@@ -93,38 +93,25 @@ export function CreateProjectScreen() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Department selector - determines entire feature set */}
+          {/* Department selector */}
           <div>
             <label className="field-label block mb-2">Department</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {DEPARTMENT_OPTIONS.map((dept) => (
                 <button
                   key={dept.value}
                   type="button"
                   onClick={() => setDepartment(dept.value)}
-                  className={`p-4 rounded-xl border-2 text-center transition-all ${
+                  className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
                     department === dept.value
-                      ? 'border-gold bg-gold-50 shadow-sm'
-                      : 'border-border bg-card hover:border-gold-300'
+                      ? 'border-gold bg-gold-50 text-gold'
+                      : 'border-border bg-card text-text-secondary hover:border-gold-300'
                   }`}
                 >
-                  <div className="text-2xl mb-1">
-                    {dept.value === 'hmu' ? '\uD83D\uDC84' : '\uD83D\uDC57'}
-                  </div>
-                  <div className={`text-sm font-semibold ${
-                    department === dept.value ? 'text-gold' : 'text-text-primary'
-                  }`}>
-                    {dept.label}
-                  </div>
-                  <div className="text-xs text-text-secondary mt-0.5">
-                    {dept.description}
-                  </div>
+                  {dept.label}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-text-tertiary mt-1.5">
-              Cannot be changed after project creation
-            </p>
           </div>
 
           <Input
