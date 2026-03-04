@@ -32,10 +32,9 @@ export function ChatAssistant() {
   } = useChatStore();
 
   const [inputValue, setInputValue] = useState('');
-  const [activeMode, setActiveMode] = useState<ChatMode>(() => {
-    // Scriptie is OFF by default — only activate if user previously opted in
-    const stored = localStorage.getItem('scriptieEnabled');
-    return stored === 'true' ? 'scriptie' : 'team';
+  const [activeMode, setActiveMode] = useState<ChatMode>('team');
+  const [scriptieActivated, setScriptieActivated] = useState<boolean>(() => {
+    return localStorage.getItem('scriptieActivated') === 'true';
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -75,7 +74,12 @@ export function ChatAssistant() {
 
   const switchMode = (mode: ChatMode) => {
     setActiveMode(mode);
-    localStorage.setItem('scriptieEnabled', mode === 'scriptie' ? 'true' : 'false');
+  };
+
+  const toggleScriptieActivation = () => {
+    const next = !scriptieActivated;
+    setScriptieActivated(next);
+    localStorage.setItem('scriptieActivated', next ? 'true' : 'false');
   };
 
   // Format message content with basic markdown using React elements (no dangerouslySetInnerHTML)
@@ -221,16 +225,16 @@ export function ChatAssistant() {
             </button>
             <button
               onClick={() => switchMode('scriptie')}
-              className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+              className="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 backgroundColor: activeMode === 'scriptie' ? 'rgba(201, 169, 97, 0.15)' : 'transparent',
                 border: `1px solid ${activeMode === 'scriptie' ? 'rgba(201, 169, 97, 0.4)' : 'var(--color-border)'}`,
                 color: activeMode === 'scriptie' ? 'var(--color-gold)' : 'var(--color-text-muted)',
               }}
             >
-              <span className="flex items-center justify-center gap-1">
-                Scriptie
-                <span className="text-xs opacity-60">Project assistant</span>
+              <span className="flex flex-col items-center leading-tight">
+                <span>Ask Scriptie</span>
+                <span className="text-[10px] opacity-50 font-normal">Project assistant</span>
               </span>
             </button>
           </div>
@@ -293,15 +297,81 @@ export function ChatAssistant() {
           {activeMode === 'scriptie' && (
             <>
               <div className="flex-1 overflow-y-auto px-4 py-4">
-                {!hasMessages ? (
-                  // Scriptie welcome screen
+                {!scriptieActivated ? (
+                  // Scriptie activation gate — toggle to enable
                   <div className="flex flex-col items-center justify-center h-full text-center px-4">
                     <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                      Scriptie
+                      Ask Scriptie
+                    </h3>
+                    <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                      Your project assistant. Get instant answers about characters, looks, scenes, and timesheets.
+                    </p>
+
+                    {/* Toggle Switch */}
+                    <button
+                      onClick={toggleScriptieActivation}
+                      className="flex items-center gap-3 px-5 py-3 rounded-xl transition-all active:scale-[0.97]"
+                      style={{
+                        backgroundColor: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <div
+                        className="relative w-12 h-7 rounded-full transition-colors"
+                        style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        }}
+                      >
+                        <div
+                          className="absolute top-0.5 left-0.5 w-6 h-6 rounded-full transition-transform"
+                          style={{
+                            backgroundColor: 'var(--color-text-muted)',
+                            transform: 'translateX(0)',
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        Enable Ask Scriptie
+                      </span>
+                    </button>
+                  </div>
+                ) : !hasMessages ? (
+                  // Scriptie welcome screen (activated)
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                      Ask Scriptie
                     </h3>
                     <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
                       I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
                     </p>
+
+                    {/* Disable toggle */}
+                    <button
+                      onClick={toggleScriptieActivation}
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg mb-6 transition-all active:scale-[0.97]"
+                      style={{
+                        backgroundColor: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <div
+                        className="relative w-10 h-6 rounded-full transition-colors"
+                        style={{
+                          backgroundColor: 'rgba(201, 169, 97, 0.4)',
+                        }}
+                      >
+                        <div
+                          className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform"
+                          style={{
+                            backgroundColor: 'var(--color-gold)',
+                            transform: 'translateX(16px)',
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        Scriptie enabled
+                      </span>
+                    </button>
 
                     {/* Suggestions */}
                     <div className="space-y-2 w-full max-w-sm">
@@ -393,7 +463,8 @@ export function ChatAssistant() {
                 )}
               </div>
 
-              {/* Scriptie Input Area */}
+              {/* Scriptie Input Area — only when activated */}
+              {scriptieActivated && (
               <div
                 className="px-4 pt-3 pb-24"
                 style={{
@@ -429,6 +500,7 @@ export function ChatAssistant() {
                   </button>
                 </div>
               </div>
+              )}
             </>
           )}
         </div>
