@@ -11,27 +11,20 @@ export function TopBar() {
           {/* Back to Checks Happy */}
           <a
             href="/"
+            className="btn-ghost"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               padding: '9px 18px',
-              background: 'var(--accent-gold-soft)',
-              border: '1px solid var(--border-medium)',
+              background: 'rgba(201, 169, 97, 0.05)',
+              border: '1px solid var(--border-card)',
               borderRadius: '10px',
               color: 'var(--accent-gold)',
               fontWeight: 600,
               fontSize: '0.8125rem',
               textDecoration: 'none',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-strong)';
-              e.currentTarget.style.background = 'rgba(201, 169, 97, 0.12)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-medium)';
-              e.currentTarget.style.background = 'var(--accent-gold-soft)';
+              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.2)',
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,36 +36,65 @@ export function TopBar() {
             </svg>
           </a>
 
-          {/* Avatar */}
-          <button
-            style={{
-              width: '40px',
-              height: '40px',
+          {/* Avatar — THE SUN */}
+          <div style={{ position: 'relative' }}>
+            {/* Outer glow rings */}
+            <div style={{
+              position: 'absolute',
+              inset: '-12px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.85) 0%, rgba(160, 118, 40, 0.85) 100%)',
-              border: '1px solid rgba(201, 169, 97, 0.3)',
-              color: '#0c0a08',
-              fontWeight: 600,
-              fontSize: '0.8125rem',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(201, 169, 97, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            AM
-          </button>
+              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.12) 0%, rgba(201, 169, 97, 0.04) 40%, transparent 70%)',
+              pointerEvents: 'none',
+              animation: 'pulse-glow 3s ease-in-out infinite',
+            }} />
+            <div style={{
+              position: 'absolute',
+              inset: '-24px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.05) 0%, transparent 60%)',
+              pointerEvents: 'none',
+              filter: 'blur(8px)',
+            }} />
+            <button
+              style={{
+                position: 'relative',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #dbbf72 0%, #c9a961 40%, #a07628 100%)',
+                border: '1px solid rgba(201, 169, 97, 0.5)',
+                color: '#0c0a08',
+                fontWeight: 700,
+                fontSize: '0.8125rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 16px rgba(201, 169, 97, 0.25), 0 0 40px rgba(201, 169, 97, 0.10), 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.15) inset',
+                zIndex: 1,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.08)';
+                e.currentTarget.style.boxShadow = '0 0 24px rgba(201, 169, 97, 0.35), 0 0 60px rgba(201, 169, 97, 0.15), 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.2) inset';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 0 16px rgba(201, 169, 97, 0.25), 0 0 40px rgba(201, 169, 97, 0.10), 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.15) inset';
+              }}
+            >
+              AM
+            </button>
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.05); }
+        }
+      `}</style>
     </header>
   );
 }

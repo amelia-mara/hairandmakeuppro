@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   PREP HAPPY — Design System
-   Warm dark aesthetic with refined gold accents
+   PREP HAPPY — Glass Panel Design System
+   "The avatar is the sun reflecting off solid glass
+    panels in the night as the sun rises"
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 @theme {
@@ -26,35 +27,49 @@
 }
 
 :root {
-  /* Warm dark palette */
-  --bg-primary: #0c0a08;
-  --bg-surface: #141210;
-  --bg-card: #1a1814;
-  --bg-card-hover: #201d18;
-  --bg-elevated: #242018;
+  /* Night sky palette */
+  --bg-primary: #080706;
+  --bg-surface: #0e0d0b;
+  --bg-card: #161412;
+  --bg-card-hover: #1c1916;
+  --bg-elevated: #201d18;
 
   --text-primary: #f0ebe0;
   --text-secondary: #9a9080;
   --text-muted: #5c5448;
   --text-label: #7a7068;
 
-  /* Refined gold */
+  /* Gold — the sunrise */
   --accent-gold: #c9a961;
   --accent-gold-dim: rgba(201, 169, 97, 0.5);
   --accent-gold-soft: rgba(201, 169, 97, 0.08);
   --accent-gold-glow: rgba(201, 169, 97, 0.04);
 
-  /* Borders */
-  --border-subtle: rgba(201, 169, 97, 0.06);
+  /* Borders — glass edges catching light */
+  --border-subtle: rgba(201, 169, 97, 0.05);
   --border-card: rgba(201, 169, 97, 0.10);
   --border-medium: rgba(201, 169, 97, 0.18);
   --border-strong: rgba(201, 169, 97, 0.30);
 
-  /* Shadows & Glows */
-  --glow-gold-top: linear-gradient(180deg, rgba(201, 169, 97, 0.12) 0%, transparent 40%);
-  --glow-gold-line: rgba(201, 169, 97, 0.35);
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-card);
-  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-medium);
+  /* Glass panel shadows — the key to 3D depth */
+  --glass-shadow:
+    0 1px 0 0 rgba(201, 169, 97, 0.08) inset,       /* top inner rim highlight */
+    0 -1px 0 0 rgba(0, 0, 0, 0.3) inset,              /* bottom inner shadow */
+    0 4px 16px -2px rgba(0, 0, 0, 0.6),               /* drop shadow */
+    0 1px 3px rgba(0, 0, 0, 0.4);                     /* tight shadow */
+
+  --glass-shadow-hover:
+    0 1px 0 0 rgba(201, 169, 97, 0.15) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.3) inset,
+    0 8px 32px -4px rgba(0, 0, 0, 0.7),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 40px -8px rgba(201, 169, 97, 0.06);
+
+  --glass-shadow-stat:
+    0 1px 0 0 rgba(201, 169, 97, 0.10) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
+    0 3px 12px -2px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.3);
 
   /* Status */
   --status-active: #52c186;
@@ -86,6 +101,49 @@ body {
   min-height: 100vh;
 }
 
+/* ━━━ Ambient light — radial sunrise from top-right ━━━ */
+.ambient-light {
+  position: relative;
+  min-height: 100vh;
+}
+.ambient-light::before {
+  content: '';
+  position: fixed;
+  top: -120px;
+  right: -60px;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(201, 169, 97, 0.07) 0%,
+    rgba(201, 169, 97, 0.03) 30%,
+    rgba(201, 169, 97, 0.01) 50%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+.ambient-light::after {
+  content: '';
+  position: fixed;
+  top: -200px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(
+    circle at center,
+    rgba(201, 169, 97, 0.04) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(40px);
+}
+.ambient-light > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -97,70 +155,124 @@ body {
   outline-offset: 2px;
 }
 
-/* ━━━ Card base — warm card with inner glow ━━━ */
+/* ━━━ Glass card base ━━━ */
 .card {
-  background: var(--bg-card);
+  background: linear-gradient(
+    170deg,
+    rgba(30, 27, 22, 0.95) 0%,
+    rgba(22, 20, 18, 0.98) 40%,
+    rgba(18, 16, 14, 1) 100%
+  );
   border: 1px solid var(--border-card);
+  border-top-color: rgba(201, 169, 97, 0.14);
   border-radius: 16px;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--glass-shadow);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: var(--glow-gold-top);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(201, 169, 97, 0.05) 0%,
+    transparent 100%
+  );
   pointer-events: none;
   border-radius: inherit;
 }
-.card:hover {
-  border-color: var(--border-medium);
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
-}
-
-/* Gold top-shine line on cards */
-.card-shine::after {
+/* Gold rim light — thick top edge reflection */
+.card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glow-gold-line), transparent);
-  border-radius: 1px;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 97, 0.15) 20%,
+    rgba(201, 169, 97, 0.35) 50%,
+    rgba(201, 169, 97, 0.15) 80%,
+    transparent 100%
+  );
+  border-radius: 2px;
+  filter: blur(0.5px);
+}
+.card:hover {
+  border-color: var(--border-medium);
+  border-top-color: rgba(201, 169, 97, 0.22);
+  box-shadow: var(--glass-shadow-hover);
+  transform: translateY(-3px);
 }
 
-/* ━━━ Stat card ━━━ */
+/* ━━━ Stat card — solid glass panel ━━━ */
 .stat-card {
-  background: var(--bg-card);
+  background: linear-gradient(
+    170deg,
+    rgba(30, 27, 22, 0.95) 0%,
+    rgba(22, 20, 18, 0.98) 40%,
+    rgba(18, 16, 14, 1) 100%
+  );
   border: 1px solid var(--border-card);
+  border-top-color: rgba(201, 169, 97, 0.15);
   border-radius: 16px;
   padding: 24px 28px;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--glass-shadow-stat);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Inner light reflection from "sun" */
 .stat-card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: var(--glow-gold-top);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(
+    170deg,
+    rgba(201, 169, 97, 0.06) 0%,
+    rgba(201, 169, 97, 0.02) 40%,
+    transparent 100%
+  );
   pointer-events: none;
 }
+/* Thick gold rim — light catching the top edge */
 .stat-card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 15%;
-  right: 15%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glow-gold-line), transparent);
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 97, 0.18) 20%,
+    rgba(201, 169, 97, 0.40) 50%,
+    rgba(201, 169, 97, 0.18) 80%,
+    transparent 100%
+  );
+  border-radius: 2px;
+  filter: blur(0.5px);
 }
 .stat-card:hover {
   border-color: var(--border-medium);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-top-color: rgba(201, 169, 97, 0.25);
+  box-shadow:
+    0 1px 0 0 rgba(201, 169, 97, 0.15) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
+    0 6px 24px -4px rgba(0, 0, 0, 0.6),
+    0 0 30px -8px rgba(201, 169, 97, 0.06);
+  transform: translateY(-2px);
 }
 .stat-card .stat-label {
   font-size: 0.75rem;
@@ -169,6 +281,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
+  position: relative;
 }
 .stat-card .stat-value {
   font-size: 2rem;
@@ -176,41 +289,70 @@ body {
   color: var(--accent-gold);
   line-height: 1;
   letter-spacing: -0.02em;
+  position: relative;
+  text-shadow: 0 0 30px rgba(201, 169, 97, 0.15);
 }
 
-/* ━━━ Project card ━━━ */
+/* ━━━ Project card — main glass panel ━━━ */
 .project-card {
-  background: var(--bg-card);
+  background: linear-gradient(
+    170deg,
+    rgba(30, 27, 22, 0.95) 0%,
+    rgba(22, 20, 18, 0.98) 35%,
+    rgba(16, 14, 12, 1) 100%
+  );
   border: 1px solid var(--border-card);
+  border-top-color: rgba(201, 169, 97, 0.14);
   border-radius: 16px;
   overflow: hidden;
   min-height: 340px;
   display: flex;
   flex-direction: column;
   position: relative;
+  box-shadow: var(--glass-shadow);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Inner top glow */
 .project-card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: var(--glow-gold-top);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: linear-gradient(
+    170deg,
+    rgba(201, 169, 97, 0.05) 0%,
+    rgba(201, 169, 97, 0.015) 40%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 0;
 }
+/* Thick gold rim light */
 .project-card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glow-gold-line), transparent);
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 97, 0.15) 15%,
+    rgba(201, 169, 97, 0.35) 50%,
+    rgba(201, 169, 97, 0.15) 85%,
+    transparent 100%
+  );
+  border-radius: 2px;
+  filter: blur(0.5px);
   z-index: 1;
 }
 .project-card:hover {
   border-color: var(--border-medium);
-  box-shadow: var(--shadow-card-hover);
+  border-top-color: rgba(201, 169, 97, 0.25);
+  box-shadow: var(--glass-shadow-hover);
   transform: translateY(-4px);
 }
 .project-card-header {
@@ -226,26 +368,30 @@ body {
 }
 .project-card-footer {
   padding: 14px 20px;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.2);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   gap: 8px;
   position: relative;
   z-index: 1;
+  /* Bottom edge: darker, like glass shadow side */
+  box-shadow: 0 1px 0 0 rgba(201, 169, 97, 0.03) inset;
 }
 
-/* Progress bar */
+/* Progress bar — glass tube with gold fill */
 .progress-bar-track {
   height: 3px;
   background: rgba(201, 169, 97, 0.06);
   border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) inset;
 }
 .progress-bar-fill {
   height: 100%;
   border-radius: 2px;
   background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-dim));
   transition: width 0.5s ease;
+  box-shadow: 0 0 6px rgba(201, 169, 97, 0.3);
 }
 
 /* Status dot */
@@ -259,7 +405,7 @@ body {
 .status-dot.setup { background: var(--status-pending); box-shadow: 0 0 8px rgba(232, 168, 124, 0.5); }
 .status-dot.wrapped { background: var(--text-muted); }
 
-/* New project card */
+/* New project card — dashed glass outline */
 .new-project-card {
   border: 2px dashed var(--border-medium);
   border-radius: 16px;
@@ -271,14 +417,21 @@ body {
   padding: 60px 24px;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  background: transparent;
+  background: rgba(22, 20, 18, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 .new-project-card:hover {
   border-color: var(--accent-gold);
   border-style: solid;
-  background: var(--accent-gold-glow);
+  background: linear-gradient(
+    170deg,
+    rgba(201, 169, 97, 0.04) 0%,
+    rgba(22, 20, 18, 0.6) 100%
+  );
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(201, 169, 97, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 40px -8px rgba(201, 169, 97, 0.06);
 }
 .new-project-card .icon-circle {
   width: 56px;
@@ -290,10 +443,12 @@ body {
   justify-content: center;
   margin-bottom: 16px;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 .new-project-card:hover .icon-circle {
   border-color: var(--accent-gold);
   background: var(--accent-gold-soft);
+  box-shadow: 0 0 20px rgba(201, 169, 97, 0.1);
 }
 
 /* ━━━ Buttons ━━━ */
@@ -304,10 +459,11 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.1) inset;
 }
 .btn-gold:hover {
   background: linear-gradient(135deg, #c9a961 0%, #b89651 100%);
-  box-shadow: 0 0 24px rgba(201, 169, 97, 0.2);
+  box-shadow: 0 4px 20px rgba(201, 169, 97, 0.25), 0 1px 0 0 rgba(255, 255, 255, 0.15) inset;
   transform: translateY(-1px);
 }
 .btn-gold:active { transform: translateY(0) scale(0.98); }
@@ -329,7 +485,7 @@ body {
 }
 
 .btn-action {
-  background: transparent;
+  background: rgba(22, 20, 18, 0.5);
   border: 1px solid var(--border-card);
   color: var(--text-label);
   font-size: 0.75rem;
@@ -338,15 +494,16 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .btn-action:hover {
   border-color: var(--border-medium);
   color: var(--text-secondary);
-  background: var(--accent-gold-glow);
+  background: rgba(201, 169, 97, 0.04);
 }
 
 .btn-action-gold {
-  background: var(--accent-gold-soft);
+  background: rgba(201, 169, 97, 0.06);
   border: 1px solid var(--border-medium);
   color: var(--accent-gold);
   font-size: 0.75rem;
@@ -355,15 +512,17 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .btn-action-gold:hover {
   background: var(--accent-gold);
   color: #0c0a08;
   border-color: var(--accent-gold);
+  box-shadow: 0 0 16px rgba(201, 169, 97, 0.2);
 }
 
 .btn-action-danger {
-  background: transparent;
+  background: rgba(22, 20, 18, 0.5);
   border: 1px solid var(--border-card);
   color: var(--text-label);
   font-size: 0.75rem;
@@ -372,16 +531,17 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .btn-action-danger:hover {
   border-color: #e85d75;
   color: #e85d75;
 }
 
-/* ━━━ Filter pill ━━━ */
+/* ━━━ Filter pill — mini glass panels ━━━ */
 .filter-pill {
   padding: 8px 20px;
-  background: transparent;
+  background: rgba(22, 20, 18, 0.6);
   border: 1px solid var(--border-card);
   border-radius: 10px;
   color: var(--text-label);
@@ -390,41 +550,45 @@ body {
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.25s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 .filter-pill:hover {
   border-color: var(--border-medium);
   color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 .filter-pill.active {
   background: linear-gradient(135deg, rgba(201, 169, 97, 0.85) 0%, rgba(184, 150, 81, 0.85) 100%);
   border-color: rgba(201, 169, 97, 0.4);
   color: #0c0a08;
   font-weight: 600;
+  box-shadow: 0 2px 12px rgba(201, 169, 97, 0.15), 0 1px 0 0 rgba(255, 255, 255, 0.1) inset;
 }
 
 /* ━━━ Form ━━━ */
 .input-field {
   width: 100%;
   padding: 12px 16px;
-  background: var(--bg-surface);
+  background: rgba(14, 13, 11, 0.8);
   border: 1px solid var(--border-card);
   border-radius: 10px;
   color: var(--text-primary);
   font-size: 0.875rem;
   font-family: var(--font-sans);
   transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
 }
 .input-field::placeholder { color: var(--text-muted); }
 .input-field:hover { border-color: var(--border-medium); }
 .input-field:focus {
   outline: none;
   border-color: var(--accent-gold);
-  box-shadow: 0 0 0 3px var(--accent-gold-soft);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset, 0 0 0 3px var(--accent-gold-soft);
 }
 
 .select-field {
   padding: 10px 16px;
-  background: var(--bg-surface);
+  background: rgba(14, 13, 11, 0.8);
   border: 1px solid var(--border-card);
   border-radius: 10px;
   color: var(--text-primary);
@@ -433,6 +597,7 @@ body {
   transition: all 0.3s ease;
   cursor: pointer;
   appearance: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235c5448' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -442,7 +607,7 @@ body {
 .select-field:focus {
   outline: none;
   border-color: var(--accent-gold);
-  box-shadow: 0 0 0 3px var(--accent-gold-soft);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset, 0 0 0 3px var(--accent-gold-soft);
 }
 
 /* ━━━ Upload zone ━━━ */
@@ -468,28 +633,50 @@ body {
   transform: scale(1.005);
 }
 
-/* ━━━ Glass ━━━ */
+/* ━━━ Glass utility ━━━ */
 .glass {
-  background: var(--bg-card);
+  background: linear-gradient(
+    170deg,
+    rgba(30, 27, 22, 0.95) 0%,
+    rgba(22, 20, 18, 0.98) 40%,
+    rgba(18, 16, 14, 1) 100%
+  );
   border: 1px solid var(--border-card);
   border-radius: 16px;
+  box-shadow: var(--glass-shadow);
 }
 
-/* ━━━ Header ━━━ */
+/* ━━━ Header — gold bar across the bottom ━━━ */
 .app-header {
   padding: 20px 40px;
   position: relative;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(
+    180deg,
+    rgba(20, 18, 14, 0.98) 0%,
+    rgba(14, 13, 11, 1) 100%
+  );
+  border-bottom: 1px solid rgba(201, 169, 97, 0.08);
+  box-shadow:
+    0 1px 0 0 rgba(201, 169, 97, 0.03) inset,
+    0 4px 16px rgba(0, 0, 0, 0.4);
 }
+/* Strong gold line — the horizon */
 .app-header::after {
   content: '';
   position: absolute;
   bottom: -1px;
-  left: 5%;
-  right: 5%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glow-gold-line), transparent);
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 97, 0.10) 15%,
+    rgba(201, 169, 97, 0.35) 50%,
+    rgba(201, 169, 97, 0.10) 85%,
+    transparent 100%
+  );
+  filter: blur(0.5px);
 }
 
 /* ━━━ Scroll arrow ━━━ */
@@ -506,11 +693,13 @@ body {
   cursor: pointer;
   transition: all 0.25s ease;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 .scroll-arrow:hover {
   border-color: var(--border-medium);
   color: var(--accent-gold);
   background: var(--accent-gold-glow);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 16px rgba(201, 169, 97, 0.05);
 }
 
 /* ━━━ Animations ━━━ */
