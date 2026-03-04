@@ -139,34 +139,6 @@ export function CostumeContinuityFields({ data, onChange }: CostumeContinuityFie
         />
       </div>
 
-      {/* Scene Change Toggle */}
-      <div>
-        <label className="field-label block mb-2">Scene Change</label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => updateField('sceneChange', 'same')}
-            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-              data.sceneChange === 'same'
-                ? 'border-gold bg-gold-50 text-gold'
-                : 'border-border bg-card text-text-secondary'
-            }`}
-          >
-            Same as Previous
-          </button>
-          <button
-            type="button"
-            onClick={() => updateField('sceneChange', 'change')}
-            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-              data.sceneChange === 'change'
-                ? 'border-gold bg-gold-50 text-gold'
-                : 'border-border bg-card text-text-secondary'
-            }`}
-          >
-            Costume Change
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
