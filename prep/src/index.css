@@ -130,7 +130,7 @@ body {
   background:
     /* Soft warm center — very diffused */
     radial-gradient(
-      ellipse 1200px 1000px at calc(100% - 60px) 40px,
+      ellipse 960px 800px at calc(100% - 60px) 40px,
       rgba(196, 172, 116, 0.07) 0%,
       rgba(196, 172, 116, 0.04) 30%,
       rgba(196, 172, 116, 0.015) 55%,
@@ -138,7 +138,7 @@ body {
     ),
     /* Huge ambient wash — centered on profile icon */
     radial-gradient(
-      ellipse 3000px 2200px at calc(100% - 60px) 40px,
+      ellipse 2400px 1760px at calc(100% - 60px) 40px,
       rgba(182, 156, 86, 0.06) 0%,
       rgba(174, 150, 82, 0.035) 25%,
       rgba(164, 138, 74, 0.015) 45%,
@@ -150,10 +150,10 @@ body {
 .ambient-light::before {
   content: '';
   position: fixed;
-  top: -410px;
-  right: -390px;
-  width: 900px;
-  height: 900px;
+  top: -328px;
+  right: -312px;
+  width: 720px;
+  height: 720px;
   background: radial-gradient(
     circle at center,
     rgba(196, 172, 116, 0.08) 0%,
@@ -169,10 +169,10 @@ body {
 .ambient-light::after {
   content: '';
   position: fixed;
-  top: -860px;
-  right: -1140px;
-  width: 2400px;
-  height: 1800px;
+  top: -688px;
+  right: -912px;
+  width: 1920px;
+  height: 1440px;
   background: radial-gradient(
     ellipse at center,
     rgba(196, 172, 116, 0.05) 0%,
