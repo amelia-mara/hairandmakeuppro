@@ -137,7 +137,7 @@ export async function parseScriptWithAI(
   scenes: AIExtractedScene[];
   characters: AIExtractedCharacter[];
 }> {
-  onProgress?.('Analyzing script structure with AI...');
+  onProgress?.('Analyzing script structure...');
 
   // STEP 1: Pre-extract ALL character names from entire script BEFORE chunking
   // This ensures we have a complete cast list to reference across all chunks

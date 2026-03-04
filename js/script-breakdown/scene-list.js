@@ -226,7 +226,7 @@ function renderExpandedDetails(scene, cast) {
                             Edit
                         </button>`
                         : `<button class="scene-synopsis-generate-btn" onclick="event.stopPropagation(); handleGenerateSceneSynopsis(${sceneIndex})">
-                            Generate AI
+                            Generate
                         </button>`
                     }
                 </div>

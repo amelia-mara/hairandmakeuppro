@@ -634,7 +634,7 @@ function UploadScreen({
             </svg>
             <div className="text-xs text-blue-700">
               <p className="font-medium mb-1">Faster with Schedule</p>
-              <p>The schedule contains the official cast list with character numbers. This allows instant, accurate character detection per scene without AI processing.</p>
+              <p>The schedule contains the official cast list with character numbers. This allows instant, accurate character detection per scene.</p>
             </div>
           </div>
         </div>

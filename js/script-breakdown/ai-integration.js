@@ -482,7 +482,7 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
 
     // For local testing with API key
     if (!state.apiKey) {
-        const error = new Error('No API key set. Please configure AI settings first or deploy to Vercel with serverless function.');
+        const error = new Error('No API key set. Please configure settings first or deploy to Vercel with serverless function.');
         console.error('❌ No API key configured');
         showErrorNotification('No API key configured. Open API Settings to add your key.');
         throw error;
@@ -1939,7 +1939,7 @@ function renderEventTimelineEntries(event) {
                 }
                 html += `
                     <div class="timeline-gap">
-                        <div class="gap-indicator">Scenes ${sceneList.join(', ')} (AI can generate)</div>
+                        <div class="gap-indicator">Scenes ${sceneList.join(', ')} (can be generated)</div>
                     </div>
                 `;
             } else {
