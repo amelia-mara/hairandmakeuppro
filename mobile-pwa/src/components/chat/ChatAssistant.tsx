@@ -342,7 +342,7 @@ export function ChatAssistant() {
                       Ask Scriptie
                     </h3>
                     <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
-                      I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
+                      Here to help with your characters, looks, scenes, and schedule — just ask.
                     </p>
 
                     {/* Disable toggle */}

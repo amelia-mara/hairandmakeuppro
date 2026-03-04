@@ -412,7 +412,7 @@ function renderChatMessages() {
                 <div class="chat-welcome-icon">✨</div>
                 <div class="chat-welcome-title">Scriptie</div>
                 <div class="chat-welcome-text">
-                    I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
+                    Here to help with your characters, looks, scenes, and schedule — just ask.
                 </div>
                 <div class="chat-suggestions">
                     <button class="chat-suggestion" onclick="window.chatAssistant.askSuggestion('How many scenes is each character in?')">
