@@ -126,6 +126,23 @@ function toProjectMembership(
   };
 }
 
+// Merge server-fetched memberships with existing local ones to preserve
+// fields not yet stored in Supabase (e.g. department).
+function mergeWithLocalMemberships(
+  serverMemberships: ProjectMembership[],
+  localMemberships: ProjectMembership[]
+): ProjectMembership[] {
+  const localMap = new Map(localMemberships.map((m) => [m.projectId, m]));
+  return serverMemberships.map((m) => {
+    const local = localMap.get(m.projectId);
+    if (local && m.department === 'hmu' && local.department && local.department !== 'hmu') {
+      // Server doesn't have department yet — preserve local value
+      return { ...m, department: local.department };
+    }
+    return m;
+  });
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -188,7 +205,10 @@ export const useAuthStore = create<AuthState>()(
               const visibleProjects = projects.filter(
                 (p) => !(p.is_owner && p.pending_deletion_at)
               );
-              const memberships = visibleProjects.map(toProjectMembership);
+              const memberships = mergeWithLocalMemberships(
+                visibleProjects.map(toProjectMembership),
+                get().projectMemberships
+              );
 
               set({
                 isAuthenticated: true,
@@ -237,7 +257,10 @@ export const useAuthStore = create<AuthState>()(
             (p) => !(p.is_owner && p.pending_deletion_at)
           );
 
-          const memberships = remaining.map(toProjectMembership);
+          const memberships = mergeWithLocalMemberships(
+            remaining.map(toProjectMembership),
+            get().projectMemberships
+          );
           set({ projectMemberships: memberships });
         } catch (error) {
           console.error('Error refreshing projects:', error);
@@ -334,7 +357,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Only update projectMemberships if the fetch succeeded
           const memberships = !projectsError && projects.length > 0
-            ? projects.map(toProjectMembership)
+            ? mergeWithLocalMemberships(projects.map(toProjectMembership), get().projectMemberships)
             : projectsError
               ? get().projectMemberships // Keep existing on error
               : []; // Genuinely empty
