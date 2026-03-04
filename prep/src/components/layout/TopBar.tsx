@@ -2,8 +2,15 @@ export function TopBar() {
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Title */}
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+        {/* Title — muted, elegant, belongs to the glass world */}
+        <h1 style={{
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--text-muted)',
+          margin: 0,
+        }}>
           Projects
         </h1>
 
