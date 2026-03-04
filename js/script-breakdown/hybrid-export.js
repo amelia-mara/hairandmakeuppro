@@ -123,7 +123,7 @@ export function exportHybridContinuityCSV() {
                 csv += `"${escapeCSV(item.character)}",`;
                 csv += `"${item.category}",`;
                 csv += `"${escapeCSV(item.description)}",`;
-                csv += `"AI",`;
+                csv += `"Auto",`;
                 csv += `"${item.statusLabel}"\n`;
             });
     });
@@ -440,7 +440,7 @@ export function exportHybridBreakdownHTML() {
                     <div class="item-header">
                         <span class="character-name">${escapeHTML(item.character)}</span>
                         <span class="category-badge">${item.category}</span>
-                        <span class="source-badge">AI (${item.confidence}%)</span>
+                        <span class="source-badge">Auto (${item.confidence}%)</span>
                     </div>
                     <div class="item-description">${escapeHTML(item.description)}</div>
                 </div>

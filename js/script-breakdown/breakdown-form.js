@@ -890,7 +890,7 @@ function formatSource(source) {
         'day_night_transition': 'Day/night transition',
         'user_assigned': 'User assigned',
         'copied': 'Copied from another scene',
-        'inferred': 'AI inferred'
+        'inferred': 'Auto-inferred'
     };
     return labels[source] || source;
 }
@@ -2798,7 +2798,7 @@ function renderTimelineColumn(event) {
                 html += `
                     <div class="timeline-entry generated">
                         <div class="timeline-scene">Scene ${gen.scene + 1}</div>
-                        <div class="timeline-badge">AI GENERATED</div>
+                        <div class="timeline-badge">AUTO-GENERATED</div>
                         <div class="timeline-description">${escapeHtml(gen.description)}</div>
                     </div>
                 `;

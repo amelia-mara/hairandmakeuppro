@@ -286,11 +286,11 @@ export async function syncSceneSynopses(
     return updatedScenes;
   }
 
-  onProgress?.('Checking AI availability...', 15);
+  onProgress?.('Checking availability...', 15);
   const aiAvailable = await checkAIAvailability();
 
   if (!aiAvailable) {
-    onProgress?.('AI unavailable - some scenes lack synopses', 100);
+    onProgress?.('Smart analysis unavailable - some scenes lack synopses', 100);
     return updatedScenes;
   }
 
