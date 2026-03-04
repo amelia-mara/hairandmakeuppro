@@ -4,6 +4,7 @@ import { ProjectHub } from '@/pages/ProjectHub';
 import { CreateProjectModal } from '@/pages/CreateProject';
 import { ProjectLayout } from '@/components/layout/ProjectLayout';
 import { ProjectDashboard } from '@/pages/ProjectDashboard';
+import { ScriptBreakdown } from '@/pages/ScriptBreakdown';
 import { useProjectStore } from '@/stores/projectStore';
 
 function App() {
@@ -43,6 +44,9 @@ function App() {
         >
           {activePage === 'dashboard' && (
             <ProjectDashboard projectId={selectedProjectId} />
+          )}
+          {activePage === 'breakdown' && (
+            <ScriptBreakdown projectId={selectedProjectId} />
           )}
         </ProjectLayout>
       </div>
