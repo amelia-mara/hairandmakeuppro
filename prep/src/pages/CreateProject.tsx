@@ -72,10 +72,11 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
           padding: '24px 28px 0',
         }}>
           <h2 style={{
-            fontSize: '1.125rem',
-            fontWeight: 600,
-            letterSpacing: '-0.02em',
-            color: 'var(--text-primary)',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--text-heading)',
             margin: 0,
           }}>
             New Project
