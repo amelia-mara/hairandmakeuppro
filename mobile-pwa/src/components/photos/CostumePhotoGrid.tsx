@@ -60,23 +60,22 @@ export function CostumePhotoGrid({
         </div>
       </div>
 
-      {/* Detail categories - horizontally scrollable row */}
+      {/* Detail categories - multi-row grid */}
       <div>
         <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Details</p>
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        <div className="grid grid-cols-4 gap-2">
           {detailCategories.map((cat) => (
-            <div key={cat.key} className="flex-shrink-0 w-[calc(25%-6px)]">
-              <CostumePhotoSlot
-                photo={photos[cat.key]}
-                category={cat.key}
-                label={cat.label.replace('Detail: ', '').replace('Close-up: ', '')}
-                onCapture={() => onCapture(cat.key)}
-                onView={photos[cat.key] && onView
-                  ? () => onView(photos[cat.key]!, cat.key)
-                  : undefined
-                }
-              />
-            </div>
+            <CostumePhotoSlot
+              key={cat.key}
+              photo={photos[cat.key]}
+              category={cat.key}
+              label={cat.label.replace('Detail: ', '').replace('Close-up: ', '')}
+              onCapture={() => onCapture(cat.key)}
+              onView={photos[cat.key] && onView
+                ? () => onView(photos[cat.key]!, cat.key)
+                : undefined
+              }
+            />
           ))}
         </div>
       </div>
