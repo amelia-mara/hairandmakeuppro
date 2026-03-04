@@ -93,6 +93,16 @@ export function CreateProjectScreen() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          <Input
+            type="text"
+            label="Production Name"
+            placeholder="e.g., The Crown S6"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isLoading}
+            autoComplete="off"
+          />
+
           {/* Department selector */}
           <div>
             <label className="field-label block mb-2">Department</label>
@@ -113,16 +123,6 @@ export function CreateProjectScreen() {
               ))}
             </div>
           </div>
-
-          <Input
-            type="text"
-            label="Production Name"
-            placeholder="e.g., The Crown S6"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={isLoading}
-            autoComplete="off"
-          />
 
           {/* Production type select */}
           <div>
