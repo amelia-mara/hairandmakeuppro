@@ -892,6 +892,73 @@ body {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MODAL
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 3, 2, 0.75);
+  backdrop-filter: blur(8px);
+  animation: modal-fade-in 0.2s ease-out;
+}
+.modal-glass {
+  position: relative;
+  width: 460px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: linear-gradient(
+    145deg,
+    rgba(28, 25, 20, 0.98) 0%,
+    rgba(18, 16, 14, 0.99) 30%,
+    rgba(11, 10, 9, 1) 100%
+  );
+  border: 1px solid var(--border-card);
+  border-top-color: rgba(191, 173, 122, 0.18);
+  border-right-color: rgba(191, 173, 122, 0.12);
+  border-radius: 16px;
+  box-shadow:
+    var(--glass-shadow),
+    0 24px 80px -12px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.3);
+  animation: modal-scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Top shine line on modal */
+.modal-glass::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(191, 173, 122, 0.06) 30%,
+    rgba(214, 196, 140, 0.20) 50%,
+    rgba(228, 215, 160, 0.50) 72%,
+    rgba(238, 225, 175, 0.65) 80%,
+    rgba(228, 215, 160, 0.40) 88%,
+    rgba(191, 173, 122, 0.08) 96%,
+    transparent 100%
+  );
+  border-radius: 16px 16px 0 0;
+  pointer-events: none;
+}
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-scale-in {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    HEADER — gold horizon brighter on right (toward sun)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .app-header {
