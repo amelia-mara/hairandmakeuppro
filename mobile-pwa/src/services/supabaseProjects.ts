@@ -35,7 +35,8 @@ export async function createProject(
   name: string,
   productionType: string,
   _userId: string,
-  ownerRole: ProjectMember['role'] = 'designer'
+  ownerRole: ProjectMember['role'] = 'designer',
+  department: 'hmu' | 'costume' = 'hmu'
 ): Promise<{ project: Project | null; inviteCode: string | null; error: Error | null }> {
   try {
     // Use SECURITY DEFINER RPC to bypass RLS (same pattern as join flow).
@@ -55,7 +56,8 @@ export async function createProject(
       production_type: data.production_type,
       invite_code: data.invite_code,
       created_by: data.created_by,
-    } as Project;
+      department,
+    } as unknown as Project;
 
     return { project, inviteCode: data.invite_code, error: null };
   } catch (error) {

@@ -120,6 +120,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       const project: Project = {
         id: projectId,
         name: projectNameToUse,
+        department: currentProject?.department || 'hmu',
         createdAt: currentProject?.createdAt || new Date(),
         updatedAt: new Date(),
         scenes,
@@ -333,6 +334,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       const emptyProject: Project = {
         id: uuidv4(),
         name: projectName || 'Untitled Project',
+        department: currentProject?.department || 'hmu',
         createdAt: new Date(),
         updatedAt: new Date(),
         scenes: [],
@@ -381,6 +383,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
     const project: Project = {
       id: projectId,
       name: projectNameToUse,
+      department: currentProject?.department || 'hmu',
       createdAt: currentProject?.createdAt || new Date(),
       updatedAt: new Date(),
       scenes,
