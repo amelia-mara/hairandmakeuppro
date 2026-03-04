@@ -586,14 +586,14 @@ export function canSyncCastData(schedule: ProductionSchedule | null): {
   if (schedule.status !== 'complete') {
     return {
       canSync: false,
-      reason: 'Schedule processing not complete. Run AI analysis first.',
+      reason: 'Schedule processing not complete. Run schedule analysis first.',
     };
   }
 
   if (!schedule.days || schedule.days.length === 0) {
     return {
       canSync: false,
-      reason: 'Schedule has no shooting days. Run AI analysis first.',
+      reason: 'Schedule has no shooting days. Run schedule analysis first.',
     };
   }
 

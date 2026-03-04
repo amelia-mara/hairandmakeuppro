@@ -200,7 +200,7 @@ function renderPhysicalProfileSection(characterName, profile, aiProfile = {}) {
     const renderField = (field, label, placeholder, isTextarea = false) => {
         const value = escapeHtml(profile[field] || '');
         const aiDetected = isAiValue(field);
-        const aiIndicator = aiDetected ? '<span class="ai-indicator" title="Auto-detected from script">AI</span>' : '';
+        const aiIndicator = aiDetected ? '<span class="ai-indicator" title="Auto-detected from script">auto</span>' : '';
 
         if (isTextarea) {
             return `
@@ -232,7 +232,7 @@ function renderPhysicalProfileSection(characterName, profile, aiProfile = {}) {
         <div class="profile-section physical-profile">
             <div class="section-header">
                 <h3>PHYSICAL PROFILE</h3>
-                ${hasAiData ? '<span class="ai-hint">Fields marked "AI" were auto-detected from script</span>' : ''}
+                ${hasAiData ? '<span class="ai-hint">Fields marked "auto" were auto-detected from script</span>' : ''}
             </div>
 
             <div class="profile-grid">
@@ -331,7 +331,7 @@ function renderVisualIdentitySection(characterName, identity, characterData) {
                     <h3>VISUAL IDENTITY</h3>
                     <span class="ai-hint">From script analysis</span>
                     <button class="generate-btn" onclick="generateVisualIdentity('${escapedName}')">
-                        Enhance with AI
+                        Enhance
                     </button>
                 </div>
 
@@ -394,7 +394,7 @@ function renderVisualIdentitySection(characterName, identity, characterData) {
                 </div>
 
                 <div class="identity-hint">
-                    Click "Enhance with AI" for a comprehensive visual identity analysis tailored for hair and makeup.
+                    Click "Enhance" for a comprehensive visual identity analysis tailored for hair and makeup.
                 </div>
             </div>
         `;
@@ -411,7 +411,7 @@ function renderVisualIdentitySection(characterName, identity, characterData) {
             </div>
 
             <div class="identity-empty">
-                <p>Click "Generate Analysis" to create an AI-powered visual identity analysis for this character.</p>
+                <p>Click "Generate Analysis" to create a visual identity analysis for this character.</p>
                 <p class="hint">The analysis will consider the character's role, personality, story arc, and how these could influence their hair and makeup throughout the film.</p>
             </div>
         </div>

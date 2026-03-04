@@ -387,7 +387,7 @@ function toggleChatSidebar() {
     if (toggleBtn) {
         toggleBtn.classList.toggle('active', chatState.isOpen);
         toggleBtn.innerHTML = chatState.isOpen ? '×' : '💬';
-        toggleBtn.title = chatState.isOpen ? 'Close Chat' : 'Open AI Assistant';
+        toggleBtn.title = chatState.isOpen ? 'Close Chat' : 'Open Project Chat';
     }
 
     // Focus input when opening
@@ -409,10 +409,10 @@ function renderChatMessages() {
     if (chatState.messages.length === 0) {
         container.innerHTML = `
             <div class="chat-welcome">
-                <div class="chat-welcome-icon">🎬</div>
-                <div class="chat-welcome-title">H&MU Breakdown Assistant</div>
+                <div class="chat-welcome-icon">✨</div>
+                <div class="chat-welcome-title">Scriptie</div>
                 <div class="chat-welcome-text">
-                    Ask me about your script breakdown - character appearances, continuity tracking, scene details, and more.
+                    Here to help with your characters, looks, scenes, and schedule — just ask.
                 </div>
                 <div class="chat-suggestions">
                     <button class="chat-suggestion" onclick="window.chatAssistant.askSuggestion('How many scenes is each character in?')">
@@ -644,7 +644,7 @@ function createChatSidebarHTML() {
     toggleBtn.id = 'chat-toggle-btn';
     toggleBtn.className = 'chat-toggle-btn';
     toggleBtn.innerHTML = '💬';
-    toggleBtn.title = 'Open AI Assistant';
+    toggleBtn.title = 'Open Project Chat';
     toggleBtn.onclick = toggleChatSidebar;
     document.body.appendChild(toggleBtn);
 
@@ -652,11 +652,12 @@ function createChatSidebarHTML() {
     const sidebar = document.createElement('div');
     sidebar.id = 'chat-sidebar';
     sidebar.className = 'chat-sidebar';
+    const scriptieEnabled = localStorage.getItem('scriptieEnabled') === 'true';
     sidebar.innerHTML = `
         <div class="chat-header">
             <div class="chat-header-title">
-                <span class="chat-header-icon">🎬</span>
-                <span>H&MU Assistant</span>
+                <span class="chat-header-icon">💬</span>
+                <span>Project Chat</span>
             </div>
             <div class="chat-header-actions">
                 <button class="chat-header-btn" onclick="window.chatAssistant.clearChat()" title="Clear chat">
@@ -667,19 +668,42 @@ function createChatSidebarHTML() {
                 </button>
             </div>
         </div>
-        <div class="chat-messages" id="chat-messages">
-            <!-- Messages rendered here -->
-        </div>
-        <div class="chat-input-container">
-            <textarea
-                id="chat-input"
-                class="chat-input"
-                placeholder="Ask about your breakdown..."
-                rows="1"
-            ></textarea>
-            <button id="chat-send-btn" class="chat-send-btn" onclick="window.chatAssistant.handleSendMessage()">
-                →
+        <div class="chat-mode-toggle" style="display: flex; padding: 8px 12px; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.15); flex-shrink: 0;">
+            <button class="chat-mode-btn ${!scriptieEnabled ? 'active' : ''}" id="team-chat-tab-sb" onclick="window.chatAssistant.setMode('team')" style="flex: 1; padding: 8px 12px; background: ${!scriptieEnabled ? 'rgba(212,175,122,0.15)' : 'transparent'}; border: 1px solid ${!scriptieEnabled ? 'rgba(212,175,122,0.4)' : 'rgba(255,255,255,0.08)'}; border-radius: 8px; color: ${!scriptieEnabled ? 'var(--accent-gold)' : 'var(--text-muted)'}; font-size: 12px; cursor: pointer;">
+                💬 Team Chat
             </button>
+            <button class="chat-mode-btn ${scriptieEnabled ? 'active' : ''}" id="scriptie-tab-sb" onclick="window.chatAssistant.setMode('scriptie')" style="flex: 1; padding: 8px 12px; background: ${scriptieEnabled ? 'rgba(212,175,122,0.15)' : 'transparent'}; border: 1px solid ${scriptieEnabled ? 'rgba(212,175,122,0.4)' : 'rgba(255,255,255,0.08)'}; border-radius: 8px; color: ${scriptieEnabled ? 'var(--accent-gold)' : 'var(--text-muted)'}; font-size: 12px; cursor: pointer;">
+                ✨ Scriptie
+            </button>
+        </div>
+        <div id="team-chat-panel-sb" style="display: ${scriptieEnabled ? 'none' : 'flex'}; flex-direction: column; flex: 1; overflow: hidden;">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                <div style="font-size: 1.125rem; font-weight: 600; color: var(--text-light); margin-bottom: 8px;">Project Chat</div>
+                <div style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.5;">
+                    Synced project messaging for your team. Share updates, notes, and coordinate on set.
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <textarea class="chat-input" placeholder="Message your team..." rows="1"></textarea>
+                <button class="chat-send-btn">→</button>
+            </div>
+        </div>
+        <div id="scriptie-panel-sb" style="display: ${scriptieEnabled ? 'flex' : 'none'}; flex-direction: column; flex: 1; overflow: hidden;">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages rendered here -->
+            </div>
+            <div class="chat-input-container">
+                <textarea
+                    id="chat-input"
+                    class="chat-input"
+                    placeholder="Ask Scriptie..."
+                    rows="1"
+                ></textarea>
+                <button id="chat-send-btn" class="chat-send-btn" onclick="window.chatAssistant.handleSendMessage()">
+                    →
+                </button>
+            </div>
         </div>
     `;
     document.body.appendChild(sidebar);
@@ -715,6 +739,30 @@ function setupChatEventListeners() {
 // EXPORTS
 // ============================================================================
 
+/**
+ * Switch between Team Chat and Scriptie modes
+ */
+function setMode(mode) {
+    const teamPanel = document.getElementById('team-chat-panel-sb');
+    const scriptiePanel = document.getElementById('scriptie-panel-sb');
+    const teamTab = document.getElementById('team-chat-tab-sb');
+    const scriptieTab = document.getElementById('scriptie-tab-sb');
+
+    if (mode === 'scriptie') {
+        if (teamPanel) teamPanel.style.display = 'none';
+        if (scriptiePanel) scriptiePanel.style.display = 'flex';
+        if (teamTab) { teamTab.style.background = 'transparent'; teamTab.style.borderColor = 'rgba(255,255,255,0.08)'; teamTab.style.color = 'var(--text-muted)'; teamTab.classList.remove('active'); }
+        if (scriptieTab) { scriptieTab.style.background = 'rgba(212,175,122,0.15)'; scriptieTab.style.borderColor = 'rgba(212,175,122,0.4)'; scriptieTab.style.color = 'var(--accent-gold)'; scriptieTab.classList.add('active'); }
+        localStorage.setItem('scriptieEnabled', 'true');
+    } else {
+        if (teamPanel) teamPanel.style.display = 'flex';
+        if (scriptiePanel) scriptiePanel.style.display = 'none';
+        if (teamTab) { teamTab.style.background = 'rgba(212,175,122,0.15)'; teamTab.style.borderColor = 'rgba(212,175,122,0.4)'; teamTab.style.color = 'var(--accent-gold)'; teamTab.classList.add('active'); }
+        if (scriptieTab) { scriptieTab.style.background = 'transparent'; scriptieTab.style.borderColor = 'rgba(255,255,255,0.08)'; scriptieTab.style.color = 'var(--text-muted)'; scriptieTab.classList.remove('active'); }
+        localStorage.setItem('scriptieEnabled', 'false');
+    }
+}
+
 // Expose to window for HTML onclick handlers
 window.chatAssistant = {
     toggle: toggleChatSidebar,
@@ -723,6 +771,7 @@ window.chatAssistant = {
     clearChat,
     cancelRequest,
     askSuggestion,
+    setMode,
     init: initChatAssistant
 };
 

@@ -152,7 +152,7 @@ window.resetAPIUsage = resetAPIUsage;
  * Show API limit help for Claude/Anthropic
  */
 function showAPILimitHelp() {
-    const helpText = `Check your Anthropic (Claude) usage and rate limits:
+    const helpText = `Check your API usage and rate limits:
 
 1. Go to: https://console.anthropic.com/settings/limits
 2. View your rate limits for your current tier
@@ -163,7 +163,7 @@ RATE LIMITS DEPEND ON TIER:
 - Build tier: 50 requests/minute
 - Scale tier: Custom limits
 
-TIP: Anthropic has generous rate limits on paid tiers. The app will automatically retry with exponential backoff if you hit limits.`;
+TIP: Paid tiers have generous rate limits. The app will automatically retry with exponential backoff if you hit limits.`;
 
     alert(helpText);
 }
@@ -230,7 +230,7 @@ export function saveSettings() {
     localStorage.setItem('anthropicModel', anthropicModel);
     localStorage.setItem('apiKey', anthropicKey);
 
-    showToast('AI settings saved successfully', 'success');
+    showToast('API settings saved successfully', 'success');
     closeSettingsModal();
 }
 
@@ -269,7 +269,7 @@ export async function testAPIConnection() {
         const response = await callAI('Respond with exactly: "Connection successful"', 50);
 
         if (response && response.toLowerCase().includes('successful')) {
-            showToast('Claude API connected successfully!', 'success');
+            showToast('API connected successfully!', 'success');
         } else {
             showToast('API responded but format unexpected', 'warning');
         }
@@ -384,7 +384,7 @@ async function callAIWithRetry(prompt, maxTokens, sceneNumber, maxRetries = 3) {
             // If auth error, don't retry
             if (isAuthError) {
                 console.error('🔑 AUTHENTICATION FAILED');
-                showErrorNotification('Invalid API key. Check AI Settings.');
+                showErrorNotification('Invalid API key. Check API Settings.');
                 throw error; // Don't retry
             }
 
@@ -482,9 +482,9 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
 
     // For local testing with API key
     if (!state.apiKey) {
-        const error = new Error('No API key set. Please configure AI settings first or deploy to Vercel with serverless function.');
+        const error = new Error('No API key set. Please configure settings first or deploy to Vercel with serverless function.');
         console.error('❌ No API key configured');
-        showErrorNotification('No API key configured. Open AI Settings to add your key.');
+        showErrorNotification('No API key configured. Open API Settings to add your key.');
         throw error;
     }
 
@@ -1939,7 +1939,7 @@ function renderEventTimelineEntries(event) {
                 }
                 html += `
                     <div class="timeline-gap">
-                        <div class="gap-indicator">Scenes ${sceneList.join(', ')} (AI can generate)</div>
+                        <div class="gap-indicator">Scenes ${sceneList.join(', ')} (can be generated)</div>
                     </div>
                 `;
             } else {
@@ -1948,7 +1948,7 @@ function renderEventTimelineEntries(event) {
                     html += `
                         <div class="timeline-entry generated">
                             <div class="timeline-scene">Scene ${gen.scene + 1}</div>
-                            <div class="timeline-badge">AI GENERATED</div>
+                            <div class="timeline-badge">AUTO-GENERATED</div>
                             <div class="timeline-description">${escapeHtml(gen.description)}</div>
                         </div>
                     `;

@@ -857,18 +857,18 @@ export async function parseScriptFile(
 
   // Try AI parsing first if enabled
   if (useAI) {
-    onProgress?.('Checking AI availability...');
+    onProgress?.('Checking smart parsing availability...');
     const aiAvailable = await checkAIAvailability();
 
     if (aiAvailable) {
       try {
-        onProgress?.('Analyzing script with AI...');
+        onProgress?.('Analyzing script...');
         return await parseScriptWithAIFallback(text, onProgress);
       } catch (error) {
-        onProgress?.('AI unavailable, using standard parsing...');
+        onProgress?.('Smart parsing unavailable, using standard parsing...');
       }
     } else {
-      onProgress?.('AI service unavailable, using standard parsing...');
+      onProgress?.('Smart parsing unavailable, using standard parsing...');
     }
   }
 

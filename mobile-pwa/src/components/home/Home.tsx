@@ -238,9 +238,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       const onProgress = (status: string) => {
         setProcessingStatus(status);
         // Increment progress based on status
-        if (status.includes('Checking AI')) {
+        if (status.includes('Checking')) {
           lastProgress = 20;
-        } else if (status.includes('Analyzing script with AI')) {
+        } else if (status.includes('Analyzing script')) {
           lastProgress = 30;
         } else if (status.includes('Analyzing script section')) {
           // Extract section number for progress
@@ -634,7 +634,7 @@ function UploadScreen({
             </svg>
             <div className="text-xs text-blue-700">
               <p className="font-medium mb-1">Faster with Schedule</p>
-              <p>The schedule contains the official cast list with character numbers. This allows instant, accurate character detection per scene without AI processing.</p>
+              <p>The schedule contains the official cast list with character numbers. This allows instant, accurate character detection per scene.</p>
             </div>
           </div>
         </div>

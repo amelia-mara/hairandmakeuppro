@@ -1139,7 +1139,7 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
               {isExtracting && (
                 <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
                   <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin mb-3" />
-                  <span className="text-white text-sm font-medium">Analyzing receipt...</span>
+                  <span className="text-white text-sm font-medium">Processing receipt...</span>
                 </div>
               )}
             </div>

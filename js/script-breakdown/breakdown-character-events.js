@@ -420,8 +420,8 @@ export function renderContinuityEventsTimeline(characterName) {
                         </div>
 
                         <div class="event-timeline-actions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
-                            <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
-                                Fill Gaps with AI
+                            <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Auto-fill progression gaps" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                Auto-fill Gaps
                             </button>
                             <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
                                 Edit
@@ -889,7 +889,7 @@ export async function fillProgressionGaps(characterName, eventId) {
     }
 
     try {
-        showToast('Generating progression stages with AI...', 'info');
+        showToast('Generating progression stages...', 'info');
 
         const { callAI } = await import('./ai-integration.js');
 
@@ -936,13 +936,13 @@ Return ONLY the JSON array, no other text.`;
             }
         } catch (parseError) {
             console.error('Failed to parse AI response:', response);
-            showToast('AI generated invalid progression data', 'error');
+            showToast('Auto-generated invalid progression data', 'error');
             return;
         }
 
         // Validate progression stages
         if (!Array.isArray(progressionStages) || progressionStages.length === 0) {
-            showToast('AI generated empty progression', 'error');
+            showToast('Auto-generated empty progression', 'error');
             return;
         }
 

@@ -143,7 +143,7 @@ export async function processScenesBatchForSynopsisAndCharacters(
   // Check if AI is available for synopsis generation
   const aiAvailable = await checkAIAvailability();
   if (!aiAvailable) {
-    onProgress?.('Character identification complete (AI unavailable for synopses)', 100);
+    onProgress?.('Character identification complete (synopsis generation unavailable)', 100);
     return results;
   }
 
@@ -286,11 +286,11 @@ export async function syncSceneSynopses(
     return updatedScenes;
   }
 
-  onProgress?.('Checking AI availability...', 15);
+  onProgress?.('Checking availability...', 15);
   const aiAvailable = await checkAIAvailability();
 
   if (!aiAvailable) {
-    onProgress?.('AI unavailable - some scenes lack synopses', 100);
+    onProgress?.('Smart analysis unavailable - some scenes lack synopses', 100);
     return updatedScenes;
   }
 
