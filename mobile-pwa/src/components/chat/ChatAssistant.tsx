@@ -122,7 +122,7 @@ export function ChatAssistant() {
         style={{
           boxShadow: '0 4px 20px rgba(201, 169, 97, 0.4)',
         }}
-        aria-label={isOpen ? 'Close chat' : 'Open chat assistant'}
+        aria-label={isOpen ? 'Close chat' : 'Open project chat'}
       >
         {isOpen ? (
           <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,7 +157,7 @@ export function ChatAssistant() {
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Claude Assistant
+                Project Chat
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -193,9 +193,9 @@ export function ChatAssistant() {
             {!hasMessages ? (
               // Welcome screen
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <div className="text-5xl mb-4">🎬</div>
+                <div className="text-5xl mb-4">✨</div>
                 <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                  Project Assistant
+                  Scriptie
                 </h3>
                 <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
                   I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
@@ -305,7 +305,7 @@ export function ChatAssistant() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your project..."
+                placeholder="Ask Scriptie..."
                 rows={1}
                 className="flex-1 input-field resize-none max-h-32"
                 style={{ minHeight: '44px' }}

@@ -377,7 +377,7 @@ export async function processScript() {
             selected: true
         }));
 
-        showToast('AI analysis failed. Basic character detection used. Please review characters.', 'warning');
+        showToast('Analysis failed. Basic character detection used. Please review characters.', 'warning');
 
         const { showCharacterConfirmationModal } = await import('./export-character-confirmation.js');
         showCharacterConfirmationModal();

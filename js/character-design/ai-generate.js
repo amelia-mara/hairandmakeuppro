@@ -36,7 +36,7 @@ function initAIGenerateTab() {
             <div class="generation-form">
 
                 <h3>GENERATE MAKEUP REFERENCE</h3>
-                <p class="ai-notice">Powered by AI - Creates reference images, not actor transformations</p>
+                <p class="ai-notice">Creates reference images, not actor transformations</p>
 
                 <div class="form-group">
                     <label>Based on Look</label>
@@ -92,7 +92,7 @@ function initAIGenerateTab() {
                 </button>
 
                 <p style="margin-top: 16px; font-size: 0.75em; color: var(--text-muted); text-align: center;">
-                    AI generation requires API key configuration
+                    Generation requires API key configuration
                 </p>
 
             </div>
@@ -262,7 +262,7 @@ function showPlaceholderResult(prompt) {
                         border: 1px solid rgba(201, 169, 97, 0.3); border-radius: 12px;
                         padding: 40px; margin-bottom: 16px;">
                 <p style="font-size: 1.1em; color: var(--accent-gold); margin-bottom: 12px;">
-                    AI Generation Demo
+                    Generation Demo
                 </p>
                 <p style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 20px;">
                     This feature requires API configuration to generate actual images.

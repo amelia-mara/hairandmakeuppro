@@ -352,8 +352,8 @@ ${scene.text || scene.content || ''}`;
                 window.highlightCharacterNames();
             }
 
-            updateTopLoadingBar('Analysis Complete', 'AI context created successfully', 100);
-            showToast('AI context created successfully', 'success');
+            updateTopLoadingBar('Analysis Complete', 'Context created successfully', 100);
+            showToast('Context created successfully', 'success');
             console.log('AI context initialized successfully');
 
             closeTopLoadingBar();
@@ -364,7 +364,7 @@ ${scene.text || scene.content || ''}`;
         return false;
     } catch (error) {
         console.error('Failed to initialize AI context:', error);
-        showToast('AI context creation failed: ' + error.message, 'error');
+        showToast('Context creation failed: ' + error.message, 'error');
         closeTopLoadingBar(0);
         return false;
     }

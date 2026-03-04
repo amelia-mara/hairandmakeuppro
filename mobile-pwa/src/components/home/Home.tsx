@@ -238,9 +238,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       const onProgress = (status: string) => {
         setProcessingStatus(status);
         // Increment progress based on status
-        if (status.includes('Checking AI')) {
+        if (status.includes('Checking')) {
           lastProgress = 20;
-        } else if (status.includes('Analyzing script with AI')) {
+        } else if (status.includes('Analyzing script')) {
           lastProgress = 30;
         } else if (status.includes('Analyzing script section')) {
           // Extract section number for progress

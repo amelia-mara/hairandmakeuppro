@@ -97,11 +97,11 @@ function renderSuggestionsSection(suggestions, sceneIndex) {
         return `
             <div class="suggestions-section empty">
                 <div class="section-header">
-                    <h4 class="section-title">AI Suggestions</h4>
+                    <h4 class="section-title">Suggestions</h4>
                 </div>
                 <div class="empty-state">
-                    <div class="empty-icon">🤖</div>
-                    <div class="empty-message">No AI suggestions available</div>
+                    <div class="empty-icon">✨</div>
+                    <div class="empty-message">No suggestions available</div>
                     <button onclick="generateSuggestions()" class="btn-primary">
                         Generate Suggestions
                     </button>
@@ -114,7 +114,7 @@ function renderSuggestionsSection(suggestions, sceneIndex) {
         <div class="suggestions-section">
             <div class="section-header">
                 <h4 class="section-title">
-                    AI Suggestions
+                    Suggestions
                     <span class="count-badge">${pending.length} pending</span>
                 </h4>
                 ${pending.length > 0 ? `
@@ -445,9 +445,9 @@ function getCategoryLabel(category) {
 function getSourceLabel(source) {
     switch (source) {
         case 'ai-suggestion':
-            return 'AI';
+            return 'Auto';
         case 'ai-suggestion-edited':
-            return 'AI (Edited)';
+            return 'Auto (Edited)';
         case 'manual':
             return 'Manual';
         default:
@@ -478,8 +478,8 @@ export function renderHybridToolbarButton() {
     return `
         <button class="toolbar-btn hybrid-mode-btn ${hasSuggestions ? 'has-suggestions' : ''}"
                 onclick="toggleHybridMode()"
-                title="Hybrid AI-Assisted Mode">
-            🤖 Hybrid Mode
+                title="Hybrid Smart-Assisted Mode">
+            ✨ Hybrid Mode
             ${progress.completed > 0 ? `<span class="progress-badge">${progress.completed}/${progress.total}</span>` : ''}
         </button>
     `;

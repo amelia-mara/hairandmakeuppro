@@ -83,7 +83,7 @@
         toggleBtn.id = 'chat-assistant-toggle';
         toggleBtn.className = 'chat-assistant-toggle';
         toggleBtn.innerHTML = '<span class="chat-icon">💬</span>';
-        toggleBtn.title = 'Open Claude Assistant';
+        toggleBtn.title = 'Open Project Chat';
         toggleBtn.onclick = toggleChat;
 
         // Chat container
@@ -104,50 +104,80 @@
      */
     function buildChatHTML() {
         const hasMessages = chatState.messages.length > 0;
+        const scriptieEnabled = localStorage.getItem('scriptieEnabled') === 'true';
 
         return `
             <div class="chat-assistant-header">
                 <div class="chat-assistant-header-left">
-                    <div class="chat-assistant-status ${chatState.hasApiKey ? '' : 'error'}"></div>
-                    <span class="chat-assistant-title">Claude Assistant</span>
+                    <span class="chat-assistant-title">Project Chat</span>
                 </div>
                 <div class="chat-assistant-header-actions">
                     <button class="chat-assistant-header-btn" title="Clear chat">🗑</button>
                     <button class="chat-assistant-header-btn" title="Close">✕</button>
                 </div>
             </div>
-            ${hasMessages ? `
-                <div class="chat-assistant-messages" id="chat-assistant-messages"></div>
-            ` : `
-                <div class="chat-assistant-welcome" id="chat-assistant-welcome">
-                    <div class="chat-assistant-welcome-icon">🎬</div>
-                    <div class="chat-assistant-welcome-title">Project Assistant</div>
+            <div class="chat-mode-toggle">
+                <button class="chat-mode-btn ${!scriptieEnabled ? 'active' : ''}" id="team-chat-tab" onclick="window.chatAssistant.setMode('team')">
+                    💬 Team Chat
+                </button>
+                <button class="chat-mode-btn ${scriptieEnabled ? 'active' : ''}" id="scriptie-tab" onclick="window.chatAssistant.setMode('scriptie')">
+                    ✨ Scriptie
+                    <span class="chat-mode-sub">Project assistant</span>
+                </button>
+            </div>
+            <div id="team-chat-panel" style="display: ${scriptieEnabled ? 'none' : 'flex'}; flex-direction: column; flex: 1; overflow: hidden;">
+                <div class="chat-assistant-welcome" style="flex: 1; display: flex;">
+                    <div class="chat-assistant-welcome-icon">💬</div>
+                    <div class="chat-assistant-welcome-title">Project Chat</div>
                     <div class="chat-assistant-welcome-text">
-                        I have access to your entire project data including scenes, characters, breakdowns, and continuity events. How can I help?
-                    </div>
-                    <div class="chat-assistant-suggestions">
-                        <button class="chat-assistant-suggestion" data-prompt="Give me an overview of all characters in this project">
-                            Overview of all characters
-                        </button>
-                        <button class="chat-assistant-suggestion" data-prompt="What continuity events should I track across scenes?">
-                            Continuity tracking summary
-                        </button>
-                        <button class="chat-assistant-suggestion" data-prompt="Which scenes have the most complex hair and makeup requirements?">
-                            Complex H&M scenes
-                        </button>
+                        Synced project messaging for your team. Share updates, notes, and coordinate on set.
                     </div>
                 </div>
-            `}
-            <div class="chat-assistant-input-area">
-                <textarea
-                    id="chat-assistant-input"
-                    class="chat-assistant-input"
-                    placeholder="Ask about your project..."
-                    rows="1"
-                ></textarea>
-                <button id="chat-assistant-send" class="chat-assistant-send" onclick="window.chatAssistant.send()">
-                    Send
-                </button>
+                <div class="chat-assistant-input-area">
+                    <textarea
+                        class="chat-assistant-input"
+                        placeholder="Message your team..."
+                        rows="1"
+                    ></textarea>
+                    <button class="chat-assistant-send">
+                        Send
+                    </button>
+                </div>
+            </div>
+            <div id="scriptie-panel" style="display: ${scriptieEnabled ? 'flex' : 'none'}; flex-direction: column; flex: 1; overflow: hidden;">
+                ${hasMessages ? `
+                    <div class="chat-assistant-messages" id="chat-assistant-messages"></div>
+                ` : `
+                    <div class="chat-assistant-welcome" id="chat-assistant-welcome">
+                        <div class="chat-assistant-welcome-icon">✨</div>
+                        <div class="chat-assistant-welcome-title">Scriptie</div>
+                        <div class="chat-assistant-welcome-text">
+                            I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
+                        </div>
+                        <div class="chat-assistant-suggestions">
+                            <button class="chat-assistant-suggestion" data-prompt="Give me an overview of all characters in this project">
+                                Overview of all characters
+                            </button>
+                            <button class="chat-assistant-suggestion" data-prompt="What continuity events should I track across scenes?">
+                                Continuity tracking summary
+                            </button>
+                            <button class="chat-assistant-suggestion" data-prompt="Which scenes have the most complex hair and makeup requirements?">
+                                Complex H&M scenes
+                            </button>
+                        </div>
+                    </div>
+                `}
+                <div class="chat-assistant-input-area">
+                    <textarea
+                        id="chat-assistant-input"
+                        class="chat-assistant-input"
+                        placeholder="Ask Scriptie..."
+                        rows="1"
+                    ></textarea>
+                    <button id="chat-assistant-send" class="chat-assistant-send" onclick="window.chatAssistant.send()">
+                        Send
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -289,7 +319,7 @@
 
         checkApiKey();
         if (!chatState.hasApiKey) {
-            addMessage('assistant', 'Please configure your Anthropic API key in AI Settings first.');
+            addMessage('assistant', 'Please configure your API key in Settings first.');
             return;
         }
 
@@ -436,7 +466,7 @@
         const projectContext = buildProjectContext();
 
         // Build system prompt
-        const systemPrompt = `You are the AI Project Specialist for this film/TV production, integrated into Hair & Makeup Pro. You have comprehensive knowledge of the entire project including:
+        const systemPrompt = `You are Scriptie, the Project Specialist for this film/TV production, integrated into Hair & Makeup Pro. You have comprehensive knowledge of the entire project including:
 
 - Script content and scene details
 - All characters and their profiles
@@ -825,6 +855,30 @@ ${projectContext}
         return context;
     }
 
+    /**
+     * Switch between Team Chat and Scriptie modes
+     */
+    function setMode(mode) {
+        const teamPanel = document.getElementById('team-chat-panel');
+        const scriptiePanel = document.getElementById('scriptie-panel');
+        const teamTab = document.getElementById('team-chat-tab');
+        const scriptieTab = document.getElementById('scriptie-tab');
+
+        if (mode === 'scriptie') {
+            if (teamPanel) teamPanel.style.display = 'none';
+            if (scriptiePanel) scriptiePanel.style.display = 'flex';
+            if (teamTab) teamTab.classList.remove('active');
+            if (scriptieTab) scriptieTab.classList.add('active');
+            localStorage.setItem('scriptieEnabled', 'true');
+        } else {
+            if (teamPanel) teamPanel.style.display = 'flex';
+            if (scriptiePanel) scriptiePanel.style.display = 'none';
+            if (teamTab) teamTab.classList.add('active');
+            if (scriptieTab) scriptieTab.classList.remove('active');
+            localStorage.setItem('scriptieEnabled', 'false');
+        }
+    }
+
     // Expose public API
     window.chatAssistant = {
         init: init,
@@ -833,7 +887,8 @@ ${projectContext}
         toggle: toggleChat,
         clear: clearChat,
         send: sendMessage,
-        sendSuggestion: sendSuggestion
+        sendSuggestion: sendSuggestion,
+        setMode: setMode
     };
 
     // Auto-initialize

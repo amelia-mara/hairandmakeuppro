@@ -1959,7 +1959,7 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label">Claude API Key</label>
+                    <label class="form-label">API Key</label>
                     <input type="password" class="form-input" id="claude-api-key" placeholder="sk-ant-...">
                     <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
                         Your API key is stored locally in your browser's localStorage. Never share your API key.
@@ -1968,7 +1968,7 @@
                 <div class="form-group" style="margin-top: 16px;">
                     <label class="form-label">Note</label>
                     <div style="background: rgba(232, 168, 124, 0.1); padding: 12px; border-radius: 6px; font-size: 13px; color: var(--text-secondary);">
-                        The Claude API is used for OCR receipt extraction. In production, API calls should be made through a secure server. This local storage approach is for personal use only.
+                        The API is used for OCR receipt extraction. In production, API calls should be made through a secure server. This local storage approach is for personal use only.
                     </div>
                 </div>
             </div>
@@ -3959,7 +3959,7 @@
             const apiKey = budgetManager.data.apiSettings.claudeApiKey;
 
             if (!apiKey) {
-                throw new Error('API key not configured. Please set your Claude API key in Settings.');
+                throw new Error('API key not configured. Please set your API key in Settings.');
             }
 
             // Extract base64 data from data URL
@@ -4086,13 +4086,13 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
             } else {
                 // Call Claude API for OCR
                 if (!budgetManager.data.apiSettings.claudeApiKey) {
-                    budgetManager.showNotification('Please set your Claude API key in Settings first', 'warning');
+                    budgetManager.showNotification('Please set your API key in Settings first', 'warning');
                     addReceiptLineItem(); // Add empty line item for manual entry
                     return;
                 }
 
                 try {
-                    budgetManager.showNotification('Processing receipt with AI...', 'info');
+                    budgetManager.showNotification('Processing receipt...', 'info');
                     const ocrResult = await callClaudeAPI(receipt.file_data, receipt.file_type);
 
                     // Store OCR response
