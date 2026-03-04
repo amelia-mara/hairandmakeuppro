@@ -28,9 +28,9 @@
 
 :root {
   /* Night sky palette */
-  --bg-primary: #080706;
-  --bg-surface: #0e0d0b;
-  --bg-card: #161412;
+  --bg-primary: #070605;
+  --bg-surface: #0d0c0a;
+  --bg-card: #151311;
   --bg-card-hover: #1c1916;
   --bg-elevated: #201d18;
 
@@ -51,25 +51,26 @@
   --border-medium: rgba(201, 169, 97, 0.18);
   --border-strong: rgba(201, 169, 97, 0.30);
 
-  /* Glass panel shadows — the key to 3D depth */
+  /* 3D Glass panel shadows — HEAVY depth */
   --glass-shadow:
-    0 1px 0 0 rgba(201, 169, 97, 0.08) inset,       /* top inner rim highlight */
-    0 -1px 0 0 rgba(0, 0, 0, 0.3) inset,              /* bottom inner shadow */
-    0 4px 16px -2px rgba(0, 0, 0, 0.6),               /* drop shadow */
-    0 1px 3px rgba(0, 0, 0, 0.4);                     /* tight shadow */
+    0 2px 0 0 rgba(201, 169, 97, 0.10) inset,        /* top inner rim — bright */
+    0 -2px 4px 0 rgba(0, 0, 0, 0.4) inset,            /* bottom inner darkness */
+    0 6px 20px -2px rgba(0, 0, 0, 0.7),               /* main drop shadow */
+    0 2px 6px rgba(0, 0, 0, 0.5),                     /* tight shadow */
+    0 0 1px rgba(201, 169, 97, 0.08);                 /* edge glow */
 
   --glass-shadow-hover:
-    0 1px 0 0 rgba(201, 169, 97, 0.15) inset,
-    0 -1px 0 0 rgba(0, 0, 0, 0.3) inset,
-    0 8px 32px -4px rgba(0, 0, 0, 0.7),
-    0 2px 8px rgba(0, 0, 0, 0.5),
-    0 0 40px -8px rgba(201, 169, 97, 0.06);
+    0 2px 0 0 rgba(201, 169, 97, 0.18) inset,
+    0 -2px 4px 0 rgba(0, 0, 0, 0.4) inset,
+    0 12px 40px -4px rgba(0, 0, 0, 0.8),
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    0 0 60px -10px rgba(201, 169, 97, 0.10);
 
   --glass-shadow-stat:
-    0 1px 0 0 rgba(201, 169, 97, 0.10) inset,
-    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
-    0 3px 12px -2px rgba(0, 0, 0, 0.5),
-    0 1px 2px rgba(0, 0, 0, 0.3);
+    0 2px 0 0 rgba(201, 169, 97, 0.12) inset,
+    0 -2px 4px 0 rgba(0, 0, 0, 0.35) inset,
+    0 4px 16px -2px rgba(0, 0, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.4);
 
   /* Status */
   --status-active: #52c186;
@@ -101,43 +102,70 @@ body {
   min-height: 100vh;
 }
 
-/* ━━━ Ambient light — radial sunrise from top-right ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AMBIENT LIGHT — Intense sunrise from top-right
+   Multiple layered radial gradients for depth
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .ambient-light {
   position: relative;
   min-height: 100vh;
+  /* Warm gradient baked into the background itself */
+  background:
+    radial-gradient(
+      ellipse 800px 600px at calc(100% - 40px) 30px,
+      rgba(201, 169, 97, 0.12) 0%,
+      rgba(201, 169, 97, 0.06) 25%,
+      rgba(201, 169, 97, 0.02) 50%,
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 1200px 900px at calc(100% - 20px) 0px,
+      rgba(180, 140, 60, 0.07) 0%,
+      rgba(160, 120, 40, 0.03) 35%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 500px 400px at calc(100% - 60px) 60px,
+      rgba(220, 190, 120, 0.08) 0%,
+      transparent 50%
+    ),
+    var(--bg-primary);
 }
+/* Sharp inner glow — bright core near the avatar */
 .ambient-light::before {
   content: '';
   position: fixed;
-  top: -120px;
-  right: -60px;
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(201, 169, 97, 0.07) 0%,
-    rgba(201, 169, 97, 0.03) 30%,
-    rgba(201, 169, 97, 0.01) 50%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-.ambient-light::after {
-  content: '';
-  position: fixed;
-  top: -200px;
-  right: -100px;
+  top: -80px;
+  right: -40px;
   width: 500px;
   height: 500px;
   background: radial-gradient(
     circle at center,
-    rgba(201, 169, 97, 0.04) 0%,
-    transparent 60%
+    rgba(201, 169, 97, 0.14) 0%,
+    rgba(201, 169, 97, 0.06) 30%,
+    rgba(201, 169, 97, 0.02) 50%,
+    transparent 65%
   );
   pointer-events: none;
   z-index: 0;
-  filter: blur(40px);
+}
+/* Soft wide halo — warm wash across the page */
+.ambient-light::after {
+  content: '';
+  position: fixed;
+  top: -300px;
+  right: -200px;
+  width: 1000px;
+  height: 800px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(201, 169, 97, 0.06) 0%,
+    rgba(180, 140, 60, 0.03) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(30px);
 }
 .ambient-light > * {
   position: relative;
@@ -155,73 +183,79 @@ body {
   outline-offset: 2px;
 }
 
-/* ━━━ Glass card base ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GLASS CARD — base class with thick 3D rim light
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .card {
   background: linear-gradient(
-    170deg,
-    rgba(30, 27, 22, 0.95) 0%,
-    rgba(22, 20, 18, 0.98) 40%,
-    rgba(18, 16, 14, 1) 100%
+    168deg,
+    rgba(32, 28, 22, 0.97) 0%,
+    rgba(21, 19, 17, 0.99) 35%,
+    rgba(15, 13, 11, 1) 100%
   );
   border: 1px solid var(--border-card);
-  border-top-color: rgba(201, 169, 97, 0.14);
+  border-top-color: rgba(201, 169, 97, 0.18);
   border-radius: 16px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--glass-shadow);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Inner light wash from the sun */
 .card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 50%;
+  height: 55%;
   background: linear-gradient(
-    180deg,
-    rgba(201, 169, 97, 0.05) 0%,
+    168deg,
+    rgba(201, 169, 97, 0.07) 0%,
+    rgba(201, 169, 97, 0.02) 35%,
     transparent 100%
   );
   pointer-events: none;
   border-radius: inherit;
 }
-/* Gold rim light — thick top edge reflection */
+/* THICK gold rim — the key to that glass edge shine */
 .card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 8%;
-  right: 8%;
-  height: 2px;
+  left: 6%;
+  right: 6%;
+  height: 3px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(201, 169, 97, 0.15) 20%,
-    rgba(201, 169, 97, 0.35) 50%,
-    rgba(201, 169, 97, 0.15) 80%,
+    rgba(201, 169, 97, 0.20) 15%,
+    rgba(201, 169, 97, 0.50) 50%,
+    rgba(201, 169, 97, 0.20) 85%,
     transparent 100%
   );
-  border-radius: 2px;
-  filter: blur(0.5px);
+  border-radius: 0 0 3px 3px;
+  filter: blur(0.8px);
 }
 .card:hover {
   border-color: var(--border-medium);
-  border-top-color: rgba(201, 169, 97, 0.22);
+  border-top-color: rgba(201, 169, 97, 0.28);
   box-shadow: var(--glass-shadow-hover);
   transform: translateY(-3px);
 }
 
-/* ━━━ Stat card — solid glass panel ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STAT CARD — thick glass panel with gold bar
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .stat-card {
   background: linear-gradient(
-    170deg,
-    rgba(30, 27, 22, 0.95) 0%,
-    rgba(22, 20, 18, 0.98) 40%,
-    rgba(18, 16, 14, 1) 100%
+    168deg,
+    rgba(32, 28, 22, 0.97) 0%,
+    rgba(21, 19, 17, 0.99) 35%,
+    rgba(15, 13, 11, 1) 100%
   );
   border: 1px solid var(--border-card);
-  border-top-color: rgba(201, 169, 97, 0.15);
+  border-top-color: rgba(201, 169, 97, 0.20);
   border-radius: 16px;
   padding: 24px 28px;
   position: relative;
@@ -229,49 +263,49 @@ body {
   box-shadow: var(--glass-shadow-stat);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Inner light reflection from "sun" */
+/* Inner light from top-right sun */
 .stat-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 60%;
+  height: 65%;
   background: linear-gradient(
-    170deg,
-    rgba(201, 169, 97, 0.06) 0%,
-    rgba(201, 169, 97, 0.02) 40%,
+    150deg,
+    rgba(201, 169, 97, 0.09) 0%,
+    rgba(201, 169, 97, 0.03) 40%,
     transparent 100%
   );
   pointer-events: none;
 }
-/* Thick gold rim — light catching the top edge */
+/* STRONG gold rim bar */
 .stat-card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 12%;
-  right: 12%;
-  height: 2px;
+  left: 10%;
+  right: 10%;
+  height: 3px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(201, 169, 97, 0.18) 20%,
-    rgba(201, 169, 97, 0.40) 50%,
-    rgba(201, 169, 97, 0.18) 80%,
+    rgba(201, 169, 97, 0.25) 15%,
+    rgba(201, 169, 97, 0.55) 50%,
+    rgba(201, 169, 97, 0.25) 85%,
     transparent 100%
   );
-  border-radius: 2px;
-  filter: blur(0.5px);
+  border-radius: 0 0 3px 3px;
+  filter: blur(0.8px);
 }
 .stat-card:hover {
   border-color: var(--border-medium);
-  border-top-color: rgba(201, 169, 97, 0.25);
+  border-top-color: rgba(201, 169, 97, 0.30);
   box-shadow:
-    0 1px 0 0 rgba(201, 169, 97, 0.15) inset,
-    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
-    0 6px 24px -4px rgba(0, 0, 0, 0.6),
-    0 0 30px -8px rgba(201, 169, 97, 0.06);
+    0 2px 0 0 rgba(201, 169, 97, 0.18) inset,
+    0 -2px 4px 0 rgba(0, 0, 0, 0.35) inset,
+    0 8px 28px -4px rgba(0, 0, 0, 0.7),
+    0 0 40px -8px rgba(201, 169, 97, 0.08);
   transform: translateY(-2px);
 }
 .stat-card .stat-label {
@@ -290,19 +324,21 @@ body {
   line-height: 1;
   letter-spacing: -0.02em;
   position: relative;
-  text-shadow: 0 0 30px rgba(201, 169, 97, 0.15);
+  text-shadow: 0 0 40px rgba(201, 169, 97, 0.20);
 }
 
-/* ━━━ Project card — main glass panel ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PROJECT CARD — main glass panel
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .project-card {
   background: linear-gradient(
-    170deg,
-    rgba(30, 27, 22, 0.95) 0%,
-    rgba(22, 20, 18, 0.98) 35%,
-    rgba(16, 14, 12, 1) 100%
+    168deg,
+    rgba(32, 28, 22, 0.97) 0%,
+    rgba(21, 19, 17, 0.99) 30%,
+    rgba(13, 12, 10, 1) 100%
   );
   border: 1px solid var(--border-card);
-  border-top-color: rgba(201, 169, 97, 0.14);
+  border-top-color: rgba(201, 169, 97, 0.18);
   border-radius: 16px;
   overflow: hidden;
   min-height: 340px;
@@ -312,46 +348,45 @@ body {
   box-shadow: var(--glass-shadow);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Inner top glow */
 .project-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 45%;
+  height: 50%;
   background: linear-gradient(
-    170deg,
-    rgba(201, 169, 97, 0.05) 0%,
-    rgba(201, 169, 97, 0.015) 40%,
+    168deg,
+    rgba(201, 169, 97, 0.07) 0%,
+    rgba(201, 169, 97, 0.02) 35%,
     transparent 100%
   );
   pointer-events: none;
   z-index: 0;
 }
-/* Thick gold rim light */
+/* THICK gold rim */
 .project-card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 8%;
-  right: 8%;
-  height: 2px;
+  left: 6%;
+  right: 6%;
+  height: 3px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(201, 169, 97, 0.15) 15%,
-    rgba(201, 169, 97, 0.35) 50%,
-    rgba(201, 169, 97, 0.15) 85%,
+    rgba(201, 169, 97, 0.20) 12%,
+    rgba(201, 169, 97, 0.50) 50%,
+    rgba(201, 169, 97, 0.20) 88%,
     transparent 100%
   );
-  border-radius: 2px;
-  filter: blur(0.5px);
+  border-radius: 0 0 3px 3px;
+  filter: blur(0.8px);
   z-index: 1;
 }
 .project-card:hover {
   border-color: var(--border-medium);
-  border-top-color: rgba(201, 169, 97, 0.25);
+  border-top-color: rgba(201, 169, 97, 0.30);
   box-shadow: var(--glass-shadow-hover);
   transform: translateY(-4px);
 }
@@ -368,30 +403,29 @@ body {
 }
 .project-card-footer {
   padding: 14px 20px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   gap: 8px;
   position: relative;
   z-index: 1;
-  /* Bottom edge: darker, like glass shadow side */
   box-shadow: 0 1px 0 0 rgba(201, 169, 97, 0.03) inset;
 }
 
-/* Progress bar — glass tube with gold fill */
+/* Progress bar — glass tube */
 .progress-bar-track {
   height: 3px;
   background: rgba(201, 169, 97, 0.06);
   border-radius: 2px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) inset;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) inset;
 }
 .progress-bar-fill {
   height: 100%;
   border-radius: 2px;
   background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-dim));
   transition: width 0.5s ease;
-  box-shadow: 0 0 6px rgba(201, 169, 97, 0.3);
+  box-shadow: 0 0 8px rgba(201, 169, 97, 0.35);
 }
 
 /* Status dot */
@@ -405,7 +439,7 @@ body {
 .status-dot.setup { background: var(--status-pending); box-shadow: 0 0 8px rgba(232, 168, 124, 0.5); }
 .status-dot.wrapped { background: var(--text-muted); }
 
-/* New project card — dashed glass outline */
+/* New project card — dashed glass */
 .new-project-card {
   border: 2px dashed var(--border-medium);
   border-radius: 16px;
@@ -417,21 +451,21 @@ body {
   padding: 60px 24px;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(22, 20, 18, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: rgba(21, 19, 17, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 .new-project-card:hover {
   border-color: var(--accent-gold);
   border-style: solid;
   background: linear-gradient(
-    170deg,
-    rgba(201, 169, 97, 0.04) 0%,
-    rgba(22, 20, 18, 0.6) 100%
+    168deg,
+    rgba(201, 169, 97, 0.05) 0%,
+    rgba(21, 19, 17, 0.6) 100%
   );
   transform: translateY(-4px);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 40px -8px rgba(201, 169, 97, 0.06);
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 50px -10px rgba(201, 169, 97, 0.08);
 }
 .new-project-card .icon-circle {
   width: 56px;
@@ -448,10 +482,12 @@ body {
 .new-project-card:hover .icon-circle {
   border-color: var(--accent-gold);
   background: var(--accent-gold-soft);
-  box-shadow: 0 0 20px rgba(201, 169, 97, 0.1);
+  box-shadow: 0 0 24px rgba(201, 169, 97, 0.12);
 }
 
-/* ━━━ Buttons ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUTTONS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .btn-gold {
   background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
   border: 1px solid rgba(201, 169, 97, 0.4);
@@ -459,7 +495,7 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.1) inset;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.12) inset;
 }
 .btn-gold:hover {
   background: linear-gradient(135deg, #c9a961 0%, #b89651 100%);
@@ -485,7 +521,7 @@ body {
 }
 
 .btn-action {
-  background: rgba(22, 20, 18, 0.5);
+  background: rgba(21, 19, 17, 0.6);
   border: 1px solid var(--border-card);
   color: var(--text-label);
   font-size: 0.75rem;
@@ -494,7 +530,7 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 .btn-action:hover {
   border-color: var(--border-medium);
@@ -512,17 +548,17 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 .btn-action-gold:hover {
   background: var(--accent-gold);
   color: #0c0a08;
   border-color: var(--accent-gold);
-  box-shadow: 0 0 16px rgba(201, 169, 97, 0.2);
+  box-shadow: 0 0 20px rgba(201, 169, 97, 0.2);
 }
 
 .btn-action-danger {
-  background: rgba(22, 20, 18, 0.5);
+  background: rgba(21, 19, 17, 0.6);
   border: 1px solid var(--border-card);
   color: var(--text-label);
   font-size: 0.75rem;
@@ -531,64 +567,125 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 .btn-action-danger:hover {
   border-color: #e85d75;
   color: #e85d75;
 }
 
-/* ━━━ Filter pill — mini glass panels ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FILTER PILLS — 3D glass capsules with real depth
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .filter-pill {
-  padding: 8px 20px;
-  background: rgba(22, 20, 18, 0.6);
-  border: 1px solid var(--border-card);
-  border-radius: 10px;
+  padding: 9px 22px;
+  background: linear-gradient(
+    170deg,
+    rgba(30, 27, 22, 0.95) 0%,
+    rgba(20, 18, 15, 0.98) 50%,
+    rgba(14, 12, 10, 1) 100%
+  );
+  border: 1px solid rgba(201, 169, 97, 0.10);
+  border-top-color: rgba(201, 169, 97, 0.16);
+  border-radius: 12px;
   color: var(--text-label);
   font-size: 0.8125rem;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+  /* 3D layered shadow — capsule sitting on surface */
+  box-shadow:
+    0 1px 0 0 rgba(201, 169, 97, 0.06) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.3) inset,
+    0 3px 10px -2px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+}
+/* Subtle gold rim on pills too */
+.filter-pill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 97, 0.15) 20%,
+    rgba(201, 169, 97, 0.30) 50%,
+    rgba(201, 169, 97, 0.15) 80%,
+    transparent 100%
+  );
+  border-radius: 0 0 2px 2px;
+  filter: blur(0.5px);
 }
 .filter-pill:hover {
   border-color: var(--border-medium);
+  border-top-color: rgba(201, 169, 97, 0.22);
   color: var(--text-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 1px 0 0 rgba(201, 169, 97, 0.10) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.3) inset,
+    0 5px 16px -3px rgba(0, 0, 0, 0.6),
+    0 2px 5px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
 }
 .filter-pill.active {
-  background: linear-gradient(135deg, rgba(201, 169, 97, 0.85) 0%, rgba(184, 150, 81, 0.85) 100%);
-  border-color: rgba(201, 169, 97, 0.4);
+  background: linear-gradient(
+    170deg,
+    rgba(210, 180, 110, 0.95) 0%,
+    rgba(190, 155, 80, 0.90) 50%,
+    rgba(170, 135, 60, 0.85) 100%
+  );
+  border-color: rgba(201, 169, 97, 0.45);
+  border-top-color: rgba(230, 210, 160, 0.50);
   color: #0c0a08;
   font-weight: 600;
-  box-shadow: 0 2px 12px rgba(201, 169, 97, 0.15), 0 1px 0 0 rgba(255, 255, 255, 0.1) inset;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.15) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.2) inset,
+    0 3px 14px -2px rgba(201, 169, 97, 0.20),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 20px -4px rgba(201, 169, 97, 0.12);
+}
+.filter-pill.active::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 240, 200, 0.30) 20%,
+    rgba(255, 240, 200, 0.50) 50%,
+    rgba(255, 240, 200, 0.30) 80%,
+    transparent 100%
+  );
 }
 
 /* ━━━ Form ━━━ */
 .input-field {
   width: 100%;
   padding: 12px 16px;
-  background: rgba(14, 13, 11, 0.8);
+  background: rgba(10, 9, 8, 0.9);
   border: 1px solid var(--border-card);
   border-radius: 10px;
   color: var(--text-primary);
   font-size: 0.875rem;
   font-family: var(--font-sans);
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) inset, 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .input-field::placeholder { color: var(--text-muted); }
 .input-field:hover { border-color: var(--border-medium); }
 .input-field:focus {
   outline: none;
   border-color: var(--accent-gold);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset, 0 0 0 3px var(--accent-gold-soft);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) inset, 0 0 0 3px var(--accent-gold-soft), 0 0 20px -4px rgba(201, 169, 97, 0.10);
 }
 
 .select-field {
   padding: 10px 16px;
-  background: rgba(14, 13, 11, 0.8);
+  background: rgba(10, 9, 8, 0.9);
   border: 1px solid var(--border-card);
   border-radius: 10px;
   color: var(--text-primary);
@@ -597,7 +694,7 @@ body {
   transition: all 0.3s ease;
   cursor: pointer;
   appearance: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) inset, 0 1px 2px rgba(0, 0, 0, 0.2);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235c5448' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -607,7 +704,7 @@ body {
 .select-field:focus {
   outline: none;
   border-color: var(--accent-gold);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset, 0 0 0 3px var(--accent-gold-soft);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) inset, 0 0 0 3px var(--accent-gold-soft);
 }
 
 /* ━━━ Upload zone ━━━ */
@@ -636,47 +733,68 @@ body {
 /* ━━━ Glass utility ━━━ */
 .glass {
   background: linear-gradient(
-    170deg,
-    rgba(30, 27, 22, 0.95) 0%,
-    rgba(22, 20, 18, 0.98) 40%,
-    rgba(18, 16, 14, 1) 100%
+    168deg,
+    rgba(32, 28, 22, 0.97) 0%,
+    rgba(21, 19, 17, 0.99) 40%,
+    rgba(15, 13, 11, 1) 100%
   );
   border: 1px solid var(--border-card);
   border-radius: 16px;
   box-shadow: var(--glass-shadow);
 }
 
-/* ━━━ Header — gold bar across the bottom ━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HEADER — with STRONG gold horizon bar
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .app-header {
   padding: 20px 40px;
   position: relative;
   background: linear-gradient(
     180deg,
-    rgba(20, 18, 14, 0.98) 0%,
-    rgba(14, 13, 11, 1) 100%
+    rgba(22, 20, 16, 0.98) 0%,
+    rgba(13, 12, 10, 1) 100%
   );
-  border-bottom: 1px solid rgba(201, 169, 97, 0.08);
+  border-bottom: 1px solid rgba(201, 169, 97, 0.10);
   box-shadow:
-    0 1px 0 0 rgba(201, 169, 97, 0.03) inset,
-    0 4px 16px rgba(0, 0, 0, 0.4);
+    0 1px 0 0 rgba(201, 169, 97, 0.04) inset,
+    0 6px 24px rgba(0, 0, 0, 0.5);
 }
-/* Strong gold line — the horizon */
+/* STRONG gold horizon line */
 .app-header::after {
   content: '';
   position: absolute;
   bottom: -1px;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(201, 169, 97, 0.10) 15%,
-    rgba(201, 169, 97, 0.35) 50%,
-    rgba(201, 169, 97, 0.10) 85%,
+    rgba(201, 169, 97, 0.12) 10%,
+    rgba(201, 169, 97, 0.45) 50%,
+    rgba(201, 169, 97, 0.12) 90%,
     transparent 100%
   );
   filter: blur(0.5px);
+}
+/* Secondary soft glow under the bar */
+.app-header::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 10%;
+  right: 10%;
+  height: 8px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 97, 0.06) 25%,
+    rgba(201, 169, 97, 0.10) 50%,
+    rgba(201, 169, 97, 0.06) 75%,
+    transparent 100%
+  );
+  filter: blur(4px);
+  z-index: 2;
 }
 
 /* ━━━ Scroll arrow ━━━ */
@@ -699,7 +817,7 @@ body {
   border-color: var(--border-medium);
   color: var(--accent-gold);
   background: var(--accent-gold-glow);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 16px rgba(201, 169, 97, 0.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(201, 169, 97, 0.06);
 }
 
 /* ━━━ Animations ━━━ */

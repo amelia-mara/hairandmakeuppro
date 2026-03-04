@@ -24,7 +24,7 @@ export function TopBar() {
               fontWeight: 600,
               fontSize: '0.8125rem',
               textDecoration: 'none',
-              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.2)',
+              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)',
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -36,24 +36,33 @@ export function TopBar() {
             </svg>
           </a>
 
-          {/* Avatar — THE SUN */}
+          {/* Avatar — THE SUN — intense radiance */}
           <div style={{ position: 'relative' }}>
-            {/* Outer glow rings */}
+            {/* Outermost soft halo — wide warm wash */}
             <div style={{
               position: 'absolute',
-              inset: '-12px',
+              inset: '-40px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.12) 0%, rgba(201, 169, 97, 0.04) 40%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.08) 0%, rgba(201, 169, 97, 0.03) 40%, transparent 65%)',
               pointerEvents: 'none',
-              animation: 'pulse-glow 3s ease-in-out infinite',
+              filter: 'blur(12px)',
             }} />
+            {/* Mid halo — visible warm ring */}
             <div style={{
               position: 'absolute',
-              inset: '-24px',
+              inset: '-20px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.05) 0%, transparent 60%)',
+              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.18) 0%, rgba(201, 169, 97, 0.06) 45%, transparent 70%)',
               pointerEvents: 'none',
-              filter: 'blur(8px)',
+              animation: 'pulse-glow 4s ease-in-out infinite',
+            }} />
+            {/* Inner corona — bright tight glow */}
+            <div style={{
+              position: 'absolute',
+              inset: '-8px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(201, 169, 97, 0.25) 0%, rgba(201, 169, 97, 0.08) 50%, transparent 70%)',
+              pointerEvents: 'none',
             }} />
             <button
               style={{
@@ -61,8 +70,8 @@ export function TopBar() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #dbbf72 0%, #c9a961 40%, #a07628 100%)',
-                border: '1px solid rgba(201, 169, 97, 0.5)',
+                background: 'linear-gradient(135deg, #e0c87a 0%, #c9a961 35%, #a07628 100%)',
+                border: '1.5px solid rgba(220, 195, 130, 0.55)',
                 color: '#0c0a08',
                 fontWeight: 700,
                 fontSize: '0.8125rem',
@@ -71,16 +80,34 @@ export function TopBar() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 16px rgba(201, 169, 97, 0.25), 0 0 40px rgba(201, 169, 97, 0.10), 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.15) inset',
+                boxShadow: [
+                  '0 0 20px rgba(201, 169, 97, 0.35)',
+                  '0 0 50px rgba(201, 169, 97, 0.15)',
+                  '0 0 80px rgba(201, 169, 97, 0.06)',
+                  '0 2px 4px rgba(0, 0, 0, 0.3)',
+                  '0 1px 0 0 rgba(255, 240, 200, 0.25) inset',
+                ].join(', '),
                 zIndex: 1,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.08)';
-                e.currentTarget.style.boxShadow = '0 0 24px rgba(201, 169, 97, 0.35), 0 0 60px rgba(201, 169, 97, 0.15), 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.2) inset';
+                e.currentTarget.style.transform = 'scale(1.1)';
+                e.currentTarget.style.boxShadow = [
+                  '0 0 30px rgba(201, 169, 97, 0.45)',
+                  '0 0 70px rgba(201, 169, 97, 0.20)',
+                  '0 0 100px rgba(201, 169, 97, 0.10)',
+                  '0 2px 4px rgba(0, 0, 0, 0.3)',
+                  '0 1px 0 0 rgba(255, 240, 200, 0.30) inset',
+                ].join(', ');
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 0 16px rgba(201, 169, 97, 0.25), 0 0 40px rgba(201, 169, 97, 0.10), 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.15) inset';
+                e.currentTarget.style.boxShadow = [
+                  '0 0 20px rgba(201, 169, 97, 0.35)',
+                  '0 0 50px rgba(201, 169, 97, 0.15)',
+                  '0 0 80px rgba(201, 169, 97, 0.06)',
+                  '0 2px 4px rgba(0, 0, 0, 0.3)',
+                  '0 1px 0 0 rgba(255, 240, 200, 0.25) inset',
+                ].join(', ');
               }}
             >
               AM
@@ -92,7 +119,7 @@ export function TopBar() {
       <style>{`
         @keyframes pulse-glow {
           0%, 100% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.05); }
+          50% { opacity: 1; transform: scale(1.08); }
         }
       `}</style>
     </header>
