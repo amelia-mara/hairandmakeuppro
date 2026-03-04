@@ -197,8 +197,8 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
                         ? 'var(--accent-gold-soft)'
                         : 'linear-gradient(145deg, rgba(26, 23, 19, 0.95) 0%, rgba(16, 14, 12, 1) 100%)',
                       boxShadow: selected
-                        ? '0 0 20px -4px rgba(191, 173, 122, 0.12), 2px 1px 0 0 rgba(191, 173, 122, 0.12) inset, -1px -1px 3px 0 rgba(0,0,0,0.3) inset'
-                        : '2px 1px 0 0 rgba(191, 173, 122, 0.06) inset, -1px -1px 3px 0 rgba(0,0,0,0.4) inset, 2px 2px 6px -2px rgba(0,0,0,0.5)',
+                        ? '0 0 20px -4px rgba(196, 172, 116, 0.12), 2px 1px 0 0 rgba(196, 172, 116, 0.12) inset, -1px -1px 3px 0 rgba(0,0,0,0.3) inset'
+                        : '2px 1px 0 0 rgba(196, 172, 116, 0.06) inset, -1px -1px 3px 0 rgba(0,0,0,0.4) inset, 2px 2px 6px -2px rgba(0,0,0,0.5)',
                     }}
                   >
                     <Icon size={20} style={{ color: selected ? 'var(--accent-gold)' : 'var(--text-muted)' }} />

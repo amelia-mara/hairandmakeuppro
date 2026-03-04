@@ -24,7 +24,7 @@ export function TopBar() {
               alignItems: 'center',
               gap: '8px',
               padding: '9px 18px',
-              background: 'rgba(191, 173, 122, 0.05)',
+              background: 'rgba(196, 172, 116, 0.05)',
               border: '1px solid var(--border-card)',
               borderRadius: '10px',
               color: 'var(--accent-gold)',
@@ -50,7 +50,7 @@ export function TopBar() {
               position: 'absolute',
               inset: '-40px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(191, 173, 122, 0.08) 0%, rgba(191, 173, 122, 0.03) 40%, transparent 65%)',
+              background: 'radial-gradient(circle, rgba(196, 172, 116, 0.08) 0%, rgba(196, 172, 116, 0.03) 40%, transparent 65%)',
               pointerEvents: 'none',
               filter: 'blur(12px)',
             }} />
@@ -59,7 +59,7 @@ export function TopBar() {
               position: 'absolute',
               inset: '-20px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(191, 173, 122, 0.18) 0%, rgba(191, 173, 122, 0.06) 45%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(196, 172, 116, 0.18) 0%, rgba(196, 172, 116, 0.06) 45%, transparent 70%)',
               pointerEvents: 'none',
               animation: 'pulse-glow 4s ease-in-out infinite',
             }} />
@@ -68,7 +68,7 @@ export function TopBar() {
               position: 'absolute',
               inset: '-8px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(191, 173, 122, 0.25) 0%, rgba(191, 173, 122, 0.08) 50%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(196, 172, 116, 0.25) 0%, rgba(196, 172, 116, 0.08) 50%, transparent 70%)',
               pointerEvents: 'none',
             }} />
             <button
@@ -77,8 +77,8 @@ export function TopBar() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #d4ca95 0%, #bfad7a 35%, #9a8a50 100%)',
-                border: '1.5px solid rgba(215, 200, 148, 0.55)',
+                background: 'linear-gradient(135deg, #d9c88c 0%, #c4ac74 35%, #9f8845 100%)',
+                border: '1.5px solid rgba(220, 198, 140, 0.55)',
                 color: '#0c0a08',
                 fontWeight: 700,
                 fontSize: '0.8125rem',
@@ -88,32 +88,32 @@ export function TopBar() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: [
-                  '0 0 20px rgba(191, 173, 122, 0.35)',
-                  '0 0 50px rgba(191, 173, 122, 0.15)',
-                  '0 0 80px rgba(191, 173, 122, 0.06)',
+                  '0 0 20px rgba(196, 172, 116, 0.35)',
+                  '0 0 50px rgba(196, 172, 116, 0.15)',
+                  '0 0 80px rgba(196, 172, 116, 0.06)',
                   '0 2px 4px rgba(0, 0, 0, 0.3)',
-                  '0 1px 0 0 rgba(248, 238, 208, 0.25) inset',
+                  '0 1px 0 0 rgba(252, 236, 200, 0.25) inset',
                 ].join(', '),
                 zIndex: 1,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.1)';
                 e.currentTarget.style.boxShadow = [
-                  '0 0 30px rgba(191, 173, 122, 0.45)',
-                  '0 0 70px rgba(191, 173, 122, 0.20)',
-                  '0 0 100px rgba(191, 173, 122, 0.10)',
+                  '0 0 30px rgba(196, 172, 116, 0.45)',
+                  '0 0 70px rgba(196, 172, 116, 0.20)',
+                  '0 0 100px rgba(196, 172, 116, 0.10)',
                   '0 2px 4px rgba(0, 0, 0, 0.3)',
-                  '0 1px 0 0 rgba(248, 238, 208, 0.30) inset',
+                  '0 1px 0 0 rgba(252, 236, 200, 0.30) inset',
                 ].join(', ');
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
                 e.currentTarget.style.boxShadow = [
-                  '0 0 20px rgba(191, 173, 122, 0.35)',
-                  '0 0 50px rgba(191, 173, 122, 0.15)',
-                  '0 0 80px rgba(191, 173, 122, 0.06)',
+                  '0 0 20px rgba(196, 172, 116, 0.35)',
+                  '0 0 50px rgba(196, 172, 116, 0.15)',
+                  '0 0 80px rgba(196, 172, 116, 0.06)',
                   '0 2px 4px rgba(0, 0, 0, 0.3)',
-                  '0 1px 0 0 rgba(248, 238, 208, 0.25) inset',
+                  '0 1px 0 0 rgba(252, 236, 200, 0.25) inset',
                 ].join(', ');
               }}
             >
