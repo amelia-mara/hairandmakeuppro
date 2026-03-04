@@ -10,7 +10,6 @@ import { extractReceiptData, buildDescriptionFromItems } from '@/services/receip
 import { useProjectStore } from '@/stores/projectStore';
 import {
   useBudgetStore,
-  EXPENSE_CATEGORIES as HMU_CATEGORIES,
   getExpenseCategoriesForDepartment,
   type ExpenseCategory,
   type Receipt,
@@ -1041,7 +1040,8 @@ function ScanOptionsModal({ onTakePhoto, onChooseFromLibrary, onManualEntry, onC
   );
 }
 
-function AddReceiptModal({ imageUri, currencySymbol, categories: CATEGORIES, onAdd, onClose }: AddReceiptModalProps) {
+function AddReceiptModal({ imageUri, currencySymbol, categories, onAdd, onClose }: AddReceiptModalProps) {
+  const CATEGORIES = categories as readonly ExpenseCategory[];
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
   const [vat, setVat] = useState('');
@@ -1372,7 +1372,8 @@ interface ReceiptDetailModalProps {
   onClose: () => void;
 }
 
-function ReceiptDetailModal({ receipt, currencySymbol, categories: CATEGORIES, onSave, onDelete, onClose }: ReceiptDetailModalProps) {
+function ReceiptDetailModal({ receipt, currencySymbol, categories, onSave, onDelete, onClose }: ReceiptDetailModalProps) {
+  const CATEGORIES = categories as readonly ExpenseCategory[];
   const [isEditing, setIsEditing] = useState(false);
   const [vendor, setVendor] = useState(receipt.vendor);
   const [amount, setAmount] = useState(receipt.amount.toFixed(2));
