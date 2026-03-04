@@ -71,7 +71,7 @@ interface AuthState {
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
   joinProject: (code: string, role?: string) => Promise<{ success: boolean; projectName?: string; error?: string }>;
-  createProject: (name: string, type: ProductionType, ownerRole?: string) => Promise<{ success: boolean; code?: string; error?: string }>;
+  createProject: (name: string, type: ProductionType, ownerRole?: string, department?: 'hmu' | 'costume') => Promise<{ success: boolean; code?: string; error?: string }>;
   clearError: () => void;
   setHasCompletedOnboarding: (value: boolean) => void;
   canCreateProjects: () => boolean;
@@ -673,7 +673,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Create a new project with the owner's selected role
-      createProject: async (name, type, ownerRole) => {
+      createProject: async (name, type, ownerRole, department) => {
         const { user, projectMemberships } = get();
 
         const tierLimits = user ? TIER_LIMITS[user.tier] : null;
@@ -701,6 +701,7 @@ export const useAuthStore = create<AuthState>()(
             projectId: project.id,
             projectName: project.name,
             productionType: type,
+            department: department || 'hmu',
             role: 'owner',
             joinedAt: new Date(),
             lastAccessedAt: new Date(),

@@ -6,6 +6,7 @@ export type CharacterDetectionStatus = 'idle' | 'running' | 'complete';
 export interface Project {
   id: string;
   name: string;
+  department?: 'hmu' | 'costume'; // Department mode: "hmu" (default) or "costume". Set at creation, cannot change.
   createdAt: Date;
   updatedAt: Date;
   scenes: Scene[];
@@ -207,12 +208,27 @@ export interface SceneCapture {
     right?: Photo;
     back?: Photo;
   };
+  // Costume 360 photo grid (used when department === 'costume')
+  costumePhotos?: {
+    masterReference?: Photo;
+    frontFull?: Photo;
+    backFull?: Photo;
+    leftSideFull?: Photo;
+    rightSideFull?: Photo;
+    detailJewellery?: Photo;
+    detailAccessories?: Photo;
+    detailShoes?: Photo;
+    detailHeadwear?: Photo;
+    closeupFastenings?: Photo;
+  };
   additionalPhotos: Photo[];
   continuityFlags: ContinuityFlags;
   continuityEvents: ContinuityEvent[];
   sfxDetails: SFXDetails;
   notes: string;
   applicationTime?: number;
+  // Costume continuity data (used when department === 'costume')
+  costumeContinuity?: import('@/config/department').CostumeContinuityData;
 }
 
 export interface Photo {
@@ -1303,6 +1319,7 @@ export interface ProjectMembership {
   projectId: string;
   projectName: string;
   productionType: ProductionType;
+  department?: 'hmu' | 'costume'; // Department mode for this project
   role: ProjectRole;
   joinedAt: Date;
   lastAccessedAt: Date;
