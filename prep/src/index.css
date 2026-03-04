@@ -114,64 +114,69 @@ body {
   position: relative;
   min-height: 100vh;
   background:
-    /* Hot core near avatar */
+    /* Hot core near avatar — soft and warm */
     radial-gradient(
-      ellipse 600px 500px at calc(100% - 40px) 30px,
-      rgba(201, 169, 97, 0.14) 0%,
-      rgba(201, 169, 97, 0.07) 25%,
-      rgba(201, 169, 97, 0.02) 50%,
-      transparent 75%
+      ellipse 800px 700px at calc(100% - 40px) 30px,
+      rgba(201, 169, 97, 0.12) 0%,
+      rgba(201, 169, 97, 0.06) 30%,
+      rgba(201, 169, 97, 0.02) 55%,
+      transparent 80%
     ),
-    /* Wide warm wash */
+    /* Wide warm wash — much larger, softer */
     radial-gradient(
-      ellipse 1200px 900px at calc(100% - 20px) 0px,
-      rgba(180, 140, 60, 0.08) 0%,
-      rgba(160, 120, 40, 0.03) 35%,
+      ellipse 2000px 1400px at calc(100% - 20px) 0px,
+      rgba(180, 140, 60, 0.10) 0%,
+      rgba(170, 130, 50, 0.05) 30%,
+      rgba(160, 120, 40, 0.02) 50%,
+      transparent 70%
+    ),
+    /* Secondary fill — broader */
+    radial-gradient(
+      ellipse 600px 500px at calc(100% - 50px) 50px,
+      rgba(220, 190, 120, 0.09) 0%,
+      rgba(201, 169, 97, 0.03) 40%,
       transparent 60%
-    ),
-    /* Secondary fill */
-    radial-gradient(
-      ellipse 400px 350px at calc(100% - 50px) 50px,
-      rgba(220, 190, 120, 0.10) 0%,
-      transparent 45%
     ),
     var(--bg-primary);
 }
-/* Sharp bright core */
+/* Bright core — slightly larger */
 .ambient-light::before {
   content: '';
   position: fixed;
-  top: -60px;
-  right: -20px;
-  width: 450px;
-  height: 450px;
+  top: -80px;
+  right: -40px;
+  width: 600px;
+  height: 600px;
   background: radial-gradient(
     circle at center,
-    rgba(201, 169, 97, 0.16) 0%,
-    rgba(201, 169, 97, 0.07) 30%,
-    rgba(201, 169, 97, 0.02) 50%,
+    rgba(201, 169, 97, 0.14) 0%,
+    rgba(201, 169, 97, 0.07) 25%,
+    rgba(201, 169, 97, 0.03) 45%,
     transparent 65%
   );
   pointer-events: none;
   z-index: 0;
+  filter: blur(8px);
 }
-/* Big soft halo */
+/* Big soft halo — much larger, softer spread */
 .ambient-light::after {
   content: '';
   position: fixed;
-  top: -250px;
-  right: -150px;
-  width: 900px;
-  height: 750px;
+  top: -400px;
+  right: -300px;
+  width: 1600px;
+  height: 1200px;
   background: radial-gradient(
     ellipse at center,
-    rgba(201, 169, 97, 0.07) 0%,
+    rgba(201, 169, 97, 0.08) 0%,
+    rgba(190, 155, 75, 0.05) 25%,
     rgba(180, 140, 60, 0.03) 40%,
-    transparent 65%
+    rgba(170, 130, 50, 0.01) 55%,
+    transparent 70%
   );
   pointer-events: none;
   z-index: 0;
-  filter: blur(25px);
+  filter: blur(60px);
 }
 .ambient-light > * {
   position: relative;
@@ -272,7 +277,14 @@ body {
   padding: 24px 28px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--glass-shadow-stat);
+  box-shadow:
+    var(--glass-shadow-stat),
+    /* 3D depth: top-right inner highlight edge */
+    1px 1px 0 0 rgba(201, 169, 97, 0.12) inset,
+    0 1px 0 0 rgba(235, 210, 150, 0.10) inset,
+    /* 3D depth: bottom-left inner shadow edge */
+    -1px -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Inner glow from top-right */
@@ -291,26 +303,26 @@ body {
   );
   pointer-events: none;
 }
-/* Rim — crisp specular point biased right */
+/* Rim — sharp bright specular line biased right */
 .stat-card::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 5%,
-    rgba(201, 169, 97, 0.06) 30%,
-    rgba(201, 169, 97, 0.18) 55%,
-    rgba(201, 169, 97, 0.60) 73%,
-    rgba(201, 169, 97, 0.75) 79%,
-    rgba(201, 169, 97, 0.60) 85%,
-    rgba(201, 169, 97, 0.12) 95%,
+    rgba(201, 169, 97, 0.08) 25%,
+    rgba(220, 190, 120, 0.30) 50%,
+    rgba(235, 210, 150, 0.85) 73%,
+    rgba(245, 225, 170, 1.0) 79%,
+    rgba(235, 210, 150, 0.85) 85%,
+    rgba(201, 169, 97, 0.15) 95%,
     transparent 100%
   );
-  border-radius: 0 0 3px 3px;
+  border-radius: 16px 16px 0 0;
 }
 .stat-card:hover {
   border-color: var(--border-medium);
@@ -360,7 +372,14 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: var(--glass-shadow);
+  box-shadow:
+    var(--glass-shadow),
+    /* 3D depth: top-right inner highlight edge */
+    1px 1px 0 0 rgba(201, 169, 97, 0.12) inset,
+    0 1px 0 0 rgba(235, 210, 150, 0.10) inset,
+    /* 3D depth: bottom-left inner shadow edge */
+    -1px -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Inner glow from top-right */
@@ -380,26 +399,26 @@ body {
   pointer-events: none;
   z-index: 0;
 }
-/* Rim — specular hot spot biased right */
+/* Rim — sharp bright specular line biased right */
 .project-card::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 5%,
-    rgba(201, 169, 97, 0.06) 25%,
-    rgba(201, 169, 97, 0.15) 50%,
-    rgba(201, 169, 97, 0.55) 72%,
-    rgba(201, 169, 97, 0.70) 78%,
-    rgba(201, 169, 97, 0.55) 84%,
-    rgba(201, 169, 97, 0.10) 95%,
+    rgba(201, 169, 97, 0.08) 25%,
+    rgba(220, 190, 120, 0.25) 48%,
+    rgba(235, 210, 150, 0.80) 72%,
+    rgba(245, 225, 170, 1.0) 78%,
+    rgba(235, 210, 150, 0.80) 84%,
+    rgba(201, 169, 97, 0.15) 95%,
     transparent 100%
   );
-  border-radius: 0 0 3px 3px;
+  border-radius: 16px 16px 0 0;
   z-index: 1;
 }
 .project-card:hover {
@@ -615,32 +634,33 @@ body {
   position: relative;
   overflow: hidden;
   box-shadow:
-    1px 0 0 0 rgba(201, 169, 97, 0.06) inset,        /* right inner edge catch */
-    0 1px 0 0 rgba(201, 169, 97, 0.05) inset,         /* top inner rim */
-    -1px -1px 3px 0 rgba(0, 0, 0, 0.3) inset,         /* bottom-left inner dark */
-    2px 2px 8px -2px rgba(0, 0, 0, 0.5),              /* shadow to bottom-left */
+    1px 1px 0 0 rgba(201, 169, 97, 0.14) inset,       /* top-right inner highlight */
+    0 1px 0 0 rgba(235, 210, 150, 0.10) inset,         /* top inner bright rim */
+    -1px -1px 0 0 rgba(0, 0, 0, 0.40) inset,           /* bottom-left inner shadow */
+    0 -1px 0 0 rgba(0, 0, 0, 0.30) inset,              /* bottom inner dark edge */
+    2px 2px 8px -2px rgba(0, 0, 0, 0.5),               /* drop shadow */
     0 1px 3px rgba(0, 0, 0, 0.3);
 }
-/* Rim — hot spot at ~75% (right-biased) */
+/* Rim — sharp bright hot spot biased right */
 .filter-pill::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 1.5px;
   background: linear-gradient(
     90deg,
     transparent 10%,
-    rgba(201, 169, 97, 0.06) 35%,
-    rgba(201, 169, 97, 0.18) 58%,
-    rgba(201, 169, 97, 0.45) 74%,
-    rgba(201, 169, 97, 0.55) 80%,
-    rgba(201, 169, 97, 0.40) 86%,
-    rgba(201, 169, 97, 0.08) 95%,
+    rgba(201, 169, 97, 0.08) 30%,
+    rgba(220, 190, 120, 0.30) 55%,
+    rgba(235, 210, 150, 0.80) 74%,
+    rgba(245, 225, 170, 1.0) 80%,
+    rgba(235, 210, 150, 0.75) 86%,
+    rgba(201, 169, 97, 0.12) 95%,
     transparent 100%
   );
-  border-radius: 0 0 2px 2px;
+  border-radius: 12px 12px 0 0;
 }
 .filter-pill:hover {
   border-color: var(--border-medium);
