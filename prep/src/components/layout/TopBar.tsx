@@ -1,19 +1,13 @@
 export function TopBar() {
   return (
     <header className="app-header">
-      <div className="flex items-center justify-between">
-        <h1
-          style={{
-            fontSize: '1.875em',
-            fontWeight: 600,
-            letterSpacing: '-0.02em',
-            color: 'var(--text-primary)',
-          }}
-        >
-          Prep Happy
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Title */}
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+          Projects
         </h1>
 
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Back to Checks Happy */}
           <a
             href="/"
@@ -21,44 +15,45 @@ export function TopBar() {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '10px 18px',
-              background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.15) 0%, rgba(201, 169, 97, 0.08) 100%)',
-              border: '1px solid rgba(201, 169, 97, 0.4)',
+              padding: '9px 18px',
+              background: 'var(--accent-gold-soft)',
+              border: '1px solid var(--border-medium)',
               borderRadius: '10px',
               color: 'var(--accent-gold)',
               fontWeight: 600,
-              fontSize: '0.875rem',
+              fontSize: '0.8125rem',
               textDecoration: 'none',
               transition: 'all 0.3s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(201, 169, 97, 0.25) 0%, rgba(201, 169, 97, 0.15) 100%)';
-              e.currentTarget.style.boxShadow = 'var(--glow-medium)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
+              e.currentTarget.style.background = 'rgba(201, 169, 97, 0.12)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(201, 169, 97, 0.15) 0%, rgba(201, 169, 97, 0.08) 100%)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-medium)';
+              e.currentTarget.style.background = 'var(--accent-gold-soft)';
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Checks Happy
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 17L17 7M17 7H7M17 7v10"/>
+            </svg>
           </a>
 
-          {/* Profile */}
+          {/* Avatar */}
           <button
             style={{
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%)',
+              background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.85) 0%, rgba(160, 118, 40, 0.85) 100%)',
               border: '1px solid rgba(201, 169, 97, 0.3)',
-              color: 'var(--bg-primary)',
+              color: '#0c0a08',
               fontWeight: 600,
-              fontSize: '0.8125em',
+              fontSize: '0.8125rem',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
               display: 'flex',
@@ -67,7 +62,7 @@ export function TopBar() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = 'var(--glow-medium)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(201, 169, 97, 0.2)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
