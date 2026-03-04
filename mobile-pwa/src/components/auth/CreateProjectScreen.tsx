@@ -4,6 +4,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { Button, Input } from '@/components/ui';
 import type { ProductionType, Project } from '@/types';
 import { PRODUCTION_TYPES } from '@/types';
+import { DEPARTMENT_OPTIONS, type DepartmentType } from '@/config/department';
 
 // Owner role options (same set as the join flow)
 const OWNER_ROLES = [
@@ -21,6 +22,7 @@ export function CreateProjectScreen() {
   const { goBack, createProject, isLoading, error, clearError } = useAuthStore();
 
   const [name, setName] = useState('');
+  const [department, setDepartment] = useState<DepartmentType>('hmu');
   const [productionType, setProductionType] = useState<ProductionType>('film');
   const [ownerRole, setOwnerRole] = useState<OwnerRole>('designer');
 
@@ -30,7 +32,7 @@ export function CreateProjectScreen() {
 
     if (!name.trim()) return;
 
-    const result = await createProject(name.trim(), productionType, ownerRole);
+    const result = await createProject(name.trim(), productionType, ownerRole, department);
 
     if (result.success && result.code) {
       // Go directly to the upload files flow instead of showing success screen
@@ -40,6 +42,7 @@ export function CreateProjectScreen() {
         const project: Project = {
           id: membership.projectId,
           name: membership.projectName,
+          department,
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
           scenes: [],
@@ -90,6 +93,40 @@ export function CreateProjectScreen() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Department selector - determines entire feature set */}
+          <div>
+            <label className="field-label block mb-2">Department</label>
+            <div className="grid grid-cols-2 gap-3">
+              {DEPARTMENT_OPTIONS.map((dept) => (
+                <button
+                  key={dept.value}
+                  type="button"
+                  onClick={() => setDepartment(dept.value)}
+                  className={`p-4 rounded-xl border-2 text-center transition-all ${
+                    department === dept.value
+                      ? 'border-gold bg-gold-50 shadow-sm'
+                      : 'border-border bg-card hover:border-gold-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-1">
+                    {dept.value === 'hmu' ? '\uD83D\uDC84' : '\uD83D\uDC57'}
+                  </div>
+                  <div className={`text-sm font-semibold ${
+                    department === dept.value ? 'text-gold' : 'text-text-primary'
+                  }`}>
+                    {dept.label}
+                  </div>
+                  <div className="text-xs text-text-secondary mt-0.5">
+                    {dept.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-text-tertiary mt-1.5">
+              Cannot be changed after project creation
+            </p>
+          </div>
+
           <Input
             type="text"
             label="Production Name"

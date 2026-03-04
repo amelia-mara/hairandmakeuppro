@@ -3,8 +3,13 @@ import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/types';
 
-// Budget expense category types
-export type ExpenseCategory = 'Kit Supplies' | 'Consumables' | 'Transportation' | 'Equipment' | 'Other';
+import { COSTUME_BUDGET_CATEGORIES, type CostumeBudgetCategory } from '@/config/department';
+
+// Budget expense category types (HMU default)
+export type HmuExpenseCategory = 'Kit Supplies' | 'Consumables' | 'Transportation' | 'Equipment' | 'Other';
+
+// Combined type that supports both department modes
+export type ExpenseCategory = HmuExpenseCategory | CostumeBudgetCategory;
 
 export interface Receipt {
   id: string;
@@ -21,16 +26,25 @@ export interface Receipt {
 export interface BudgetSummary {
   totalBudget: number;
   totalSpent: number;
-  byCategory: Record<ExpenseCategory, number>;
+  byCategory: Record<string, number>;
 }
 
-export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+// HMU expense categories (default)
+export const EXPENSE_CATEGORIES: HmuExpenseCategory[] = [
   'Kit Supplies',
   'Consumables',
   'Transportation',
   'Equipment',
   'Other',
 ];
+
+// Costume expense categories (re-exported for convenience)
+export const COSTUME_EXPENSE_CATEGORIES: readonly CostumeBudgetCategory[] = COSTUME_BUDGET_CATEGORIES;
+
+// Get categories for a department
+export function getExpenseCategoriesForDepartment(department: 'hmu' | 'costume' = 'hmu'): readonly string[] {
+  return department === 'costume' ? COSTUME_BUDGET_CATEGORIES : EXPENSE_CATEGORIES;
+}
 
 interface BudgetState {
   // Data
@@ -53,7 +67,7 @@ interface BudgetState {
   getTotalVat: () => number;
   getRemaining: () => number;
   getPercentUsed: () => number;
-  getByCategory: () => Record<ExpenseCategory, number>;
+  getByCategory: () => Record<string, number>;
   getBudgetSummary: () => BudgetSummary;
 }
 
@@ -150,15 +164,17 @@ export const useBudgetStore = create<BudgetState>()(
       },
 
       getByCategory: () => {
-        const cats: Record<ExpenseCategory, number> = {
-          'Kit Supplies': 0,
-          'Consumables': 0,
-          'Transportation': 0,
-          'Equipment': 0,
-          'Other': 0,
-        };
+        const cats: Record<string, number> = {};
+        // Initialize all known categories to 0
+        EXPENSE_CATEGORIES.forEach(c => { cats[c] = 0; });
+        COSTUME_BUDGET_CATEGORIES.forEach(c => { cats[c] = 0; });
+        // Sum receipt amounts by category
         get().receipts.forEach((r) => {
-          cats[r.category] += r.amount;
+          if (cats[r.category] !== undefined) {
+            cats[r.category] += r.amount;
+          } else {
+            cats[r.category] = r.amount;
+          }
         });
         return cats;
       },

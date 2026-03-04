@@ -10,7 +10,8 @@ import { extractReceiptData, buildDescriptionFromItems } from '@/services/receip
 import { useProjectStore } from '@/stores/projectStore';
 import {
   useBudgetStore,
-  EXPENSE_CATEGORIES as CATEGORIES,
+  EXPENSE_CATEGORIES as HMU_CATEGORIES,
+  getExpenseCategoriesForDepartment,
   type ExpenseCategory,
   type Receipt,
   type BudgetSummary,
@@ -49,22 +50,25 @@ export function Budget() {
   // Get current currency info
   const currentCurrency = getCurrencyByCode(currency);
 
+  // Get department-aware categories
+  const department = currentProject?.department || 'hmu';
+  const CATEGORIES = getExpenseCategoriesForDepartment(department);
+
   // Calculate totals from receipts
   const { totalSpent, totalVat, byCategory } = useMemo(() => {
     const spent = receipts.reduce((sum, r) => sum + r.amount, 0);
     const vat = receipts.reduce((sum, r) => sum + (r.vat || 0), 0);
-    const cats: Record<ExpenseCategory, number> = {
-      'Kit Supplies': 0,
-      'Consumables': 0,
-      'Transportation': 0,
-      'Equipment': 0,
-      'Other': 0,
-    };
+    const cats: Record<string, number> = {};
+    CATEGORIES.forEach(c => { cats[c] = 0; });
     receipts.forEach(r => {
-      cats[r.category] += r.amount;
+      if (cats[r.category] !== undefined) {
+        cats[r.category] += r.amount;
+      } else {
+        cats[r.category] = r.amount;
+      }
     });
     return { totalSpent: spent, totalVat: vat, byCategory: cats };
-  }, [receipts]);
+  }, [receipts, CATEGORIES]);
 
   const remainingBudget = budgetTotal - totalSpent;
   const percentUsed = budgetTotal > 0 ? (totalSpent / budgetTotal) * 100 : 0;
@@ -831,6 +835,7 @@ export function Budget() {
         <AddReceiptModal
           imageUri={capturedImage}
           currencySymbol={currentCurrency.symbol}
+          categories={CATEGORIES}
           onAdd={handleAddReceipt}
           onClose={() => {
             setShowAddReceipt(false);
@@ -880,6 +885,7 @@ export function Budget() {
         <ReceiptDetailModal
           receipt={selectedReceipt}
           currencySymbol={currentCurrency.symbol}
+          categories={CATEGORIES}
           onSave={handleUpdateReceipt}
           onDelete={handleDeleteReceipt}
           onClose={() => setSelectedReceipt(null)}
@@ -947,6 +953,7 @@ function CurrencyPickerModal({ currentCurrency, onSelect, onClose }: CurrencyPic
 interface AddReceiptModalProps {
   imageUri: string | null;
   currencySymbol: string;
+  categories: readonly string[];
   onAdd: (receipt: Omit<Receipt, 'id' | 'synced'>) => void;
   onClose: () => void;
 }
@@ -1034,11 +1041,11 @@ function ScanOptionsModal({ onTakePhoto, onChooseFromLibrary, onManualEntry, onC
   );
 }
 
-function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceiptModalProps) {
+function AddReceiptModal({ imageUri, currencySymbol, categories: CATEGORIES, onAdd, onClose }: AddReceiptModalProps) {
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
   const [vat, setVat] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('Kit Supplies');
+  const [category, setCategory] = useState<ExpenseCategory>(CATEGORIES[0] as ExpenseCategory);
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -1359,12 +1366,13 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
 interface ReceiptDetailModalProps {
   receipt: Receipt;
   currencySymbol: string;
+  categories: readonly string[];
   onSave: (updated: Receipt) => void;
   onDelete: (receiptId: string) => void;
   onClose: () => void;
 }
 
-function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose }: ReceiptDetailModalProps) {
+function ReceiptDetailModal({ receipt, currencySymbol, categories: CATEGORIES, onSave, onDelete, onClose }: ReceiptDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [vendor, setVendor] = useState(receipt.vendor);
   const [amount, setAmount] = useState(receipt.amount.toFixed(2));

@@ -1089,9 +1089,16 @@ export function ProjectHubScreen() {
                         )}
                         <div className="flex items-center justify-between">
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-sm font-medium text-text-primary truncate">
-                              {project.projectName}
-                            </h4>
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-sm font-medium text-text-primary truncate">
+                                {project.projectName}
+                              </h4>
+                              {project.department === 'costume' && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider bg-purple-50 text-purple-600 border border-purple-200 flex-shrink-0">
+                                  Costume
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-text-muted mt-0.5">
                               {getMembershipLabel(project)}
                             </p>

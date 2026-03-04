@@ -6,14 +6,16 @@ import type { Photo, PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
 import { countFilledFields, countHairFields, countSFXFields } from '@/types';
 import { Button, Accordion } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
-import { PhotoGrid, AdditionalPhotosGrid, MasterReference, PhotoCapture, SceneThumbnailSlot, PhotoViewer } from '../photos';
+import { PhotoGrid, AdditionalPhotosGrid, CostumePhotoGrid, MasterReference, PhotoCapture, SceneThumbnailSlot, PhotoViewer } from '../photos';
 import { QuickFlags } from '../continuity/QuickFlags';
 import { ContinuityEvents } from '../continuity/ContinuityEvents';
+import { CostumeContinuityFields } from '../continuity/CostumeContinuityFields';
 import { AddEventModal } from '../continuity/AddEventModal';
 import { MakeupForm } from '../forms/MakeupForm';
 import { HairForm } from '../forms/HairForm';
 import { SFXForm } from '../forms/SFXForm';
 import { NotesForm } from '../forms/NotesForm';
+import { createDefaultCostumeContinuity, type CostumePhotoCategory, type CostumeContinuityData } from '@/config/department';
 
 interface CharacterProfileProps {
   sceneId: string;
@@ -70,6 +72,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     return null;
   }
 
+  const isCostume = currentProject.department === 'costume';
   const captureId = `${sceneId}-${characterId}`;
 
   // Handle photo capture
@@ -240,24 +243,36 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           );
         })()}
 
-        {/* Scene Photos Section */}
+        {/* Scene Photos Section - department-aware */}
         <div className="card">
-          <h3 className="section-header mb-3">SCENE PHOTOS</h3>
-          <PhotoGrid
-            photos={capture.photos}
-            onCapture={(angle) => handleOpenCapture(angle)}
-            onView={handleViewScenePhoto}
-          />
+          <h3 className="section-header mb-3">
+            {isCostume ? 'COSTUME PHOTOS' : 'SCENE PHOTOS'}
+          </h3>
+          {isCostume ? (
+            <CostumePhotoGrid
+              photos={capture.costumePhotos || {}}
+              onCapture={(cat: CostumePhotoCategory) => handleOpenCapture(cat as unknown as PhotoAngle)}
+              onView={(photo, cat) => handleViewScenePhoto(photo, cat as unknown as PhotoAngle)}
+            />
+          ) : (
+            <PhotoGrid
+              photos={capture.photos}
+              onCapture={(angle) => handleOpenCapture(angle)}
+              onView={handleViewScenePhoto}
+            />
+          )}
         </div>
 
-        {/* Master Reference Section */}
-        <div className="card">
-          <h3 className="section-header mb-3">MASTER REFERENCE</h3>
-          <MasterReference
-            photo={look?.masterReference}
-            onCapture={() => handleOpenCapture('front', true)}
-          />
-        </div>
+        {/* Master Reference Section (HMU only - costume has it in the photo grid) */}
+        {!isCostume && (
+          <div className="card">
+            <h3 className="section-header mb-3">MASTER REFERENCE</h3>
+            <MasterReference
+              photo={look?.masterReference}
+              onCapture={() => handleOpenCapture('front', true)}
+            />
+          </div>
+        )}
 
         {/* Scenes in This Look */}
         {lookScenes.length > 1 && (
@@ -306,16 +321,30 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           />
         </div>
 
-        {/* Quick Flags Section */}
-        <div className="card">
-          <h3 className="section-header mb-3">QUICK FLAGS</h3>
-          <QuickFlags
-            flags={capture.continuityFlags}
-            onToggle={(flag) => toggleContinuityFlag(captureId, flag)}
-          />
-        </div>
+        {/* Continuity Section - department-aware */}
+        {isCostume ? (
+          /* Costume Continuity Fields */
+          <div className="card">
+            <h3 className="section-header mb-3">COSTUME CONTINUITY</h3>
+            <CostumeContinuityFields
+              data={capture.costumeContinuity || createDefaultCostumeContinuity()}
+              onChange={(costumeContinuity: CostumeContinuityData) => updateSceneCapture(captureId, { costumeContinuity })}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Quick Flags Section (HMU) */}
+            <div className="card">
+              <h3 className="section-header mb-3">QUICK FLAGS</h3>
+              <QuickFlags
+                flags={capture.continuityFlags}
+                onToggle={(flag) => toggleContinuityFlag(captureId, flag)}
+              />
+            </div>
+          </>
+        )}
 
-        {/* Continuity Events Section */}
+        {/* Continuity Events Section (shared between departments) */}
         <div className="card">
           <ContinuityEvents
             events={capture.continuityEvents}
@@ -324,7 +353,8 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           />
         </div>
 
-        {/* Accordion sections for Makeup, Hair, Notes */}
+        {/* Accordion sections for Makeup, Hair, Notes (HMU only) */}
+        {!isCostume && (
         <Accordion
           title="MAKEUP"
           count={look ? countFilledFields(look.makeup) : 0}
@@ -334,7 +364,9 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
             onChange={look ? (makeup) => updateLook(look.id, { makeup }) : undefined}
           />
         </Accordion>
+        )}
 
+        {!isCostume && (
         <Accordion
           title="HAIR"
           count={look ? countHairFields(look.hair) : 0}
@@ -344,7 +376,9 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
             onChange={look ? (hair) => updateLook(look.id, { hair }) : undefined}
           />
         </Accordion>
+        )}
 
+        {!isCostume && (
         <Accordion
           title="SPECIAL EFFECTS"
           count={countSFXFields(capture.sfxDetails)}
@@ -357,6 +391,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
             onRemovePhoto={(photoId) => removeSFXPhoto(captureId, photoId)}
           />
         </Accordion>
+        )}
 
         <Accordion title="SCENE NOTES">
           <NotesForm
@@ -365,9 +400,9 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           />
         </Accordion>
 
-        {/* Application Time */}
+        {/* Application/Fitting Time */}
         <div className="card flex items-center gap-3.5">
-          <label className="field-label whitespace-nowrap">APPLICATION TIME</label>
+          <label className="field-label whitespace-nowrap">{isCostume ? 'FITTING TIME' : 'APPLICATION TIME'}</label>
           <input
             type="number"
             value={capture.applicationTime ?? look?.estimatedTime ?? ''}
