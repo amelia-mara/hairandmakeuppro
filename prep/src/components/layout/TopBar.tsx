@@ -1,18 +1,56 @@
-export function TopBar() {
+interface TopBarProps {
+  title?: string;
+  onBack?: () => void;
+}
+
+export function TopBar({ title = 'Projects', onBack }: TopBarProps) {
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Title — muted, elegant, belongs to the glass world */}
-        <h1 style={{
-          fontSize: '0.8125rem',
-          fontWeight: 500,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase' as const,
-          color: 'var(--text-muted)',
-          margin: 0,
-        }}>
-          Projects
-        </h1>
+        {/* Left side — title with optional back arrow */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-card)',
+                background: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--accent-gold)';
+                e.currentTarget.style.color = 'var(--accent-gold)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-card)';
+                e.currentTarget.style.color = 'var(--text-muted)';
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+          )}
+          <h1 style={{
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--text-muted)',
+            margin: 0,
+          }}>
+            {title}
+          </h1>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Back to Checks Happy */}

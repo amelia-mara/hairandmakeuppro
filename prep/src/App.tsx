@@ -4,11 +4,13 @@ import { ProjectHub } from '@/pages/ProjectHub';
 import { CreateProjectModal } from '@/pages/CreateProject';
 import { ProjectLayout } from '@/components/layout/ProjectLayout';
 import { ProjectDashboard } from '@/pages/ProjectDashboard';
+import { useProjectStore } from '@/stores/projectStore';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState('dashboard');
+  const getProject = useProjectStore((s) => s.getProject);
 
   const handleCreateProject = () => setShowCreateModal(true);
   const handleCloseModal = () => setShowCreateModal(false);
@@ -25,10 +27,14 @@ function App() {
     setSelectedProjectId(null);
   };
 
-  // Project view — sidebar + dashboard
+  // Project view — TopBar + sidebar + dashboard
   if (selectedProjectId) {
+    const project = getProject(selectedProjectId);
+    const projectTitle = project?.title || 'Project';
+
     return (
       <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <TopBar title={projectTitle} onBack={handleBackToHub} />
         <ProjectLayout
           projectId={selectedProjectId}
           activePage={activePage}
