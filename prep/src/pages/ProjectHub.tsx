@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useProjectStore, type Project } from '@/stores/projectStore';
 import { PROJECT_TYPES } from '@/types';
 
@@ -13,14 +13,12 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [sort, setSort] = useState('Newest First');
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = ['All', ...PROJECT_TYPES];
 
   const filtered = projects
-    .filter((p) => {
-      if (filter !== 'All') return p.type === filter;
-      return true;
-    })
+    .filter((p) => filter === 'All' || p.type === filter)
     .filter(
       (p) =>
         !search ||
@@ -36,54 +34,38 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
 
   const activeCount = projects.filter((p) => p.status === 'active').length;
   const setupCount = projects.filter((p) => p.status === 'setup').length;
+  const avgProgress = projects.length > 0
+    ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+    : 0;
 
   return (
     <div className="animate-fade-in">
-      {/* Dashboard Stats */}
-      <div style={{ padding: '20px 40px 0' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px',
-            marginBottom: '20px',
-          }}
-        >
+      {/* Stats Row */}
+      <div style={{ padding: '24px 40px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
           <div className="stat-card">
-            <div className="stat-value">{projects.length}</div>
             <div className="stat-label">Total Projects</div>
+            <div className="stat-value">{projects.length}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{activeCount}</div>
             <div className="stat-label">Active</div>
+            <div className="stat-value">{activeCount}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{setupCount}</div>
             <div className="stat-label">In Setup</div>
+            <div className="stat-value">{setupCount}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">
-              {projects.length > 0
-                ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
-                : 0}%
-            </div>
             <div className="stat-label">Avg Progress</div>
+            <div className="stat-value">{avgProgress}%</div>
           </div>
         </div>
       </div>
 
       {/* Controls Row */}
-      <div
-        style={{
-          padding: '0 40px 20px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '16px',
-        }}
-      >
+      <div style={{ padding: '20px 40px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
         {/* Search */}
-        <div style={{ flex: '0 0 360px', minWidth: '200px' }}>
+        <div style={{ flex: '0 0 340px', minWidth: '200px' }}>
           <input
             type="text"
             value={search}
@@ -99,7 +81,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`filter-btn ${filter === f ? 'active' : ''}`}
+              className={`filter-pill ${filter === f ? 'active' : ''}`}
             >
               {f}
             </button>
@@ -108,9 +90,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
 
         {/* Sort */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-            Sort:
-          </span>
+          <span style={{ fontSize: '0.8125rem', color: 'var(--text-label)', whiteSpace: 'nowrap' }}>Sort:</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
@@ -125,30 +105,31 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
       </div>
 
       {/* Projects Grid */}
-      <div style={{ padding: '0 40px 40px' }}>
+      <div style={{ padding: '0 40px 48px' }}>
         <div
+          ref={gridRef}
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
             gap: '20px',
           }}
         >
-          {/* New Project Card */}
+          {/* Create New Project */}
           <button className="new-project-card" onClick={onCreateProject}>
             <div className="icon-circle">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--accent-gold)' }}>
                 <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
               </svg>
             </div>
-            <span style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+            <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
               Create New Project
             </span>
-            <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
               Start your breakdown
             </span>
           </button>
 
-          {/* Project Cards */}
+          {/* Project cards */}
           {filtered.map((project) => (
             <ProjectCard
               key={project.id}
@@ -159,12 +140,9 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
           ))}
         </div>
 
-        {/* Empty search results */}
         {filtered.length === 0 && projects.length > 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <p style={{ fontSize: '0.875em', color: 'var(--text-muted)' }}>
-              No projects match your search
-            </p>
+          <div style={{ textAlign: 'center', padding: '64px 0' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>No projects match your search</p>
           </div>
         )}
       </div>
@@ -185,84 +163,81 @@ function ProjectCard({
 
   return (
     <div className="project-card">
-      {/* Progress bar at top */}
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${project.progress}%` }} />
-      </div>
-
       {/* Header */}
       <div className="project-card-header" style={{ cursor: 'pointer' }} onClick={onClick}>
-        <h3 style={{ fontSize: '1.25em', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px', letterSpacing: '-0.01em' }}>
           {project.title}
         </h3>
-        <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)' }}>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
           {project.type || 'Not Set'}
         </span>
       </div>
 
-      {/* Body — stats grid */}
+      {/* Body */}
       <div className="project-card-body" style={{ cursor: 'pointer' }} onClick={onClick}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-              Script
-            </div>
-            <div style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {project.scriptFilename ? '...' : '\u2014'}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-              Scenes
-            </div>
-            <div style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {project.scenes || 0}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-              Characters
-            </div>
-            <div style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {project.characters || 0}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-              Progress
-            </div>
-            <div style={{ fontSize: '1em', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {project.progress}%
-            </div>
-          </div>
+        {/* Stats grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 16px', marginBottom: '20px' }}>
+          <StatItem label="Script" value={project.scriptFilename ? 'Uploaded' : '\u2014'} />
+          <StatItem label="Scenes" value={String(project.scenes || 0)} />
+          <StatItem label="Characters" value={String(project.characters || 0)} />
+          <StatItem label="Progress" value={`${project.progress}%`} bold />
         </div>
 
-        {/* Date info */}
+        {/* Progress bar */}
+        <div className="progress-bar-track" style={{ marginBottom: '16px' }}>
+          <div className="progress-bar-fill" style={{ width: `${project.progress}%` }} />
+        </div>
+
+        {/* Date / Genre */}
         <div style={{
           paddingTop: '12px',
-          borderTop: '1px solid var(--glass-border)',
-          fontSize: '0.8125em',
+          borderTop: '1px solid var(--border-subtle)',
+          fontSize: '0.8125rem',
           color: 'var(--text-muted)',
         }}>
-          {project.genre ? project.genre : 'No dates set'}
+          {project.genre || 'No dates set'}
         </div>
       </div>
 
       {/* Footer */}
       <div className="project-card-footer">
         <div className={`status-dot ${project.status}`} />
-        <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)', marginRight: 'auto' }}>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginRight: 'auto' }}>
           {statusLabel}
         </span>
-        <button className="btn-import" onClick={(e) => { e.stopPropagation(); }}>
+        <button className="btn-action-gold" onClick={(e) => { e.stopPropagation(); }}>
           Import Script
         </button>
-        <button className="btn-edit" onClick={(e) => { e.stopPropagation(); onClick(); }}>
+        <button className="btn-action" onClick={(e) => { e.stopPropagation(); onClick(); }}>
           Edit
         </button>
-        <button className="btn-delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+        <button className="btn-action-danger" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
           Delete
         </button>
+      </div>
+    </div>
+  );
+}
+
+function StatItem({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div>
+      <div style={{
+        fontSize: '0.6875rem',
+        fontWeight: 500,
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.06em',
+        marginBottom: '4px',
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize: '1rem',
+        fontWeight: bold ? 700 : 600,
+        color: 'var(--text-primary)',
+      }}>
+        {value}
       </div>
     </div>
   );
