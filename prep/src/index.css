@@ -302,7 +302,7 @@ body {
   );
   pointer-events: none;
 }
-/* Rim — base top shine (will be overridden per position) */
+/* Rim — base (farthest from light) — subtle but visible */
 .stat-card::after {
   content: '';
   position: absolute;
@@ -313,25 +313,25 @@ body {
   background: linear-gradient(
     90deg,
     transparent 10%,
-    rgba(196, 172, 116, 0.04) 40%,
-    rgba(218, 194, 132, 0.12) 65%,
-    rgba(196, 172, 116, 0.06) 90%,
+    rgba(196, 172, 116, 0.08) 40%,
+    rgba(218, 194, 132, 0.22) 65%,
+    rgba(196, 172, 116, 0.12) 90%,
     transparent 100%
   );
   border-radius: 16px 16px 0 0;
 }
 /* Card 4 (rightmost, closest to light) — bright top + right edge wrap */
 .stat-card:nth-child(4)::after {
-  height: 1.5px;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 5%,
-    rgba(196, 172, 116, 0.08) 25%,
-    rgba(218, 194, 132, 0.30) 50%,
-    rgba(232, 212, 152, 0.85) 73%,
-    rgba(242, 222, 166, 1.0) 79%,
-    rgba(232, 212, 152, 0.85) 85%,
-    rgba(196, 172, 116, 0.15) 95%,
+    rgba(196, 172, 116, 0.15) 25%,
+    rgba(218, 194, 132, 0.50) 50%,
+    rgba(242, 222, 166, 1.0) 73%,
+    rgba(255, 245, 200, 1.0) 79%,
+    rgba(242, 222, 166, 1.0) 85%,
+    rgba(196, 172, 116, 0.25) 95%,
     transparent 100%
   );
 }
@@ -341,16 +341,16 @@ body {
 }
 /* Card 3 — strong top, hint of right */
 .stat-card:nth-child(3)::after {
-  height: 1.5px;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 8%,
-    rgba(196, 172, 116, 0.06) 30%,
-    rgba(218, 194, 132, 0.22) 55%,
-    rgba(232, 212, 152, 0.65) 74%,
-    rgba(242, 222, 166, 0.80) 80%,
-    rgba(232, 212, 152, 0.55) 87%,
-    rgba(196, 172, 116, 0.10) 95%,
+    rgba(196, 172, 116, 0.12) 30%,
+    rgba(218, 194, 132, 0.40) 55%,
+    rgba(242, 222, 166, 0.90) 74%,
+    rgba(255, 245, 200, 1.0) 80%,
+    rgba(242, 222, 166, 0.80) 87%,
+    rgba(196, 172, 116, 0.18) 95%,
     transparent 100%
   );
 }
@@ -363,27 +363,27 @@ body {
   background: linear-gradient(
     90deg,
     transparent 10%,
-    rgba(196, 172, 116, 0.05) 35%,
-    rgba(218, 194, 132, 0.15) 58%,
-    rgba(232, 212, 152, 0.40) 75%,
-    rgba(242, 222, 166, 0.50) 81%,
-    rgba(232, 212, 152, 0.30) 88%,
-    rgba(196, 172, 116, 0.06) 96%,
+    rgba(196, 172, 116, 0.10) 35%,
+    rgba(218, 194, 132, 0.30) 58%,
+    rgba(242, 222, 166, 0.65) 75%,
+    rgba(255, 245, 200, 0.80) 81%,
+    rgba(242, 222, 166, 0.50) 88%,
+    rgba(196, 172, 116, 0.12) 96%,
     transparent 100%
   );
 }
-/* Card 1 (leftmost, furthest from light) — faint dispersed glow */
+/* Card 1 (leftmost, furthest from light) — still visible but softer */
 .stat-card:nth-child(1)::after {
-  height: 1px;
+  height: 1.5px;
   background: linear-gradient(
     90deg,
     transparent 15%,
-    rgba(196, 172, 116, 0.03) 40%,
-    rgba(218, 194, 132, 0.08) 60%,
-    rgba(232, 212, 152, 0.18) 76%,
-    rgba(232, 212, 152, 0.22) 82%,
-    rgba(218, 194, 132, 0.12) 90%,
-    rgba(196, 172, 116, 0.04) 96%,
+    rgba(196, 172, 116, 0.06) 40%,
+    rgba(218, 194, 132, 0.18) 60%,
+    rgba(232, 212, 152, 0.38) 76%,
+    rgba(242, 222, 166, 0.48) 82%,
+    rgba(218, 194, 132, 0.25) 90%,
+    rgba(196, 172, 116, 0.08) 96%,
     transparent 100%
   );
 }
@@ -455,7 +455,7 @@ body {
   pointer-events: none;
   z-index: 0;
 }
-/* Rim — moderate dispersed shine (further from light source) */
+/* Rim — intensified shine */
 .project-card::after {
   content: '';
   position: absolute;
@@ -466,12 +466,12 @@ body {
   background: linear-gradient(
     90deg,
     transparent 10%,
-    rgba(196, 172, 116, 0.04) 30%,
-    rgba(218, 194, 132, 0.15) 52%,
-    rgba(232, 212, 152, 0.45) 72%,
-    rgba(242, 222, 166, 0.55) 78%,
-    rgba(232, 212, 152, 0.35) 84%,
-    rgba(196, 172, 116, 0.08) 95%,
+    rgba(196, 172, 116, 0.08) 30%,
+    rgba(218, 194, 132, 0.30) 52%,
+    rgba(242, 222, 166, 0.75) 72%,
+    rgba(255, 245, 200, 0.90) 78%,
+    rgba(242, 222, 166, 0.60) 84%,
+    rgba(196, 172, 116, 0.15) 95%,
     transparent 100%
   );
   border-radius: 16px 16px 0 0;
@@ -702,37 +702,37 @@ body {
     3px 3px 12px -2px rgba(0, 0, 0, 0.6),
     1px 1px 4px rgba(0, 0, 0, 0.4);
 }
-/* Rim — base (farthest from light, leftmost pills) — faint dispersed */
+/* Rim — base (farthest from light, leftmost pills) — visible */
 .filter-pill::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
+  height: 1.5px;
   background: linear-gradient(
     90deg,
     transparent 15%,
-    rgba(196, 172, 116, 0.03) 40%,
-    rgba(218, 194, 132, 0.08) 60%,
-    rgba(232, 212, 152, 0.15) 78%,
-    rgba(218, 194, 132, 0.10) 90%,
+    rgba(196, 172, 116, 0.06) 40%,
+    rgba(218, 194, 132, 0.18) 60%,
+    rgba(242, 222, 166, 0.38) 78%,
+    rgba(218, 194, 132, 0.22) 90%,
     transparent 100%
   );
   border-radius: 12px 12px 0 0;
 }
-/* Last 2 pills (rightmost, closest to light) — bright top + right edge */
+/* Last 2 pills (rightmost, closest to light) — intense top + right edge */
 .filter-pill:nth-last-child(-n+2)::after {
-  height: 1.5px;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 5%,
-    rgba(196, 172, 116, 0.08) 25%,
-    rgba(218, 194, 132, 0.30) 50%,
-    rgba(232, 212, 152, 0.80) 74%,
-    rgba(242, 222, 166, 1.0) 80%,
-    rgba(232, 212, 152, 0.75) 86%,
-    rgba(196, 172, 116, 0.12) 95%,
+    rgba(196, 172, 116, 0.15) 25%,
+    rgba(218, 194, 132, 0.50) 50%,
+    rgba(242, 222, 166, 1.0) 74%,
+    rgba(255, 245, 200, 1.0) 80%,
+    rgba(242, 222, 166, 1.0) 86%,
+    rgba(196, 172, 116, 0.25) 95%,
     transparent 100%
   );
 }
@@ -750,19 +750,19 @@ body {
     3px 3px 12px -2px rgba(0, 0, 0, 0.6),
     1px 1px 4px rgba(0, 0, 0, 0.4);
 }
-/* Pills 3-4 from right — moderate shine */
+/* Pills 3-4 from right — strong shine */
 .filter-pill:nth-last-child(3)::after,
 .filter-pill:nth-last-child(4)::after {
   height: 1.5px;
   background: linear-gradient(
     90deg,
     transparent 10%,
-    rgba(196, 172, 116, 0.05) 35%,
-    rgba(218, 194, 132, 0.18) 58%,
-    rgba(232, 212, 152, 0.50) 75%,
-    rgba(242, 222, 166, 0.60) 81%,
-    rgba(232, 212, 152, 0.40) 88%,
-    rgba(196, 172, 116, 0.08) 95%,
+    rgba(196, 172, 116, 0.10) 35%,
+    rgba(218, 194, 132, 0.35) 58%,
+    rgba(242, 222, 166, 0.80) 75%,
+    rgba(255, 245, 200, 0.90) 81%,
+    rgba(242, 222, 166, 0.65) 88%,
+    rgba(196, 172, 116, 0.15) 95%,
     transparent 100%
   );
 }
@@ -927,23 +927,23 @@ body {
     0 0 0 1px rgba(0, 0, 0, 0.3);
   animation: modal-scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Top shine line on modal */
+/* Top shine line on modal — intense */
 .modal-glass::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1.5px;
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent 10%,
-    rgba(196, 172, 116, 0.06) 30%,
-    rgba(218, 194, 132, 0.20) 50%,
-    rgba(232, 212, 152, 0.50) 72%,
-    rgba(242, 222, 166, 0.65) 80%,
-    rgba(232, 212, 152, 0.40) 88%,
-    rgba(196, 172, 116, 0.08) 96%,
+    rgba(196, 172, 116, 0.12) 30%,
+    rgba(218, 194, 132, 0.40) 50%,
+    rgba(242, 222, 166, 0.85) 72%,
+    rgba(255, 245, 200, 1.0) 80%,
+    rgba(242, 222, 166, 0.65) 88%,
+    rgba(196, 172, 116, 0.15) 96%,
     transparent 100%
   );
   border-radius: 16px 16px 0 0;
@@ -986,12 +986,12 @@ body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(196, 172, 116, 0.06) 15%,
-    rgba(196, 172, 116, 0.15) 40%,
-    rgba(196, 172, 116, 0.50) 72%,
-    rgba(196, 172, 116, 0.65) 82%,
-    rgba(196, 172, 116, 0.50) 90%,
-    rgba(196, 172, 116, 0.20) 97%,
+    rgba(196, 172, 116, 0.10) 15%,
+    rgba(196, 172, 116, 0.25) 40%,
+    rgba(196, 172, 116, 0.70) 72%,
+    rgba(196, 172, 116, 0.90) 82%,
+    rgba(196, 172, 116, 0.70) 90%,
+    rgba(196, 172, 116, 0.30) 97%,
     transparent 100%
   );
 }
