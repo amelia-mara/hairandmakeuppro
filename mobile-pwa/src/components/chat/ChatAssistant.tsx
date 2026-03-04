@@ -129,32 +129,26 @@ export function ChatAssistant() {
 
   return (
     <>
-      {/* Toggle Button — speech bubble icon for Team Chat */}
+      {/* Toggle Button — only visible when chat is closed */}
+      {!isOpen && (
       <button
         onClick={toggleChat}
-        className={`fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 ${
-          isOpen ? 'gold-gradient rotate-0' : 'gold-gradient'
-        }`}
+        className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 gold-gradient"
         style={{
           boxShadow: '0 4px 20px rgba(201, 169, 97, 0.4)',
         }}
-        aria-label={isOpen ? 'Close chat' : 'Open project chat'}
+        aria-label="Open project chat"
       >
-        {isOpen ? (
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-        )}
+        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
       </button>
+      )}
 
       {/* Chat Panel - z-30 to stay below BottomNav (z-40) so users can navigate away */}
       {isOpen && (
