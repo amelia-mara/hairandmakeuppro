@@ -1,5 +1,11 @@
 {
-  "buildCommand": "cd mobile-pwa && npm install && npm run build",
+  "buildCommand": "cd mobile-pwa && npm install && npm run build && cd ../prep-app && npm install && npm run build",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/prep/((?!assets/).*)",
+      "destination": "/prep/index.html"
+    }
+  ]
 }
