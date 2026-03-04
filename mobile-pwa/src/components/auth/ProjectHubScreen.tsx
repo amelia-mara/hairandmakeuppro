@@ -70,6 +70,7 @@ function createProjectFromMembership(membership: ProjectMembership): Project {
   return {
     id: membership.projectId,
     name: membership.projectName,
+    department: membership.department || 'hmu',
     createdAt: membership.joinedAt,
     updatedAt: membership.lastAccessedAt,
     scenes: [],
@@ -726,6 +727,7 @@ export function ProjectHubScreen() {
         const project: Project = {
           id: membership.projectId,
           name: membership.projectName,
+          department: membership.department || 'hmu',
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
           scenes: localScenes,
