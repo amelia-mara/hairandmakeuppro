@@ -1067,7 +1067,300 @@ body {
 .stagger-3 { animation-delay: 0.15s; animation-fill-mode: backwards; }
 .stagger-4 { animation-delay: 0.2s; animation-fill-mode: backwards; }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PROJECT SIDEBAR — 220px fixed left column
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.project-sidebar {
+  width: 220px;
+  min-width: 220px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 13, 11, 1) 0%,
+    rgba(10, 9, 8, 1) 100%
+  );
+  border-right: 1px solid var(--border-subtle);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.sidebar-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.sidebar-back-btn:hover {
+  color: var(--accent-gold);
+}
+
+.sidebar-project-info {
+  padding: 4px 20px 16px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+  gap: 2px;
+  flex: 1;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-label);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+.sidebar-nav-item:hover {
+  color: var(--text-secondary);
+  background: rgba(196, 172, 116, 0.04);
+}
+.sidebar-nav-item.active {
+  color: var(--accent-gold);
+  background: rgba(196, 172, 116, 0.08);
+  box-shadow: inset 2px 0 0 var(--accent-gold);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PROJECT CONTENT AREA
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.project-content {
+  flex: 1;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DASHBOARD
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.dashboard-header .btn-action-gold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 24px;
+  text-align: center;
+}
+.dashboard-empty .btn-action-gold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-grid-wrapper {
+  padding: 24px 32px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WIDGET CARD — glass panel matching project cards
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.widget-card {
+  background: linear-gradient(
+    145deg,
+    rgba(34, 30, 24, 0.97) 0%,
+    rgba(21, 19, 17, 0.99) 30%,
+    rgba(13, 12, 10, 1) 100%
+  );
+  border: 1px solid var(--border-card);
+  border-top-color: rgba(196, 172, 116, 0.16);
+  border-right-color: rgba(196, 172, 116, 0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--glass-shadow-stat);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+/* Inner glow */
+.widget-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 70%;
+  height: 60%;
+  background: radial-gradient(
+    ellipse at top right,
+    rgba(196, 172, 116, 0.09) 0%,
+    rgba(196, 172, 116, 0.03) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+/* Rim light */
+.widget-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(196, 172, 116, 0.08) 30%,
+    rgba(218, 194, 132, 0.30) 52%,
+    rgba(242, 222, 166, 0.75) 72%,
+    rgba(255, 245, 200, 0.90) 78%,
+    rgba(242, 222, 166, 0.60) 84%,
+    rgba(196, 172, 116, 0.15) 95%,
+    transparent 100%
+  );
+  border-radius: 16px 16px 0 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.widget-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 8px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 1;
+}
+
+.widget-icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.widget-icon-btn:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: rgba(196, 172, 116, 0.06);
+}
+.widget-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   QUICK ACTION BUTTONS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 8px;
+  background: rgba(10, 9, 8, 0.6);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) inset, 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+.quick-action-btn:hover {
+  border-color: var(--border-medium);
+  background: rgba(196, 172, 116, 0.04);
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.3) inset,
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(196, 172, 116, 0.04);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ADD WIDGET MODAL — option rows
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.widget-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(10, 9, 8, 0.5);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.widget-option:hover:not(:disabled) {
+  border-color: var(--border-medium);
+  background: rgba(196, 172, 116, 0.04);
+}
+.widget-option.added {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   REACT-GRID-LAYOUT OVERRIDES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.react-grid-layout {
+  position: relative;
+}
+.react-grid-item.react-grid-placeholder {
+  background: rgba(196, 172, 116, 0.08) !important;
+  border: 1px dashed var(--border-medium) !important;
+  border-radius: 16px !important;
+  opacity: 1 !important;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-color: var(--text-muted) !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+.react-grid-item > .react-resizable-handle:hover::after {
+  border-color: var(--accent-gold) !important;
+}
+
 /* ━━━ Responsive ━━━ */
 @media (max-width: 768px) {
   .app-header { padding: 16px 20px; }
+  .project-sidebar { width: 180px; min-width: 180px; }
+  .dashboard-header { padding: 20px 20px; }
+  .dashboard-grid-wrapper { padding: 16px 20px; }
 }
