@@ -9,14 +9,13 @@ interface ProjectLayoutProps {
   children: ReactNode;
 }
 
-export function ProjectLayout({ projectId, activePage, onNavigate, onBackToHub, children }: ProjectLayoutProps) {
+export function ProjectLayout({ projectId, activePage, onNavigate, children }: ProjectLayoutProps) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="project-layout">
       <ProjectSidebar
         projectId={projectId}
         activePage={activePage}
         onNavigate={onNavigate}
-        onBackToHub={onBackToHub}
       />
       <main className="project-content">
         {children}

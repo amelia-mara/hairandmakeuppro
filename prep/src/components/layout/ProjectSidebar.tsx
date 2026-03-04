@@ -4,7 +4,6 @@ interface ProjectSidebarProps {
   projectId: string;
   activePage: string;
   onNavigate: (page: string) => void;
-  onBackToHub: () => void;
 }
 
 const NAV_ITEMS = [
@@ -17,36 +16,18 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function ProjectSidebar({ projectId, activePage, onNavigate, onBackToHub }: ProjectSidebarProps) {
+export function ProjectSidebar({ projectId, activePage, onNavigate }: ProjectSidebarProps) {
   const project = useProjectStore((s) => s.getProject(projectId));
 
   if (!project) return null;
 
   return (
     <aside className="project-sidebar">
-      {/* Back button */}
-      <button className="sidebar-back-btn" onClick={onBackToHub}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
-        <span>Projects</span>
-      </button>
-
       {/* Project info */}
       <div className="sidebar-project-info">
         <div style={{
-          fontSize: '0.8125rem',
-          fontWeight: 500,
-          color: 'var(--text-heading)',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          marginBottom: '4px',
-          lineHeight: 1.3,
-        }}>
-          {project.title}
-        </div>
-        <div style={{
           fontSize: '0.6875rem',
+          fontWeight: 500,
           color: 'var(--text-muted)',
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
@@ -59,7 +40,7 @@ export function ProjectSidebar({ projectId, activePage, onNavigate, onBackToHub 
       <div style={{
         height: '1px',
         background: 'var(--border-subtle)',
-        margin: '4px 16px 8px',
+        margin: '0 16px 8px',
       }} />
 
       {/* Nav items */}

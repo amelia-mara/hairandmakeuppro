@@ -1068,14 +1068,22 @@ body {
 .stagger-4 { animation-delay: 0.2s; animation-fill-mode: backwards; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   PROJECT SIDEBAR — 220px fixed left column
+   PROJECT LAYOUT — sits below TopBar
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.project-layout {
+  display: flex;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PROJECT SIDEBAR — 220px left column
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .project-sidebar {
   width: 220px;
   min-width: 220px;
-  height: 100vh;
+  min-height: calc(100vh - 80px);
   position: sticky;
-  top: 0;
+  top: 80px;
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   background: linear-gradient(
@@ -1088,28 +1096,8 @@ body {
   z-index: 10;
 }
 
-.sidebar-back-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 20px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-.sidebar-back-btn:hover {
-  color: var(--accent-gold);
-}
-
 .sidebar-project-info {
-  padding: 4px 20px 16px;
+  padding: 16px 20px 12px;
 }
 
 .sidebar-nav {
@@ -1360,7 +1348,7 @@ body {
 /* ━━━ Responsive ━━━ */
 @media (max-width: 768px) {
   .app-header { padding: 16px 20px; }
-  .project-sidebar { width: 180px; min-width: 180px; }
+  .project-sidebar { width: 180px; min-width: 180px; min-height: calc(100vh - 64px); top: 64px; }
   .dashboard-header { padding: 20px 20px; }
   .dashboard-grid-wrapper { padding: 16px 20px; }
 }
