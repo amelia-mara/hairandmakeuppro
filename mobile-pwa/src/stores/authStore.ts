@@ -113,7 +113,7 @@ function toProjectMembership(
     projectId: project.id,
     projectName: project.name,
     productionType: project.production_type as ProductionType,
-    department: ((project as unknown as Record<string, unknown>).department as 'hmu' | 'costume') || 'hmu',
+    department: project.department || 'hmu',
     role: project.is_owner ? 'owner' : (project.role as ProjectRole),
     joinedAt: new Date(project.created_at),
     lastAccessedAt: new Date(),
@@ -520,8 +520,7 @@ export const useAuthStore = create<AuthState>()(
             if (ownerMember) ownerName = ownerMember.user.name;
           } catch { /* non-critical */ }
 
-          // Read department from the joined project (may come from DB once column exists)
-          const joinedDept = ((joinedProject as Record<string, unknown>).department as 'hmu' | 'costume') || 'hmu';
+          const joinedDept = joinedProject.department || 'hmu';
 
           // Add to local memberships
           const newMembership: ProjectMembership = {

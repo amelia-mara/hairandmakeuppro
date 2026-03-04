@@ -40,6 +40,7 @@ export type Database = {
           id: string
           name: string
           production_type: string
+          department: 'hmu' | 'costume'
           status: 'prep' | 'shooting' | 'wrapped'
           invite_code: string
           created_by: string
@@ -50,6 +51,7 @@ export type Database = {
           id?: string
           name: string
           production_type: string
+          department?: 'hmu' | 'costume'
           status?: 'prep' | 'shooting' | 'wrapped'
           invite_code: string
           created_by: string
@@ -60,6 +62,7 @@ export type Database = {
           id?: string
           name?: string
           production_type?: string
+          department?: 'hmu' | 'costume'
           status?: 'prep' | 'shooting' | 'wrapped'
           invite_code?: string
           created_by?: string
