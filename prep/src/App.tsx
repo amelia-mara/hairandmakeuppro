@@ -23,7 +23,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)' }}>
+    <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <TopBar />
 
       {view === 'hub' && (
