@@ -6,7 +6,7 @@ import path from 'path'
 export default defineConfig({
   base: '/prep/',
   build: {
-    outDir: '../prep',
+    outDir: '../prep-dist',
     emptyOutDir: true,
   },
   plugins: [react(), tailwindcss()],
