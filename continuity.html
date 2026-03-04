@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Continuity Tracker - Hair & Makeup Pro</title>
+    <title>Continuity Tracker</title>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -2028,6 +2028,31 @@
         // CONTINUITY TRACKER - STATE MANAGEMENT
         // ============================================================================
 
+        // Department detection
+        function getProjectDepartment() {
+            try {
+                const proj = JSON.parse(localStorage.getItem('currentProject') || '{}');
+                return proj.department || 'hmu';
+            } catch (e) { return 'hmu'; }
+        }
+
+        const projectDepartment = getProjectDepartment();
+        const isCostumeDept = projectDepartment === 'costume';
+
+        // Costume photo categories (when department === 'costume')
+        const COSTUME_PHOTO_SLOTS = [
+            { angle: 'masterReference', label: 'MASTER REF' },
+            { angle: 'frontFull', label: 'FRONT' },
+            { angle: 'backFull', label: 'BACK' },
+            { angle: 'leftSideFull', label: 'LEFT' },
+            { angle: 'rightSideFull', label: 'RIGHT' },
+            { angle: 'detailJewellery', label: 'JEWELLERY' },
+            { angle: 'detailAccessories', label: 'ACCESSORIES' },
+            { angle: 'detailShoes', label: 'SHOES' },
+            { angle: 'detailHeadwear', label: 'HEADWEAR' },
+            { angle: 'closeupFastenings', label: 'FASTENINGS' },
+        ];
+
         // Application state
         let scenes = [];
         let sceneBreakdowns = {};
@@ -2845,12 +2870,18 @@
 
             contentContainer.innerHTML = `
                 <!-- Essential Photos Section -->
-                <div class="section-label">ESSENTIAL PHOTOS</div>
-                <div class="photo-upload-grid">
-                    ${renderPhotoSlot('front', 'FRONT', charData.photos.front)}
-                    ${renderPhotoSlot('left', 'LEFT', charData.photos.left)}
-                    ${renderPhotoSlot('right', 'RIGHT', charData.photos.right)}
-                    ${renderPhotoSlot('back', 'BACK', charData.photos.back)}
+                <div class="section-label">${isCostumeDept ? 'COSTUME PHOTOS' : 'ESSENTIAL PHOTOS'}</div>
+                <div class="photo-upload-grid" style="${isCostumeDept ? 'grid-template-columns: repeat(3, 1fr); gap: 8px;' : ''}">
+                    ${isCostumeDept ?
+                        COSTUME_PHOTO_SLOTS.map(slot =>
+                            renderPhotoSlot(slot.angle, slot.label, charData.photos[slot.angle])
+                        ).join('')
+                        :
+                        `${renderPhotoSlot('front', 'FRONT', charData.photos.front)}
+                        ${renderPhotoSlot('left', 'LEFT', charData.photos.left)}
+                        ${renderPhotoSlot('right', 'RIGHT', charData.photos.right)}
+                        ${renderPhotoSlot('back', 'BACK', charData.photos.back)}`
+                    }
                 </div>
 
                 <!-- Comparison View Toggle -->
@@ -2941,8 +2972,74 @@
 
                 <!-- Structured Notes Section -->
                 <div class="scene-notes-section">
-                    <div class="notes-label">SCENE NOTES</div>
+                    <div class="notes-label">${isCostumeDept ? 'COSTUME CONTINUITY' : 'SCENE NOTES'}</div>
                     <div class="structured-notes">
+                        ${isCostumeDept ? `
+                        <!-- Costume Items -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">👗</span>
+                                <span class="note-field-label">Costume Items</span>
+                            </div>
+                            <textarea class="note-field-textarea"
+                                      id="note-products"
+                                      placeholder="List costume items worn in this scene..."
+                                      oninput="handleStructuredNoteInput('products', this.value)"
+                                      onblur="saveStructuredNote('products', this.value)">${escapeHtml(structuredNotes.products || '')}</textarea>
+                        </div>
+
+                        <!-- Shoes -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">👞</span>
+                                <span class="note-field-label">Shoes</span>
+                            </div>
+                            <input type="text" class="note-field-input" id="note-shoes"
+                                   placeholder="e.g., Brown leather brogues"
+                                   value="${escapeHtml(structuredNotes.shoes || '')}"
+                                   oninput="handleStructuredNoteInput('shoes', this.value)"
+                                   onblur="saveStructuredNote('shoes', this.value)">
+                        </div>
+
+                        <!-- Jewellery -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">💍</span>
+                                <span class="note-field-label">Jewellery</span>
+                            </div>
+                            <input type="text" class="note-field-input" id="note-jewellery"
+                                   placeholder="e.g., Gold wedding band, silver watch"
+                                   value="${escapeHtml(structuredNotes.jewellery || '')}"
+                                   oninput="handleStructuredNoteInput('jewellery', this.value)"
+                                   onblur="saveStructuredNote('jewellery', this.value)">
+                        </div>
+
+                        <!-- Accessories -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">👜</span>
+                                <span class="note-field-label">Accessories</span>
+                            </div>
+                            <input type="text" class="note-field-input" id="note-accessories"
+                                   placeholder="e.g., Brown leather belt, sunglasses"
+                                   value="${escapeHtml(structuredNotes.accessories || '')}"
+                                   oninput="handleStructuredNoteInput('accessories', this.value)"
+                                   onblur="saveStructuredNote('accessories', this.value)">
+                        </div>
+
+                        <!-- Hair Pieces/Wigs -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">💇</span>
+                                <span class="note-field-label">Hair Pieces/Wigs</span>
+                            </div>
+                            <input type="text" class="note-field-input" id="note-hairpieces"
+                                   placeholder="e.g., Lace front wig #3 (crossover with H&MU)"
+                                   value="${escapeHtml(structuredNotes.hairPiecesWigs || '')}"
+                                   oninput="handleStructuredNoteInput('hairPiecesWigs', this.value)"
+                                   onblur="saveStructuredNote('hairPiecesWigs', this.value)">
+                        </div>
+                        ` : `
                         <!-- Products Used -->
                         <div class="note-field">
                             <div class="note-field-header">
@@ -2970,8 +3067,9 @@
                                       oninput="handleStructuredNoteInput('changes', this.value)"
                                       onblur="saveStructuredNote('changes', this.value)">${escapeHtml(structuredNotes.changes || '')}</textarea>
                         </div>
+                        `}
 
-                        <!-- Continuity Notes -->
+                        <!-- Continuity Notes (shared) -->
                         <div class="note-field">
                             <div class="note-field-header">
                                 <span class="note-field-icon">👁️</span>
@@ -2984,11 +3082,11 @@
                                       onblur="saveStructuredNote('continuity', this.value)">${escapeHtml(structuredNotes.continuity || legacyNotes)}</textarea>
                         </div>
 
-                        <!-- Application Time -->
+                        <!-- Application/Fitting Time -->
                         <div class="note-field inline">
                             <div class="note-field-header">
                                 <span class="note-field-icon">⏱️</span>
-                                <span class="note-field-label">Application Time</span>
+                                <span class="note-field-label">${isCostumeDept ? 'Fitting Time' : 'Application Time'}</span>
                             </div>
                             <input type="text"
                                    class="note-field-input"

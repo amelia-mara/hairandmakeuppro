@@ -58,6 +58,8 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
     return null;
   }
 
+  const isCostume = currentProject.department === 'costume';
+
   // Get scene data and front photos for carousel
   const lookScenes = currentProject.scenes.filter((s) =>
     look.scenes.includes(s.sceneNumber)
@@ -453,7 +455,8 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
             </div>
           </div>
 
-          {/* Quick Flags */}
+          {/* Quick Flags (HMU only) */}
+          {!isCostume && (
           <div className="card">
             <h3 className="section-header mb-3">QUICK FLAGS</h3>
             <QuickFlags flags={lookFlags} onToggle={handleToggleFlag} />
@@ -461,6 +464,7 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
               Flags set here apply to all scenes in this look
             </p>
           </div>
+          )}
 
           {/* Continuity Events */}
           <div className="card">
@@ -471,7 +475,8 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
             />
           </div>
 
-          {/* Makeup Accordion */}
+          {/* Makeup Accordion (HMU only) */}
+          {!isCostume && (
           <Accordion
             title="MAKEUP"
             count={countFilledFields(look.makeup)}
@@ -483,8 +488,10 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
               }
             />
           </Accordion>
+          )}
 
-          {/* Hair Accordion */}
+          {/* Hair Accordion (HMU only) */}
+          {!isCostume && (
           <Accordion
             title="HAIR"
             count={countHairFields(look.hair)}
@@ -496,8 +503,10 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
               }
             />
           </Accordion>
+          )}
 
-          {/* SFX Accordion */}
+          {/* SFX Accordion (HMU only) */}
+          {!isCostume && (
           <Accordion
             title="SPECIAL EFFECTS"
             count={countSFXFields(lookSfx)}
@@ -510,6 +519,7 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
               onRemovePhoto={handleRemoveSFXPhoto}
             />
           </Accordion>
+          )}
 
           {/* Notes Accordion */}
           <Accordion title="LOOK NOTES">

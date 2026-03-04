@@ -71,7 +71,7 @@ interface AuthState {
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
   joinProject: (code: string, role?: string) => Promise<{ success: boolean; projectName?: string; error?: string }>;
-  createProject: (name: string, type: ProductionType, ownerRole?: string) => Promise<{ success: boolean; code?: string; error?: string }>;
+  createProject: (name: string, type: ProductionType, ownerRole?: string, department?: 'hmu' | 'costume') => Promise<{ success: boolean; code?: string; error?: string }>;
   clearError: () => void;
   setHasCompletedOnboarding: (value: boolean) => void;
   canCreateProjects: () => boolean;
@@ -113,6 +113,7 @@ function toProjectMembership(
     projectId: project.id,
     projectName: project.name,
     productionType: project.production_type as ProductionType,
+    department: ((project as unknown as Record<string, unknown>).department as 'hmu' | 'costume') || 'hmu',
     role: project.is_owner ? 'owner' : (project.role as ProjectRole),
     joinedAt: new Date(project.created_at),
     lastAccessedAt: new Date(),
@@ -123,6 +124,23 @@ function toProjectMembership(
     ownerName: project.owner_name,
     pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
   };
+}
+
+// Merge server-fetched memberships with existing local ones to preserve
+// fields not yet stored in Supabase (e.g. department).
+function mergeWithLocalMemberships(
+  serverMemberships: ProjectMembership[],
+  localMemberships: ProjectMembership[]
+): ProjectMembership[] {
+  const localMap = new Map(localMemberships.map((m) => [m.projectId, m]));
+  return serverMemberships.map((m) => {
+    const local = localMap.get(m.projectId);
+    if (local && m.department === 'hmu' && local.department && local.department !== 'hmu') {
+      // Server doesn't have department yet — preserve local value
+      return { ...m, department: local.department };
+    }
+    return m;
+  });
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -187,7 +205,10 @@ export const useAuthStore = create<AuthState>()(
               const visibleProjects = projects.filter(
                 (p) => !(p.is_owner && p.pending_deletion_at)
               );
-              const memberships = visibleProjects.map(toProjectMembership);
+              const memberships = mergeWithLocalMemberships(
+                visibleProjects.map(toProjectMembership),
+                get().projectMemberships
+              );
 
               set({
                 isAuthenticated: true,
@@ -236,7 +257,10 @@ export const useAuthStore = create<AuthState>()(
             (p) => !(p.is_owner && p.pending_deletion_at)
           );
 
-          const memberships = remaining.map(toProjectMembership);
+          const memberships = mergeWithLocalMemberships(
+            remaining.map(toProjectMembership),
+            get().projectMemberships
+          );
           set({ projectMemberships: memberships });
         } catch (error) {
           console.error('Error refreshing projects:', error);
@@ -333,7 +357,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Only update projectMemberships if the fetch succeeded
           const memberships = !projectsError && projects.length > 0
-            ? projects.map(toProjectMembership)
+            ? mergeWithLocalMemberships(projects.map(toProjectMembership), get().projectMemberships)
             : projectsError
               ? get().projectMemberships // Keep existing on error
               : []; // Genuinely empty
@@ -496,11 +520,15 @@ export const useAuthStore = create<AuthState>()(
             if (ownerMember) ownerName = ownerMember.user.name;
           } catch { /* non-critical */ }
 
+          // Read department from the joined project (may come from DB once column exists)
+          const joinedDept = ((joinedProject as Record<string, unknown>).department as 'hmu' | 'costume') || 'hmu';
+
           // Add to local memberships
           const newMembership: ProjectMembership = {
             projectId: joinedProject.id,
             projectName: joinedProject.name,
             productionType: joinedProject.production_type as ProductionType,
+            department: joinedDept,
             role: joinRole as ProjectRole,
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
@@ -572,6 +600,7 @@ export const useAuthStore = create<AuthState>()(
             const loadedProject: Project = {
               id: joinedProject.id,
               name: joinedProject.name,
+              department: joinedDept,
               createdAt: new Date(joinedProject.created_at),
               updatedAt: new Date(),
               scenes: localScenes,
@@ -584,6 +613,7 @@ export const useAuthStore = create<AuthState>()(
             const emptyProject: Project = {
               id: joinedProject.id,
               name: joinedProject.name,
+              department: joinedDept,
               createdAt: new Date(joinedProject.created_at),
               updatedAt: new Date(),
               scenes: [],
@@ -673,7 +703,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Create a new project with the owner's selected role
-      createProject: async (name, type, ownerRole) => {
+      createProject: async (name, type, ownerRole, department) => {
         const { user, projectMemberships } = get();
 
         const tierLimits = user ? TIER_LIMITS[user.tier] : null;
@@ -689,7 +719,8 @@ export const useAuthStore = create<AuthState>()(
             name,
             type,
             user.id,
-            (ownerRole || 'designer') as DbMemberRole
+            (ownerRole || 'designer') as DbMemberRole,
+            department || 'hmu'
           );
 
           if (error || !project || !inviteCode) {
@@ -701,6 +732,7 @@ export const useAuthStore = create<AuthState>()(
             projectId: project.id,
             projectName: project.name,
             productionType: type,
+            department: department || 'hmu',
             role: 'owner',
             joinedAt: new Date(),
             lastAccessedAt: new Date(),

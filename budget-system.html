@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budget System Pro - Hair & Makeup</title>
+    <title>Budget System Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -2086,6 +2086,46 @@
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 
     <script>
+        // Department detection for budget categories
+        function getBudgetDepartment() {
+            try {
+                const proj = JSON.parse(localStorage.getItem('currentProject') || '{}');
+                return proj.department || 'hmu';
+            } catch (e) { return 'hmu'; }
+        }
+
+        const budgetDepartment = getBudgetDepartment();
+
+        // HMU categories (default)
+        const HMU_BUDGET_CATS = {
+            disposables: { name: 'Disposables', items: [] },
+            hygiene: { name: 'Hygiene', items: [] },
+            makeup: { name: 'Makeup', items: [] },
+            hair: { name: 'Hair', items: [] },
+            prosthetics: { name: 'Prosthetics', items: [] },
+            mouldmaking: { name: 'Mould Making', items: [] },
+            sfxmakeup: { name: 'SFX Makeup', items: [] },
+            accessories: { name: 'Accessories', items: [] },
+            actoressentials: { name: 'Actor Essentials', items: [] },
+            departmentsupplies: { name: 'Department Supplies', items: [] }
+        };
+
+        // Costume categories
+        const COSTUME_BUDGET_CATS = {
+            costumebuild: { name: 'Costume Build', items: [] },
+            costumehire: { name: 'Costume Hire', items: [] },
+            alterations: { name: 'Alterations', items: [] },
+            shoes: { name: 'Shoes', items: [] },
+            accessories: { name: 'Accessories', items: [] },
+            jewellery: { name: 'Jewellery', items: [] },
+            hatsheadwear: { name: 'Hats/Headwear', items: [] },
+            undergarments: { name: 'Undergarments', items: [] },
+            fabricmaterials: { name: 'Fabric/Materials', items: [] },
+            drycleaning: { name: 'Dry Cleaning', items: [] },
+            costumebreakdown: { name: 'Costume Breakdown', items: [] },
+            multiples: { name: 'Multiples', items: [] }
+        };
+
         // Enhanced Budget Management System
         class BudgetManager {
             constructor() {
@@ -2098,18 +2138,9 @@
                         duration: '4 weeks',
                         budgetLimit: 0
                     },
-                    categories: {
-                        disposables: { name: 'Disposables', items: [] },
-                        hygiene: { name: 'Hygiene', items: [] },
-                        makeup: { name: 'Makeup', items: [] },
-                        hair: { name: 'Hair', items: [] },
-                        prosthetics: { name: 'Prosthetics', items: [] },
-                        mouldmaking: { name: 'Mould Making', items: [] },
-                        sfxmakeup: { name: 'SFX Makeup', items: [] },
-                        accessories: { name: 'Accessories', items: [] },
-                        actoressentials: { name: 'Actor Essentials', items: [] },
-                        departmentsupplies: { name: 'Department Supplies', items: [] }
-                    },
+                    categories: budgetDepartment === 'costume'
+                        ? JSON.parse(JSON.stringify(COSTUME_BUDGET_CATS))
+                        : JSON.parse(JSON.stringify(HMU_BUDGET_CATS)),
                     expenses: [],
                     receipts: [],
                     apiSettings: {

@@ -2496,8 +2496,19 @@
             }
         }
 
+        function getDepartmentLabel() {
+            return currentProject?.department === 'costume' ? 'Costume' : 'H&MU';
+        }
+
         function updateDashboard() {
-            document.querySelector('.project-info h2').textContent = currentProject?.title || 'The Big Race';
+            document.querySelector('.project-info h2').textContent = currentProject?.title || currentProject?.name || 'The Big Race';
+            // Update department-specific labels
+            const deptLabel = getDepartmentLabel();
+            const deptFull = currentProject?.department === 'costume' ? 'Costume Department' : 'Hair & Makeup Department';
+            document.querySelector('.project-code').textContent = deptFull;
+            // Update dashboard title
+            const dashTitle = document.querySelector('.top-bar .widget-title');
+            if (dashTitle) dashTitle.textContent = deptLabel + ' Dashboard';
         }
 
         // Widget Templates - Complete HTML for all widget types

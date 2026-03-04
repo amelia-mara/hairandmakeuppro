@@ -605,6 +605,81 @@
             margin-top: 4px;
         }
 
+        /* Department Selector */
+        .department-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .department-option {
+            cursor: pointer;
+        }
+
+        .department-option input[type="radio"] {
+            display: none;
+        }
+
+        .department-card {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--glass-border);
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .department-option:hover .department-card {
+            border-color: var(--border-medium);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .department-option.selected .department-card {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.08);
+            box-shadow: 0 0 20px rgba(201, 169, 97, 0.1);
+        }
+
+        .department-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .department-name {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .department-desc {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            line-height: 1.3;
+        }
+
+        .department-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.6875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .department-badge.hmu {
+            background: rgba(201, 169, 97, 0.15);
+            color: var(--accent-gold);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+        }
+
+        .department-badge.costume {
+            background: rgba(147, 130, 220, 0.15);
+            color: #9382dc;
+            border: 1px solid rgba(147, 130, 220, 0.3);
+        }
+
         .form-input,
         .form-select {
             width: 100%;
@@ -1126,7 +1201,30 @@
             
             <form id="projectForm" onsubmit="saveProject(event)">
                 <input type="hidden" id="editIndex" value="">
-                
+
+                <div class="form-group" id="departmentGroup">
+                    <label class="form-label">Department *</label>
+                    <div class="department-selector" id="departmentSelector">
+                        <label class="department-option selected" data-value="hmu">
+                            <input type="radio" name="department" value="hmu" checked>
+                            <div class="department-card">
+                                <div class="department-icon">💄</div>
+                                <div class="department-name">Hair & Makeup</div>
+                                <div class="department-desc">H&MU breakdowns, continuity & budget</div>
+                            </div>
+                        </label>
+                        <label class="department-option" data-value="costume">
+                            <input type="radio" name="department" value="costume">
+                            <div class="department-card">
+                                <div class="department-icon">👗</div>
+                                <div class="department-name">Costume</div>
+                                <div class="department-desc">Costume tracking, 360 photos & budget</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-hint">Department type cannot be changed after creation</div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Project Name *</label>
                     <input type="text" class="form-input" id="projectName" placeholder="Enter project name" required>
@@ -1416,7 +1514,10 @@
                         <div class="project-progress-fill" style="width: ${progress}%"></div>
                     </div>
                     <div class="project-header">
-                        <div class="project-title">${escapeHtml(project.name)}</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="project-title">${escapeHtml(project.name)}</div>
+                            <span class="department-badge ${project.department || 'hmu'}">${project.department === 'costume' ? 'Costume' : 'H&MU'}</span>
+                        </div>
                         <div class="project-meta">
                             <span>${escapeHtml(displayGenre)}</span>
                             ${displayType !== 'Not Set' ? '<span>•</span><span>' + escapeHtml(displayType) + '</span>' : ''}
@@ -1493,6 +1594,10 @@
                 document.getElementById('editIndex').value = '';
                 document.getElementById('modalTitle').textContent = 'Create New Project';
                 document.getElementById('submitBtn').textContent = 'Create Project';
+                // Re-enable department selector for new projects
+                document.getElementById('departmentGroup').style.opacity = '1';
+                document.getElementById('departmentGroup').style.pointerEvents = 'auto';
+                updateDepartmentSelection('hmu');
             }
         }
 
@@ -1506,9 +1611,13 @@
             const editIndex = document.getElementById('editIndex').value;
             const isEditing = editIndex !== '';
 
+            const selectedDept = document.querySelector('input[name="department"]:checked');
+            const department = isEditing ? projects[editIndex].department || 'hmu' : (selectedDept ? selectedDept.value : 'hmu');
+
             const project = {
                 id: isEditing ? projects[editIndex].id : Date.now(),
                 name: document.getElementById('projectName').value,
+                department: department,
                 genre: document.getElementById('projectGenre').value,
                 type: document.getElementById('projectType').value,
                 preProductionStart: document.getElementById('preProductionStart').value,
@@ -1536,7 +1645,7 @@
 
         function editProject(index) {
             const project = projects[index];
-            
+
             document.getElementById('editIndex').value = index;
             document.getElementById('projectName').value = project.name;
             document.getElementById('projectGenre').value = project.genre || '';
@@ -1545,10 +1654,19 @@
             document.getElementById('preProductionEnd').value = project.preProductionEnd || '';
             document.getElementById('productionStart').value = project.productionStart || '';
             document.getElementById('productionEnd').value = project.productionEnd || '';
-            
+
+            // Department is locked after creation - show but disable
+            const dept = project.department || 'hmu';
+            const deptRadio = document.querySelector(`input[name="department"][value="${dept}"]`);
+            if (deptRadio) deptRadio.checked = true;
+            updateDepartmentSelection(dept);
+            // Disable department selector when editing
+            document.getElementById('departmentGroup').style.opacity = '0.5';
+            document.getElementById('departmentGroup').style.pointerEvents = 'none';
+
             document.getElementById('modalTitle').textContent = 'Edit Project';
             document.getElementById('submitBtn').textContent = 'Save Changes';
-            
+
             openModal(true);
         }
 
@@ -1975,6 +2093,19 @@
             if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
             return `${days} day${days > 1 ? 's' : ''} ago`;
         }
+
+        // Department selector interaction
+        function updateDepartmentSelection(value) {
+            document.querySelectorAll('.department-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.value === value);
+            });
+        }
+
+        document.querySelectorAll('.department-option input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                updateDepartmentSelection(this.value);
+            });
+        });
 
         // Initialize
         loadProjects();
