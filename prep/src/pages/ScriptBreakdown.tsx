@@ -214,17 +214,17 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
-          {/* Tab bar */}
-          <div className="cp-tabbar">
-            <div className="cp-tabs-scroll">
-              <button className={`cp-pill ${activeTab === 'script' ? 'cp-pill--active' : ''}`}
+          {/* File divider tabs */}
+          <div className="cp-tabstrip">
+            <div className="cp-tabs-row">
+              <button className={`cp-divider-tab ${activeTab === 'script' ? 'cp-divider-tab--active' : ''}`}
                 onClick={() => setActiveTab('script')}>Script</button>
               {sceneCharacters.map((c) => (
-                <button key={c.id} className={`cp-pill ${activeTab === c.id ? 'cp-pill--active' : ''}`}
+                <button key={c.id} className={`cp-divider-tab ${activeTab === c.id ? 'cp-divider-tab--active' : ''}`}
                   onClick={() => setActiveTab(c.id)}>{c.name}</button>
               ))}
             </div>
-            <div className="cp-tabbar-right">
+            <div className="cp-tabstrip-right">
               <div className="bd-legend-tags">
                 {BREAKDOWN_CATEGORIES.map((cat) => (
                   <span key={cat.id} className="bd-legend-tag">
@@ -244,7 +244,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
               </div>
             </div>
           </div>
-          {/* Content */}
+          {/* Content body — connects to active tab */}
           <div className="cp-body">
             {activeTab === 'script' ? (
               <ScriptView scene={scene} fontSize={fontSize} onCharClick={setActiveTab} />
