@@ -16,8 +16,12 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(13);
-  const [collapsed, setCollapsed] = useState(() => {
+  const [leftCollapsed, setLeftCollapsed] = useState(() => {
     try { return localStorage.getItem('prep-scene-list-collapsed') === 'true'; }
+    catch { return false; }
+  });
+  const [rightCollapsed, setRightCollapsed] = useState(() => {
+    try { return localStorage.getItem('prep-form-panel-collapsed') === 'true'; }
     catch { return false; }
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -30,8 +34,11 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const breakdown = store.getBreakdown(selectedSceneId);
 
   useEffect(() => {
-    localStorage.setItem('prep-scene-list-collapsed', String(collapsed));
-  }, [collapsed]);
+    localStorage.setItem('prep-scene-list-collapsed', String(leftCollapsed));
+  }, [leftCollapsed]);
+  useEffect(() => {
+    localStorage.setItem('prep-form-panel-collapsed', String(rightCollapsed));
+  }, [rightCollapsed]);
 
   useEffect(() => {
     if (!store.getBreakdown(selectedSceneId)) {
@@ -85,7 +92,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
         const next = filteredScenes.find((s, i) => i > idx && store.getCompletionStatus(s.id, s) !== 'complete');
         if (next) selectScene(next.id);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault(); setCollapsed((c) => !c);
+        e.preventDefault(); setLeftCollapsed((c) => !c);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault(); triggerSave();
       }
@@ -133,8 +140,8 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
       {/* Three panels */}
       <div className="bd-panels">
         {/* Left — Scene List */}
-        <div className={`bd-left ${collapsed ? 'bd-left--collapsed' : ''}`}>
-          {!collapsed && (
+        <div className={`bd-left ${leftCollapsed ? 'bd-left--collapsed' : ''}`}>
+          {!leftCollapsed && (
             <SceneListPanel
               scenes={filteredScenes}
               selectedId={selectedSceneId}
@@ -144,9 +151,13 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
               getStatus={(s) => store.getCompletionStatus(s.id, s)}
             />
           )}
-          <button className="bd-collapse-btn" onClick={() => setCollapsed((c) => !c)}>
+          <button
+            className="bd-collapse-btn bd-collapse-btn--left"
+            onClick={() => setLeftCollapsed((c) => !c)}
+            title={leftCollapsed ? 'Show scenes' : 'Hide scenes'}
+          >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              {collapsed ? <path d="M9 18l6-6-6-6"/> : <path d="M15 18l-6-6 6-6"/>}
+              {leftCollapsed ? <path d="M9 18l6-6-6-6"/> : <path d="M15 18l-6-6 6-6"/>}
             </svg>
           </button>
         </div>
@@ -158,16 +169,27 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
         </div>
 
         {/* Right — Breakdown Form */}
-        <div className="bd-right">
-          <BreakdownFormPanel
-            scene={scene} characters={sceneCharacters} breakdown={breakdown}
-            activeCharacterId={activeTab !== 'script' ? activeTab : null}
-            saveStatus={saveStatus}
-            onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
-            onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
-            onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
-            onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
-          />
+        <div className={`bd-right ${rightCollapsed ? 'bd-right--collapsed' : ''}`}>
+          <button
+            className="bd-collapse-btn bd-collapse-btn--right"
+            onClick={() => setRightCollapsed((c) => !c)}
+            title={rightCollapsed ? 'Show breakdown' : 'Hide breakdown'}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              {rightCollapsed ? <path d="M15 18l-6-6 6-6"/> : <path d="M9 18l6-6-6-6"/>}
+            </svg>
+          </button>
+          {!rightCollapsed && (
+            <BreakdownFormPanel
+              scene={scene} characters={sceneCharacters} breakdown={breakdown}
+              activeCharacterId={activeTab !== 'script' ? activeTab : null}
+              saveStatus={saveStatus}
+              onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
+              onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
+              onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
+              onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
+            />
+          )}
         </div>
       </div>
     </div>

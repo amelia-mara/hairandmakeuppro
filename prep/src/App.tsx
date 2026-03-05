@@ -28,14 +28,20 @@ function App() {
     setSelectedProjectId(null);
   };
 
-  // Project view — TopBar + sidebar + dashboard
+  // Project view — TopBar with nav dropdown + content
   if (selectedProjectId) {
     const project = getProject(selectedProjectId);
     const projectTitle = project?.title || 'Project';
 
     return (
       <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <TopBar title={projectTitle} onBack={handleBackToHub} />
+        <TopBar
+          title={projectTitle}
+          onBack={handleBackToHub}
+          activePage={activePage}
+          onNavigate={setActivePage}
+          projectType={project?.type}
+        />
         <ProjectLayout
           projectId={selectedProjectId}
           activePage={activePage}
