@@ -1,5 +1,4 @@
 import { type ReactNode } from 'react';
-import { ProjectSidebar } from './ProjectSidebar';
 
 interface ProjectLayoutProps {
   projectId: string;
@@ -9,17 +8,10 @@ interface ProjectLayoutProps {
   children: ReactNode;
 }
 
-export function ProjectLayout({ projectId, activePage, onNavigate, children }: ProjectLayoutProps) {
+export function ProjectLayout({ children }: ProjectLayoutProps) {
   return (
-    <div className="project-layout">
-      <ProjectSidebar
-        projectId={projectId}
-        activePage={activePage}
-        onNavigate={onNavigate}
-      />
-      <main className="project-content">
-        {children}
-      </main>
-    </div>
+    <main className="project-content" style={{ minHeight: 'calc(100vh - 80px)' }}>
+      {children}
+    </main>
   );
 }
