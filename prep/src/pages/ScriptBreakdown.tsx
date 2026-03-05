@@ -224,24 +224,25 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                   onClick={() => setActiveTab(c.id)}>{c.name}</button>
               ))}
             </div>
-            <div className="cp-tabstrip-right">
-              <div className="bd-legend-tags">
-                {BREAKDOWN_CATEGORIES.map((cat) => (
-                  <span key={cat.id} className="bd-legend-tag">
-                    <span className="bd-legend-swatch" style={{ background: cat.color }} />
-                    {cat.label}
-                  </span>
-                ))}
-              </div>
-              <div className="bd-zoom">
-                <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
-                </button>
-                <span className="bd-zoom-label">{fontSize}</span>
-                <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.min(22, s + 1))}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                </button>
-              </div>
+          </div>
+          {/* Legend & zoom bar — separate row below tabs */}
+          <div className="cp-toolbar">
+            <div className="bd-legend-tags">
+              {BREAKDOWN_CATEGORIES.map((cat) => (
+                <span key={cat.id} className="bd-legend-tag">
+                  <span className="bd-legend-swatch" style={{ background: cat.color }} />
+                  {cat.label}
+                </span>
+              ))}
+            </div>
+            <div className="bd-zoom">
+              <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
+              </button>
+              <span className="bd-zoom-label">{fontSize}</span>
+              <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.min(22, s + 1))}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
             </div>
           </div>
           {/* Content body — connects to active tab */}
