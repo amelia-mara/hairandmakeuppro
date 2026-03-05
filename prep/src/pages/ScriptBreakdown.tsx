@@ -48,17 +48,13 @@ function usePanelResize(storageKey: string, defaultWidth: number, min: number, m
     document.addEventListener('mouseup', onUp);
   }, [width, min, max, side]);
 
-  // Double-click to reset to default
-  const onDoubleClick = useCallback(() => {
-    setWidth(defaultWidth);
-  }, [defaultWidth]);
+  const onDoubleClick = useCallback(() => { setWidth(defaultWidth); }, [defaultWidth]);
 
-  // Persist
   useEffect(() => {
     localStorage.setItem(storageKey, String(width));
   }, [storageKey, width]);
 
-  return { width, onMouseDown, onDoubleClick, setWidth };
+  return { width, onMouseDown, onDoubleClick };
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -67,12 +63,12 @@ function usePanelResize(storageKey: string, defaultWidth: number, min: number, m
 
 interface Props { projectId: string }
 
-const LEFT_DEFAULT = 240;
-const LEFT_MIN = 120;
-const LEFT_MAX = 400;
-const RIGHT_DEFAULT = 360;
-const RIGHT_MIN = 200;
-const RIGHT_MAX = 520;
+const LEFT_DEFAULT = 300;
+const LEFT_MIN = 200;
+const LEFT_MAX = 440;
+const RIGHT_DEFAULT = 400;
+const RIGHT_MIN = 300;
+const RIGHT_MAX = 560;
 
 export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
@@ -153,82 +149,132 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
 
   return (
     <div className="bd-page">
-      {/* Header */}
-      <div className="bd-header">
-        <div className="bd-header-row">
-          <h2 className="bd-title">Script Breakdown</h2>
-          <div className="bd-header-actions">
-            <button className="btn-ghost bd-btn" onClick={() => console.log('Tools')}>
-              <ToolsIcon /> Tools
-            </button>
-            <button className="btn-gold bd-btn" onClick={() => console.log('Import Script')}>
-              <ImportIcon /> Import Script
-            </button>
-          </div>
-        </div>
-        <div className="bd-legend-row">
-          <div className="bd-legend-tags">
-            {BREAKDOWN_CATEGORIES.map((cat) => (
-              <span key={cat.id} className="bd-legend-tag">
-                <span className="bd-legend-swatch" style={{ background: cat.color }} />
-                {cat.label}
-              </span>
-            ))}
-          </div>
-          <div className="bd-zoom">
-            <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
-            </button>
-            <span className="bd-zoom-label">{fontSize}</span>
-            <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.min(22, s + 1))}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Three panels with draggable dividers */}
       <div className="bd-panels">
-        {/* Left — Scene List */}
-        <div className="bd-left" style={{ width: leftPanel.width, minWidth: leftPanel.width }}>
-          <SceneListPanel
-            scenes={filteredScenes}
-            selectedId={selectedSceneId}
-            onSelect={selectScene}
-            searchQuery={searchQuery}
-            onSearch={setSearchQuery}
-            getStatus={(s) => store.getCompletionStatus(s.id, s)}
-          />
+
+        {/* ━━━ LEFT — Scene List Panel ━━━ */}
+        <div className="bd-left bd-panel-surface" style={{ width: leftPanel.width, minWidth: leftPanel.width }}>
+          <div className="sl-header">
+            <span className="sl-header-label">Scenes</span>
+            <span className="sl-header-count">{MOCK_SCENES.length}</span>
+          </div>
+          <div className="sl-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input className="sl-search-input" placeholder="Search scenes..."
+              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
+          <div className="sl-list">
+            {filteredScenes.map((s) => {
+              const status = store.getCompletionStatus(s.id, s);
+              const isActive = s.id === selectedSceneId;
+              return (
+                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''}`}
+                  onClick={() => selectScene(s.id)}>
+                  <div className="sl-card-top">
+                    <span className="sl-card-num">{s.number}</span>
+                    <span className="sl-card-location">{s.intExt}. {s.location}</span>
+                  </div>
+                  <div className="sl-card-meta">
+                    <span className="sl-card-pill">{s.dayNight}</span>
+                    <span className="sl-card-detail">{s.intExt}</span>
+                    {s.characterIds.length > 0 && (
+                      <span className="sl-card-cast">{s.characterIds.length}</span>
+                    )}
+                    <span className={`sl-card-status sl-card-status--${status}`} />
+                  </div>
+                  {isActive && s.synopsis && (
+                    <div className="sl-card-synopsis">
+                      <div className="sl-card-synopsis-head">
+                        <span>Synopsis</span>
+                        <button className="sl-generate-btn" onClick={(e) => { e.stopPropagation(); console.log('AI generate'); }}>Generate AI</button>
+                      </div>
+                      <p className="sl-card-synopsis-text">{s.synopsis}</p>
+                    </div>
+                  )}
+                  {isActive && s.characterIds.length > 0 && (
+                    <div className="sl-card-chars">
+                      {s.characterIds.map((cid) => {
+                        const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
+                        return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0]}</span> : null;
+                      })}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Left divider — drag handle */}
-        <div
-          className="bd-divider"
-          onMouseDown={leftPanel.onMouseDown}
-          onDoubleClick={leftPanel.onDoubleClick}
-          title="Drag to resize · Double-click to reset"
-        >
+        {/* Left divider */}
+        <div className="bd-divider" onMouseDown={leftPanel.onMouseDown} onDoubleClick={leftPanel.onDoubleClick}>
           <div className="bd-divider-grip" />
         </div>
 
-        {/* Center — Script / Characters */}
+        {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
-          <CenterPanel scene={scene} characters={sceneCharacters}
-            activeTab={activeTab} onTabChange={setActiveTab} fontSize={fontSize} />
+          {/* Tab bar */}
+          <div className="cp-tabbar">
+            <div className="cp-tabs-scroll">
+              <button className={`cp-pill ${activeTab === 'script' ? 'cp-pill--active' : ''}`}
+                onClick={() => setActiveTab('script')}>Script</button>
+              {sceneCharacters.map((c) => (
+                <button key={c.id} className={`cp-pill ${activeTab === c.id ? 'cp-pill--active' : ''}`}
+                  onClick={() => setActiveTab(c.id)}>{c.name}</button>
+              ))}
+            </div>
+            <div className="cp-tabbar-right">
+              <div className="bd-legend-tags">
+                {BREAKDOWN_CATEGORIES.map((cat) => (
+                  <span key={cat.id} className="bd-legend-tag">
+                    <span className="bd-legend-swatch" style={{ background: cat.color }} />
+                    {cat.label}
+                  </span>
+                ))}
+              </div>
+              <div className="bd-zoom">
+                <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
+                </button>
+                <span className="bd-zoom-label">{fontSize}</span>
+                <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.min(22, s + 1))}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* Content */}
+          <div className="cp-body">
+            {activeTab === 'script' ? (
+              <ScriptView scene={scene} fontSize={fontSize} onCharClick={setActiveTab} />
+            ) : (
+              <CharacterView
+                char={sceneCharacters.find((c) => c.id === activeTab)!}
+                subTab="profile"
+              />
+            )}
+          </div>
         </div>
 
-        {/* Right divider — drag handle */}
-        <div
-          className="bd-divider"
-          onMouseDown={rightPanel.onMouseDown}
-          onDoubleClick={rightPanel.onDoubleClick}
-          title="Drag to resize · Double-click to reset"
-        >
+        {/* Right divider */}
+        <div className="bd-divider" onMouseDown={rightPanel.onMouseDown} onDoubleClick={rightPanel.onDoubleClick}>
           <div className="bd-divider-grip" />
         </div>
 
-        {/* Right — Breakdown Form */}
-        <div className="bd-right" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
+        {/* ━━━ RIGHT — Breakdown Form ━━━ */}
+        <div className="bd-right bd-panel-surface" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
+          <div className="fp-panel-header">
+            <span className="fp-panel-title">Scene Breakdown</span>
+            <div className="fp-panel-actions">
+              <button className="btn-ghost bd-btn" onClick={() => console.log('Tools')}>
+                <ToolsIcon /> Tools
+              </button>
+              <button className="btn-gold bd-btn" onClick={() => console.log('Import')}>
+                <ImportIcon /> Import Script
+              </button>
+            </div>
+          </div>
           <BreakdownFormPanel
             scene={scene} characters={sceneCharacters} breakdown={breakdown}
             activeCharacterId={activeTab !== 'script' ? activeTab : null}
@@ -239,87 +285,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
           />
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* ━━━ SCENE LIST ━━━ */
-
-function SceneListPanel({ scenes, selectedId, onSelect, searchQuery, onSearch, getStatus }: {
-  scenes: Scene[]; selectedId: string; onSelect: (id: string) => void;
-  searchQuery: string; onSearch: (q: string) => void;
-  getStatus: (s: Scene) => 'empty' | 'partial' | 'complete';
-}) {
-  const selectedScene = scenes.find((s) => s.id === selectedId);
-
-  return (
-    <div className="sl-wrap">
-      <div className="sl-search">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-        </svg>
-        <input className="sl-search-input" placeholder="Search scenes..."
-          value={searchQuery} onChange={(e) => onSearch(e.target.value)} />
-      </div>
-      <div className="sl-list">
-        {scenes.map((s) => {
-          const status = getStatus(s);
-          return (
-            <button key={s.id} className={`sl-item ${s.id === selectedId ? 'sl-item--active' : ''}`}
-              onClick={() => onSelect(s.id)}>
-              <div className="sl-item-row">
-                <span className="sl-scene-num">{s.number}</span>
-                <span className="sl-location">{s.location}</span>
-                <span className={`sl-status-dot sl-status-dot--${status}`} />
-              </div>
-              <div className="sl-item-sub">
-                <span>{s.intExt} · {s.dayNight}</span>
-                <span>{s.characterIds.length} cast</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-      {selectedScene && (
-        <div className="sl-synopsis">
-          <div className="sl-synopsis-head">
-            <span>Synopsis</span>
-            <button className="sl-generate-btn" onClick={() => console.log('AI generate')}>Generate</button>
-          </div>
-          <p className="sl-synopsis-text">{selectedScene.synopsis || 'No synopsis.'}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ━━━ CENTER PANEL ━━━ */
-
-function CenterPanel({ scene, characters, activeTab, onTabChange, fontSize }: {
-  scene: Scene; characters: Character[]; activeTab: string;
-  onTabChange: (t: string) => void; fontSize: number;
-}) {
-  const [charSubTab, setCharSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events'>('profile');
-  const activeChar = characters.find((c) => c.id === activeTab);
-  useEffect(() => { setCharSubTab('profile'); }, [activeTab]);
-
-  return (
-    <div className="cp-wrap">
-      <div className="cp-tabs">
-        <button className={`cp-tab ${activeTab === 'script' ? 'cp-tab--active' : ''}`}
-          onClick={() => onTabChange('script')}>Script</button>
-        {characters.map((c) => (
-          <button key={c.id} className={`cp-tab ${activeTab === c.id ? 'cp-tab--active' : ''}`}
-            onClick={() => onTabChange(c.id)}>{c.name}</button>
-        ))}
-      </div>
-      <div className="cp-body">
-        {activeTab === 'script' ? (
-          <ScriptView scene={scene} fontSize={fontSize} onCharClick={onTabChange} />
-        ) : activeChar ? (
-          <CharacterView char={activeChar} subTab={charSubTab} onSubTab={setCharSubTab} />
-        ) : null}
       </div>
     </div>
   );
@@ -347,7 +312,9 @@ function ScriptView({ scene, fontSize, onCharClick }: {
 
   return (
     <div className="sv-paper" style={{ fontSize: `${fontSize}px` }}>
-      <div className="sv-heading">{scene.intExt}. {scene.location} — {scene.dayNight}</div>
+      {/* Scene badge */}
+      <div className="sv-scene-badge">Scene {scene.number}</div>
+      <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
       {scene.scriptContent.split('\n').map(renderLine)}
     </div>
   );
@@ -355,11 +322,8 @@ function ScriptView({ scene, fontSize, onCharClick }: {
 
 /* ━━━ CHARACTER VIEW ━━━ */
 
-function CharacterView({ char, subTab, onSubTab }: {
-  char: Character;
-  subTab: 'profile' | 'lookbook' | 'timeline' | 'events';
-  onSubTab: (t: 'profile' | 'lookbook' | 'timeline' | 'events') => void;
-}) {
+function CharacterView({ char }: { char: Character; subTab: string }) {
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events'>('profile');
   const looks = MOCK_LOOKS.filter((l) => l.characterId === char.id);
   const scenes = MOCK_SCENES.filter((s) => s.characterIds.includes(char.id));
 
@@ -374,12 +338,12 @@ function CharacterView({ char, subTab, onSubTab }: {
       </div>
       <div className="cv-subtabs">
         {(['profile', 'lookbook', 'timeline', 'events'] as const).map((t) => (
-          <button key={t} className={`cv-subtab ${subTab === t ? 'cv-subtab--active' : ''}`}
-            onClick={() => onSubTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+          <button key={t} className={`cv-subtab ${activeSubTab === t ? 'cv-subtab--active' : ''}`}
+            onClick={() => setActiveSubTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
       <div className="cv-content">
-        {subTab === 'profile' && (
+        {activeSubTab === 'profile' && (
           <div className="cv-grid">
             {([['Age', char.age], ['Gender', char.gender], ['Hair Colour', char.hairColour],
               ['Hair Type', char.hairType], ['Eye Colour', char.eyeColour], ['Skin Tone', char.skinTone],
@@ -391,7 +355,7 @@ function CharacterView({ char, subTab, onSubTab }: {
             )}
           </div>
         )}
-        {subTab === 'lookbook' && (
+        {activeSubTab === 'lookbook' && (
           <div className="cv-looks">
             {looks.length === 0 ? <p className="cv-empty">No looks created.</p> : looks.map((lk) => (
               <div key={lk.id} className="cv-look-card">
@@ -403,7 +367,7 @@ function CharacterView({ char, subTab, onSubTab }: {
             ))}
           </div>
         )}
-        {subTab === 'timeline' && (
+        {activeSubTab === 'timeline' && (
           <div className="cv-timeline">
             {scenes.map((s) => (
               <div key={s.id} className="cv-tl-item">
@@ -413,7 +377,7 @@ function CharacterView({ char, subTab, onSubTab }: {
             ))}
           </div>
         )}
-        {subTab === 'events' && <p className="cv-empty">No continuity events for this character.</p>}
+        {activeSubTab === 'events' && <p className="cv-empty">No continuity events for this character.</p>}
       </div>
     </div>
   );
@@ -433,10 +397,11 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
   return (
     <div className="fp-wrap">
+      {/* Scene info */}
       <div className="fp-header">
         <div className="fp-scene-info">
           <span className="fp-scene-num">Scene {scene.number}</span>
-          <span className="fp-scene-loc">{scene.intExt}. {scene.location}</span>
+          <span className="fp-scene-loc">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</span>
         </div>
         <span className={`fp-save fp-save--${saveStatus}`}>
           {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
@@ -457,14 +422,17 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             <FSelect label="Type" value={breakdown.timeline.type}
               options={['', 'Normal', 'VFX', 'SFX']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, type: v })} />
-            <FInput label="Note" value={breakdown.timeline.note}
+            <FInput label="Note" value={breakdown.timeline.note} placeholder="e.g. 3 weeks later"
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, note: v })} />
           </div>
         </div>
 
-        {/* Characters */}
+        {/* Characters in Scene */}
         <div className="fp-section">
-          <div className="fp-section-title">Characters</div>
+          <div className="fp-section-title">
+            Characters in Scene
+            <span className="fp-section-count">{characters.length}</span>
+          </div>
           {characters.map((ch) => {
             const cb = breakdown.characters.find((c) => c.characterId === ch.id);
             if (!cb) return null;
@@ -477,7 +445,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
           })}
         </div>
 
-        {/* Continuity */}
+        {/* Continuity Events */}
         <div className="fp-section">
           <div className="fp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Continuity Events</span>
@@ -518,7 +486,9 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate }: {
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
       <div className="cb-header">
         <span className="cb-name">{char.name}</span>
-        <span className="cb-billing">{ordinal(char.billing)}</span>
+        <div className="cb-header-right">
+          <span className="cb-billing-badge">{ordinal(char.billing)}</span>
+        </div>
       </div>
 
       <div className="cb-field">
@@ -574,11 +544,11 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate }: {
 
 /* ━━━ Form primitives ━━━ */
 
-function FInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function FInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div className="fi-wrap">
       <label className="fi-label">{label}</label>
-      <input className="fi-input" value={value} onChange={(e) => onChange(e.target.value)} />
+      <input className="fi-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
     </div>
   );
 }
