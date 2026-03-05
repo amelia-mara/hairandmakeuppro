@@ -6,24 +6,83 @@ import {
 } from '@/stores/breakdownStore';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DRAGGABLE PANEL RESIZE HOOK
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function usePanelResize(storageKey: string, defaultWidth: number, min: number, max: number, side: 'left' | 'right') {
+  const [width, setWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) { const n = Number(saved); if (n >= min && n <= max) return n; }
+    } catch { /* ignore */ }
+    return defaultWidth;
+  });
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(0);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = side === 'left'
+        ? ev.clientX - startX.current
+        : startX.current - ev.clientX;
+      const next = Math.max(min, Math.min(max, startW.current + delta));
+      setWidth(next);
+    };
+    const onUp = () => {
+      dragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [width, min, max, side]);
+
+  // Double-click to reset to default
+  const onDoubleClick = useCallback(() => {
+    setWidth(defaultWidth);
+  }, [defaultWidth]);
+
+  // Persist
+  useEffect(() => {
+    localStorage.setItem(storageKey, String(width));
+  }, [storageKey, width]);
+
+  return { width, onMouseDown, onDoubleClick, setWidth };
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 interface Props { projectId: string }
+
+const LEFT_DEFAULT = 240;
+const LEFT_MIN = 120;
+const LEFT_MAX = 400;
+const RIGHT_DEFAULT = 360;
+const RIGHT_MIN = 200;
+const RIGHT_MAX = 520;
 
 export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(13);
-  const [leftCollapsed, setLeftCollapsed] = useState(() => {
-    try { return localStorage.getItem('prep-scene-list-collapsed') === 'true'; }
-    catch { return false; }
-  });
-  const [rightCollapsed, setRightCollapsed] = useState(() => {
-    try { return localStorage.getItem('prep-form-panel-collapsed') === 'true'; }
-    catch { return false; }
-  });
+
+  const leftPanel = usePanelResize('prep-left-panel-w', LEFT_DEFAULT, LEFT_MIN, LEFT_MAX, 'left');
+  const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
+
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -32,13 +91,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
   const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!);
   const breakdown = store.getBreakdown(selectedSceneId);
-
-  useEffect(() => {
-    localStorage.setItem('prep-scene-list-collapsed', String(leftCollapsed));
-  }, [leftCollapsed]);
-  useEffect(() => {
-    localStorage.setItem('prep-form-panel-collapsed', String(rightCollapsed));
-  }, [rightCollapsed]);
 
   useEffect(() => {
     if (!store.getBreakdown(selectedSceneId)) {
@@ -91,8 +143,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
       } else if (e.key === 'n') {
         const next = filteredScenes.find((s, i) => i > idx && store.getCompletionStatus(s.id, s) !== 'complete');
         if (next) selectScene(next.id);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault(); setLeftCollapsed((c) => !c);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault(); triggerSave();
       }
@@ -137,29 +187,28 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
         </div>
       </div>
 
-      {/* Three panels */}
+      {/* Three panels with draggable dividers */}
       <div className="bd-panels">
         {/* Left — Scene List */}
-        <div className={`bd-left ${leftCollapsed ? 'bd-left--collapsed' : ''}`}>
-          {!leftCollapsed && (
-            <SceneListPanel
-              scenes={filteredScenes}
-              selectedId={selectedSceneId}
-              onSelect={selectScene}
-              searchQuery={searchQuery}
-              onSearch={setSearchQuery}
-              getStatus={(s) => store.getCompletionStatus(s.id, s)}
-            />
-          )}
-          <button
-            className="bd-collapse-btn bd-collapse-btn--left"
-            onClick={() => setLeftCollapsed((c) => !c)}
-            title={leftCollapsed ? 'Show scenes' : 'Hide scenes'}
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              {leftCollapsed ? <path d="M9 18l6-6-6-6"/> : <path d="M15 18l-6-6 6-6"/>}
-            </svg>
-          </button>
+        <div className="bd-left" style={{ width: leftPanel.width, minWidth: leftPanel.width }}>
+          <SceneListPanel
+            scenes={filteredScenes}
+            selectedId={selectedSceneId}
+            onSelect={selectScene}
+            searchQuery={searchQuery}
+            onSearch={setSearchQuery}
+            getStatus={(s) => store.getCompletionStatus(s.id, s)}
+          />
+        </div>
+
+        {/* Left divider — drag handle */}
+        <div
+          className="bd-divider"
+          onMouseDown={leftPanel.onMouseDown}
+          onDoubleClick={leftPanel.onDoubleClick}
+          title="Drag to resize · Double-click to reset"
+        >
+          <div className="bd-divider-grip" />
         </div>
 
         {/* Center — Script / Characters */}
@@ -168,28 +217,27 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             activeTab={activeTab} onTabChange={setActiveTab} fontSize={fontSize} />
         </div>
 
+        {/* Right divider — drag handle */}
+        <div
+          className="bd-divider"
+          onMouseDown={rightPanel.onMouseDown}
+          onDoubleClick={rightPanel.onDoubleClick}
+          title="Drag to resize · Double-click to reset"
+        >
+          <div className="bd-divider-grip" />
+        </div>
+
         {/* Right — Breakdown Form */}
-        <div className={`bd-right ${rightCollapsed ? 'bd-right--collapsed' : ''}`}>
-          <button
-            className="bd-collapse-btn bd-collapse-btn--right"
-            onClick={() => setRightCollapsed((c) => !c)}
-            title={rightCollapsed ? 'Show breakdown' : 'Hide breakdown'}
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              {rightCollapsed ? <path d="M15 18l-6-6 6-6"/> : <path d="M9 18l6-6-6-6"/>}
-            </svg>
-          </button>
-          {!rightCollapsed && (
-            <BreakdownFormPanel
-              scene={scene} characters={sceneCharacters} breakdown={breakdown}
-              activeCharacterId={activeTab !== 'script' ? activeTab : null}
-              saveStatus={saveStatus}
-              onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
-              onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
-              onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
-              onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
-            />
-          )}
+        <div className="bd-right" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
+          <BreakdownFormPanel
+            scene={scene} characters={sceneCharacters} breakdown={breakdown}
+            activeCharacterId={activeTab !== 'script' ? activeTab : null}
+            saveStatus={saveStatus}
+            onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
+            onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
+            onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
+            onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
+          />
         </div>
       </div>
     </div>
