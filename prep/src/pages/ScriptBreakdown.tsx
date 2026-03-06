@@ -89,6 +89,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(13);
+  const [showLegend, setShowLegend] = useState(false);
 
   const leftPanel = usePanelResize('prep-left-panel-w', LEFT_DEFAULT, LEFT_MIN, LEFT_MAX, 'left');
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
@@ -256,36 +257,44 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
               ))}
             </div>
           </div>
-          {/* Legend & zoom bar — separate row below tabs */}
+          {/* Compact toolbar — Tags toggle only */}
           <div className="cp-toolbar">
-            <div className="bd-legend-tags">
-              {BREAKDOWN_CATEGORIES.map((cat) => (
-                <span key={cat.id} className="bd-legend-tag">
-                  <span className="bd-legend-swatch" style={{ background: cat.color }} />
-                  {cat.label}
-                </span>
-              ))}
-            </div>
-            <div className="bd-zoom">
-              <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
-              </button>
-              <span className="bd-zoom-label">{fontSize}</span>
-              <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.min(22, s + 1))}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              </button>
-            </div>
+            <button className={`bd-tags-toggle ${showLegend ? 'bd-tags-toggle--active' : ''}`} onClick={() => setShowLegend((v) => !v)}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              Tags
+            </button>
+            {showLegend && (
+              <div className="bd-legend-tags">
+                {BREAKDOWN_CATEGORIES.map((cat) => (
+                  <span key={cat.id} className="bd-legend-tag">
+                    <span className="bd-legend-swatch" style={{ background: cat.color }} />
+                    {cat.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {/* Content body — connects to active tab */}
           <div className="cp-body">
             {activeTab === 'script' ? (
-              <ScriptView
-                scenes={MOCK_SCENES}
-                selectedSceneId={selectedSceneId}
-                onSceneVisible={onSceneVisible}
-                fontSize={fontSize}
-                onCharClick={setActiveTab}
-              />
+              <div className="sv-wrapper">
+                <ScriptView
+                  scenes={MOCK_SCENES}
+                  selectedSceneId={selectedSceneId}
+                  onSceneVisible={onSceneVisible}
+                  fontSize={fontSize}
+                  onCharClick={setActiveTab}
+                />
+                <div className="bd-zoom-float">
+                  <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
+                  </button>
+                  <span className="bd-zoom-label">{fontSize}</span>
+                  <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.min(22, s + 1))}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                  </button>
+                </div>
+              </div>
             ) : (
               <CharacterView
                 char={sceneCharacters.find((c) => c.id === activeTab)!}
