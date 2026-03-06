@@ -88,7 +88,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
-  const [fontSize, setFontSize] = useState(15);
+  const [fontSize, setFontSize] = useState(16);
   const [showLegend, setShowLegend] = useState(false);
 
   const leftPanel = usePanelResize('prep-left-panel-w', LEFT_DEFAULT, LEFT_MIN, LEFT_MAX, 'left');
