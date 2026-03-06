@@ -2290,9 +2290,9 @@ body {
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-card);
+  color: var(--accent-gold);
+  background: rgba(var(--a), 0.12);
+  border: 1px solid rgba(var(--a), 0.22);
   padding: 3px 8px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -2302,7 +2302,7 @@ body {
 .sv-heading {
   font-weight: 700;
   font-size: 1.1em;
-  color: #6b5c3e;
+  color: #1a1510;
   margin-bottom: 28px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
