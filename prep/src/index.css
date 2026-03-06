@@ -2134,7 +2134,7 @@ body {
 }
 
 .sv-paper {
-  font-family: 'Courier New', 'Courier', monospace;
+  font-family: var(--font-sans);
   line-height: 1.8;
   color: #1a1510;
   background: linear-gradient(
