@@ -63,6 +63,20 @@ function usePanelResize(storageKey: string, defaultWidth: number, min: number, m
 
 interface Props { projectId: string }
 
+/** Map INT/EXT + DAY/NIGHT to a CSS color class (matches original script-breakdown.css) */
+function sceneColorClass(intExt: string, dayNight: string): string {
+  const isInt = intExt.toUpperCase() === 'INT';
+  const isExt = intExt.toUpperCase() === 'EXT';
+  const isDay = dayNight.toUpperCase() === 'DAY';
+  const isNight = dayNight.toUpperCase() === 'NIGHT';
+
+  if (isInt && isDay) return 'sl-card--int-day';
+  if (isExt && isDay) return 'sl-card--ext-day';
+  if (isInt && isNight) return 'sl-card--int-night';
+  if (isExt && isNight) return 'sl-card--ext-night';
+  return '';
+}
+
 const LEFT_DEFAULT = 300;
 const LEFT_MIN = 200;
 const LEFT_MAX = 440;
@@ -185,15 +199,16 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             {filteredScenes.map((s) => {
               const status = store.getCompletionStatus(s.id, s);
               const isActive = s.id === selectedSceneId;
+              const colorClass = sceneColorClass(s.intExt, s.dayNight);
               return (
-                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''}`}
+                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
                   onClick={() => selectScene(s.id)}>
                   <div className="sl-card-top">
                     <span className="sl-card-num">{s.number}</span>
                     <span className="sl-card-location">{s.intExt}. {s.location}</span>
                   </div>
                   <div className="sl-card-meta">
-                    <span className="sl-card-pill">{s.dayNight}</span>
+                    <span className={`sl-card-pill sl-pill--${s.dayNight.toLowerCase()}`}>{s.dayNight}</span>
                     <span className="sl-card-detail">{s.intExt}</span>
                     {s.characterIds.length > 0 && (
                       <span className="sl-card-cast">{s.characterIds.length}</span>
