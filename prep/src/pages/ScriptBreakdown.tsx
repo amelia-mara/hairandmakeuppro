@@ -280,11 +280,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
           </div>
         </div>
 
-        {/* Right divider */}
-        <div className="bd-divider" onMouseDown={rightPanel.onMouseDown} onDoubleClick={rightPanel.onDoubleClick}>
-          <div className="bd-divider-grip" />
-        </div>
-
         {/* ━━━ RIGHT — Breakdown Form ━━━ */}
         <div className="bd-right bd-panel-surface" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
           <div className="fp-panel-header">
