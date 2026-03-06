@@ -2134,7 +2134,7 @@ body {
 }
 
 .sv-paper {
-  font-family: var(--font-sans);
+  font-family: 'Courier New', 'Courier', monospace;
   line-height: 1.9;
   color: #1a1510;
   background: linear-gradient(
@@ -2416,7 +2416,7 @@ body {
 
 .fp-scene-info { display: flex; flex-direction: column; gap: 3px; }
 .fp-scene-num { font-size: 0.8125rem; font-weight: 700; color: var(--accent-gold); }
-.fp-scene-loc { font-size: 0.6875rem; color: var(--text-muted); font-family: var(--font-sans); }
+.fp-scene-loc { font-size: 0.6875rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
 
 .fp-save {
   font-size: 0.5625rem;
