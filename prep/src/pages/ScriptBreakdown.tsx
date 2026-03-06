@@ -116,6 +116,17 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
     }, 800);
   }, []);
 
+  /* Scroll the active scene card into view in the left panel */
+  const sceneListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = sceneListRef.current;
+    if (!list) return;
+    const active = list.querySelector('.sl-card--active') as HTMLElement;
+    if (active) {
+      active.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [selectedSceneId]);
+
   const filteredScenes = MOCK_SCENES.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -125,6 +136,11 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const selectScene = useCallback((id: string) => {
     setSelectedSceneId(id);
     setActiveTab('script');
+  }, []);
+
+  /* Called by IntersectionObserver as user scrolls through script */
+  const onSceneVisible = useCallback((id: string) => {
+    setSelectedSceneId(id);
   }, []);
 
   useEffect(() => {
@@ -165,7 +181,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             <input className="sl-search-input" placeholder="Search scenes..."
               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
-          <div className="sl-list">
+          <div className="sl-list" ref={sceneListRef}>
             {filteredScenes.map((s) => {
               const status = store.getCompletionStatus(s.id, s);
               const isActive = s.id === selectedSceneId;
@@ -248,7 +264,13 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
           {/* Content body — connects to active tab */}
           <div className="cp-body">
             {activeTab === 'script' ? (
-              <ScriptView scene={scene} fontSize={fontSize} onCharClick={setActiveTab} />
+              <ScriptView
+                scenes={MOCK_SCENES}
+                selectedSceneId={selectedSceneId}
+                onSceneVisible={onSceneVisible}
+                fontSize={fontSize}
+                onCharClick={setActiveTab}
+              />
             ) : (
               <CharacterView
                 char={sceneCharacters.find((c) => c.id === activeTab)!}
@@ -291,14 +313,21 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   );
 }
 
-/* ━━━ SCRIPT VIEW — off-white paper ━━━ */
+/* ━━━ SCRIPT VIEW — continuous scroll, all scenes ━━━ */
 
-function ScriptView({ scene, fontSize, onCharClick }: {
-  scene: Scene; fontSize: number; onCharClick: (id: string) => void;
+function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
+  scenes: Scene[];
+  selectedSceneId: string;
+  onSceneVisible: (id: string) => void;
+  fontSize: number;
+  onCharClick: (id: string) => void;
 }) {
   const charNames = MOCK_CHARACTERS.map((c) => c.name);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const isScrollingTo = useRef(false);
 
-  const renderLine = (line: string, i: number) => {
+  const renderLine = (line: string, i: number, sceneId: string) => {
     const trimmed = line.trim();
     const matched = charNames.find((name) => {
       const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
@@ -306,17 +335,73 @@ function ScriptView({ scene, fontSize, onCharClick }: {
     });
     if (matched) {
       const ch = MOCK_CHARACTERS.find((c) => c.name === matched)!;
-      return <div key={i} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{line}</div>;
+      return <div key={`${sceneId}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{line}</div>;
     }
-    return <div key={i} className="sv-line">{line || '\u00A0'}</div>;
+    return <div key={`${sceneId}-${i}`} className="sv-line">{line || '\u00A0'}</div>;
   };
 
+  /* Scroll to scene when selected from the scene list */
+  useEffect(() => {
+    const el = pageRefs.current.get(selectedSceneId);
+    if (el && scrollRef.current) {
+      isScrollingTo.current = true;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      /* Reset the flag after scroll animation completes */
+      const timer = setTimeout(() => { isScrollingTo.current = false; }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedSceneId]);
+
+  /* IntersectionObserver to detect which scene is visible while scrolling */
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingTo.current) return;
+        /* Find the entry with the largest visible ratio */
+        let best: IntersectionObserverEntry | null = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting && (!best || entry.intersectionRatio > best.intersectionRatio)) {
+            best = entry;
+          }
+        }
+        if (best) {
+          const id = (best.target as HTMLElement).dataset.sceneId;
+          if (id) onSceneVisible(id);
+        }
+      },
+      { root: container, threshold: [0.1, 0.3, 0.5, 0.7], rootMargin: '-10% 0px -60% 0px' }
+    );
+
+    for (const el of pageRefs.current.values()) {
+      observer.observe(el);
+    }
+
+    return () => observer.disconnect();
+  }, [scenes, onSceneVisible]);
+
+  const setPageRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) pageRefs.current.set(id, el);
+    else pageRefs.current.delete(id);
+  }, []);
+
   return (
-    <div className="sv-paper" style={{ fontSize: `${fontSize}px` }}>
-      {/* Scene badge */}
-      <div className="sv-scene-badge">Scene {scene.number}</div>
-      <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
-      {scene.scriptContent.split('\n').map(renderLine)}
+    <div className="sv-scroll" ref={scrollRef}>
+      {scenes.map((scene) => (
+        <div
+          key={scene.id}
+          ref={(el) => setPageRef(scene.id, el)}
+          data-scene-id={scene.id}
+          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
+          style={{ fontSize: `${fontSize}px` }}
+        >
+          <div className="sv-scene-badge">Scene {scene.number}</div>
+          <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+          {scene.scriptContent.split('\n').map((line, i) => renderLine(line, i, scene.id))}
+        </div>
+      ))}
     </div>
   );
 }
