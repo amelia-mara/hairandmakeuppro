@@ -2556,11 +2556,23 @@ body {
   z-index: 2;
 }
 
-.fp-section { margin-bottom: 28px; }
+.fp-section { margin-bottom: 24px; }
 
 .fp-section--bordered {
-  padding-bottom: 24px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Pill-style section — contained card look for Synopsis / Timeline */
+.fp-section--pill {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.fp-section--pill .fp-section-title {
+  margin-bottom: 12px;
 }
 
 .fp-section-title {
