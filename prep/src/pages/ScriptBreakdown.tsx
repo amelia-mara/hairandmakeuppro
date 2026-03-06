@@ -330,6 +330,8 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             scene={scene} characters={sceneCharacters} breakdown={breakdown}
             activeCharacterId={activeTab !== 'script' ? activeTab : null}
             saveStatus={saveStatus}
+            scenes={filteredScenes}
+            onNavigate={selectScene}
             onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
             onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
             onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
@@ -499,15 +501,20 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, onUpdate, onUpdateTimeline, onAddEvent, onRemoveEvent }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onRemoveEvent }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
+  scenes: Scene[]; onNavigate: (id: string) => void;
   onUpdate: (cid: string, d: Partial<CharacterBreakdown>) => void;
   onUpdateTimeline: (t: SceneBreakdown['timeline']) => void;
   onAddEvent: (e: { id: string; type: string; characterId: string; description: string; sceneRange: string }) => void;
   onRemoveEvent: (id: string) => void;
 }) {
   if (!breakdown) return null;
+
+  const sceneIdx = scenes.findIndex((s) => s.id === scene.id);
+  const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
+  const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
   return (
     <div className="fp-wrap">
@@ -595,6 +602,23 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Scene navigation */}
+      <div className="fp-nav">
+        <button className="fp-nav-btn" disabled={!prevScene} onClick={() => prevScene && onNavigate(prevScene.id)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span className="fp-nav-label">
+            {prevScene ? <>Scene {prevScene.number}</> : 'No previous'}
+          </span>
+        </button>
+        <span className="fp-nav-pos">{sceneIdx + 1} / {scenes.length}</span>
+        <button className="fp-nav-btn" disabled={!nextScene} onClick={() => nextScene && onNavigate(nextScene.id)}>
+          <span className="fp-nav-label">
+            {nextScene ? <>Scene {nextScene.number}</> : 'No next'}
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
       </div>
     </div>
   );
