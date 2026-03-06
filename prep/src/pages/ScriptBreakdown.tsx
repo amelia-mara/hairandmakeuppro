@@ -529,18 +529,16 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
   return (
     <div className="fp-wrap">
-      {/* Scene info */}
+      {/* Scene info — pinned */}
       <div className="fp-header">
-        <div className="fp-scene-info">
-          <span className="fp-scene-num">Scene {scene.number}</span>
-          <span className="fp-scene-loc">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</span>
-        </div>
+        <span className="fp-scene-num">Scene {scene.number}</span>
         <span className={`fp-save fp-save--${saveStatus}`}>
           {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
         </span>
       </div>
 
       <div className="fp-scroll">
+        <div className="fp-scene-loc">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
         {/* Synopsis */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
