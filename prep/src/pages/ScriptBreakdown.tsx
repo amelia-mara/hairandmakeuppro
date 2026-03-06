@@ -516,6 +516,17 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
   const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [atBottom, setAtBottom] = useState(false);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => setAtBottom(entry.isIntersecting), { threshold: 0.1 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <div className="fp-wrap">
       {/* Scene info */}
@@ -602,10 +613,11 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             </div>
           ))}
         </div>
+        <div ref={sentinelRef} className="fp-scroll-sentinel" />
       </div>
 
-      {/* Scene navigation */}
-      <div className="fp-nav">
+      {/* Scene navigation — visible only when scrolled to bottom */}
+      <div className={`fp-nav${atBottom ? ' fp-nav--visible' : ''}`}>
         <button className="fp-nav-btn" disabled={!prevScene} onClick={() => prevScene && onNavigate(prevScene.id)}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           <span className="fp-nav-label">
