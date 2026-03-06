@@ -2040,8 +2040,9 @@ body {
   min-width: 0;
   align-items: flex-end;
   padding-top: 8px;
+  scrollbar-width: none;
 }
-.cp-tabs-row::-webkit-scrollbar { height: 0; }
+.cp-tabs-row::-webkit-scrollbar { display: none; }
 
 /* Inactive tab — visible border, clearly clickable */
 .cp-divider-tab {
@@ -2057,6 +2058,7 @@ body {
   border-radius: 8px 8px 0 0;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
   position: relative;
   margin-bottom: -1px;
