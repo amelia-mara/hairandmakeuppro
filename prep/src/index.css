@@ -2528,8 +2528,8 @@ body {
 }
 
 .fp-scene-info { display: flex; flex-direction: column; gap: 6px; }
-.fp-scene-num { font-size: 1rem; font-weight: 700; color: var(--text-heading); }
-.fp-scene-loc { font-size: 0.875rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; }
+.fp-scene-num { font-size: 1rem; font-weight: 700; color: var(--text-heading); text-transform: uppercase; letter-spacing: 0.08em; }
+.fp-scene-loc { font-size: 0.875rem; color: var(--text-primary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; }
 
 .fp-save {
   font-size: 0.5625rem;
