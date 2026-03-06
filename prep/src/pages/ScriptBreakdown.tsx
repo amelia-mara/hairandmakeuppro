@@ -201,7 +201,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
               const status = store.getCompletionStatus(s.id, s);
               const isActive = s.id === selectedSceneId;
               const colorClass = sceneColorClass(s.intExt, s.dayNight);
-              const bd = store.getBreakdown(s.id);
               return (
                 <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
                   onClick={() => selectScene(s.id)}>
@@ -223,14 +222,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                         <div className="sl-expand-pill">
                           <span className="sl-expand-label">Synopsis</span>
                           <span className="sl-expand-value">{s.synopsis}</span>
-                        </div>
-                      )}
-                      {bd && bd.timeline.day && (
-                        <div className="sl-expand-pill">
-                          <span className="sl-expand-label">Timeline</span>
-                          <span className="sl-expand-value">
-                            {[bd.timeline.day, bd.timeline.time, bd.timeline.type, bd.timeline.note].filter(Boolean).join(' · ')}
-                          </span>
                         </div>
                       )}
                       {s.characterIds.length > 0 && (
@@ -533,7 +524,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
       <div className="fp-scroll">
         {/* Synopsis */}
-        <div className="fp-section fp-section--bordered">
+        <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
           {scene.synopsis ? (
             <div className="fp-synopsis-body">
@@ -546,7 +537,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         </div>
 
         {/* Timeline */}
-        <div className="fp-section fp-section--bordered">
+        <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>
           <div className="fp-row-4">
             <FSelect label="Day" value={breakdown.timeline.day}
