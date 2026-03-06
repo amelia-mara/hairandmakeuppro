@@ -1778,22 +1778,9 @@ body {
 .sl-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 12px 40px;
+  padding: 0 12px 12px;
   position: relative;
   z-index: 1;
-}
-
-/* Scroll fade at bottom of scene list */
-.bd-left::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(to bottom, transparent, var(--bg-surface));
-  pointer-events: none;
-  z-index: 2;
 }
 
 /* ━━━ Scene Card — glass card per scene ━━━ */
@@ -1802,8 +1789,8 @@ body {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 14px 18px;
-  margin-bottom: 6px;
+  padding: 20px 22px;
+  margin-bottom: 10px;
   background: linear-gradient(
     145deg,
     rgba(18, 16, 13, 1) 0%,
@@ -1812,8 +1799,7 @@ body {
   );
   border: 1px solid rgba(var(--a), 0.14);
   border-top-color: rgba(var(--a-light), 0.22);
-  border-left: 2px solid var(--border-subtle);
-  border-radius: 10px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: var(--font-sans);
@@ -1826,23 +1812,44 @@ body {
 .sl-card:hover {
   border-color: rgba(var(--a), 0.20);
   border-top-color: rgba(var(--a-light), 0.26);
-  border-left-color: rgba(var(--a), 0.30);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(var(--a-light), 0.08);
+  transform: translateY(-1px);
 }
 .sl-card--active {
   background: linear-gradient(
     135deg,
-    rgba(var(--a), 0.06) 0%,
-    rgba(25, 22, 18, 0.8) 50%,
-    rgba(var(--a), 0.03) 100%
+    rgba(var(--a), 0.10) 0%,
+    rgba(35, 31, 27, 0.6) 50%,
+    rgba(var(--a), 0.06) 100%
   );
-  border-color: rgba(var(--a), 0.20);
-  border-left: 2px solid var(--gold-primary);
+  border-color: rgba(var(--a), 0.30);
+  border-top-color: rgba(var(--a-light), 0.38);
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.45),
+    0 0 20px rgba(var(--a), 0.10),
     inset 0 1px 0 rgba(var(--a-light), 0.08);
+}
+.sl-card--active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(
+    90deg,
+    transparent 15%,
+    rgba(var(--a), 0.12) 35%,
+    rgba(var(--a-light), 0.35) 58%,
+    rgba(var(--a-bright), 0.45) 75%,
+    rgba(var(--a-peak), 0.30) 82%,
+    rgba(var(--a-light), 0.18) 90%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 /* Active card overrides color-coded border-left to gold */
@@ -1850,7 +1857,13 @@ body {
 .sl-card--active.sl-card--ext-day,
 .sl-card--active.sl-card--int-night,
 .sl-card--active.sl-card--ext-night {
-  border-left: 2px solid var(--gold-primary);
+  border-left-color: rgba(var(--a), 0.50);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--a), 0.10) 0%,
+    rgba(35, 31, 27, 0.6) 50%,
+    rgba(var(--a), 0.06) 100%
+  );
 }
 
 .sl-card-top {
@@ -1910,16 +1923,20 @@ body {
    Boosted opacity vs original because prep cards have opaque dark base
    (original uses backdrop-filter glass which naturally reveals more color) */
 .sl-card.sl-card--int-day {
-  border-left: 2px solid var(--border-subtle);
+  border-left: 3px solid var(--int-day-border);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(255, 255, 255, 0.05) 100%);
 }
 .sl-card.sl-card--ext-day {
-  border-left: 2px solid var(--border-subtle);
+  border-left: 3px solid var(--ext-day-border);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.14) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(251, 191, 36, 0.07) 100%);
 }
 .sl-card.sl-card--int-night {
-  border-left: 2px solid var(--border-subtle);
+  border-left: 3px solid var(--int-night-border);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(56, 189, 248, 0.07) 100%);
 }
 .sl-card.sl-card--ext-night {
-  border-left: 2px solid var(--border-subtle);
+  border-left: 3px solid var(--ext-night-border);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.14) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(52, 211, 153, 0.07) 100%);
 }
 
 .sl-card-detail {
@@ -1943,18 +1960,14 @@ body {
 }
 
 .sl-card-status {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
 }
-.sl-card-status--empty { background: var(--border-strong); }
-.sl-card-status--partial { background: transparent; border: 2px solid var(--gold-primary); }
-.sl-card-status--complete { background: #22c55e; }
+.sl-card-status--empty { background: var(--text-muted); opacity: 0.25; }
+.sl-card-status--partial { background: var(--status-pending); }
+.sl-card-status--complete { background: var(--status-success); }
 
 /* Synopsis inside active card */
 .sl-card-synopsis {
