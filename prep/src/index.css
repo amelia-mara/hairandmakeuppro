@@ -1916,22 +1916,24 @@ body {
 .sl-pill--dawn  { color: #fb923c; background: rgba(251, 146, 60, 0.14); border-color: rgba(251, 146, 60, 0.30); }
 .sl-pill--dusk  { color: #a78bfa; background: rgba(167, 139, 250, 0.14); border-color: rgba(167, 139, 250, 0.30); }
 
-/* Scene card color coding — left border + subtle bg tint (matches original) */
+/* Scene card color coding — left border + subtle bg tint
+   Boosted opacity vs original because prep cards have opaque dark base
+   (original uses backdrop-filter glass which naturally reveals more color) */
 .sl-card.sl-card--int-day {
   border-left: 3px solid var(--int-day-border);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(255, 255, 255, 0.03) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(255, 255, 255, 0.05) 100%);
 }
 .sl-card.sl-card--ext-day {
   border-left: 3px solid var(--ext-day-border);
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(251, 191, 36, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.14) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(251, 191, 36, 0.07) 100%);
 }
 .sl-card.sl-card--int-night {
   border-left: 3px solid var(--int-night-border);
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(56, 189, 248, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(56, 189, 248, 0.07) 100%);
 }
 .sl-card.sl-card--ext-night {
   border-left: 3px solid var(--ext-night-border);
-  background: linear-gradient(135deg, rgba(52, 211, 153, 0.08) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(52, 211, 153, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.14) 0%, rgba(20, 18, 16, 0.95) 50%, rgba(52, 211, 153, 0.07) 100%);
 }
 
 .sl-card-detail {
