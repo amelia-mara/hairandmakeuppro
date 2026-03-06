@@ -2604,7 +2604,7 @@ body {
   border-radius: 8px;
 }
 
-.fp-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1.5fr; gap: 10px; }
+.fp-row-4 { display: grid; grid-template-columns: auto auto auto 1.5fr; gap: 10px; }
 
 .fp-add-btn {
   font-size: 0.625rem;
@@ -2930,11 +2930,11 @@ body {
 .fi-wrap { display: flex; flex-direction: column; gap: 5px; }
 
 .fi-label {
-  font-size: 0.5625rem;
-  font-weight: 500;
+  font-size: 0.625rem;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   line-height: 1.4;
 }
 
@@ -2945,7 +2945,7 @@ body {
   border: 1px solid var(--border-card);
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   font-family: var(--font-sans);
   outline: none;
@@ -2965,12 +2965,13 @@ body {
 
 .fi-select {
   width: 100%;
-  padding: 9px 12px;
+  min-width: 0;
+  padding: 9px 28px 9px 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-card);
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-family: var(--font-sans);
   outline: none;
   cursor: pointer;
@@ -2979,6 +2980,12 @@ body {
     inset 1px 1px 3px rgba(0, 0, 0, 0.3),
     inset 0 -1px 0 rgba(var(--a), 0.04);
   transition: all 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  text-overflow: ellipsis;
 }
 .fi-select:focus {
   border-color: var(--accent-gold-dim);
