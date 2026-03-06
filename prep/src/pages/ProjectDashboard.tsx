@@ -52,11 +52,14 @@ export function ProjectDashboard({ projectId }: ProjectDashboardProps) {
       {/* Page header */}
       <div className="dashboard-header">
         <h1 style={{
-          font: 'var(--type-display-lg-font)',
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase' as const,
           color: 'var(--text-heading)',
           margin: 0,
         }}>
-          H&MU Dashboard
+          H&MU DASHBOARD
         </h1>
         <button className="btn-action-gold" onClick={() => setShowAddModal(true)}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -78,14 +81,16 @@ export function ProjectDashboard({ projectId }: ProjectDashboardProps) {
             </svg>
           </div>
           <p style={{
-            font: 'var(--type-ui-md-font)',
-            fontWeight: 600,
+            fontSize: '0.8125rem',
+            fontWeight: 500,
             color: 'var(--text-heading)',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase' as const,
             marginBottom: '8px',
           }}>
             No widgets yet
           </p>
-          <p style={{ font: 'var(--type-ui-sm-font)', color: 'var(--text-muted)', marginBottom: '24px' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '24px' }}>
             Add widgets to customise your dashboard
           </p>
           <button className="btn-action-gold" onClick={() => setShowAddModal(true)}>
@@ -152,10 +157,11 @@ function WidgetRenderer({ widgetId, onRemove }: { widgetId: WidgetId; onRemove: 
             <circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/>
           </svg>
           <span style={{
-            font: 'var(--type-label-font)',
-            letterSpacing: 'var(--type-label-spacing)',
-            textTransform: 'uppercase' as const,
+            fontSize: '0.6875rem',
+            fontWeight: 500,
             color: 'var(--text-muted)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.06em',
           }}>
             {def.name}
           </span>
@@ -205,10 +211,10 @@ function BudgetOverviewWidget() {
 
       {/* Progress bar */}
       <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ font: 'var(--type-label-font)', letterSpacing: 'var(--type-label-spacing)', textTransform: 'uppercase' as const, color: 'var(--text-muted)' }}>
+        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
           Budget Used
         </span>
-        <span style={{ font: 'var(--type-label-font)', letterSpacing: 'var(--type-label-spacing)', color: 'var(--text-heading)' }}>
+        <span style={{ fontSize: '0.6875rem', color: 'var(--text-heading)', fontWeight: 600 }}>
           {pct}%
         </span>
       </div>
@@ -218,7 +224,7 @@ function BudgetOverviewWidget() {
 
       {/* Link */}
       <div style={{ marginTop: '16px' }}>
-        <button className="btn-ghost" style={{ font: 'var(--type-ui-sm-font)', padding: '6px 12px' }}>
+        <button className="btn-ghost" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
           View full budget →
         </button>
       </div>
@@ -230,17 +236,20 @@ function BudgetFigure({ label, value, highlight }: { label: string; value: strin
   return (
     <div>
       <div style={{
-        font: 'var(--type-label-font)',
-        letterSpacing: 'var(--type-label-spacing)',
-        textTransform: 'uppercase' as const,
+        fontSize: '0.6875rem',
+        fontWeight: 500,
         color: 'var(--text-muted)',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.06em',
         marginBottom: '6px',
       }}>
         {label}
       </div>
       <div style={{
-        font: 'var(--type-display-md-font)',
+        fontSize: '1.125rem',
+        fontWeight: 700,
         color: highlight ? 'var(--accent-gold)' : 'var(--text-heading)',
+        letterSpacing: '-0.01em',
         textShadow: highlight ? '0 0 30px rgba(var(--a), 0.20)' : undefined,
       }}>
         {value}
@@ -265,8 +274,11 @@ function QuickActionsWidget() {
         <button key={action.label} className="quick-action-btn">
           <action.icon />
           <span style={{
-            font: 'var(--type-ui-sm-font)',
+            fontSize: '0.6875rem',
+            fontWeight: 500,
             color: 'var(--text-heading)',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase' as const,
             lineHeight: 1.3,
           }}>
             {action.label}
@@ -283,15 +295,16 @@ function PlaceholderWidget({ name, description }: { name: string; description: s
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
       <div style={{
-        font: 'var(--type-label-font)',
-        letterSpacing: 'var(--type-label-spacing)',
-        textTransform: 'uppercase' as const,
+        fontSize: '0.75rem',
+        fontWeight: 500,
         color: 'var(--text-heading)',
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase' as const,
         marginBottom: '8px',
       }}>
         {name}
       </div>
-      <p style={{ font: 'var(--type-ui-sm-font)', color: 'var(--text-muted)', margin: 0 }}>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: 0 }}>
         {description}
       </p>
     </div>
@@ -314,8 +327,9 @@ function AddWidgetModal({
       <div className="modal-glass" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: '24px 28px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
-            font: 'var(--type-label-font)',
-            letterSpacing: 'var(--type-label-spacing)',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            letterSpacing: '0.1em',
             textTransform: 'uppercase' as const,
             color: 'var(--text-heading)',
             margin: 0,
@@ -364,7 +378,7 @@ function AddWidgetModal({
               >
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    font: 'var(--type-ui-md-font)',
+                    fontSize: '0.8125rem',
                     fontWeight: 500,
                     color: isAdded ? 'var(--text-muted)' : 'var(--text-heading)',
                     marginBottom: '2px',
@@ -372,7 +386,7 @@ function AddWidgetModal({
                     {widget.name}
                   </div>
                   <div style={{
-                    font: 'var(--type-ui-sm-font)',
+                    fontSize: '0.75rem',
                     color: 'var(--text-muted)',
                   }}>
                     {widget.description}
@@ -380,9 +394,10 @@ function AddWidgetModal({
                 </div>
                 {isAdded ? (
                   <span style={{
-                    font: 'var(--type-label-font)',
-                    letterSpacing: 'var(--type-label-spacing)',
+                    fontSize: '0.6875rem',
                     textTransform: 'uppercase' as const,
+                    letterSpacing: '0.06em',
+                    fontWeight: 500,
                     color: 'var(--text-muted)',
                   }}>
                     Added

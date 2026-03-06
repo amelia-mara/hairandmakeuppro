@@ -75,9 +75,11 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
             </button>
           )}
           <h1 style={{
-            font: 'var(--type-ui-md-font)',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--text-muted)',
             margin: 0,
             minWidth: '60px',
             maxWidth: '140px',
@@ -106,8 +108,10 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
               {projectType && (
                 <>
                   <span style={{
-                    font: 'var(--type-ui-sm-font)',
+                    fontSize: '0.6875rem',
+                    fontWeight: 500,
                     color: 'var(--text-muted)',
+                    letterSpacing: '0.04em',
                     opacity: 0.6,
                     marginRight: '10px',
                   }}>
