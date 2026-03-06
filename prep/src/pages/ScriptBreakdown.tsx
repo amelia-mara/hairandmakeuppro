@@ -216,6 +216,25 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                     )}
                     <span className={`sl-card-status sl-card-status--${status}`} />
                   </div>
+                  {isActive && (
+                    <div className="sl-card-synopsis">
+                      <div className="sl-card-synopsis-head">
+                        <span>Synopsis</span>
+                        <button className="sl-generate-btn" onClick={(e) => { e.stopPropagation(); console.log('AI generate'); }}>
+                          Generate AI
+                        </button>
+                      </div>
+                      {s.synopsis && <p className="sl-card-synopsis-text">{s.synopsis}</p>}
+                    </div>
+                  )}
+                  {isActive && s.characterIds.length > 0 && (
+                    <div className="sl-card-chars">
+                      {s.characterIds.map((cid) => {
+                        const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
+                        return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span> : null;
+                      })}
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -502,28 +521,8 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
       </div>
 
       <div className="fp-scroll">
-        {/* Synopsis */}
-        <div className="fp-section fp-synopsis-section">
-          <div className="fp-section-title">
-            Synopsis
-            {!scene.synopsis && (
-              <button className="fp-synopsis-generate" onClick={() => console.log('Generate synopsis')}>
-                <SparklesIcon /> Generate
-              </button>
-            )}
-          </div>
-          {scene.synopsis ? (
-            <div className="fp-synopsis-body">
-              <p className="fp-synopsis-text">{scene.synopsis}</p>
-              <button className="fp-synopsis-regen" onClick={() => console.log('Regenerate synopsis')}>Regenerate</button>
-            </div>
-          ) : (
-            <p className="fp-synopsis-empty">No synopsis yet</p>
-          )}
-        </div>
-
         {/* Timeline */}
-        <div className="fp-section">
+        <div className="fp-section fp-section--bordered">
           <div className="fp-section-title">Timeline</div>
           <div className="fp-row-4">
             <FSelect label="Day" value={breakdown.timeline.day}
@@ -541,7 +540,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         </div>
 
         {/* Characters in Scene */}
-        <div className="fp-section">
+        <div className="fp-section fp-section--bordered">
           <div className="fp-section-title">
             Characters in Scene
             <span className="fp-section-count">{characters.length}</span>
@@ -693,6 +692,3 @@ function ImportIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
 }
 
-function SparklesIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>;
-}
