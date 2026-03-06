@@ -74,19 +74,7 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
               </svg>
             </button>
           )}
-          <h1 style={{
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase' as const,
-            color: 'var(--text-muted)',
-            margin: 0,
-            minWidth: '60px',
-            maxWidth: '140px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }} title={title}>
+          <h1 className="topbar-title" title={title}>
             {title}
           </h1>
 
@@ -148,7 +136,7 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
                 </svg>
               </button>
 
-              {/* Dropdown */}
+              {/* Dropdown — positioned over the left scene list panel */}
               {navOpen && (
                 <div className="topbar-nav-dropdown">
                   {NAV_ITEMS.map((item) => (

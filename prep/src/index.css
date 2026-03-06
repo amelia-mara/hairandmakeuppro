@@ -1166,6 +1166,18 @@ body {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TOPBAR NAV DROPDOWN
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.topbar-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .topbar-back-btn {
   display: flex;
   align-items: center;
@@ -1208,47 +1220,24 @@ body {
 }
 
 .topbar-nav-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
+  position: fixed;
+  top: 80px;
   left: 0;
+  width: 280px;
+  bottom: 0;
   z-index: 200;
-  min-width: 200px;
-  padding: 6px;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   background: linear-gradient(
-    145deg,
-    rgba(28, 25, 20, 0.98) 0%,
-    rgba(18, 16, 14, 0.99) 30%,
-    rgba(11, 10, 9, 1) 100%
+    180deg,
+    rgba(5, 5, 4, 1) 0%,
+    rgba(2, 2, 2, 1) 100%
   );
-  border: 1px solid var(--border-card);
-  border-top-color: rgba(var(--a), 0.18);
-  border-radius: 12px;
-  box-shadow:
-    var(--glass-shadow),
-    0 16px 48px -8px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(var(--a), 0.15);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
   animation: dropdown-in 0.15s ease-out;
-}
-.topbar-nav-dropdown::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1.5px;
-  border-radius: 12px 12px 0 0;
-  background: linear-gradient(
-    90deg,
-    transparent 10%,
-    rgba(var(--a), 0.10) 30%,
-    rgba(var(--a-light), 0.35) 52%,
-    rgba(var(--a-bright), 0.70) 72%,
-    rgba(var(--a-peak), 0.85) 78%,
-    rgba(var(--a-bright), 0.50) 84%,
-    rgba(var(--a), 0.12) 95%,
-    transparent 100%
-  );
-  pointer-events: none;
 }
 
 @keyframes dropdown-in {
@@ -1259,12 +1248,12 @@ body {
 .topbar-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 12px 14px;
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-label);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -1697,6 +1686,12 @@ body {
   background: var(--accent-gold);
   box-shadow: 0 0 10px rgba(var(--a), 0.3);
 }
+
+.bd-divider--static { cursor: default; }
+.bd-divider--static:hover,
+.bd-divider--static:active { background: rgba(var(--a), 0.06); }
+.bd-divider--static:hover .bd-divider-grip,
+.bd-divider--static:active .bd-divider-grip { opacity: 0.25; background: var(--text-muted); box-shadow: none; }
 
 .bd-divider-grip {
   width: 3px;
