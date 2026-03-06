@@ -89,7 +89,13 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
             textTransform: 'uppercase' as const,
             color: 'var(--text-muted)',
             margin: 0,
-          }}>
+            minWidth: '60px',
+            maxWidth: '220px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            direction: 'ltr',
+          }} title={title}>
             {title}
           </h1>
 
