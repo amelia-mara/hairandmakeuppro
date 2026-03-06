@@ -250,7 +250,7 @@ function BudgetFigure({ label, value, highlight }: { label: string; value: strin
         fontWeight: 700,
         color: highlight ? 'var(--accent-gold)' : 'var(--text-heading)',
         letterSpacing: '-0.01em',
-        textShadow: highlight ? '0 0 30px rgba(196, 172, 116, 0.20)' : undefined,
+        textShadow: highlight ? '0 0 30px rgba(var(--a), 0.20)' : undefined,
       }}>
         {value}
       </div>
