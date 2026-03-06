@@ -2139,15 +2139,15 @@ body {
   color: #1a1510;
   background: linear-gradient(
     180deg,
-    #f8f3e8 0%,
-    #f2ecdf 50%,
-    #ede7da 100%
+    #fefdfb 0%,
+    #faf9f6 50%,
+    #f7f5f2 100%
   );
   border-radius: 6px;
   padding: 40px 48px;
   margin: 20px 20px 0;
   min-height: 300px;
-  border: 1px solid rgba(160, 140, 100, 0.25);
+  border: 1px solid rgba(200, 195, 185, 0.35);
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.2),
     0 8px 20px rgba(0, 0, 0, 0.35),
