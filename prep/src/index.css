@@ -2528,7 +2528,7 @@ body {
 }
 
 .fp-scene-info { display: flex; flex-direction: column; gap: 6px; }
-.fp-scene-num { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.fp-scene-num { font-size: 1rem; font-weight: 700; color: var(--text-heading); }
 .fp-scene-loc { font-size: 0.875rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; }
 
 .fp-save {
@@ -2621,7 +2621,7 @@ body {
 .fp-section-title {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-heading);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 18px;
@@ -2860,7 +2860,7 @@ body {
   display: block;
   font-size: 0.625rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-heading);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 8px;
@@ -2974,7 +2974,7 @@ body {
 .fi-label {
   font-size: 0.625rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-heading);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   line-height: 1.4;
