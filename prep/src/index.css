@@ -2647,6 +2647,7 @@ body {
 }
 
 .fp-row-4 { display: grid; grid-template-columns: auto auto auto 1.5fr; gap: 10px; }
+.fp-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
 .fp-add-btn {
   font-size: 0.625rem;
