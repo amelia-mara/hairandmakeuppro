@@ -1411,14 +1411,62 @@ body {
 
 .bd-panels { display: flex; flex: 1; overflow: hidden; }
 
-/* ━━━ Panel Surface — elevated glass background for left & right ━━━ */
+/* ━━━ Panel Surfaces — 3 distinct elevation levels ━━━ */
 
-.bd-panel-surface {
+/* Left panel — deepest, recessed shelf */
+.bd-left {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
   background: linear-gradient(
     180deg,
-    rgba(18, 16, 13, 1) 0%,
-    rgba(12, 11, 9, 1) 100%
+    rgba(10, 9, 7, 1) 0%,
+    rgba(6, 6, 5, 1) 100%
   );
+  box-shadow:
+    inset -1px 0 8px rgba(0, 0, 0, 0.4),
+    inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Center — warm workspace surface, distinct from sides */
+.bd-center {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    rgba(26, 23, 18, 1) 0%,
+    rgba(20, 18, 14, 1) 100%
+  );
+  border-left: 1px solid rgba(196, 172, 116, 0.12);
+  border-right: 1px solid rgba(196, 172, 116, 0.12);
+  box-shadow:
+    inset 0 2px 12px rgba(196, 172, 116, 0.03),
+    inset 1px 0 0 rgba(196, 172, 116, 0.05),
+    inset -1px 0 0 rgba(196, 172, 116, 0.05);
+}
+
+/* Right panel — elevated form surface, slightly lighter than left */
+.bd-right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(16, 14, 12, 1) 0%,
+    rgba(10, 9, 8, 1) 100%
+  );
+  box-shadow:
+    inset 1px 0 8px rgba(0, 0, 0, 0.3),
+    inset 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Shared panel-surface treatment — directional inner glow (for right) */
+.bd-panel-surface {
   position: relative;
 }
 .bd-panel-surface::before {
@@ -1437,39 +1485,10 @@ body {
   z-index: 0;
 }
 
-/* ━━━ Panels ━━━ */
-
-.bd-left {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.bd-center {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid rgba(196, 172, 116, 0.10);
-  border-right: 1px solid rgba(196, 172, 116, 0.10);
-  box-shadow:
-    inset 1px 0 0 rgba(196, 172, 116, 0.04),
-    inset -1px 0 0 rgba(196, 172, 116, 0.04);
-}
-
-.bd-right {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
 /* ━━━ Draggable Divider ━━━ */
 
 .bd-divider {
-  width: 6px;
+  width: 8px;
   flex-shrink: 0;
   cursor: col-resize;
   position: relative;
@@ -1477,12 +1496,15 @@ body {
   align-items: center;
   justify-content: center;
   background: linear-gradient(
-    180deg,
-    rgba(196, 172, 116, 0.08) 0%,
-    var(--border-subtle) 20%,
-    var(--border-subtle) 80%,
-    rgba(196, 172, 116, 0.08) 100%
+    90deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(196, 172, 116, 0.10) 40%,
+    rgba(196, 172, 116, 0.10) 60%,
+    rgba(0, 0, 0, 0.5) 100%
   );
+  box-shadow:
+    inset 1px 0 0 rgba(196, 172, 116, 0.08),
+    inset -1px 0 0 rgba(196, 172, 116, 0.08);
   transition: background 0.15s ease;
   z-index: 10;
 }
@@ -1599,12 +1621,12 @@ body {
   margin-bottom: 6px;
   background: linear-gradient(
     145deg,
-    rgba(28, 25, 20, 0.7) 0%,
-    rgba(18, 16, 14, 0.8) 40%,
-    rgba(13, 12, 10, 0.9) 100%
+    rgba(32, 28, 22, 1) 0%,
+    rgba(22, 20, 16, 1) 40%,
+    rgba(16, 15, 12, 1) 100%
   );
-  border: 1px solid var(--border-card);
-  border-top-color: rgba(196, 172, 116, 0.10);
+  border: 1px solid rgba(196, 172, 116, 0.10);
+  border-top-color: rgba(196, 172, 116, 0.14);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1612,8 +1634,9 @@ body {
   position: relative;
   overflow: hidden;
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(196, 172, 116, 0.03);
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(196, 172, 116, 0.04);
 }
 .sl-card:hover {
   border-color: var(--border-medium);
@@ -1625,13 +1648,17 @@ body {
 .sl-card--active {
   background: linear-gradient(
     145deg,
-    rgba(34, 30, 24, 0.95) 0%,
-    rgba(21, 19, 17, 0.98) 30%,
-    rgba(13, 12, 10, 1) 100%
+    rgba(38, 34, 26, 1) 0%,
+    rgba(26, 23, 18, 1) 30%,
+    rgba(18, 16, 13, 1) 100%
   );
-  border-color: var(--border-medium);
-  border-top-color: rgba(196, 172, 116, 0.20);
-  box-shadow: var(--glass-shadow-stat);
+  border-color: rgba(196, 172, 116, 0.18);
+  border-top-color: rgba(196, 172, 116, 0.25);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.5),
+    0 8px 20px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(196, 172, 116, 0.04),
+    inset 0 1px 0 rgba(196, 172, 116, 0.06);
 }
 .sl-card--active::after {
   content: '';
@@ -1901,18 +1928,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 16px;
+  padding: 7px 16px;
   flex-shrink: 0;
-  border-top: 1px solid rgba(196, 172, 116, 0.12);
-  border-bottom: 1px solid rgba(196, 172, 116, 0.10);
+  border-bottom: 1px solid rgba(196, 172, 116, 0.15);
   background: linear-gradient(
     180deg,
-    rgba(20, 18, 14, 0.95) 0%,
-    rgba(14, 13, 10, 0.9) 100%
+    rgba(18, 16, 12, 1) 0%,
+    rgba(14, 12, 10, 1) 100%
   );
   box-shadow:
-    inset 0 1px 0 rgba(196, 172, 116, 0.05),
-    0 1px 3px rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 rgba(196, 172, 116, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.3);
   gap: 12px;
   position: relative;
   z-index: 1;
@@ -1971,16 +1997,23 @@ body {
   font-family: 'Courier New', 'Courier', monospace;
   line-height: 1.7;
   color: #2a2520;
-  background: #f5f0e6;
-  border-radius: 6px;
+  background: linear-gradient(
+    180deg,
+    #f7f2e8 0%,
+    #f0eade 50%,
+    #ebe5d8 100%
+  );
+  border-radius: 8px;
   padding: 36px 44px;
   margin: 20px;
   min-height: calc(100% - 40px);
+  border: 1px solid rgba(180, 160, 120, 0.2);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.15),
-    0 8px 24px rgba(0, 0, 0, 0.2),
-    0 0 50px rgba(196, 172, 116, 0.06),
-    inset 0 0 80px rgba(180, 160, 120, 0.05);
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 12px 36px rgba(0, 0, 0, 0.35),
+    0 0 60px rgba(196, 172, 116, 0.08),
+    inset 0 0 80px rgba(180, 160, 120, 0.04);
 }
 
 .sv-scene-badge {
@@ -2176,14 +2209,15 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-card);
+  border-bottom: 1px solid rgba(196, 172, 116, 0.12);
   position: relative;
   z-index: 1;
   background: linear-gradient(
     180deg,
-    rgba(196, 172, 116, 0.03) 0%,
-    transparent 100%
+    rgba(196, 172, 116, 0.05) 0%,
+    rgba(196, 172, 116, 0.01) 100%
   );
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .fp-panel-title {
@@ -2324,18 +2358,21 @@ body {
 .cb-block {
   background: linear-gradient(
     145deg,
-    rgba(34, 30, 24, 0.95) 0%,
-    rgba(21, 19, 17, 0.98) 30%,
-    rgba(13, 12, 10, 1) 100%
+    rgba(30, 27, 21, 1) 0%,
+    rgba(22, 20, 16, 1) 30%,
+    rgba(16, 15, 12, 1) 100%
   );
-  border: 1px solid var(--border-card);
-  border-top-color: rgba(196, 172, 116, 0.14);
+  border: 1px solid rgba(196, 172, 116, 0.12);
+  border-top-color: rgba(196, 172, 116, 0.18);
   border-radius: 14px;
   padding: 18px;
   margin-bottom: 12px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--glass-shadow-stat);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(196, 172, 116, 0.05);
   transition: all 0.2s ease;
 }
 .cb-block::before {
