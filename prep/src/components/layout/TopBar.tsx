@@ -8,14 +8,6 @@ interface TopBarProps {
   projectType?: string;
 }
 
-const THEMES = [
-  { id: 'gold',   label: 'Gold',   color: '#c4ac74' },
-  { id: 'silver', label: 'Silver', color: '#a8b0b8' },
-  { id: 'teal',   label: 'Teal',   color: '#7aad96' },
-  { id: 'rose',   label: 'Rose',   color: '#c4949a' },
-  { id: 'ice',    label: 'Ice',    color: '#8b9cc4' },
-] as const;
-
 function useTheme() {
   const [theme, setThemeState] = useState(() => {
     try { return localStorage.getItem('prep-theme') || 'gold'; } catch { return 'gold'; }
@@ -51,7 +43,7 @@ const NAV_ITEMS = [
 export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, projectType }: TopBarProps) {
   const [navOpen, setNavOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
-  const { theme, setTheme } = useTheme();
+  useTheme();
 
   // Close on outside click
   useEffect(() => {
@@ -83,17 +75,15 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
             </button>
           )}
           <h1 style={{
-            font: 'var(--type-label-font)',
-            letterSpacing: 'var(--type-label-spacing)',
-            textTransform: 'uppercase' as const,
-            color: 'var(--text-muted)',
+            font: 'var(--type-ui-md-font)',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
             margin: 0,
             minWidth: '60px',
-            maxWidth: '220px',
+            maxWidth: '140px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            direction: 'ltr',
           }} title={title}>
             {title}
           </h1>
@@ -190,20 +180,6 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
               <path d="M7 17L17 7M17 7H7M17 7v10"/>
             </svg>
           </a>
-
-          {/* Theme picker */}
-          <div className="theme-picker">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                className={`theme-swatch ${theme === t.id ? 'theme-swatch--active' : ''}`}
-                style={{ background: t.color }}
-                onClick={() => setTheme(t.id)}
-                title={t.label}
-                aria-label={`${t.label} theme`}
-              />
-            ))}
-          </div>
 
           {/* Avatar — THE SUN */}
           <div className="avatar-wrap">
