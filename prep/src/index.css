@@ -2288,15 +2288,15 @@ body {
 
 .sv-scene-badge {
   display: inline-block;
-  font-family: var(--font-sans);
-  font-size: 11px;
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--accent-gold);
-  background: rgba(var(--a), 0.12);
-  border: 1px solid rgba(var(--a), 0.22);
-  padding: 3px 8px;
-  border-radius: 6px;
-  margin-bottom: 16px;
+  color: #3a3530;
+  background: rgba(220, 210, 195, 0.35);
+  border: 1px solid rgba(180, 170, 155, 0.4);
+  padding: 6px 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
   letter-spacing: 0.02em;
 }
 
