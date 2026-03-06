@@ -90,7 +90,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
 
         {/* Sort */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--text-label)', whiteSpace: 'nowrap' }}>Sort:</span>
+          <span style={{ font: 'var(--type-ui-sm-font)', color: 'var(--text-label)', whiteSpace: 'nowrap' }}>Sort:</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
@@ -121,10 +121,10 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
                 <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
               </svg>
             </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+            <span style={{ font: 'var(--type-ui-md-font)', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '4px' }}>
               Create New Project
             </span>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+            <span style={{ font: 'var(--type-ui-sm-font)', color: 'var(--text-secondary)' }}>
               Start your breakdown
             </span>
           </button>
@@ -165,10 +165,10 @@ function ProjectCard({
     <div className="project-card">
       {/* Header */}
       <div className="project-card-header" style={{ cursor: 'pointer' }} onClick={onClick}>
-        <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+        <h3 style={{ font: 'var(--type-display-sm-font)', color: 'var(--text-heading)', marginBottom: '4px' }}>
           {project.title}
         </h3>
-        <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+        <span style={{ font: 'var(--type-ui-sm-font)', color: 'var(--text-muted)' }}>
           {project.type || 'Not Set'}
         </span>
       </div>
@@ -192,7 +192,7 @@ function ProjectCard({
         <div style={{
           paddingTop: '12px',
           borderTop: '1px solid var(--border-subtle)',
-          fontSize: '0.8125rem',
+          font: 'var(--type-ui-sm-font)',
           color: 'var(--text-muted)',
         }}>
           {project.genre || 'No dates set'}
@@ -202,7 +202,7 @@ function ProjectCard({
       {/* Footer */}
       <div className="project-card-footer">
         <div className={`status-dot ${project.status}`} />
-        <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginRight: 'auto' }}>
+        <span style={{ font: 'var(--type-ui-sm-font)', color: 'var(--text-secondary)', marginRight: 'auto' }}>
           {statusLabel}
         </span>
         <button className="btn-action-gold" onClick={(e) => { e.stopPropagation(); }}>
@@ -223,19 +223,18 @@ function StatItem({ label, value, bold }: { label: string; value: string; bold?:
   return (
     <div>
       <div style={{
-        fontSize: '0.6875rem',
-        fontWeight: 500,
-        color: 'var(--text-muted)',
+        font: 'var(--type-label-font)',
+        letterSpacing: 'var(--type-label-spacing)',
         textTransform: 'uppercase' as const,
-        letterSpacing: '0.06em',
+        color: 'var(--text-muted)',
         marginBottom: '4px',
       }}>
         {label}
       </div>
       <div style={{
-        fontSize: '1rem',
-        fontWeight: bold ? 700 : 600,
-        color: 'var(--text-heading)',
+        font: 'var(--type-ui-lg-font)',
+        fontWeight: bold ? 700 : 500,
+        color: 'var(--text-primary)',
       }}>
         {value}
       </div>
