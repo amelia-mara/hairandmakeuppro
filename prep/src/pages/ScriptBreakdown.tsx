@@ -236,7 +236,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                 onClick={() => setActiveTab('script')}>Script</button>
               {sceneCharacters.map((c) => (
                 <button key={c.id} className={`cp-divider-tab ${activeTab === c.id ? 'cp-divider-tab--active' : ''}`}
-                  onClick={() => setActiveTab(c.id)}>{titleCase(c.name)}</button>
+                  onClick={() => setActiveTab(c.id)}>{c.name}</button>
               ))}
             </div>
           </div>
@@ -425,7 +425,7 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
       <div className="cv-header">
         <div className="cv-avatar">{char.name.split(' ').map((n) => n[0]).join('')}</div>
         <div>
-          <div className="cv-name">{titleCase(char.name)}</div>
+          <div className="cv-name">{char.name}</div>
           <div className="cv-meta">{ordinal(char.billing)} Billing · {char.gender} · Age {char.age}</div>
         </div>
       </div>
@@ -598,7 +598,7 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate }: {
   return (
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
       <div className="cb-header">
-        <span className="cb-name">{titleCase(char.name)}</span>
+        <span className="cb-name">{char.name}</span>
         <div className="cb-header-right">
           <span className="cb-billing-badge">{ordinal(char.billing)}</span>
         </div>
@@ -683,10 +683,6 @@ function ordinal(n: number) {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
-function titleCase(str: string) {
-  return str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function ToolsIcon() {
