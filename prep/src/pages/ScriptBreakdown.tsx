@@ -557,7 +557,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         {/* Timeline */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>
-          <div className="fp-row-4">
+          <div className="fp-row-3">
             <FSelect label="Day" value={breakdown.timeline.day}
               options={['', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, day: v })} />
@@ -565,11 +565,16 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
               options={['', 'Day', 'Night', 'Dawn', 'Dusk']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, time: v })} />
             <FSelect label="Type" value={breakdown.timeline.type}
-              options={['', 'Normal', 'VFX', 'SFX']}
+              options={['', 'Normal', 'Flashback', 'Flash Fwd', 'Time Jump', 'Dream', 'Montage']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, type: v })} />
-            <FInput label="Note" value={breakdown.timeline.note} placeholder="e.g. 3 weeks later"
-              onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, note: v })} />
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="fp-section fp-section--pill">
+          <div className="fp-section-title">Notes</div>
+          <FInput label="" value={breakdown.timeline.note} placeholder="e.g. 3 weeks later"
+            onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, note: v })} />
         </div>
 
         {/* Characters in Scene */}
