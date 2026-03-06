@@ -77,9 +77,7 @@ function sceneColorClass(intExt: string, dayNight: string): string {
   return '';
 }
 
-const LEFT_DEFAULT = 300;
-const LEFT_MIN = 200;
-const LEFT_MAX = 440;
+const LEFT_WIDTH = 280;
 const RIGHT_DEFAULT = 400;
 const RIGHT_MIN = 300;
 const RIGHT_MAX = 560;
@@ -91,7 +89,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [fontSize, setFontSize] = useState(16);
   const [showLegend, setShowLegend] = useState(false);
 
-  const leftPanel = usePanelResize('prep-left-panel-w', LEFT_DEFAULT, LEFT_MIN, LEFT_MAX, 'left');
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -184,7 +181,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
       <div className="bd-panels">
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
-        <div className="bd-left bd-panel-surface" style={{ width: leftPanel.width, minWidth: leftPanel.width }}>
+        <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
             <span className="sl-header-count">{MOCK_SCENES.length}</span>
@@ -243,8 +240,8 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
           </div>
         </div>
 
-        {/* Left divider */}
-        <div className="bd-divider" onMouseDown={leftPanel.onMouseDown} onDoubleClick={leftPanel.onDoubleClick}>
+        {/* Left divider (visual only) */}
+        <div className="bd-divider bd-divider--static">
           <div className="bd-divider-grip" />
         </div>
 
