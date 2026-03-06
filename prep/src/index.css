@@ -1969,63 +1969,54 @@ body {
 .sl-card-status--partial { background: var(--status-pending); }
 .sl-card-status--complete { background: var(--status-success); }
 
-/* Synopsis inside active card */
-.sl-card-synopsis {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
-}
-.sl-card-synopsis-head {
+/* Expandable overview inside active card */
+.sl-card-expand {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--a), 0.15);
+}
+
+.sl-expand-pill {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(var(--a), 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.sl-expand-label {
+  display: block;
   font-size: 0.5625rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--accent-gold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-.sl-generate-btn {
-  font-size: 0.5625rem;
-  font-weight: 600;
-  color: var(--accent-gold);
-  background: rgba(var(--a), 0.08);
-  border: 1px solid rgba(var(--a), 0.12);
-  border-radius: 6px;
-  padding: 2px 8px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  transition: all 0.15s ease;
-}
-.sl-generate-btn:hover {
-  background: rgba(var(--a), 0.14);
-  border-color: rgba(var(--a), 0.22);
+  margin-bottom: 4px;
 }
 
-.sl-card-synopsis-text {
-  font-size: 0.75rem;
+.sl-expand-value {
+  display: block;
+  font-size: 0.6875rem;
   color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
+  line-height: 1.45;
 }
 
-/* Character tags inside active card */
-.sl-card-chars {
+.sl-expand-chars {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 8px;
 }
+
 .sl-card-char-tag {
   font-size: 0.5625rem;
   font-weight: 600;
-  color: var(--accent-gold);
-  background: rgba(var(--a), 0.12);
-  border: 1px solid rgba(var(--a), 0.18);
+  color: var(--text-primary);
+  background: rgba(var(--a), 0.18);
+  border: 1px solid rgba(var(--a), 0.28);
   border-radius: 4px;
   padding: 2px 7px;
-  box-shadow: inset 0 1px 0 rgba(var(--a-light), 0.06);
 }
 
 /* ━━━ Center Panel — Tab Bar ━━━ */
