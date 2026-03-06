@@ -2245,8 +2245,9 @@ body {
 
 .sv-paper {
   font-family: 'Courier New', 'Courier', monospace;
-  line-height: 2;
-  color: #1a1510;
+  line-height: 2.2;
+  color: #111;
+  -webkit-font-smoothing: antialiased;
   background: linear-gradient(
     180deg,
     #f8f4ee 0%,
@@ -2254,7 +2255,7 @@ body {
     #f2ede5 100%
   );
   border-radius: 10px;
-  padding: 36px 44px;
+  padding: 44px 52px;
   margin: 12px 12px 0;
   min-height: 300px;
   border: 1px solid rgba(200, 195, 185, 0.25);
