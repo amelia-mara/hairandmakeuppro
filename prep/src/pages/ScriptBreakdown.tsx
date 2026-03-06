@@ -201,6 +201,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
               const status = store.getCompletionStatus(s.id, s);
               const isActive = s.id === selectedSceneId;
               const colorClass = sceneColorClass(s.intExt, s.dayNight);
+              const bd = store.getBreakdown(s.id);
               return (
                 <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
                   onClick={() => selectScene(s.id)}>
@@ -217,22 +218,32 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                     <span className={`sl-card-status sl-card-status--${status}`} />
                   </div>
                   {isActive && (
-                    <div className="sl-card-synopsis">
-                      <div className="sl-card-synopsis-head">
-                        <span>Synopsis</span>
-                        <button className="sl-generate-btn" onClick={(e) => { e.stopPropagation(); console.log('AI generate'); }}>
-                          Generate AI
-                        </button>
-                      </div>
-                      {s.synopsis && <p className="sl-card-synopsis-text">{s.synopsis}</p>}
-                    </div>
-                  )}
-                  {isActive && s.characterIds.length > 0 && (
-                    <div className="sl-card-chars">
-                      {s.characterIds.map((cid) => {
-                        const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
-                        return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span> : null;
-                      })}
+                    <div className="sl-card-expand">
+                      {s.synopsis && (
+                        <div className="sl-expand-pill">
+                          <span className="sl-expand-label">Synopsis</span>
+                          <span className="sl-expand-value">{s.synopsis}</span>
+                        </div>
+                      )}
+                      {bd && bd.timeline.day && (
+                        <div className="sl-expand-pill">
+                          <span className="sl-expand-label">Timeline</span>
+                          <span className="sl-expand-value">
+                            {[bd.timeline.day, bd.timeline.time, bd.timeline.type, bd.timeline.note].filter(Boolean).join(' · ')}
+                          </span>
+                        </div>
+                      )}
+                      {s.characterIds.length > 0 && (
+                        <div className="sl-expand-pill">
+                          <span className="sl-expand-label">Characters</span>
+                          <div className="sl-expand-chars">
+                            {s.characterIds.map((cid) => {
+                              const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
+                              return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span> : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </button>
@@ -521,6 +532,19 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
       </div>
 
       <div className="fp-scroll">
+        {/* Synopsis */}
+        <div className="fp-section fp-section--bordered">
+          <div className="fp-section-title">Synopsis</div>
+          {scene.synopsis ? (
+            <div className="fp-synopsis-body">
+              <p className="fp-synopsis-text">{scene.synopsis}</p>
+              <button className="fp-synopsis-regen" onClick={() => console.log('Regenerate synopsis')}>Regenerate</button>
+            </div>
+          ) : (
+            <p className="fp-synopsis-empty">No synopsis yet</p>
+          )}
+        </div>
+
         {/* Timeline */}
         <div className="fp-section fp-section--bordered">
           <div className="fp-section-title">Timeline</div>
