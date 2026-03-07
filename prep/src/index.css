@@ -188,6 +188,295 @@
   --text-label: #647078;
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LIGHT MODE
+   Warm cream/ivory with gold accents — mirrors Checks Happy mobile
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+[data-theme="light"] {
+  --a:        172, 142, 72;
+  --a-light:  192, 162, 92;
+  --a-bright: 160, 130, 60;
+  --a-peak:   140, 110, 40;
+  --a-dim:    152, 122, 62;
+  --accent:       #b89651;
+  --accent-dark:  #a07c1c;
+  --accent-cue:   #8b6914;
+  --accent-cue-hover: #a07c1c;
+
+  --bg-primary: #f8f5f0;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f2ec;
+  --bg-elevated: #ffffff;
+
+  --text-primary: #1a1610;
+  --text-secondary: #6b6358;
+  --text-heading: #4a4238;
+  --text-muted: #a09888;
+  --text-label: #8a8278;
+
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-card: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.20);
+
+  --int-day:          rgba(255, 255, 255, 0.6);
+  --ext-day:          rgba(251, 191, 36, 0.08);
+  --int-night:        rgba(56, 189, 248, 0.06);
+  --ext-night:        rgba(52, 211, 153, 0.06);
+  --int-day-border:   rgba(0, 0, 0, 0.08);
+  --ext-day-border:   rgba(251, 191, 36, 0.25);
+  --int-night-border: rgba(56, 189, 248, 0.25);
+  --ext-night-border: rgba(52, 211, 153, 0.25);
+
+  --glass-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.04) inset,
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+
+  --glass-shadow-hover:
+    0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.04) inset,
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+
+  --glass-shadow-stat:
+    0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.03) inset,
+    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+
+  --status-active: #2d9e5e;
+  --status-pending: #d4843c;
+
+  color-scheme: light;
+}
+
+/* Light mode — component overrides for hardcoded dark values */
+
+/* Cards & surfaces */
+[data-theme="light"] .glass,
+[data-theme="light"] .stat-card,
+[data-theme="light"] .project-card,
+[data-theme="light"] .widget-card,
+[data-theme="light"] .fp-event,
+[data-theme="light"] .cb-block,
+[data-theme="light"] .cv-field,
+[data-theme="light"] .cv-look-card,
+[data-theme="light"] .cv-look-sub-card {
+  background: var(--bg-card) !important;
+}
+
+/* Header */
+[data-theme="light"] .app-header {
+  background: #ffffff !important;
+  box-shadow: 0 1px 0 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .app-header::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--a), 0.08) 15%,
+    rgba(var(--a), 0.20) 40%,
+    rgba(var(--a), 0.40) 72%,
+    rgba(var(--a), 0.50) 82%,
+    rgba(var(--a), 0.40) 90%,
+    rgba(var(--a), 0.15) 97%,
+    transparent 100%
+  ) !important;
+}
+[data-theme="light"] .app-header::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--a), 0.02) 30%,
+    rgba(var(--a), 0.05) 65%,
+    rgba(var(--a), 0.06) 80%,
+    rgba(var(--a), 0.02) 95%,
+    transparent 100%
+  ) !important;
+}
+
+/* Sidebar, dropdown, nav panels */
+[data-theme="light"] .topbar-nav-dropdown,
+[data-theme="light"] .dashboard-sidebar {
+  background: linear-gradient(180deg, #faf8f5 0%, #f5f2ed 100%) !important;
+  border-right: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.06) !important;
+}
+
+[data-theme="light"] .tools-dropdown,
+[data-theme="light"] .account-panel {
+  background: linear-gradient(180deg, #faf8f5 0%, #f5f2ed 100%) !important;
+  border-left: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: -2px 0 12px rgba(0,0,0,0.06) !important;
+}
+
+/* Nav items */
+[data-theme="light"] .topbar-nav-item:hover,
+[data-theme="light"] .tools-dropdown-item:hover {
+  background: rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .topbar-nav-item.active {
+  background: rgba(var(--a), 0.08) !important;
+}
+
+/* Breakdown panels */
+[data-theme="light"] .bd-left {
+  background: linear-gradient(180deg, #f5f2ed 0%, #f0ece6 100%) !important;
+  border-right: 1px solid rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .bd-center {
+  background: #ffffff !important;
+}
+[data-theme="light"] .bd-right {
+  background: var(--bg-primary) !important;
+}
+
+/* Scene list cards */
+[data-theme="light"] .sl-card {
+  background: #ffffff !important;
+}
+[data-theme="light"] .sl-card--active {
+  background: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(var(--a), 0.25) !important;
+}
+[data-theme="light"] .sl-expand-pill {
+  background: rgba(0,0,0,0.03) !important;
+}
+
+/* Panel headers */
+[data-theme="light"] .fp-panel-header {
+  background: linear-gradient(180deg, rgba(var(--a), 0.03) 0%, rgba(var(--a), 0.01) 100%) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* Form sections — pills */
+[data-theme="light"] .fp-section--pill {
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+}
+
+/* Input fields */
+[data-theme="light"] .fi-input,
+[data-theme="light"] .fi-select,
+[data-theme="light"] .cb-textarea {
+  background: #f8f6f2 !important;
+  border-color: rgba(0,0,0,0.10) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .fi-input:focus,
+[data-theme="light"] .fi-select:focus,
+[data-theme="light"] .cb-textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04), 0 0 0 2px rgba(var(--a), 0.12) !important;
+}
+
+/* Buttons — text on gold background stays dark */
+[data-theme="light"] .btn-gold,
+[data-theme="light"] .avatar-btn,
+[data-theme="light"] .account-avatar {
+  color: #ffffff !important;
+}
+[data-theme="light"] .btn-ghost {
+  background: transparent !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+[data-theme="light"] .btn-ghost:hover {
+  border-color: var(--accent) !important;
+}
+
+/* Character tabs */
+[data-theme="light"] .cp-section-bar {
+  background: #f5f2ed !important;
+}
+[data-theme="light"] .cp-tab--active {
+  color: #ffffff !important;
+}
+
+/* Script view */
+[data-theme="light"] .sv-scene-badge {
+  background: rgba(var(--a), 0.08) !important;
+}
+
+/* Dashboard */
+[data-theme="light"] .dashboard-header {
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* Project card footer */
+[data-theme="light"] .project-card-footer {
+  background: rgba(0,0,0,0.02) !important;
+}
+
+/* Account panel cards */
+[data-theme="light"] .account-card {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .account-row-icon {
+  background: rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .account-row-icon--accent {
+  background: rgba(var(--a), 0.08) !important;
+}
+[data-theme="light"] .account-theme-opt {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .account-theme-opt--active {
+  border-color: var(--accent) !important;
+  background: rgba(var(--a), 0.05) !important;
+}
+[data-theme="light"] .account-signout {
+  border-color: rgba(200, 60, 60, 0.15) !important;
+  color: rgba(200, 60, 60, 0.65) !important;
+}
+
+/* Modals */
+[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+[data-theme="light"] .modal-glass {
+  background: #ffffff !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+}
+
+/* Dividers */
+[data-theme="light"] .bd-divider {
+  background: rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .bd-divider:hover {
+  background: rgba(var(--a), 0.15) !important;
+}
+
+/* New project card */
+[data-theme="light"] .new-project-card {
+  background: rgba(0,0,0,0.02) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* Sticky headers */
+[data-theme="light"] .fp-header {
+  background: var(--bg-primary) !important;
+}
+[data-theme="light"] .sl-header {
+  background: linear-gradient(180deg, #f5f2ed 0%, #f5f2ed 80%, transparent 100%) !important;
+}
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.20);
+}
+
 /* ━━━ Base ━━━ */
 html {
   -webkit-font-smoothing: antialiased;
@@ -1577,7 +1866,7 @@ body {
 
 .account-theme-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
