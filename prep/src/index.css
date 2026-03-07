@@ -2541,7 +2541,8 @@ body {
   flex-shrink: 0;
 }
 
-.fp-scene-num { font-size: 1rem; font-weight: 700; color: var(--text-heading); text-transform: uppercase; letter-spacing: 0.08em; }
+.fp-scene-num { font-size: 0.8125rem; font-weight: 700; color: var(--text-heading); text-transform: uppercase; letter-spacing: 0.08em; }
+.fp-scene-tagline { font-size: 0.7rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; margin: 2px 0 0; line-height: 1.35; }
 .fp-scene-loc { font-size: 0.875rem; color: var(--text-primary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; margin-bottom: 20px; }
 
 .fp-save {
