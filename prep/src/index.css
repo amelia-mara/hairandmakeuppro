@@ -652,9 +652,24 @@
   border: 1px solid rgba(0,0,0,0.08) !important;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
 }
+[data-theme="light"] .sl-card.sl-card--int-day {
+  background: linear-gradient(135deg, rgba(245, 240, 230, 0.6) 0%, #ffffff 50%, rgba(245, 240, 230, 0.3) 100%) !important;
+  border-left: 3px solid var(--int-day-border) !important;
+}
+[data-theme="light"] .sl-card.sl-card--ext-day {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.10) 0%, #ffffff 50%, rgba(251, 191, 36, 0.05) 100%) !important;
+  border-left: 3px solid var(--ext-day-border) !important;
+}
+[data-theme="light"] .sl-card.sl-card--int-night {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, #ffffff 50%, rgba(56, 189, 248, 0.04) 100%) !important;
+  border-left: 3px solid var(--int-night-border) !important;
+}
+[data-theme="light"] .sl-card.sl-card--ext-night {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.08) 0%, #ffffff 50%, rgba(52, 211, 153, 0.04) 100%) !important;
+  border-left: 3px solid var(--ext-night-border) !important;
+}
 [data-theme="light"] .sl-card--active {
-  background: #ffffff !important;
-  border: 1px solid rgba(var(--a), 0.35) !important;
+  border-color: rgba(var(--a), 0.35) !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 0 0 1px rgba(var(--a), 0.20) !important;
 }
 [data-theme="light"] .sl-card .sl-synopsis,
