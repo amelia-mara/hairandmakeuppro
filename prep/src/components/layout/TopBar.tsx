@@ -78,8 +78,8 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
             {title}
           </h1>
 
-          {/* Nav dropdown trigger — only in project view */}
-          {activePage && onNavigate && (
+          {/* Nav dropdown trigger — only in project view, hidden on dashboard (has permanent sidebar) */}
+          {activePage && activePage !== 'dashboard' && onNavigate && (
             <div ref={dropRef} style={{ position: 'relative' }}>
               {/* Separator dot */}
               <span style={{
