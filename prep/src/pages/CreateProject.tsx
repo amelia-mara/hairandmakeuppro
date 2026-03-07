@@ -86,7 +86,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
             style={{
               width: '32px',
               height: '32px',
-              borderRadius: '12px',
+              borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -190,7 +190,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
                       alignItems: 'center',
                       gap: '6px',
                       padding: '14px 6px',
-                      borderRadius: '14px',
+                      borderRadius: '10px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       border: `1px solid ${selected ? 'var(--border-strong)' : 'var(--border-card)'}`,
@@ -228,7 +228,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
             onClick={onCancel}
             style={{
               padding: '10px 20px',
-              borderRadius: '12px',
+              borderRadius: '8px',
               fontSize: '0.8125rem',
               fontWeight: 500,
               background: 'none',
@@ -254,7 +254,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
             className="btn-gold"
             style={{
               padding: '10px 24px',
-              borderRadius: '12px',
+              borderRadius: '8px',
               fontSize: '0.8125rem',
               opacity: canCreate ? 1 : 0.4,
               cursor: canCreate ? 'pointer' : 'not-allowed',
