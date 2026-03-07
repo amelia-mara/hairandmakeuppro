@@ -88,6 +88,8 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(16);
   const [showLegend, setShowLegend] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = useRef<HTMLDivElement>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
 
@@ -127,6 +129,18 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
       statusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     }, 800);
   }, []);
+
+  /* Close tools menu on outside click */
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) {
+        setToolsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [toolsOpen]);
 
   /* Scroll the active scene card into view in the left panel */
   const sceneListRef = useRef<HTMLDivElement>(null);
@@ -314,13 +328,45 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
         <div className="bd-right bd-panel-surface" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
           <div className="fp-panel-header">
             <span className="fp-panel-title">Scene Breakdown</span>
-            <div className="fp-panel-actions">
-              <button className="btn-ghost bd-btn" onClick={() => console.log('Tools')}>
+            <div className="fp-panel-actions" ref={toolsRef} style={{ position: 'relative' }}>
+              <button className="btn-ghost bd-btn" onClick={() => setToolsOpen(!toolsOpen)}>
                 <ToolsIcon /> Tools
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ transition: 'transform 0.2s ease', transform: toolsOpen ? 'rotate(180deg)' : 'rotate(0deg)', marginLeft: '2px' }}>
+                  <path d="m6 9 6 6 6-6"/>
+                </svg>
               </button>
-              <button className="btn-gold bd-btn" onClick={() => console.log('Import')}>
-                <ImportIcon /> Import Script
-              </button>
+              {toolsOpen && (
+                <div className="tools-dropdown">
+                  <div className="tools-dropdown-section">
+                    <button className="tools-dropdown-item" onClick={() => { console.log('Import script'); setToolsOpen(false); }}>
+                      <ImportIcon /> <span>Import New Script</span>
+                    </button>
+                    <button className="tools-dropdown-item" onClick={() => { console.log('Previous drafts'); setToolsOpen(false); }}>
+                      <DraftsIcon /> <span>View Previous Drafts</span>
+                    </button>
+                    <button className="tools-dropdown-item" onClick={() => { console.log('View breakdown'); setToolsOpen(false); }}>
+                      <BreakdownViewIcon /> <span>View Breakdown</span>
+                    </button>
+                  </div>
+                  <div className="tools-dropdown-divider" />
+                  <div className="tools-dropdown-section">
+                    <div className="tools-dropdown-label">Export</div>
+                    <button className="tools-dropdown-item" onClick={() => { console.log('Export breakdown'); setToolsOpen(false); }}>
+                      <ExportIcon /> <span>Breakdown</span>
+                    </button>
+                    <button className="tools-dropdown-item" onClick={() => { console.log('Export lookbooks'); setToolsOpen(false); }}>
+                      <ExportIcon /> <span>Lookbooks</span>
+                    </button>
+                    <button className="tools-dropdown-item" onClick={() => { console.log('Export timeline'); setToolsOpen(false); }}>
+                      <ExportIcon /> <span>Timeline</span>
+                    </button>
+                    <button className="tools-dropdown-item" onClick={() => { console.log('Export bible'); setToolsOpen(false); }}>
+                      <ExportIcon /> <span>Bible</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <BreakdownFormPanel
@@ -747,5 +793,17 @@ function ToolsIcon() {
 
 function ImportIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+}
+
+function DraftsIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8"/></svg>;
+}
+
+function BreakdownViewIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>;
+}
+
+function ExportIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
 }
 
