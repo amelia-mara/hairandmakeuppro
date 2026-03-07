@@ -538,7 +538,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
       </div>
 
       <div className="fp-scroll">
-        <div className="fp-scene-loc">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
         {/* Synopsis */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
