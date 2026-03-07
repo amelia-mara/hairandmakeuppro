@@ -515,6 +515,11 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
+  const [synopsis, setSynopsis] = useState(scene.synopsis);
+
+  useEffect(() => {
+    setSynopsis(scene.synopsis);
+  }, [scene.id, scene.synopsis]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -541,14 +546,13 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         {/* Synopsis */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
-          {scene.synopsis ? (
-            <div className="fp-synopsis-body">
-              <p className="fp-synopsis-text">{scene.synopsis}</p>
-              <button className="fp-synopsis-regen" onClick={() => console.log('Regenerate synopsis')}>Regenerate</button>
-            </div>
-          ) : (
-            <p className="fp-synopsis-empty">No synopsis yet</p>
-          )}
+          <textarea
+            className="fi-input fp-synopsis-input"
+            value={synopsis}
+            onChange={(e) => setSynopsis(e.target.value)}
+            placeholder="Write a synopsis for this scene..."
+            rows={3}
+          />
         </div>
 
         {/* Timeline */}
