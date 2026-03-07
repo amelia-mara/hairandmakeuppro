@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
-  useBreakdownStore,
+  useBreakdownStore, useTagStore,
   type Scene, type Character, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
+  type ScriptTag,
 } from '@/stores/breakdownStore';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -299,6 +300,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                   onSceneVisible={onSceneVisible}
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
+                  showLegend={showLegend}
                 />
                 <div className="bd-zoom-float">
                   <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
@@ -388,32 +390,218 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   );
 }
 
-/* ━━━ SCRIPT VIEW — continuous scroll, all scenes ━━━ */
+/* ━━━ SCRIPT VIEW — continuous scroll, all scenes, with tagging ━━━ */
 
-function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
+/** Split text into segments: plain text and tagged spans */
+function buildTaggedSegments(text: string, tags: ScriptTag[]): { start: number; end: number; tag?: ScriptTag }[] {
+  if (tags.length === 0) return [{ start: 0, end: text.length }];
+  const sorted = [...tags].sort((a, b) => a.startOffset - b.startOffset);
+  const segs: { start: number; end: number; tag?: ScriptTag }[] = [];
+  let cursor = 0;
+  for (const t of sorted) {
+    if (t.startOffset > cursor) segs.push({ start: cursor, end: t.startOffset });
+    segs.push({ start: t.startOffset, end: t.endOffset, tag: t });
+    cursor = t.endOffset;
+  }
+  if (cursor < text.length) segs.push({ start: cursor, end: text.length });
+  return segs;
+}
+
+interface TagPopupState {
+  x: number; y: number;
+  sceneId: string;
+  startOffset: number; endOffset: number;
+  text: string;
+  /** Step 1: pick category, Step 2: optionally assign character */
+  step: 'category' | 'character';
+  categoryId?: string;
+}
+
+function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick, showLegend }: {
   scenes: Scene[];
   selectedSceneId: string;
   onSceneVisible: (id: string) => void;
   fontSize: number;
   onCharClick: (id: string) => void;
+  showLegend: boolean;
 }) {
   const charNames = MOCK_CHARACTERS.map((c) => c.name);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const isScrollingTo = useRef(false);
+  const tagStore = useTagStore();
+  const [popup, setPopup] = useState<TagPopupState | null>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
-  const renderLine = (line: string, i: number, sceneId: string) => {
-    const trimmed = line.trim();
-    const matched = charNames.find((name) => {
-      const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
-      return cue === name;
+  /* Close popup on outside click */
+  useEffect(() => {
+    if (!popup) return;
+    const handler = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) setPopup(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [popup]);
+
+  /* Handle text selection on the script paper */
+  const handleMouseUp = useCallback((sceneId: string) => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const text = sel.toString().trim();
+    if (!text) return;
+
+    const range = sel.getRangeAt(0);
+    const paper = pageRefs.current.get(sceneId);
+    if (!paper) return;
+
+    /* Find the content container (skip heading) */
+    const contentEl = paper.querySelector('.sv-content');
+    if (!contentEl) return;
+
+    /* Compute character offsets relative to the scene's scriptContent */
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+    const scriptText = scene.scriptContent;
+
+    /* Find the selected text position within scriptContent */
+    const startIdx = scriptText.indexOf(text);
+    if (startIdx === -1) return;
+
+    const rect = range.getBoundingClientRect();
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const scrollRect = scrollEl.getBoundingClientRect();
+
+    setPopup({
+      x: rect.left - scrollRect.left + rect.width / 2,
+      y: rect.top - scrollRect.top + scrollEl.scrollTop - 10,
+      sceneId,
+      startOffset: startIdx,
+      endOffset: startIdx + text.length,
+      text,
+      step: 'category',
     });
-    if (matched) {
-      const ch = MOCK_CHARACTERS.find((c) => c.name === matched)!;
-      return <div key={`${sceneId}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{line}</div>;
+
+    sel.removeAllRanges();
+  }, [scenes]);
+
+  const handleCategoryPick = useCallback((catId: string) => {
+    if (!popup) return;
+    /* If it's a 'cast' category, check if the text matches a character name */
+    if (catId === 'cast') {
+      const matched = MOCK_CHARACTERS.find((c) => c.name === popup.text.trim().toUpperCase() || c.name === popup.text.trim());
+      if (matched) {
+        tagStore.addTag({
+          id: `tag-${Date.now()}`,
+          sceneId: popup.sceneId,
+          startOffset: popup.startOffset,
+          endOffset: popup.endOffset,
+          text: popup.text,
+          categoryId: catId,
+          characterId: matched.id,
+        });
+        onCharClick(matched.id);
+        setPopup(null);
+        return;
+      }
     }
-    return <div key={`${sceneId}-${i}`} className="sv-line">{line || '\u00A0'}</div>;
-  };
+    /* Move to character assignment step */
+    setPopup({ ...popup, step: 'character', categoryId: catId });
+  }, [popup, tagStore, onCharClick]);
+
+  const handleCharacterPick = useCallback((charId: string | null) => {
+    if (!popup || !popup.categoryId) return;
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: popup.categoryId,
+      characterId: charId || undefined,
+    });
+    if (charId) onCharClick(charId);
+    setPopup(null);
+  }, [popup, tagStore, onCharClick]);
+
+  /* Render a scene's content with inline highlights */
+  const renderSceneContent = useCallback((scene: Scene) => {
+    const sceneTags = tagStore.getTagsForScene(scene.id);
+    const lines = scene.scriptContent.split('\n');
+
+    if (!showLegend || sceneTags.length === 0) {
+      /* Plain rendering (original behaviour) */
+      return lines.map((line, i) => {
+        const trimmed = line.trim();
+        const matched = charNames.find((name) => {
+          const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
+          return cue === name;
+        });
+        if (matched) {
+          const ch = MOCK_CHARACTERS.find((c) => c.name === matched)!;
+          return <div key={`${scene.id}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{line}</div>;
+        }
+        return <div key={`${scene.id}-${i}`} className="sv-line">{line || '\u00A0'}</div>;
+      });
+    }
+
+    /* Tagged rendering — overlay highlights on the full scriptContent */
+    const segments = buildTaggedSegments(scene.scriptContent, sceneTags);
+    /* Map each character offset to its line */
+    let charIdx = 0;
+    const lineOffsets: { start: number; end: number; line: string }[] = [];
+    for (const line of lines) {
+      lineOffsets.push({ start: charIdx, end: charIdx + line.length, line });
+      charIdx += line.length + 1; // +1 for \n
+    }
+
+    return lineOffsets.map((lo, lineIdx) => {
+      const trimmed = lo.line.trim();
+      const matched = charNames.find((name) => {
+        const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
+        return cue === name;
+      });
+      const isCue = !!matched;
+
+      /* Find segments that overlap this line */
+      const lineSegs = segments.filter((s) => s.start < lo.end + 1 && s.end > lo.start);
+      const hasTag = lineSegs.some((s) => s.tag);
+
+      if (!hasTag) {
+        if (isCue) {
+          const ch = MOCK_CHARACTERS.find((c) => c.name === matched)!;
+          return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{lo.line}</div>;
+        }
+        return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line || '\u00A0'}</div>;
+      }
+
+      /* Render with highlighted spans */
+      const parts: React.ReactNode[] = [];
+      for (const seg of lineSegs) {
+        const segStart = Math.max(seg.start, lo.start) - lo.start;
+        const segEnd = Math.min(seg.end, lo.end) - lo.start;
+        const segText = lo.line.slice(segStart, segEnd);
+        if (seg.tag) {
+          const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === seg.tag!.categoryId);
+          parts.push(
+            <span key={`${seg.start}-${seg.end}`} className="sv-highlight"
+              style={{ backgroundColor: `${cat?.color || '#888'}33`, borderBottom: `2px solid ${cat?.color || '#888'}` }}
+              title={`${cat?.label || 'Tag'}${seg.tag.characterId ? ` → ${MOCK_CHARACTERS.find(c => c.id === seg.tag!.characterId)?.name || ''}` : ''}`}
+            >{segText}</span>
+          );
+        } else {
+          parts.push(<span key={`${seg.start}-${seg.end}`}>{segText}</span>);
+        }
+      }
+
+      return (
+        <div key={`${scene.id}-${lineIdx}`} className={`sv-line${isCue ? ' sv-cue' : ''}`}
+          onClick={isCue && matched ? () => { const ch = MOCK_CHARACTERS.find((c) => c.name === matched); if (ch) onCharClick(ch.id); } : undefined}>
+          {parts}
+        </div>
+      );
+    });
+  }, [tagStore, showLegend, charNames, onCharClick]);
 
   /* Scroll to scene when selected from the scene list */
   useEffect(() => {
@@ -421,7 +609,6 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
     if (el && scrollRef.current) {
       isScrollingTo.current = true;
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      /* Reset the flag after scroll animation completes */
       const timer = setTimeout(() => { isScrollingTo.current = false; }, 600);
       return () => clearTimeout(timer);
     }
@@ -435,7 +622,6 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
     const observer = new IntersectionObserver(
       (entries) => {
         if (isScrollingTo.current) return;
-        /* Find the entry with the largest visible ratio */
         let best: IntersectionObserverEntry | null = null;
         for (const entry of entries) {
           if (entry.isIntersecting && (!best || entry.intersectionRatio > best.intersectionRatio)) {
@@ -462,8 +648,12 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
     else pageRefs.current.delete(id);
   }, []);
 
+  /* Characters in the current scene (for the popup character picker) */
+  const currentScene = scenes.find((s) => s.id === popup?.sceneId);
+  const popupChars = currentScene ? currentScene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!).filter(Boolean) : [];
+
   return (
-    <div className="sv-scroll" ref={scrollRef}>
+    <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
       {scenes.map((scene) => (
         <div
           key={scene.id}
@@ -471,11 +661,47 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           data-scene-id={scene.id}
           className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
           style={{ fontSize: `${fontSize}px` }}
+          onMouseUp={() => handleMouseUp(scene.id)}
         >
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
-          {scene.scriptContent.split('\n').map((line, i) => renderLine(line, i, scene.id))}
+          <div className="sv-content">
+            {renderSceneContent(scene)}
+          </div>
         </div>
       ))}
+
+      {/* Tag popup */}
+      {popup && (
+        <div ref={popupRef} className="sv-tag-popup" style={{ left: popup.x, top: popup.y, transform: 'translate(-50%, -100%)' }}>
+          {popup.step === 'category' ? (
+            <>
+              <div className="sv-tag-popup-title">Tag as:</div>
+              <div className="sv-tag-popup-grid">
+                {BREAKDOWN_CATEGORIES.map((cat) => (
+                  <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleCategoryPick(cat.id)}>
+                    <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="sv-tag-popup-title">Assign to character:</div>
+              <div className="sv-tag-popup-chars">
+                {popupChars.map((ch) => (
+                  <button key={ch.id} className="sv-tag-popup-char-btn" onClick={() => handleCharacterPick(ch.id)}>
+                    {ch.name}
+                  </button>
+                ))}
+                <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => handleCharacterPick(null)}>
+                  Skip (no character)
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -483,9 +709,11 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
 /* ━━━ CHARACTER VIEW ━━━ */
 
 function CharacterView({ char }: { char: Character; subTab: string }) {
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events' | 'notes'>('profile');
   const looks = MOCK_LOOKS.filter((l) => l.characterId === char.id);
   const scenes = MOCK_SCENES.filter((s) => s.characterIds.includes(char.id));
+  const tagStore = useTagStore();
+  const charTags = tagStore.getTagsForCharacter(char.id);
 
   return (
     <div className="cv-wrap">
@@ -497,9 +725,12 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
         </div>
       </div>
       <div className="cv-subtabs">
-        {(['profile', 'lookbook', 'timeline', 'events'] as const).map((t) => (
+        {(['profile', 'lookbook', 'timeline', 'events', 'notes'] as const).map((t) => (
           <button key={t} className={`cv-subtab ${activeSubTab === t ? 'cv-subtab--active' : ''}`}
-            onClick={() => setActiveSubTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+            onClick={() => setActiveSubTab(t)}>
+            {t === 'notes' ? 'Script Notes' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'notes' && charTags.length > 0 && <span className="cv-subtab-badge">{charTags.length}</span>}
+          </button>
         ))}
       </div>
       <div className="cv-content">
@@ -538,6 +769,31 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
           </div>
         )}
         {activeSubTab === 'events' && <p className="cv-empty">No continuity events for this character.</p>}
+        {activeSubTab === 'notes' && (
+          <div className="cv-notes">
+            {charTags.length === 0 ? (
+              <p className="cv-empty">No script notes yet. Highlight text in the script and assign it to this character.</p>
+            ) : (
+              charTags.map((tag) => {
+                const tagScene = MOCK_SCENES.find((s) => s.id === tag.sceneId);
+                const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
+                return (
+                  <div key={tag.id} className="cv-note-card">
+                    <div className="cv-note-header">
+                      <span className="cv-note-cat" style={{ color: cat?.color }}>
+                        <span className="bd-legend-swatch" style={{ background: cat?.color }} />
+                        {cat?.label}
+                      </span>
+                      {tagScene && <span className="cv-note-scene">Sc {tagScene.number}</span>}
+                      <button className="cv-note-remove" onClick={() => tagStore.removeTag(tag.id)} title="Remove tag">×</button>
+                    </div>
+                    <div className="cv-note-text">"{tag.text}"</div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
