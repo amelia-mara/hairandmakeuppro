@@ -73,6 +73,10 @@ export interface SceneBreakdown {
   continuityEvents: ContinuityEvent[];
 }
 
+/* ━━━ Continuity event types ━━━ */
+
+export const CONTINUITY_EVENT_TYPES = ['Wound', 'Bruise', 'Prosthetic', 'Scar', 'Tattoo', 'Other'] as const;
+
 /* ━━━ Category colours ━━━ */
 
 export const BREAKDOWN_CATEGORIES = [
@@ -646,6 +650,7 @@ interface BreakdownState {
   updateTimeline: (sceneId: string, timeline: SceneBreakdown['timeline']) => void;
   updateCharacterBreakdown: (sceneId: string, characterId: string, data: Partial<CharacterBreakdown>) => void;
   addContinuityEvent: (sceneId: string, event: ContinuityEvent) => void;
+  updateContinuityEvent: (sceneId: string, eventId: string, data: Partial<ContinuityEvent>) => void;
   removeContinuityEvent: (sceneId: string, eventId: string) => void;
   getCompletionStatus: (sceneId: string, scene: Scene) => 'empty' | 'partial' | 'complete';
 }
@@ -685,6 +690,23 @@ export const useBreakdownStore = create<BreakdownState>()(
             breakdowns: {
               ...s.breakdowns,
               [sceneId]: { ...existing, continuityEvents: [...existing.continuityEvents, event] },
+            },
+          };
+        }),
+
+      updateContinuityEvent: (sceneId, eventId, data) =>
+        set((s) => {
+          const existing = s.breakdowns[sceneId];
+          if (!existing) return s;
+          return {
+            breakdowns: {
+              ...s.breakdowns,
+              [sceneId]: {
+                ...existing,
+                continuityEvents: existing.continuityEvents.map((e) =>
+                  e.id === eventId ? { ...e, ...data } : e
+                ),
+              },
             },
           };
         }),

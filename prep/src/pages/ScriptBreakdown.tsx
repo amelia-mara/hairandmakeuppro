@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES,
+  MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
   useBreakdownStore,
-  type Scene, type Character, type CharacterBreakdown, type HMWEntry, type SceneBreakdown,
+  type Scene, type Character, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
 } from '@/stores/breakdownStore';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -378,6 +378,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
             onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
             onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
+            onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(selectedSceneId, eventId, data); triggerSave(); }}
             onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
           />
         </div>
@@ -543,13 +544,14 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onRemoveEvent }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; onNavigate: (id: string) => void;
   onUpdate: (cid: string, d: Partial<CharacterBreakdown>) => void;
   onUpdateTimeline: (t: SceneBreakdown['timeline']) => void;
-  onAddEvent: (e: { id: string; type: string; characterId: string; description: string; sceneRange: string }) => void;
+  onAddEvent: (e: ContinuityEvent) => void;
+  onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (id: string) => void;
 }) {
   if (!breakdown) return null;
@@ -632,21 +634,30 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
           {characters.map((ch) => {
             const cb = breakdown.characters.find((c) => c.characterId === ch.id);
             if (!cb) return null;
+            const charEvents = breakdown.continuityEvents.filter((e) => e.characterId === ch.id);
             return (
               <CharBlock key={ch.id} char={ch} cb={cb}
                 looks={MOCK_LOOKS.filter((l) => l.characterId === ch.id)}
                 highlighted={activeCharacterId === ch.id}
-                onUpdate={(d) => onUpdate(ch.id, d)} />
+                onUpdate={(d) => onUpdate(ch.id, d)}
+                characterEvents={charEvents}
+                sceneNumber={scene.number}
+                onAddCharEvent={(charId) => onAddEvent({
+                  id: `ce-${Date.now()}`, type: 'Wound', characterId: charId,
+                  description: '', sceneRange: `${scene.number}-${scene.number}`,
+                })}
+                onUpdateEvent={onUpdateEvent}
+                onRemoveEvent={onRemoveEvent} />
             );
           })}
         </div>
 
-        {/* Continuity Events */}
+        {/* Scene-level Continuity Events */}
         <div className="fp-section">
           <div className="fp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Continuity Events</span>
+            <span>Scene Continuity Events</span>
             <button className="fp-add-btn" onClick={() => onAddEvent({
-              id: `ce-${Date.now()}`, type: 'Continuity', characterId: characters[0]?.id || '',
+              id: `ce-${Date.now()}`, type: 'Wound', characterId: '',
               description: '', sceneRange: `${scene.number}-${scene.number}`,
             })}>+ Add</button>
           </div>
@@ -655,12 +666,22 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
           ) : breakdown.continuityEvents.map((evt) => (
             <div key={evt.id} className="fp-event">
               <div className="fp-event-top">
-                <span className="fp-event-badge">{evt.type}</span>
+                <select className="fp-event-type-select" value={evt.type}
+                  onChange={(e) => onUpdateEvent(evt.id, { type: e.target.value })}>
+                  {CONTINUITY_EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
                 <button className="fp-remove-btn" onClick={() => onRemoveEvent(evt.id)}>Remove</button>
               </div>
-              <div className="fp-event-detail">
-                {MOCK_CHARACTERS.find((c) => c.id === evt.characterId)?.name || 'Unknown'} · Scenes {evt.sceneRange}
-              </div>
+              <select className="fp-event-char-select" value={evt.characterId}
+                onChange={(e) => onUpdateEvent(evt.id, { characterId: e.target.value })}>
+                <option value="">Scene-wide (no character)</option>
+                {characters.map((ch) => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
+              </select>
+              <input className="fp-event-desc-input" placeholder="Description..." value={evt.description}
+                onChange={(e) => onUpdateEvent(evt.id, { description: e.target.value })} />
+              <input className="fp-event-range-input" placeholder={`Scene range (e.g. ${scene.number}-${scene.number + 2})`}
+                value={evt.sceneRange}
+                onChange={(e) => onUpdateEvent(evt.id, { sceneRange: e.target.value })} />
             </div>
           ))}
         </div>
@@ -689,9 +710,13 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, sceneNumber }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
+  characterEvents: ContinuityEvent[]; sceneNumber: number;
+  onAddCharEvent: (charId: string) => void;
+  onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
+  onRemoveEvent: (eventId: string) => void;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
@@ -754,6 +779,32 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate }: {
       </div>
 
       <FInput label="Notes" value={cb.notes} onChange={(v) => onUpdate({ notes: v })} />
+
+      {/* Per-character continuity events */}
+      <div className="cb-continuity">
+        <div className="cb-continuity-header">
+          <label className="cb-label">Continuity Events</label>
+          <button className="fp-add-btn" onClick={() => onAddCharEvent(char.id)}>+ Add</button>
+        </div>
+        {characterEvents.length === 0 ? (
+          <p className="fp-empty">No continuity events for this character.</p>
+        ) : characterEvents.map((evt) => (
+          <div key={evt.id} className="cb-event">
+            <div className="cb-event-row">
+              <select className="cb-event-type" value={evt.type}
+                onChange={(e) => onUpdateEvent(evt.id, { type: e.target.value })}>
+                {CONTINUITY_EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <button className="fp-remove-btn" onClick={() => onRemoveEvent(evt.id)}>Remove</button>
+            </div>
+            <input className="cb-event-desc" placeholder="Description..." value={evt.description}
+              onChange={(e) => onUpdateEvent(evt.id, { description: e.target.value })} />
+            <input className="cb-event-scenes" placeholder={`Scene range (e.g. ${sceneNumber}-${sceneNumber + 2})`}
+              value={evt.sceneRange}
+              onChange={(e) => onUpdateEvent(evt.id, { sceneRange: e.target.value })} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
