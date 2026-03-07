@@ -470,6 +470,11 @@
   border-color: rgba(0,0,0,0.10) !important;
 }
 
+/* Tab strip background */
+[data-theme="light"] .cp-tabstrip {
+  background: #f5f2ed !important;
+}
+
 /* Character tabs */
 [data-theme="light"] .cp-divider-tab {
   background: #ffffff !important;
@@ -593,7 +598,23 @@
 
 /* Script panel bottom fade — remove dark gradient */
 [data-theme="light"] .cp-body::after {
-  background: linear-gradient(to bottom, transparent, #f8f5f0) !important;
+  background: linear-gradient(to bottom, transparent, #f5f2ed) !important;
+}
+
+/* Script paper — white and warm */
+[data-theme="light"] .sv-paper {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+[data-theme="light"] .sv-paper--active {
+  border-color: rgba(var(--a), 0.3) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(var(--a), 0.12) !important;
+}
+
+/* Script scroll area */
+[data-theme="light"] .sv-scroll {
+  background: #f5f2ed;
 }
 
 /* Floating zoom controls */
