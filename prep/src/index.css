@@ -68,42 +68,36 @@
   --ext-night-border: rgba(52, 211, 153, 0.45);
 
   /*
-    3D Glass shadows — directional from top-right
-    AMPLIFIED — much stronger highlights and deeper shadows
+    3D Glass shadows — soft diffused depth
+    Pillowy raised surfaces with soft edges
   */
   --glass-shadow:
-    /* Light-facing edges — bright beveled highlight */
-    2px 1px 0 0 rgba(var(--a-light), 0.28) inset,
-    0 1px 0 0 rgba(var(--a-bright), 0.20) inset,
-    1px 0 0 0 rgba(var(--a-light), 0.16) inset,
-    /* Shadow-facing edges — deep dark bevel */
-    -2px -2px 6px 0 rgba(0, 0, 0, 0.70) inset,
-    0 -2px 4px 0 rgba(0, 0, 0, 0.55) inset,
-    -1px 0 3px 0 rgba(0, 0, 0, 0.40) inset,
-    /* External depth — strong directional shadow */
-    5px 4px 24px -2px rgba(0, 0, 0, 0.80),
-    2px 2px 8px rgba(0, 0, 0, 0.60),
-    -2px -1px 10px -3px rgba(var(--a), 0.06);
+    /* Top edge highlight — light catching the surface */
+    0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
+    0 1px 2px 0 rgba(var(--a-light), 0.10) inset,
+    /* Bottom edge — subtle darkening */
+    0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+    /* Soft diffused drop shadow — pillowy depth */
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    0 20px 48px -8px rgba(0, 0, 0, 0.4);
 
   --glass-shadow-hover:
-    3px 2px 0 0 rgba(var(--a-light), 0.38) inset,
-    0 2px 0 0 rgba(var(--a-bright), 0.28) inset,
-    1px 0 0 0 rgba(var(--a-light), 0.22) inset,
-    -3px -3px 8px 0 rgba(0, 0, 0, 0.70) inset,
-    0 -2px 5px 0 rgba(0, 0, 0, 0.55) inset,
-    8px 6px 40px -4px rgba(0, 0, 0, 0.85),
-    3px 3px 14px rgba(0, 0, 0, 0.65),
-    -3px -2px 14px -4px rgba(var(--a), 0.10),
-    0 0 60px -12px rgba(var(--a), 0.12);
+    0 1px 0 0 rgba(255, 255, 255, 0.10) inset,
+    0 1px 2px 0 rgba(var(--a-light), 0.14) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+    0 8px 16px rgba(0, 0, 0, 0.30),
+    0 16px 40px rgba(0, 0, 0, 0.40),
+    0 32px 64px -12px rgba(0, 0, 0, 0.45),
+    0 0 40px -8px rgba(var(--a), 0.08);
 
   --glass-shadow-stat:
-    2px 1px 0 0 rgba(var(--a-light), 0.24) inset,
-    0 1px 0 0 rgba(var(--a-bright), 0.16) inset,
-    1px 0 0 0 rgba(var(--a-light), 0.12) inset,
-    -2px -2px 6px 0 rgba(0, 0, 0, 0.65) inset,
-    0 -2px 4px 0 rgba(0, 0, 0, 0.50) inset,
-    4px 3px 20px -2px rgba(0, 0, 0, 0.75),
-    2px 2px 6px rgba(0, 0, 0, 0.55);
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 1px 2px 0 rgba(var(--a-light), 0.08) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.30) inset,
+    0 4px 8px rgba(0, 0, 0, 0.20),
+    0 8px 24px rgba(0, 0, 0, 0.30),
+    0 16px 40px -6px rgba(0, 0, 0, 0.35);
 
   /* Status */
   --status-active: #52c186;
@@ -309,7 +303,7 @@ body {
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a-light), 0.22);
   border-right-color: rgba(var(--a-light), 0.16);
-  border-radius: 16px;
+  border-radius: 22px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--glass-shadow);
@@ -351,7 +345,7 @@ body {
     rgba(var(--a), 0.15) 95%,
     transparent 100%
   );
-  border-radius: 0 0 3px 3px;
+  border-radius: 0 0 4px 4px;
 }
 .card:hover {
   border-color: var(--border-medium);
@@ -373,7 +367,7 @@ body {
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a-light), 0.22);
   border-right-color: rgba(var(--a-light), 0.16);
-  border-radius: 16px;
+  border-radius: 22px;
   padding: 24px 28px;
   position: relative;
   overflow: hidden;
@@ -412,7 +406,7 @@ body {
     rgba(var(--a), 0.12) 90%,
     transparent 100%
   );
-  border-radius: 16px 16px 0 0;
+  border-radius: 22px 22px 0 0;
 }
 /* Card 4 (rightmost, closest to light) — bright top + right edge wrap */
 .stat-card:nth-child(4)::after {
@@ -484,11 +478,7 @@ body {
 .stat-card:hover {
   border-color: var(--border-medium);
   border-top-color: rgba(var(--a), 0.28);
-  box-shadow:
-    2px 1px 0 0 rgba(var(--a), 0.18) inset,
-    -2px -2px 4px 0 rgba(0, 0, 0, 0.35) inset,
-    5px 4px 28px -4px rgba(0, 0, 0, 0.65),
-    0 0 40px -8px rgba(var(--a), 0.08);
+  box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
 }
 .stat-card .stat-label {
@@ -523,7 +513,7 @@ body {
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a-light), 0.22);
   border-right-color: rgba(var(--a-light), 0.16);
-  border-radius: 16px;
+  border-radius: 22px;
   overflow: hidden;
   min-height: 340px;
   display: flex;
@@ -568,7 +558,7 @@ body {
     rgba(var(--a), 0.15) 95%,
     transparent 100%
   );
-  border-radius: 16px 16px 0 0;
+  border-radius: 22px 22px 0 0;
   z-index: 1;
 }
 .project-card:hover {
@@ -629,7 +619,7 @@ body {
 /* New project card */
 .new-project-card {
   border: 2px dashed var(--border-medium);
-  border-radius: 16px;
+  border-radius: 22px;
   min-height: 340px;
   display: flex;
   flex-direction: column;
@@ -707,7 +697,7 @@ body {
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.3s ease;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 6px 14px;
   font-size: 0.8125rem;
   box-shadow:
@@ -730,7 +720,7 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   padding: 6px 14px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s ease;
   box-shadow:
@@ -754,7 +744,7 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   padding: 6px 14px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s ease;
   box-shadow:
@@ -782,7 +772,7 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   padding: 6px 14px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s ease;
   box-shadow:
@@ -813,7 +803,7 @@ body {
   border: 1px solid rgba(var(--a), 0.10);
   border-top-color: rgba(var(--a), 0.15);
   border-right-color: rgba(var(--a), 0.12);
-  border-radius: 12px;
+  border-radius: 16px;
   color: var(--text-label);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -823,17 +813,14 @@ body {
   position: relative;
   overflow: hidden;
   box-shadow:
-    /* Light-facing bevel — strong highlight */
-    2px 1px 0 0 rgba(var(--a), 0.20) inset,
-    0 1px 0 0 rgba(var(--a-light), 0.14) inset,
-    1px 0 0 0 rgba(var(--a), 0.10) inset,
-    /* Shadow-facing bevel — deep */
-    -2px -1px 4px 0 rgba(0, 0, 0, 0.55) inset,
-    0 -1px 3px 0 rgba(0, 0, 0, 0.40) inset,
-    -1px 0 2px 0 rgba(0, 0, 0, 0.30) inset,
-    /* Drop shadow */
-    3px 3px 12px -2px rgba(0, 0, 0, 0.6),
-    1px 1px 4px rgba(0, 0, 0, 0.4);
+    /* Top edge highlight */
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 1px 2px 0 rgba(var(--a-light), 0.08) inset,
+    /* Bottom edge */
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
+    /* Soft drop shadow */
+    0 4px 8px rgba(0, 0, 0, 0.20),
+    0 8px 24px rgba(0, 0, 0, 0.25);
 }
 /* Rim — base (farthest from light, leftmost pills) — visible */
 .filter-pill::after {
@@ -852,7 +839,7 @@ body {
     rgba(var(--a-light), 0.22) 90%,
     transparent 100%
   );
-  border-radius: 12px 12px 0 0;
+  border-radius: 16px 16px 0 0;
 }
 /* Last 2 pills (rightmost, closest to light) — intense top + right edge */
 .filter-pill:nth-last-child(-n+2)::after {
@@ -872,16 +859,11 @@ body {
 .filter-pill:nth-last-child(-n+2) {
   border-right-color: rgba(var(--a), 0.24);
   box-shadow:
-    /* Strong highlight on light-facing edges + right edge wrap */
-    2px 1px 0 0 rgba(var(--a), 0.22) inset,
-    0 1px 0 0 rgba(var(--a-light), 0.16) inset,
-    -1px 0 0 0 rgba(var(--a), 0.12) inset,
-    /* Deep shadow bevel */
-    -2px -1px 4px 0 rgba(0, 0, 0, 0.55) inset,
-    0 -1px 3px 0 rgba(0, 0, 0, 0.40) inset,
-    /* Drop shadow */
-    3px 3px 12px -2px rgba(0, 0, 0, 0.6),
-    1px 1px 4px rgba(0, 0, 0, 0.4);
+    0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
+    0 1px 2px 0 rgba(var(--a-light), 0.10) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
+    0 4px 8px rgba(0, 0, 0, 0.20),
+    0 8px 24px rgba(0, 0, 0, 0.25);
 }
 /* Pills 3-4 from right — strong shine */
 .filter-pill:nth-last-child(3)::after,
@@ -904,11 +886,10 @@ body {
   border-top-color: rgba(var(--a), 0.20);
   color: var(--text-secondary);
   box-shadow:
-    1px 0 0 0 rgba(var(--a), 0.10) inset,
-    0 1px 0 0 rgba(var(--a), 0.08) inset,
-    -1px -1px 3px 0 rgba(0, 0, 0, 0.3) inset,
-    3px 3px 14px -3px rgba(0, 0, 0, 0.6),
-    0 2px 5px rgba(0, 0, 0, 0.35);
+    0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.25) inset,
+    0 6px 12px rgba(0, 0, 0, 0.25),
+    0 12px 32px rgba(0, 0, 0, 0.30);
   transform: translateY(-1px);
 }
 .filter-pill.active {
@@ -924,12 +905,11 @@ body {
   color: #0c0a08;
   font-weight: 600;
   box-shadow:
-    1px 0 0 0 rgba(255, 255, 255, 0.12) inset,
     0 1px 0 0 rgba(255, 255, 255, 0.15) inset,
-    -1px -1px 2px 0 rgba(0, 0, 0, 0.15) inset,
-    2px 2px 12px -2px rgba(var(--a), 0.18),
-    0 2px 6px rgba(0, 0, 0, 0.25),
-    0 0 24px -4px rgba(var(--a), 0.12);
+    0 -1px 0 0 rgba(0, 0, 0, 0.15) inset,
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.20),
+    0 0 20px -4px rgba(var(--a), 0.10);
 }
 .filter-pill.active::after {
   background: linear-gradient(
@@ -949,7 +929,7 @@ body {
   padding: 12px 16px;
   background: rgba(10, 9, 8, 0.9);
   border: 1px solid var(--border-card);
-  border-radius: 10px;
+  border-radius: 14px;
   color: var(--text-primary);
   font-size: 0.875rem;
   font-family: var(--font-sans);
@@ -972,7 +952,7 @@ body {
   padding: 10px 16px;
   background: rgba(10, 9, 8, 0.9);
   border: 1px solid var(--border-card);
-  border-radius: 10px;
+  border-radius: 14px;
   color: var(--text-primary);
   font-size: 0.8125rem;
   font-family: var(--font-sans);
@@ -999,7 +979,7 @@ body {
 /* ━━━ Upload zone ━━━ */
 .upload-zone {
   border: 2px dashed var(--border-medium);
-  border-radius: 16px;
+  border-radius: 22px;
   background: var(--accent-gold-glow);
   transition: all 0.25s ease;
   cursor: pointer;
@@ -1031,7 +1011,7 @@ body {
     rgba(13, 12, 10, 1) 100%
   );
   border: 1px solid var(--border-card);
-  border-radius: 16px;
+  border-radius: 22px;
   box-shadow: var(--glass-shadow);
 }
 
@@ -1053,7 +1033,7 @@ body {
   position: relative;
   width: 460px;
   max-width: calc(100vw - 48px);
-  max-height: calc(100vh - 80px);
+  max-height: calc(100vh - 88px);
   overflow-y: auto;
   background: linear-gradient(
     145deg,
@@ -1064,11 +1044,11 @@ body {
   border: 1px solid var(--border-card);
   border-top: 1px solid rgba(255,255,255,0.08);
   border-right-color: rgba(var(--a), 0.12);
-  border-radius: 16px;
+  border-radius: 22px;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.06),
-    0 4px 6px rgba(0,0,0,0.3),
-    0 16px 48px rgba(0,0,0,0.6),
+    0 4px 8px rgba(0,0,0,0.25),
+    0 16px 48px rgba(0,0,0,0.5),
     0 32px 64px rgba(0,0,0,0.4);
   animation: modal-scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1091,7 +1071,7 @@ body {
     rgba(var(--a), 0.15) 96%,
     transparent 100%
   );
-  border-radius: 16px 16px 0 0;
+  border-radius: 22px 22px 0 0;
   pointer-events: none;
 }
 @keyframes modal-fade-in {
@@ -1107,31 +1087,37 @@ body {
    HEADER — gold horizon brighter on right (toward sun)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .app-header {
-  padding: 20px 40px;
+  padding: 16px 32px;
+  margin: 12px 16px 0;
   position: relative;
   z-index: 50;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%),
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%),
     linear-gradient(
       135deg,
-      rgba(6, 6, 5, 1) 0%,
+      rgba(14, 13, 11, 1) 0%,
       rgba(10, 9, 8, 0.99) 60%,
       rgba(14, 12, 10, 0.98) 100%
     );
-  border-bottom: 1px solid rgba(var(--a), 0.08);
+  border: 1px solid rgba(var(--a), 0.10);
+  border-top-color: rgba(var(--a-light), 0.18);
+  border-radius: 18px;
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.05) inset,
-    0 1px 8px rgba(0,0,0,0.4),
-    0 6px 24px rgba(0, 0, 0, 0.5);
+    0 1px 0 0 rgba(255,255,255,0.06) inset,
+    0 -1px 0 0 rgba(0,0,0,0.30) inset,
+    0 4px 8px rgba(0,0,0,0.25),
+    0 8px 24px rgba(0,0,0,0.35),
+    0 16px 48px -8px rgba(0,0,0,0.4);
 }
 /* Gold horizon — bright hot spot biased right */
 .app-header::after {
   content: '';
   position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 0 0 18px 18px;
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -1148,10 +1134,10 @@ body {
 .app-header::before {
   content: '';
   position: absolute;
-  bottom: -10px;
-  left: 20%;
-  right: 0;
-  height: 10px;
+  bottom: -8px;
+  left: 25%;
+  right: 5%;
+  height: 8px;
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -1222,7 +1208,7 @@ body {
    PROJECT LAYOUT — full-width below TopBar
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .project-content {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 88px);
   overflow-x: hidden;
 }
 
@@ -1252,13 +1238,14 @@ body {
   color: var(--accent-gold);
   background: rgba(var(--a), 0.06);
   border: 1px solid var(--border-card);
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.03em;
   box-shadow:
     0 1px 0 rgba(255,255,255,0.05) inset,
-    0 1px 3px rgba(0,0,0,0.3);
+    0 -1px 0 rgba(0,0,0,0.25) inset,
+    0 2px 6px rgba(0,0,0,0.3);
 }
 .topbar-nav-trigger:hover {
   background: rgba(var(--a), 0.10);
@@ -1268,7 +1255,7 @@ body {
 
 .topbar-nav-dropdown {
   position: fixed;
-  top: 80px;
+  top: 88px;
   left: 0;
   width: 280px;
   bottom: 0;
@@ -1303,7 +1290,7 @@ body {
   padding: 12px 14px;
   background: none;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   color: var(--text-label);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -1480,7 +1467,7 @@ body {
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a), 0.16);
   border-right-color: rgba(var(--a), 0.12);
-  border-radius: 16px;
+  border-radius: 22px;
   overflow: hidden;
   position: relative;
   box-shadow: var(--glass-shadow-stat);
@@ -1524,7 +1511,7 @@ body {
     rgba(var(--a), 0.15) 95%,
     transparent 100%
   );
-  border-radius: 16px 16px 0 0;
+  border-radius: 22px 22px 0 0;
   z-index: 1;
   pointer-events: none;
 }
@@ -1541,7 +1528,7 @@ body {
 .widget-icon-btn {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.04);
   background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.1) 100%);
   color: var(--text-muted);
@@ -1579,13 +1566,14 @@ body {
     linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.1) 100%),
     rgba(10, 9, 8, 0.6);
   border: 1px solid var(--border-card);
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
   transition: all 0.25s ease;
   box-shadow:
     0 1px 0 rgba(255,255,255,0.07) inset,
     0 -1px 0 rgba(0,0,0,0.3) inset,
-    0 2px 6px rgba(0,0,0,0.4);
+    0 4px 8px rgba(0,0,0,0.25),
+    0 8px 24px rgba(0,0,0,0.3);
   text-align: center;
 }
 .quick-action-btn:hover {
@@ -1610,7 +1598,7 @@ body {
     linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 40%),
     rgba(10, 9, 8, 0.5);
   border: 1px solid var(--border-card);
-  border-radius: 10px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
@@ -1637,7 +1625,7 @@ body {
 .react-grid-item.react-grid-placeholder {
   background: rgba(var(--a), 0.08) !important;
   border: 1px dashed var(--border-medium) !important;
-  border-radius: 16px !important;
+  border-radius: 22px !important;
   opacity: 1 !important;
 }
 .react-grid-item > .react-resizable-handle::after {
@@ -1656,7 +1644,7 @@ body {
 .bd-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 88px);
   overflow: hidden;
 }
 
@@ -1804,7 +1792,7 @@ body {
   color: var(--accent-gold);
   background: rgba(var(--a), 0.16);
   border: 1px solid rgba(var(--a), 0.22);
-  border-radius: 10px;
+  border-radius: 14px;
   box-shadow: inset 0 1px 0 rgba(var(--a-light), 0.08);
 }
 
@@ -1816,7 +1804,7 @@ body {
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(var(--a), 0.12);
-  border-radius: 10px;
+  border-radius: 14px;
   box-shadow:
     0 1px 3px rgba(0,0,0,0.4) inset,
     0 1px 0 rgba(255,255,255,0.03);
@@ -1866,22 +1854,26 @@ body {
   );
   border: 1px solid rgba(var(--a), 0.14);
   border-top-color: rgba(var(--a-light), 0.22);
-  border-radius: 14px;
+  border-radius: 18px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: var(--font-sans);
   position: relative;
   overflow: hidden;
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(var(--a-light), 0.06);
+    0 1px 0 0 rgba(255,255,255,0.06) inset,
+    0 -1px 0 0 rgba(0,0,0,0.25) inset,
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.30);
 }
 .sl-card:hover {
   border-color: rgba(var(--a), 0.20);
   border-top-color: rgba(var(--a-light), 0.26);
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(var(--a-light), 0.08);
+    0 1px 0 0 rgba(255,255,255,0.08) inset,
+    0 -1px 0 0 rgba(0,0,0,0.25) inset,
+    0 6px 16px rgba(0, 0, 0, 0.30),
+    0 12px 32px rgba(0, 0, 0, 0.35);
   transform: translateY(-1px);
 }
 .sl-card--active {
@@ -1894,9 +1886,11 @@ body {
   border-color: rgba(var(--a), 0.30);
   border-top-color: rgba(var(--a-light), 0.38);
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.45),
-    0 0 20px rgba(var(--a), 0.10),
-    inset 0 1px 0 rgba(var(--a-light), 0.08);
+    0 1px 0 0 rgba(255,255,255,0.08) inset,
+    0 -1px 0 0 rgba(0,0,0,0.25) inset,
+    0 6px 16px rgba(0, 0, 0, 0.30),
+    0 16px 40px rgba(0, 0, 0, 0.35),
+    0 0 20px rgba(var(--a), 0.08);
 }
 .sl-card--active::after {
   content: '';
@@ -1905,7 +1899,7 @@ body {
   left: 0;
   right: 0;
   height: 1.5px;
-  border-radius: 14px 14px 0 0;
+  border-radius: 18px 18px 0 0;
   background: linear-gradient(
     90deg,
     transparent 15%,
@@ -2051,7 +2045,7 @@ body {
     linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 40%),
     rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(var(--a), 0.18);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 8px 10px;
   box-shadow:
     0 1px 0 0 rgba(255,255,255,0.04) inset,
@@ -2128,7 +2122,7 @@ body {
   background: rgba(var(--a), 0.08);
   border: 1px solid rgba(var(--a), 0.25);
   border-bottom: 1px solid rgba(var(--a), 0.18);
-  border-radius: 8px 8px 0 0;
+  border-radius: 12px 12px 0 0;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -2278,7 +2272,7 @@ body {
   background: rgba(12, 11, 9, 0.92);
   border: 1px solid rgba(var(--a), 0.18);
   border-top: 1px solid rgba(255,255,255,0.08);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.06),
     0 4px 6px rgba(0,0,0,0.3),
@@ -2298,7 +2292,7 @@ body {
 .bd-zoom-btn {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: 14px;
   border: 1px solid var(--border-card);
   background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.1) 100%);
   color: var(--text-muted);
@@ -2341,7 +2335,7 @@ body {
     #f5f0e8 50%,
     #f2ede5 100%
   );
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 44px 52px;
   margin: 12px 12px 0;
   min-height: 300px;
@@ -2477,7 +2471,7 @@ body {
     );
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a), 0.10);
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 10px 14px;
   box-shadow:
     0 1px 0 0 rgba(255,255,255,0.06) inset,
@@ -2510,7 +2504,7 @@ body {
   );
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a), 0.12);
-  border-radius: 12px;
+  border-radius: 18px;
   padding: 14px 16px;
   box-shadow: var(--glass-shadow-stat);
   position: relative;
@@ -2520,7 +2514,7 @@ body {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  border-radius: 12px 12px 0 0;
+  border-radius: 18px 18px 0 0;
   background: linear-gradient(
     90deg,
     transparent 15%,
@@ -2550,7 +2544,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 40%),
     linear-gradient(
@@ -2606,7 +2600,7 @@ body {
   padding: 6px 12px;
   font-size: 0.6875rem;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
 }
 
@@ -2674,7 +2668,7 @@ body {
   color: var(--text-secondary);
   background: var(--bg-surface);
   border: 1px solid var(--border-card);
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow:
@@ -2749,7 +2743,7 @@ body {
   color: var(--accent-gold);
   background: rgba(var(--a), 0.16);
   border: 1px solid rgba(var(--a), 0.18);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .fp-row-4 { display: grid; grid-template-columns: auto auto auto 1.5fr; gap: 10px; }
@@ -2854,7 +2848,7 @@ body {
     );
   border: 1px solid var(--border-card);
   border-top-color: rgba(var(--a-light), 0.12);
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 12px 14px;
   margin-bottom: 10px;
   box-shadow:
@@ -2892,15 +2886,18 @@ body {
   );
   border: 1px solid rgba(var(--a), 0.14);
   border-top: 2px solid var(--border-card);
-  border-radius: 14px;
+  border-radius: 20px;
   padding: 20px 24px 20px;
   padding-top: 24px;
   margin-bottom: 28px;
   position: relative;
   overflow: hidden;
   box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(var(--a-light), 0.08);
+    0 1px 0 0 rgba(255,255,255,0.06) inset,
+    0 -1px 0 0 rgba(0,0,0,0.30) inset,
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.30),
+    0 16px 40px -6px rgba(0, 0, 0, 0.35);
   transition: all 0.2s ease;
 }
 .cb-block::before {
@@ -2953,7 +2950,7 @@ body {
     rgba(var(--a), 0.04) 100%
   );
   border-bottom: 1px solid rgba(var(--a), 0.12);
-  border-radius: 14px 14px 0 0;
+  border-radius: 20px 20px 0 0;
 }
 .cb-header-right { display: flex; align-items: center; gap: 6px; }
 .cb-name { font-size: 0.875rem; font-weight: 700; color: var(--text-heading); line-height: 1.4; }
@@ -2986,7 +2983,7 @@ body {
   padding: 9px 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-card);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-primary);
   font-size: 0.75rem;
   font-family: var(--font-sans);
@@ -3013,7 +3010,7 @@ body {
     linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 40%),
     var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px 12px;
   margin-top: 6px;
   box-shadow:
@@ -3024,7 +3021,7 @@ body {
 
 .cb-toggle {
   display: flex;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-card);
   box-shadow:
@@ -3057,7 +3054,7 @@ body {
   padding: 7px 10px;
   background: var(--bg-surface);
   border: 1px solid var(--border-card);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-primary);
   font-size: 0.75rem;
   font-family: var(--font-sans);
@@ -3107,7 +3104,7 @@ body {
   padding: 9px 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-card);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-primary);
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -3133,7 +3130,7 @@ body {
   padding: 9px 28px 9px 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-card);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-primary);
   font-size: 0.8125rem;
   font-family: var(--font-sans);
@@ -3160,7 +3157,7 @@ body {
 
 /* ━━━ Responsive ━━━ */
 @media (max-width: 768px) {
-  .app-header { padding: 16px 20px; }
+  .app-header { padding: 14px 16px; margin: 8px 8px 0; }
   .dashboard-header { padding: 20px 20px; }
   .dashboard-grid-wrapper { padding: 16px 20px; }
 }
