@@ -1050,7 +1050,7 @@ body {
    HEADER — gold horizon brighter on right (toward sun)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .app-header {
-  padding: 20px 40px;
+  padding: 16px 20px;
   position: relative;
   z-index: 50;
   background: linear-gradient(
@@ -1166,6 +1166,17 @@ body {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TOPBAR NAV DROPDOWN
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.topbar-title-group {
+  position: relative;
+  padding-left: 14px;
+}
+
+.topbar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .topbar-title {
   font-size: 1rem;
   font-weight: 700;
@@ -1178,26 +1189,36 @@ body {
   white-space: nowrap;
 }
 
-.topbar-nav-trigger {
+.topbar-subtitle {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  margin-top: 2px;
+  padding-left: 1px;
+}
+
+.topbar-nav-arrow {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  color: var(--accent-gold);
-  background: rgba(var(--a), 0.06);
-  border: 1px solid var(--border-card);
-  border-radius: 8px;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
-  letter-spacing: 0.03em;
+  transition: all 0.15s ease;
+  opacity: 0.5;
 }
-.topbar-nav-trigger:hover {
-  background: rgba(var(--a), 0.10);
-  border-color: var(--border-medium);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.topbar-nav-arrow:hover {
+  opacity: 1;
+  color: var(--accent-gold);
+  background: rgba(var(--a), 0.08);
 }
 
 .topbar-nav-dropdown {
@@ -1222,8 +1243,8 @@ body {
 }
 
 @keyframes dropdown-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .topbar-nav-item {
