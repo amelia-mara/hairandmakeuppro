@@ -341,7 +341,7 @@ function AddWidgetModal({
             style={{
               width: '32px',
               height: '32px',
-              borderRadius: '12px',
+              borderRadius: '8px',
               border: '1px solid var(--border-card)',
               background: 'transparent',
               color: 'var(--text-muted)',
