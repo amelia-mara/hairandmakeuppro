@@ -2690,47 +2690,11 @@ body {
 }
 .fp-synopsis-generate:hover { opacity: 0.8; }
 
-.fp-synopsis-empty {
-  font-size: 0.8125rem;
-  font-style: italic;
-  font-weight: 400;
-  color: var(--text-muted);
-  margin: 0;
+.fp-synopsis-input {
+  resize: vertical;
+  min-height: 60px;
   line-height: 1.6;
 }
-
-.fp-synopsis-body {
-  position: relative;
-}
-
-.fp-synopsis-text {
-  font-size: 0.8125rem;
-  font-weight: 400;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.fp-synopsis-regen {
-  display: block;
-  margin-top: 8px;
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 400;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-.fp-synopsis-regen:hover { color: var(--text-secondary); }
 
 .fp-empty { font-size: 0.75rem; color: var(--text-muted); margin: 8px 0; }
 
