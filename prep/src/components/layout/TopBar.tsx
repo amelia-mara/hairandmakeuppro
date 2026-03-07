@@ -56,24 +56,24 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
     return () => document.removeEventListener('mousedown', handleClick);
   }, [navOpen]);
 
-  const activeLabel = NAV_ITEMS.find((i) => i.id === activePage)?.label;
-
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left side — nav dropdown + title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Nav dropdown trigger — first element, replaces back arrow */}
-          {activePage && activePage !== 'dashboard' && onNavigate && (
-            <div ref={dropRef} style={{ position: 'relative' }}>
+        {/* Left side — title + subtitle + nav arrow, aligned with scene list */}
+        <div ref={dropRef} className="topbar-title-group">
+          <div className="topbar-title-row">
+            <h1 className="topbar-title" title={title}>
+              {title}
+            </h1>
+            {activePage && activePage !== 'dashboard' && onNavigate && (
               <button
-                className="topbar-nav-trigger"
+                className="topbar-nav-arrow"
                 onClick={() => setNavOpen(!navOpen)}
+                aria-label="Open navigation"
               >
-                <span>{activeLabel}</span>
                 <svg
-                  width="12" height="12" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" strokeWidth="2.5"
+                  width="10" height="10" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="3"
                   strokeLinecap="round" strokeLinejoin="round"
                   style={{
                     transition: 'transform 0.2s ease',
@@ -83,41 +83,28 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                   <path d="m6 9 6 6 6-6"/>
                 </svg>
               </button>
-
-              {navOpen && (
-                <div className="topbar-nav-dropdown">
-                  {NAV_ITEMS.map((item) => (
-                    <button
-                      key={item.id}
-                      className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
-                      onClick={() => {
-                        onNavigate(item.id);
-                        setNavOpen(false);
-                      }}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
+          </div>
+          {projectType && (
+            <span className="topbar-subtitle">{projectType}</span>
           )}
 
-          <h1 className="topbar-title" title={title}>
-            {title}
-          </h1>
-
-          {projectType && (
-            <span style={{
-              fontSize: '0.6875rem',
-              fontWeight: 500,
-              color: 'var(--text-muted)',
-              letterSpacing: '0.04em',
-              opacity: 0.6,
-            }}>
-              {projectType}
-            </span>
+          {navOpen && onNavigate && (
+            <div className="topbar-nav-dropdown">
+              {NAV_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
+                  onClick={() => {
+                    onNavigate(item.id);
+                    setNavOpen(false);
+                  }}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
