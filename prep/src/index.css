@@ -1272,6 +1272,22 @@ body {
   box-shadow: var(--glass-shadow-stat);
 }
 
+/* ━━━ Permanent dashboard sidebar ━━━ */
+.dashboard-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 5, 4, 1) 0%,
+    rgba(2, 2, 2, 1) 100%
+  );
+  border-right: 1px solid rgba(var(--a), 0.15);
+}
+
 /* ━━━ Checks Happy button ━━━ */
 .topbar-checks-btn {
   display: flex;
