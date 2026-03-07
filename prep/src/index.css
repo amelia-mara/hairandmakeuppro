@@ -1911,7 +1911,7 @@ body {
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .account-panel {
   position: fixed;
-  top: 80px;
+  top: 0;
   right: 0;
   width: 320px;
   bottom: 0;
@@ -3288,9 +3288,9 @@ body {
 /* ━━━ Tools Dropdown ━━━ */
 .tools-dropdown {
   position: fixed;
-  top: 80px;
+  top: 0;
   right: 0;
-  width: 260px;
+  width: 320px;
   bottom: 0;
   z-index: 200;
   padding: 16px 12px;
