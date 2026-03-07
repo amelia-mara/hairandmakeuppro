@@ -73,6 +73,21 @@ export interface SceneBreakdown {
   continuityEvents: ContinuityEvent[];
 }
 
+/* ━━━ Script Tags ━━━ */
+
+export interface ScriptTag {
+  id: string;
+  sceneId: string;
+  /** Character offset within the scene's scriptContent */
+  startOffset: number;
+  endOffset: number;
+  text: string;
+  /** Category id from BREAKDOWN_CATEGORIES (e.g. 'cast', 'hair', 'makeup') */
+  categoryId: string;
+  /** Optional character assignment — links this tag to a character's profile */
+  characterId?: string;
+}
+
 /* ━━━ Continuity event types ━━━ */
 
 export const CONTINUITY_EVENT_TYPES = ['Wound', 'Bruise', 'Prosthetic', 'Scar', 'Tattoo', 'Other'] as const;
@@ -748,6 +763,46 @@ export const useBreakdownStore = create<BreakdownState>()(
     }),
     {
       name: 'prep-happy-breakdowns',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
+/* ━━━ Script Tag Store ━━━ */
+
+interface TagState {
+  tags: ScriptTag[];
+  addTag: (tag: ScriptTag) => void;
+  removeTag: (id: string) => void;
+  updateTag: (id: string, data: Partial<ScriptTag>) => void;
+  getTagsForScene: (sceneId: string) => ScriptTag[];
+  getTagsForCharacter: (characterId: string) => ScriptTag[];
+}
+
+export const useTagStore = create<TagState>()(
+  persist(
+    (set, get) => ({
+      tags: [],
+
+      addTag: (tag) =>
+        set((s) => ({ tags: [...s.tags, tag] })),
+
+      removeTag: (id) =>
+        set((s) => ({ tags: s.tags.filter((t) => t.id !== id) })),
+
+      updateTag: (id, data) =>
+        set((s) => ({
+          tags: s.tags.map((t) => (t.id === id ? { ...t, ...data } : t)),
+        })),
+
+      getTagsForScene: (sceneId) =>
+        get().tags.filter((t) => t.sceneId === sceneId),
+
+      getTagsForCharacter: (characterId) =>
+        get().tags.filter((t) => t.characterId === characterId),
+    }),
+    {
+      name: 'prep-happy-tags',
       storage: createJSONStorage(() => localStorage),
     }
   )
