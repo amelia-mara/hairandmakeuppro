@@ -41,10 +41,12 @@ const NAV_ITEMS = [
 
 export function TopBar({ title = 'Projects', activePage, onNavigate, projectType }: TopBarProps) {
   const [navOpen, setNavOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
-  useTheme();
+  const accountRef = useRef<HTMLDivElement>(null);
+  const { theme, setTheme } = useTheme();
 
-  // Close on outside click
+  // Close nav on outside click
   useEffect(() => {
     if (!navOpen) return;
     const handleClick = (e: MouseEvent) => {
@@ -55,6 +57,18 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [navOpen]);
+
+  // Close account on outside click
+  useEffect(() => {
+    if (!accountOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [accountOpen]);
 
   return (
     <header className="app-header">
@@ -108,19 +122,146 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div ref={accountRef} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Avatar — THE SUN */}
           <div className="avatar-wrap">
             <div className="avatar-halo avatar-halo--outer" />
             <div className="avatar-halo avatar-halo--mid" />
             <div className="avatar-halo avatar-halo--inner" />
-            <button className="avatar-btn">AM</button>
+            <button className="avatar-btn" onClick={() => setAccountOpen(!accountOpen)}>AK</button>
           </div>
+
+          {accountOpen && (
+            <div className="account-panel">
+              <div className="account-panel-scroll">
+                {/* Profile card */}
+                <div className="account-card">
+                  <div className="account-profile">
+                    <div className="account-avatar">AK</div>
+                    <div className="account-info">
+                      <div className="account-name">Amelia Kildear</div>
+                      <div className="account-email">amelia-mara@outlook.com</div>
+                      <span className="account-badge">Beta Tester</span>
+                    </div>
+                  </div>
+                  <div className="account-divider" />
+                  <button className="account-edit-btn" onClick={() => console.log('Edit profile')}>Edit Profile</button>
+                </div>
+
+                {/* Account Settings */}
+                <div className="account-section-label">Account Settings</div>
+                <div className="account-card">
+                  <button className="account-row" onClick={() => console.log('Reset password')}>
+                    <div className="account-row-icon"><LockIcon /></div>
+                    <div className="account-row-text">
+                      <span className="account-row-title">Reset Password</span>
+                      <span className="account-row-desc">Send password reset email</span>
+                    </div>
+                    <ChevronRight />
+                  </button>
+                  <div className="account-divider" />
+                  <button className="account-row" onClick={() => console.log('Billing')}>
+                    <div className="account-row-icon"><BillingIcon /></div>
+                    <div className="account-row-text">
+                      <span className="account-row-title">Billing & Bank Details</span>
+                      <span className="account-row-desc">For timesheets and invoices</span>
+                    </div>
+                    <ChevronRight />
+                  </button>
+                </div>
+
+                {/* Beta Access */}
+                <div className="account-section-label">Beta Access</div>
+                <div className="account-card">
+                  <div className="account-row account-row--static">
+                    <div className="account-row-icon account-row-icon--accent"><BetaIcon /></div>
+                    <div className="account-row-text">
+                      <span className="account-row-title">Full Access Enabled</span>
+                      <span className="account-row-desc">Thank you for beta testing!</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appearance */}
+                <div className="account-section-label">Appearance</div>
+                <div className="account-card">
+                  <div className="account-theme-header">
+                    <span className="account-row-title">Theme</span>
+                    <span className="account-theme-current">{theme === 'gold' ? 'Gold' : theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
+                  </div>
+                  <div className="account-theme-grid">
+                    {THEMES.map((t) => (
+                      <button
+                        key={t.id}
+                        className={`account-theme-opt ${theme === t.id ? 'account-theme-opt--active' : ''}`}
+                        onClick={() => setTheme(t.id)}
+                      >
+                        <t.icon />
+                        <span>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sign out */}
+                <button className="account-signout" onClick={() => console.log('Sign out')}>
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
     </header>
   );
+}
+
+/* ━━━ Theme options ━━━ */
+const THEMES = [
+  { id: 'gold', label: 'Gold', icon: ThemeGoldIcon },
+  { id: 'silver', label: 'Silver', icon: ThemeSilverIcon },
+  { id: 'teal', label: 'Teal', icon: ThemeTealIcon },
+  { id: 'rose', label: 'Rose', icon: ThemeRoseIcon },
+  { id: 'ice', label: 'Ice', icon: ThemeIceIcon },
+];
+
+/* ━━━ Account panel icons ━━━ */
+
+function LockIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+}
+
+function BillingIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+}
+
+function BetaIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+}
+
+function ChevronRight() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4, flexShrink: 0 }}><path d="m9 18 6-6-6-6"/></svg>;
+}
+
+function ThemeGoldIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+}
+
+function ThemeSilverIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+}
+
+function ThemeTealIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>;
+}
+
+function ThemeRoseIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>;
+}
+
+function ThemeIceIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/></svg>;
 }
 
 /* ━━━ SVG Icons ━━━ */
