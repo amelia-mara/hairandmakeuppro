@@ -735,21 +735,23 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate }: {
             onClick={() => onUpdate({ changeType: 'change' })}>Change</button>
         </div>
         {cb.changeType === 'change' && (
-          <textarea className="cb-textarea" placeholder="Describe change..." value={cb.changeNotes}
-            onChange={(e) => onUpdate({ changeNotes: e.target.value })} rows={2} />
-        )}
-      </div>
+          <>
+            <textarea className="cb-textarea" placeholder="Describe change..." value={cb.changeNotes}
+              onChange={(e) => onUpdate({ changeNotes: e.target.value })} rows={2} />
 
-      <div className="cb-field">
-        <div className="cb-exits-head">
-          <label className="cb-label">Exits With</label>
-          <button className="cb-same-btn" onClick={() => onUpdate({ exitsWith: { ...cb.entersWith } })}>Same as entry</button>
-        </div>
-        <div className="cb-hmw">
-          <FInput label="Hair" value={cb.exitsWith.hair} onChange={(v) => ue('exitsWith', 'hair', v)} />
-          <FInput label="Makeup" value={cb.exitsWith.makeup} onChange={(v) => ue('exitsWith', 'makeup', v)} />
-          <FInput label="Wardrobe" value={cb.exitsWith.wardrobe} onChange={(v) => ue('exitsWith', 'wardrobe', v)} />
-        </div>
+            <div className="cb-field" style={{ marginTop: '12px' }}>
+              <div className="cb-exits-head">
+                <label className="cb-label">Exits With</label>
+                <button className="cb-same-btn" onClick={() => onUpdate({ exitsWith: { ...cb.entersWith } })}>Same as entry</button>
+              </div>
+              <div className="cb-hmw">
+                <FInput label="Hair" value={cb.exitsWith.hair} onChange={(v) => ue('exitsWith', 'hair', v)} />
+                <FInput label="Makeup" value={cb.exitsWith.makeup} onChange={(v) => ue('exitsWith', 'makeup', v)} />
+                <FInput label="Wardrobe" value={cb.exitsWith.wardrobe} onChange={(v) => ue('exitsWith', 'wardrobe', v)} />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <FInput label="Notes" value={cb.notes} onChange={(v) => onUpdate({ notes: v })} />
