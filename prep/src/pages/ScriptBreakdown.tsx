@@ -374,6 +374,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             activeCharacterId={activeTab !== 'script' ? activeTab : null}
             saveStatus={saveStatus}
             scenes={filteredScenes}
+            allScenes={MOCK_SCENES}
             onNavigate={selectScene}
             onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
             onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
@@ -544,10 +545,10 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
-  scenes: Scene[]; onNavigate: (id: string) => void;
+  scenes: Scene[]; allScenes: Scene[]; onNavigate: (id: string) => void;
   onUpdate: (cid: string, d: Partial<CharacterBreakdown>) => void;
   onUpdateTimeline: (t: SceneBreakdown['timeline']) => void;
   onAddEvent: (e: ContinuityEvent) => void;
@@ -642,6 +643,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 onUpdate={(d) => onUpdate(ch.id, d)}
                 characterEvents={charEvents}
                 sceneNumber={scene.number}
+                allScenes={allScenes}
                 onAddCharEvent={(charId) => onAddEvent({
                   id: `ce-${Date.now()}`, type: 'Wound', characterId: charId,
                   description: '', sceneRange: `${scene.number}-${scene.number}`,
@@ -679,9 +681,8 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
               </select>
               <input className="fp-event-desc-input" placeholder="Description..." value={evt.description}
                 onChange={(e) => onUpdateEvent(evt.id, { description: e.target.value })} />
-              <input className="fp-event-range-input" placeholder={`Scene range (e.g. ${scene.number}-${scene.number + 2})`}
-                value={evt.sceneRange}
-                onChange={(e) => onUpdateEvent(evt.id, { sceneRange: e.target.value })} />
+              <SceneRangeSelect sceneRange={evt.sceneRange} allScenes={allScenes}
+                onChange={(range) => onUpdateEvent(evt.id, { sceneRange: range })} />
             </div>
           ))}
         </div>
@@ -710,10 +711,11 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, sceneNumber }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, sceneNumber, allScenes }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[]; sceneNumber: number;
+  allScenes: Scene[];
   onAddCharEvent: (charId: string) => void;
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (eventId: string) => void;
@@ -799,11 +801,41 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
             </div>
             <input className="cb-event-desc" placeholder="Description..." value={evt.description}
               onChange={(e) => onUpdateEvent(evt.id, { description: e.target.value })} />
-            <input className="cb-event-scenes" placeholder={`Scene range (e.g. ${sceneNumber}-${sceneNumber + 2})`}
-              value={evt.sceneRange}
-              onChange={(e) => onUpdateEvent(evt.id, { sceneRange: e.target.value })} />
+            <SceneRangeSelect sceneRange={evt.sceneRange} allScenes={allScenes}
+              onChange={(range) => onUpdateEvent(evt.id, { sceneRange: range })} />
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ━━━ Scene range selector ━━━ */
+
+function SceneRangeSelect({ sceneRange, allScenes, onChange }: {
+  sceneRange: string; allScenes: Scene[]; onChange: (range: string) => void;
+}) {
+  const parts = sceneRange.split('-');
+  const startScene = parts[0]?.trim() || '';
+  const endScene = parts[1]?.trim() || startScene;
+
+  const handleStart = (v: string) => onChange(`${v}-${endScene}`);
+  const handleEnd = (v: string) => onChange(`${startScene}-${v}`);
+
+  return (
+    <div className="ce-scene-range">
+      <div className="ce-scene-range-field">
+        <label className="ce-scene-range-label">Start</label>
+        <select className="ce-scene-range-select" value={startScene} onChange={(e) => handleStart(e.target.value)}>
+          {allScenes.map((s) => <option key={s.id} value={String(s.number)}>Scene {s.number}</option>)}
+        </select>
+      </div>
+      <span className="ce-scene-range-sep">—</span>
+      <div className="ce-scene-range-field">
+        <label className="ce-scene-range-label">End</label>
+        <select className="ce-scene-range-select" value={endScene} onChange={(e) => handleEnd(e.target.value)}>
+          {allScenes.map((s) => <option key={s.id} value={String(s.number)}>Scene {s.number}</option>)}
+        </select>
       </div>
     </div>
   );
