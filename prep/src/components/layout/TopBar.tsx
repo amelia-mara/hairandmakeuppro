@@ -159,20 +159,6 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Back to Checks Happy */}
-          <a
-            href="/"
-            className="btn-ghost topbar-checks-btn"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Checks Happy
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 17L17 7M17 7H7M17 7v10"/>
-            </svg>
-          </a>
-
           {/* Avatar — THE SUN */}
           <div className="avatar-wrap">
             <div className="avatar-halo avatar-halo--outer" />
