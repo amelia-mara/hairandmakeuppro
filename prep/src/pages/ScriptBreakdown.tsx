@@ -470,7 +470,6 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
           style={{ fontSize: `${fontSize}px` }}
         >
-          <div className="sv-scene-badge">Scene {scene.number}</div>
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
           {scene.scriptContent.split('\n').map((line, i) => renderLine(line, i, scene.id))}
         </div>
