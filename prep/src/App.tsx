@@ -37,7 +37,6 @@ function App() {
       <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <TopBar
           title={projectTitle}
-          onBack={handleBackToHub}
           activePage={activePage}
           onNavigate={setActivePage}
           projectType={project?.type}

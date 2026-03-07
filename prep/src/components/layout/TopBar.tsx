@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface TopBarProps {
   title?: string;
-  onBack?: () => void;
   activePage?: string;
   onNavigate?: (page: string) => void;
   projectType?: string;
@@ -40,7 +39,7 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, projectType }: TopBarProps) {
+export function TopBar({ title = 'Projects', activePage, onNavigate, projectType }: TopBarProps) {
   const [navOpen, setNavOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   useTheme();
@@ -62,62 +61,11 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left side — back + title + nav dropdown */}
+        {/* Left side — nav dropdown + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="topbar-back-btn"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-            </button>
-          )}
-          <h1 className="topbar-title" title={title}>
-            {title}
-          </h1>
-
-          {/* Nav dropdown trigger — only in project view, hidden on dashboard (has permanent sidebar) */}
+          {/* Nav dropdown trigger — first element, replaces back arrow */}
           {activePage && activePage !== 'dashboard' && onNavigate && (
             <div ref={dropRef} style={{ position: 'relative' }}>
-              {/* Separator dot */}
-              <span style={{
-                display: 'inline-block',
-                width: '3px',
-                height: '3px',
-                borderRadius: '50%',
-                background: 'var(--text-muted)',
-                marginRight: '12px',
-                verticalAlign: 'middle',
-                opacity: 0.5,
-              }} />
-
-              {projectType && (
-                <>
-                  <span style={{
-                    fontSize: '0.6875rem',
-                    fontWeight: 500,
-                    color: 'var(--text-muted)',
-                    letterSpacing: '0.04em',
-                    opacity: 0.6,
-                    marginRight: '10px',
-                  }}>
-                    {projectType}
-                  </span>
-                  <span style={{
-                    display: 'inline-block',
-                    width: '3px',
-                    height: '3px',
-                    borderRadius: '50%',
-                    background: 'var(--text-muted)',
-                    marginRight: '10px',
-                    verticalAlign: 'middle',
-                    opacity: 0.35,
-                  }} />
-                </>
-              )}
-
               <button
                 className="topbar-nav-trigger"
                 onClick={() => setNavOpen(!navOpen)}
@@ -136,7 +84,6 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
                 </svg>
               </button>
 
-              {/* Dropdown — positioned over the left scene list panel */}
               {navOpen && (
                 <div className="topbar-nav-dropdown">
                   {NAV_ITEMS.map((item) => (
@@ -155,6 +102,22 @@ export function TopBar({ title = 'Projects', onBack, activePage, onNavigate, pro
                 </div>
               )}
             </div>
+          )}
+
+          <h1 className="topbar-title" title={title}>
+            {title}
+          </h1>
+
+          {projectType && (
+            <span style={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--text-muted)',
+              letterSpacing: '0.04em',
+              opacity: 0.6,
+            }}>
+              {projectType}
+            </span>
           )}
         </div>
 
