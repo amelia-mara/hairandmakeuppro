@@ -527,11 +527,14 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   return (
     <div className="fp-wrap">
       {/* Scene info — pinned */}
-      <div className="fp-header">
-        <span className="fp-scene-num">Scene {scene.number}</span>
-        <span className={`fp-save fp-save--${saveStatus}`}>
-          {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
-        </span>
+      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <span className="fp-scene-num">Scene {scene.number}</span>
+          <span className={`fp-save fp-save--${saveStatus}`}>
+            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
+          </span>
+        </div>
+        <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
       </div>
 
       <div className="fp-scroll">
