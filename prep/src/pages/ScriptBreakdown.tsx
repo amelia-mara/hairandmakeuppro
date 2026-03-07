@@ -642,7 +642,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 highlighted={activeCharacterId === ch.id}
                 onUpdate={(d) => onUpdate(ch.id, d)}
                 characterEvents={charEvents}
-                sceneNumber={scene.number}
                 allScenes={allScenes}
                 onAddCharEvent={(charId) => onAddEvent({
                   id: `ce-${Date.now()}`, type: 'Wound', characterId: charId,
@@ -711,10 +710,10 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, sceneNumber, allScenes }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
-  characterEvents: ContinuityEvent[]; sceneNumber: number;
+  characterEvents: ContinuityEvent[];
   allScenes: Scene[];
   onAddCharEvent: (charId: string) => void;
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
