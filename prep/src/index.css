@@ -3326,6 +3326,12 @@ body {
   flex: 1;
   text-align: center;
 }
+.sv-tag-popup-hint {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
 
 /* ━━━ Inline highlights ━━━ */
 .sv-highlight {
