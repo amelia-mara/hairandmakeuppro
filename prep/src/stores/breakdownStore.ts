@@ -809,3 +809,31 @@ export const useTagStore = create<TagState>()(
     }
   )
 );
+
+/* ━━━ Synopsis Store — shared editable synopses ━━━ */
+
+interface SynopsisState {
+  synopses: Record<string, string>;
+  getSynopsis: (sceneId: string, fallback: string) => string;
+  setSynopsis: (sceneId: string, text: string) => void;
+}
+
+export const useSynopsisStore = create<SynopsisState>()(
+  persist(
+    (set, get) => ({
+      synopses: {},
+
+      getSynopsis: (sceneId, fallback) => {
+        const val = get().synopses[sceneId];
+        return val !== undefined ? val : fallback;
+      },
+
+      setSynopsis: (sceneId, text) =>
+        set((s) => ({ synopses: { ...s.synopses, [sceneId]: text } })),
+    }),
+    {
+      name: 'prep-happy-synopses',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
