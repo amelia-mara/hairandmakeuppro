@@ -837,3 +837,43 @@ export const useSynopsisStore = create<SynopsisState>()(
     }
   )
 );
+
+/* ━━━ Scene Metadata Store — editable overrides for auto-detected scene heading fields ━━━ */
+
+export interface SceneMeta {
+  intExt?: 'INT' | 'EXT';
+  dayNight?: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
+  location?: string;
+}
+
+interface SceneMetaState {
+  overrides: Record<string, SceneMeta>;
+  getMeta: (sceneId: string, fallback: Scene) => { intExt: Scene['intExt']; dayNight: Scene['dayNight']; location: string };
+  setMeta: (sceneId: string, data: Partial<SceneMeta>) => void;
+}
+
+export const useSceneMetaStore = create<SceneMetaState>()(
+  persist(
+    (set, get) => ({
+      overrides: {},
+
+      getMeta: (sceneId, fallback) => {
+        const o = get().overrides[sceneId];
+        return {
+          intExt: o?.intExt ?? fallback.intExt,
+          dayNight: o?.dayNight ?? fallback.dayNight,
+          location: o?.location ?? fallback.location,
+        };
+      },
+
+      setMeta: (sceneId, data) =>
+        set((s) => ({
+          overrides: { ...s.overrides, [sceneId]: { ...s.overrides[sceneId], ...data } },
+        })),
+    }),
+    {
+      name: 'prep-happy-scene-meta',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
