@@ -282,7 +282,11 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
                           <TagPills tags={sfxTags} catId="sfx" />
                         </td>
                         <td className="bs-col-notes">
-                          {continuity || <span className="bs-empty">—</span>}
+                          {continuity
+                            ? continuity.startsWith('Same as')
+                              ? <span className="bs-same-ref">{continuity}</span>
+                              : continuity
+                            : <span className="bs-empty">—</span>}
                         </td>
                       </tr>
                     );
