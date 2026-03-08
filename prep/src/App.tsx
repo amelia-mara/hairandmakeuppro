@@ -6,6 +6,7 @@ import { ProjectLayout } from '@/components/layout/ProjectLayout';
 import { ProjectDashboard } from '@/pages/ProjectDashboard';
 import { ScriptBreakdown } from '@/pages/ScriptBreakdown';
 import { BreakdownSheet } from '@/pages/BreakdownSheet';
+import { ContinuityTracker } from '@/pages/ContinuityTracker';
 import { useProjectStore } from '@/stores/projectStore';
 
 function App() {
@@ -56,6 +57,9 @@ function App() {
           )}
           {activePage === 'breakdown' && (
             <BreakdownSheet projectId={selectedProjectId} />
+          )}
+          {activePage === 'continuity' && (
+            <ContinuityTracker projectId={selectedProjectId} />
           )}
         </ProjectLayout>
       </div>

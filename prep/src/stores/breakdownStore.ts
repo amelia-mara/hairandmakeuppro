@@ -58,13 +58,39 @@ export interface CharacterBreakdown {
   notes: string;
 }
 
+export interface ProgressionStage {
+  id: string;
+  scene: string;
+  stage: string;
+  notes: string;
+}
+
 export interface ContinuityEvent {
   id: string;
   type: string;
   characterId: string;
   description: string;
   sceneRange: string;
+  name?: string;
+  stage?: string;
+  scenes?: string[];
+  products?: string;
+  progression?: ProgressionStage[];
 }
+
+export interface ContinuityFlags {
+  sweat: boolean;
+  dishevelled: boolean;
+  blood: boolean;
+  dirt: boolean;
+  wetHair: boolean;
+  tears: boolean;
+}
+
+export const STAGE_SUGGESTIONS = [
+  'Fresh', 'Day 1 Healing', 'Day 2 Healing', 'Day 3 Healing',
+  'Scabbed', 'Faded', 'Healed',
+] as const;
 
 export interface SceneBreakdown {
   sceneId: string;
@@ -873,6 +899,93 @@ export const useSceneMetaStore = create<SceneMetaState>()(
     }),
     {
       name: 'prep-happy-scene-meta',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
+/* ━━━ Continuity Tracker Store — scene-level flags and tracking ━━━ */
+
+const emptyFlags = (): ContinuityFlags => ({
+  sweat: false, dishevelled: false, blood: false,
+  dirt: false, wetHair: false, tears: false,
+});
+
+export interface SceneContinuity {
+  sceneId: string;
+  characterId: string;
+  flags: ContinuityFlags;
+  notes: string;
+  status: 'pending' | 'in-progress' | 'complete';
+}
+
+interface ContinuityTrackerState {
+  entries: Record<string, SceneContinuity>; // key: `${sceneId}-${characterId}`
+  getEntry: (sceneId: string, characterId: string) => SceneContinuity;
+  setEntry: (sceneId: string, characterId: string, data: Partial<SceneContinuity>) => void;
+  toggleFlag: (sceneId: string, characterId: string, flag: keyof ContinuityFlags) => void;
+  setStatus: (sceneId: string, characterId: string, status: SceneContinuity['status']) => void;
+  getSceneStatus: (sceneId: string, characterIds: string[]) => 'empty' | 'partial' | 'complete';
+}
+
+export const useContinuityTrackerStore = create<ContinuityTrackerState>()(
+  persist(
+    (set, get) => ({
+      entries: {},
+
+      getEntry: (sceneId, characterId) => {
+        const key = `${sceneId}-${characterId}`;
+        return get().entries[key] || {
+          sceneId, characterId,
+          flags: emptyFlags(),
+          notes: '',
+          status: 'pending' as const,
+        };
+      },
+
+      setEntry: (sceneId, characterId, data) => {
+        const key = `${sceneId}-${characterId}`;
+        set((s) => ({
+          entries: {
+            ...s.entries,
+            [key]: { ...s.entries[key] || { sceneId, characterId, flags: emptyFlags(), notes: '', status: 'pending' as const }, ...data },
+          },
+        }));
+      },
+
+      toggleFlag: (sceneId, characterId, flag) => {
+        const key = `${sceneId}-${characterId}`;
+        const existing = get().entries[key] || {
+          sceneId, characterId, flags: emptyFlags(), notes: '', status: 'pending' as const,
+        };
+        set((s) => ({
+          entries: {
+            ...s.entries,
+            [key]: { ...existing, flags: { ...existing.flags, [flag]: !existing.flags[flag] } },
+          },
+        }));
+      },
+
+      setStatus: (sceneId, characterId, status) => {
+        const key = `${sceneId}-${characterId}`;
+        const existing = get().entries[key] || {
+          sceneId, characterId, flags: emptyFlags(), notes: '', status: 'pending' as const,
+        };
+        set((s) => ({
+          entries: { ...s.entries, [key]: { ...existing, status } },
+        }));
+      },
+
+      getSceneStatus: (sceneId, characterIds) => {
+        const entries = characterIds.map((cid) => get().entries[`${sceneId}-${cid}`]);
+        const filled = entries.filter((e) => e && (e.status !== 'pending' || e.notes || Object.values(e.flags).some(Boolean)));
+        if (filled.length === 0) return 'empty';
+        const allComplete = entries.every((e) => e?.status === 'complete');
+        return allComplete ? 'complete' : 'partial';
+      },
+    }),
+    {
+      name: 'prep-happy-continuity-tracker',
       storage: createJSONStorage(() => localStorage),
     }
   )
