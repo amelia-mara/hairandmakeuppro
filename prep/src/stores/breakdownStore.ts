@@ -559,7 +559,7 @@ They walk together toward the car. The city skyline looms in the distance.
 
 /* ━━━ Initial breakdown data (scene 1 complete, 2-4 partial, 5-12 empty) ━━━ */
 
-const emptyHMW = (): HMWEntry => ({ hair: '', makeup: '', wardrobe: '' });
+export const emptyHMW = (): HMWEntry => ({ hair: '', makeup: '', wardrobe: '' });
 
 const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
   // Scene 1 — fully complete

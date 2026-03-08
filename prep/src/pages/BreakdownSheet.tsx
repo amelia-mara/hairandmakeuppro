@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  MOCK_SCENES, MOCK_CHARACTERS, BREAKDOWN_CATEGORIES,
+  MOCK_SCENES, MOCK_CHARACTERS, BREAKDOWN_CATEGORIES, emptyHMW,
   useBreakdownStore, useTagStore, useSynopsisStore,
   type Scene, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
@@ -107,6 +107,30 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
   const scenes = MOCK_SCENES;
   const characters = MOCK_CHARACTERS;
   const firstAppearances = calcFirstAppearances(scenes);
+
+  /* Ensure every scene has a breakdown — initialise any that are missing
+     so data entered on the Script page is always visible here. */
+  useEffect(() => {
+    for (const s of scenes) {
+      if (!store.getBreakdown(s.id)) {
+        store.setBreakdown(s.id, {
+          sceneId: s.id,
+          timeline: {
+            day: '',
+            time: s.dayNight === 'DAY' ? 'Day' : s.dayNight === 'NIGHT' ? 'Night' : s.dayNight === 'DAWN' ? 'Dawn' : s.dayNight === 'DUSK' ? 'Dusk' : '',
+            type: '', note: '',
+          },
+          characters: s.characterIds.map((cid) => ({
+            characterId: cid, lookId: '',
+            entersWith: emptyHMW(), sfx: '',
+            changeType: 'no-change' as const, changeNotes: '',
+            exitsWith: emptyHMW(), notes: '',
+          })),
+          continuityEvents: [],
+        });
+      }
+    }
+  }, [scenes, store]);
 
   /* Filtered scenes: only those with characters */
   const scenesWithCast = scenes.filter((s) => {
