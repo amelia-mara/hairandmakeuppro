@@ -411,10 +411,13 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick category, Step 2: assign character + description */
-  step: 'category' | 'character';
+  /** Step 1: pick category, Step 2: assign character + description, Step 3: offer highlight-all for cast */
+  step: 'category' | 'character' | 'highlight-all';
   categoryId?: string;
   description?: string;
+  /** For highlight-all: the matched character */
+  matchedCharId?: string;
+  matchedName?: string;
 }
 
 function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
@@ -499,14 +502,49 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           categoryId: catId,
           characterId: matched.id,
         });
-        onCharClick(matched.id);
-        setPopup(null);
+        /* Offer to highlight all other occurrences */
+        setPopup({ ...popup, step: 'highlight-all', categoryId: catId, matchedCharId: matched.id, matchedName: matched.name });
         return;
       }
     }
     /* Move to character assignment step */
     setPopup({ ...popup, step: 'character', categoryId: catId });
   }, [popup, tagStore, onCharClick]);
+
+  const handleHighlightAll = useCallback(() => {
+    if (!popup || !popup.matchedCharId || !popup.categoryId || !popup.matchedName) return;
+    const name = popup.matchedName;
+    const catId = popup.categoryId;
+    const charId = popup.matchedCharId;
+    const existingTags = tagStore.tags;
+
+    for (const scene of scenes) {
+      const content = scene.scriptContent;
+      /* Find all occurrences of the name (case-insensitive) */
+      const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(content)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        /* Skip if this exact range is already tagged in this scene */
+        const alreadyTagged = existingTags.some(
+          (t) => t.sceneId === scene.id && t.startOffset === start && t.endOffset === end
+        );
+        if (alreadyTagged) continue;
+        tagStore.addTag({
+          id: `tag-${Date.now()}-${scene.id}-${start}`,
+          sceneId: scene.id,
+          startOffset: start,
+          endOffset: end,
+          text: match[0],
+          categoryId: catId,
+          characterId: charId,
+        });
+      }
+    }
+    onCharClick(charId);
+    setPopup(null);
+  }, [popup, tagStore, scenes, onCharClick]);
 
   const handleCharacterPick = useCallback((charId: string | null) => {
     if (!popup || !popup.categoryId) return;
@@ -672,7 +710,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
       {/* Tag popup */}
       {popup && (
         <div ref={popupRef} className="sv-tag-popup" style={{ left: popup.x, top: popup.y, transform: 'translate(-50%, -100%)' }}>
-          {popup.step === 'category' ? (
+          {popup.step === 'category' && (
             <>
               <div className="sv-tag-popup-title">Tag as:</div>
               <div className="sv-tag-popup-grid">
@@ -684,7 +722,8 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
                 ))}
               </div>
             </>
-          ) : (
+          )}
+          {popup.step === 'character' && (
             <>
               <div className="sv-tag-popup-title">Assign to character:</div>
               <select className="sv-tag-popup-select" defaultValue="">
@@ -713,6 +752,20 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
                 </button>
                 <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => handleCharacterPick(null)}>
                   Skip character
+                </button>
+              </div>
+            </>
+          )}
+          {popup.step === 'highlight-all' && (
+            <>
+              <div className="sv-tag-popup-title">Highlight all occurrences?</div>
+              <div className="sv-tag-popup-hint">Tag every instance of "{popup.matchedName}" across all scenes as Cast</div>
+              <div className="sv-tag-popup-actions">
+                <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--confirm" onClick={handleHighlightAll}>
+                  Highlight all
+                </button>
+                <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => { if (popup.matchedCharId) onCharClick(popup.matchedCharId); setPopup(null); }}>
+                  Just this one
                 </button>
               </div>
             </>
