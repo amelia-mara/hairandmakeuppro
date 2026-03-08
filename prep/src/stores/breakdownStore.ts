@@ -86,6 +86,8 @@ export interface ScriptTag {
   categoryId: string;
   /** Optional character assignment — links this tag to a character's profile */
   characterId?: string;
+  /** Optional description/note for this tag */
+  description?: string;
 }
 
 /* ━━━ Continuity event types ━━━ */

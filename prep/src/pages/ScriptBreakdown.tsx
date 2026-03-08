@@ -411,9 +411,10 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick category, Step 2: optionally assign character */
+  /** Step 1: pick category, Step 2: assign character + description */
   step: 'category' | 'character';
   categoryId?: string;
+  description?: string;
 }
 
 function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
@@ -517,6 +518,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
       text: popup.text,
       categoryId: popup.categoryId,
       characterId: charId || undefined,
+      description: popup.description || undefined,
     });
     if (charId) onCharClick(charId);
     setPopup(null);
@@ -646,9 +648,8 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
     else pageRefs.current.delete(id);
   }, []);
 
-  /* Characters in the current scene (for the popup character picker) */
-  const currentScene = scenes.find((s) => s.id === popup?.sceneId);
-  const popupChars = currentScene ? currentScene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!).filter(Boolean) : [];
+  /* All characters available for tag assignment */
+  const popupChars = MOCK_CHARACTERS;
 
   return (
     <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
@@ -686,14 +687,32 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           ) : (
             <>
               <div className="sv-tag-popup-title">Assign to character:</div>
-              <div className="sv-tag-popup-chars">
+              <select className="sv-tag-popup-select" defaultValue="">
+                <option value="" disabled>Select a character…</option>
                 {popupChars.map((ch) => (
-                  <button key={ch.id} className="sv-tag-popup-char-btn" onClick={() => handleCharacterPick(ch.id)}>
-                    {ch.name}
-                  </button>
+                  <option key={ch.id} value={ch.id}>{ch.name}</option>
                 ))}
+              </select>
+              <textarea
+                className="sv-tag-popup-desc"
+                placeholder="Add a description (optional)…"
+                rows={2}
+                value={popup.description || ''}
+                onChange={(e) => setPopup({ ...popup, description: e.target.value })}
+              />
+              <div className="sv-tag-popup-actions">
+                <button
+                  className="sv-tag-popup-char-btn sv-tag-popup-char-btn--confirm"
+                  onClick={() => {
+                    const selectEl = popupRef.current?.querySelector('.sv-tag-popup-select') as HTMLSelectElement | null;
+                    const charId = selectEl?.value || null;
+                    handleCharacterPick(charId);
+                  }}
+                >
+                  Confirm
+                </button>
                 <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => handleCharacterPick(null)}>
-                  Skip (no character)
+                  Skip character
                 </button>
               </div>
             </>
@@ -786,6 +805,7 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
                       <button className="cv-note-remove" onClick={() => tagStore.removeTag(tag.id)} title="Remove tag">×</button>
                     </div>
                     <div className="cv-note-text">"{tag.text}"</div>
+                    {tag.description && <div className="cv-note-desc">{tag.description}</div>}
                   </div>
                 );
               })
