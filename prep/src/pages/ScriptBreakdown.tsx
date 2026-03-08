@@ -783,7 +783,16 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
   const looks = MOCK_LOOKS.filter((l) => l.characterId === char.id);
   const scenes = MOCK_SCENES.filter((s) => s.characterIds.includes(char.id));
   const tagStore = useTagStore();
-  const charTags = tagStore.getTagsForCharacter(char.id);
+  const allCharTags = tagStore.getTagsForCharacter(char.id);
+  /* Only show tags with descriptions or non-name tags in Script Notes.
+     Cast tags that are just the character's name serve only to trigger the tab. */
+  const charTags = allCharTags.filter((t) => {
+    if (t.categoryId === 'cast' && !t.description) {
+      const isOwnName = t.text.trim().toUpperCase() === char.name.toUpperCase();
+      if (isOwnName) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="cv-wrap">
