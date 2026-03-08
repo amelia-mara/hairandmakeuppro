@@ -4452,15 +4452,15 @@ body {
 .bs-scene-block {
   margin-top: 28px;
   border-radius: var(--radius-card);
-  border: 1px solid var(--border-card);
+  border: 1px solid rgba(255,255,255,0.10);
   overflow: hidden;
   background: var(--bg-surface);
 }
 
 .bs-scene-header {
   padding: 14px 20px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-card);
+  background: rgba(0,0,0,0.35);
+  border-bottom: 2px solid rgba(var(--a), 0.18);
 }
 
 .bs-scene-header-main {
@@ -4468,7 +4468,7 @@ body {
 }
 
 .bs-scene-num {
-  font-size: 0.9375rem; font-weight: 800;
+  font-size: 1rem; font-weight: 800;
   color: var(--accent);
   letter-spacing: 0.03em;
 }
@@ -4477,15 +4477,15 @@ body {
   font-size: 0.6875rem; font-weight: 700;
   color: var(--accent);
   padding: 3px 10px;
-  background: rgba(var(--a), 0.12);
-  border: 1px solid rgba(var(--a), 0.18);
+  background: rgba(var(--a), 0.15);
+  border: 1px solid rgba(var(--a), 0.25);
   border-radius: 999px;
   letter-spacing: 0.02em;
 }
 
 .bs-scene-location {
-  font-size: 0.8125rem; font-weight: 500;
-  color: var(--text-primary);
+  font-size: 0.875rem; font-weight: 600;
+  color: var(--text-heading);
   letter-spacing: 0.01em;
 }
 
@@ -4510,32 +4510,36 @@ body {
 }
 
 .bs-table thead {
-  background: rgba(var(--a), 0.03);
+  background: rgba(0,0,0,0.20);
 }
 
 .bs-table th {
-  font-size: 0.625rem; font-weight: 700;
-  color: var(--text-muted);
+  font-size: 0.6875rem; font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.08em;
   padding: 10px 20px;
   text-align: left;
-  border-bottom: 1px solid var(--border-card);
+  border-bottom: 2px solid rgba(255,255,255,0.08);
+  border-right: 1px solid rgba(255,255,255,0.05);
   white-space: nowrap;
 }
+.bs-table th:last-child { border-right: none; }
 
 .bs-table td {
   font-size: 0.8125rem;
   color: var(--text-primary);
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.04);
   vertical-align: top;
   line-height: 1.55;
 }
+.bs-table td:last-child { border-right: none; }
 
 .bs-table tbody tr:last-child td { border-bottom: none; }
 
 .bs-table tbody tr:hover {
-  background: rgba(var(--a), 0.025);
+  background: rgba(var(--a), 0.035);
 }
 
 /* Column widths */
@@ -4550,13 +4554,15 @@ body {
 .bs-char-name {
   font-weight: 700; font-size: 0.8125rem;
   color: var(--text-heading);
-  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .bs-char-billing {
   font-size: 0.5625rem; font-weight: 600;
   color: var(--text-muted);
   margin-left: 6px;
   opacity: 0.7;
+  text-transform: none;
 }
 
 /* First appearance row */
@@ -4612,10 +4618,22 @@ body {
 
 /* Light theme overrides */
 [data-theme="light"] .bs-scene-block {
-  border-color: var(--border-card);
+  border-color: rgba(0,0,0,0.12);
 }
 [data-theme="light"] .bs-scene-header {
-  background: var(--bg-card);
+  background: rgba(0,0,0,0.04);
+  border-bottom-color: rgba(0,0,0,0.10);
+}
+[data-theme="light"] .bs-table thead {
+  background: rgba(0,0,0,0.03);
+}
+[data-theme="light"] .bs-table th {
+  border-bottom-color: rgba(0,0,0,0.10);
+  border-right-color: rgba(0,0,0,0.06);
+}
+[data-theme="light"] .bs-table td {
+  border-bottom-color: rgba(0,0,0,0.08);
+  border-right-color: rgba(0,0,0,0.05);
 }
 [data-theme="light"] .bs-table tbody tr:hover {
   background: rgba(var(--a), 0.03);
