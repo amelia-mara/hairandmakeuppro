@@ -982,6 +982,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             const charEvents = breakdown.continuityEvents.filter((e) => e.characterId === ch.id);
             return (
               <CharBlock key={ch.id} char={ch} cb={cb}
+                sceneId={scene.id}
                 looks={MOCK_LOOKS.filter((l) => l.characterId === ch.id)}
                 highlighted={activeCharacterId === ch.id}
                 onUpdate={(d) => onUpdate(ch.id, d)}
@@ -1054,7 +1055,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, sceneId }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -1062,9 +1063,47 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   onAddCharEvent: (charId: string) => void;
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (eventId: string) => void;
+  sceneId: string;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
+
+  const tagStore = useTagStore();
+  const sceneTags = tagStore.getTagsForScene(sceneId).filter((t) => t.characterId === char.id);
+
+  /* Category-specific tags (single words/short phrases → pills) */
+  const hairTags = sceneTags.filter((t) => t.categoryId === 'hair');
+  const makeupTags = sceneTags.filter((t) => t.categoryId === 'makeup');
+  const wardrobeTags = sceneTags.filter((t) => t.categoryId === 'wardrobe');
+  const sfxTags = sceneTags.filter((t) => t.categoryId === 'sfx');
+  const healthTags = sceneTags.filter((t) => t.categoryId === 'health');
+  const injuryTags = sceneTags.filter((t) => t.categoryId === 'injuries');
+  const stuntTags = sceneTags.filter((t) => t.categoryId === 'stunts');
+  const weatherTags = sceneTags.filter((t) => t.categoryId === 'weather');
+
+  /* Descriptive tags — cast tags with a description, or any tag with description text */
+  const descTags = sceneTags.filter((t) => {
+    if (t.categoryId === 'cast') return true;
+    return false;
+  }).filter((t) => {
+    /* Skip plain character-name cast tags (used only for highlighting) */
+    if (t.categoryId === 'cast' && !t.description && t.text.trim().toUpperCase() === char.name.toUpperCase()) return false;
+    return true;
+  });
+
+  const TagPills = ({ tags, color }: { tags: ScriptTag[]; color: string }) =>
+    tags.length > 0 ? (
+      <div className="cb-tag-row">
+        {tags.map((t) => (
+          <span key={t.id} className="cb-tag-pill" style={{ borderColor: color, color }}>
+            {t.text}
+            <button className="cb-tag-remove" onClick={() => tagStore.removeTag(t.id)}>×</button>
+          </span>
+        ))}
+      </div>
+    ) : null;
+
+  const catColor = (id: string) => BREAKDOWN_CATEGORIES.find((c) => c.id === id)?.color || '#999';
 
   return (
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
@@ -1084,16 +1123,49 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
         </select>
       </div>
 
+      {descTags.length > 0 && (
+        <div className="cb-desc-tags">
+          {descTags.map((t) => {
+            const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === t.categoryId);
+            return (
+              <div key={t.id} className="cb-desc-card">
+                <div className="cb-desc-header">
+                  <span className="cb-desc-cat" style={{ color: cat?.color }}>
+                    <span className="bd-legend-swatch" style={{ background: cat?.color }} /> {cat?.label}
+                  </span>
+                  <button className="cb-tag-remove" onClick={() => tagStore.removeTag(t.id)}>×</button>
+                </div>
+                <div className="cb-desc-text">"{t.text}"</div>
+                {t.description && <div className="cb-desc-note">{t.description}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="cb-field">
         <label className="cb-label">Enters With</label>
         <div className="cb-hmw">
-          <FInput label="Hair" value={cb.entersWith.hair} onChange={(v) => ue('entersWith', 'hair', v)} />
-          <FInput label="Makeup" value={cb.entersWith.makeup} onChange={(v) => ue('entersWith', 'makeup', v)} />
-          <FInput label="Wardrobe" value={cb.entersWith.wardrobe} onChange={(v) => ue('entersWith', 'wardrobe', v)} />
+          <div><FInput label="Hair" value={cb.entersWith.hair} onChange={(v) => ue('entersWith', 'hair', v)} /><TagPills tags={hairTags} color={catColor('hair')} /></div>
+          <div><FInput label="Makeup" value={cb.entersWith.makeup} onChange={(v) => ue('entersWith', 'makeup', v)} /><TagPills tags={makeupTags} color={catColor('makeup')} /></div>
+          <div><FInput label="Wardrobe" value={cb.entersWith.wardrobe} onChange={(v) => ue('entersWith', 'wardrobe', v)} /><TagPills tags={wardrobeTags} color={catColor('wardrobe')} /></div>
         </div>
       </div>
 
-      <FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} />
+      <div className="cb-field">
+        <FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} />
+        <TagPills tags={sfxTags} color={catColor('sfx')} />
+      </div>
+
+      {(healthTags.length > 0 || injuryTags.length > 0 || stuntTags.length > 0 || weatherTags.length > 0) && (
+        <div className="cb-field">
+          <label className="cb-label">Tagged from Script</label>
+          {healthTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('health') }}>Health</span><TagPills tags={healthTags} color={catColor('health')} /></>}
+          {injuryTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('injuries') }}>Injuries</span><TagPills tags={injuryTags} color={catColor('injuries')} /></>}
+          {stuntTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('stunts') }}>Stunts</span><TagPills tags={stuntTags} color={catColor('stunts')} /></>}
+          {weatherTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('weather') }}>Weather</span><TagPills tags={weatherTags} color={catColor('weather')} /></>}
+        </div>
+      )}
 
       <div className="cb-field">
         <label className="cb-label">Changes</label>
