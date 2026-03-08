@@ -639,6 +639,20 @@
 [data-theme="light"] .sv-tag-popup-char-btn:hover {
   background: rgba(var(--a), 0.08) !important;
 }
+[data-theme="light"] .sv-tag-popup-select {
+  background: rgba(0,0,0,0.03) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="light"] .sv-tag-popup-select option {
+  background: #fff !important;
+  color: #1a1a1a !important;
+}
+[data-theme="light"] .sv-tag-popup-desc {
+  background: rgba(0,0,0,0.03) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: var(--text-primary) !important;
+}
 
 /* Floating zoom controls */
 [data-theme="light"] .bd-zoom-float {
@@ -3252,6 +3266,66 @@ body {
   color: var(--text-muted);
   font-style: italic;
 }
+.sv-tag-popup-char-btn--confirm {
+  background: rgba(var(--a), 0.15);
+  border-color: rgba(var(--a), 0.35);
+  color: var(--accent);
+  font-weight: 600;
+}
+.sv-tag-popup-char-btn--confirm:hover {
+  background: rgba(var(--a), 0.25);
+}
+.sv-tag-popup-select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.sv-tag-popup-select:focus {
+  border-color: rgba(var(--a), 0.45);
+}
+.sv-tag-popup-select option {
+  background: #1a1816;
+  color: var(--text-primary);
+}
+.sv-tag-popup-desc {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  resize: vertical;
+  min-height: 40px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.sv-tag-popup-desc:focus {
+  border-color: rgba(var(--a), 0.45);
+}
+.sv-tag-popup-desc::placeholder {
+  color: var(--text-muted);
+}
+.sv-tag-popup-actions {
+  display: flex;
+  gap: 6px;
+}
+.sv-tag-popup-actions .sv-tag-popup-char-btn {
+  flex: 1;
+  text-align: center;
+}
 
 /* ━━━ Inline highlights ━━━ */
 .sv-highlight {
@@ -3480,6 +3554,14 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   font-style: italic;
+}
+.cv-note-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* ━━━ Right Panel Header ━━━ */
