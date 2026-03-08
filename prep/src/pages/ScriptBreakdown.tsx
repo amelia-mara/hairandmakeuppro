@@ -300,7 +300,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                   onSceneVisible={onSceneVisible}
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
-                  showLegend={showLegend}
                 />
                 <div className="bd-zoom-float">
                   <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
@@ -417,13 +416,12 @@ interface TagPopupState {
   categoryId?: string;
 }
 
-function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick, showLegend }: {
+function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
   scenes: Scene[];
   selectedSceneId: string;
   onSceneVisible: (id: string) => void;
   fontSize: number;
   onCharClick: (id: string) => void;
-  showLegend: boolean;
 }) {
   const charNames = MOCK_CHARACTERS.map((c) => c.name);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -529,8 +527,8 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
     const sceneTags = tagStore.getTagsForScene(scene.id);
     const lines = scene.scriptContent.split('\n');
 
-    if (!showLegend || sceneTags.length === 0) {
-      /* Plain rendering (original behaviour) */
+    if (sceneTags.length === 0) {
+      /* Plain rendering (no tags to show) */
       return lines.map((line, i) => {
         const trimmed = line.trim();
         const matched = charNames.find((name) => {
@@ -601,7 +599,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
         </div>
       );
     });
-  }, [tagStore, showLegend, charNames, onCharClick]);
+  }, [tagStore, charNames, onCharClick]);
 
   /* Scroll to scene when selected from the scene list */
   useEffect(() => {
