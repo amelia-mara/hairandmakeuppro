@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
-  useBreakdownStore, useTagStore,
+  useBreakdownStore, useTagStore, useSynopsisStore,
   type Scene, type Character, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
   type ScriptTag,
 } from '@/stores/breakdownStore';
@@ -99,6 +99,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
   const statusTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const store = useBreakdownStore();
+  const synopsisStore = useSynopsisStore();
   const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
   const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!);
   const breakdown = store.getBreakdown(selectedSceneId);
@@ -230,10 +231,10 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
                   </div>
                   {isActive && (
                     <div className="sl-card-expand">
-                      {s.synopsis && (
+                      {synopsisStore.getSynopsis(s.id, s.synopsis) && (
                         <div className="sl-expand-pill">
                           <span className="sl-expand-label">Synopsis</span>
-                          <span className="sl-expand-value">{s.synopsis}</span>
+                          <span className="sl-expand-value">{synopsisStore.getSynopsis(s.id, s.synopsis)}</span>
                         </div>
                       )}
                       {s.characterIds.length > 0 && (
@@ -899,11 +900,9 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
-  const [synopsis, setSynopsis] = useState(scene.synopsis);
-
-  useEffect(() => {
-    setSynopsis(scene.synopsis);
-  }, [scene.id, scene.synopsis]);
+  const synopsisStore = useSynopsisStore();
+  const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
+  const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
 
   useEffect(() => {
     const el = sentinelRef.current;
