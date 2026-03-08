@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
-  useBreakdownStore, useTagStore, useSynopsisStore, useSceneMetaStore,
+  useBreakdownStore, useTagStore, useSynopsisStore,
   type Scene, type Character, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
   type ScriptTag,
 } from '@/stores/breakdownStore';
@@ -100,7 +100,6 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
 
   const store = useBreakdownStore();
   const synopsisStore = useSynopsisStore();
-  const metaStore = useSceneMetaStore();
   const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
   const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!);
   const breakdown = store.getBreakdown(selectedSceneId);
@@ -110,7 +109,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
       const sc = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
       store.setBreakdown(selectedSceneId, {
         sceneId: selectedSceneId,
-        timeline: { day: '', time: '', type: '', note: '' },
+        timeline: { day: '', time: sc.dayNight === 'DAY' ? 'Day' : sc.dayNight === 'NIGHT' ? 'Night' : sc.dayNight === 'DAWN' ? 'Dawn' : sc.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
         characters: sc.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },
@@ -214,19 +213,18 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
             {filteredScenes.map((s) => {
               const status = store.getCompletionStatus(s.id, s);
               const isActive = s.id === selectedSceneId;
-              const sm = metaStore.getMeta(s.id, s);
               const bd = store.getBreakdown(s.id);
-              const colorClass = sceneColorClass(sm.intExt, sm.dayNight);
+              const colorClass = sceneColorClass(s.intExt, s.dayNight);
               return (
                 <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
                   onClick={() => selectScene(s.id)}>
                   <div className="sl-card-top">
                     <span className="sl-card-num">{s.number}</span>
-                    <span className="sl-card-location">{sm.intExt}. {sm.location}</span>
+                    <span className="sl-card-location">{s.intExt}. {s.location}</span>
                   </div>
                   <div className="sl-card-meta">
-                    <span className={`sl-card-pill sl-pill--${sm.dayNight.toLowerCase()}`}>{sm.dayNight}</span>
-                    <span className="sl-card-detail">{sm.intExt}</span>
+                    <span className={`sl-card-pill sl-pill--${s.dayNight.toLowerCase()}`}>{s.dayNight}</span>
+                    <span className="sl-card-detail">{s.intExt}</span>
                     {s.characterIds.length > 0 && (
                       <span className="sl-card-cast">{s.characterIds.length}</span>
                     )}
@@ -915,9 +913,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
   const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
 
-  const metaStore = useSceneMetaStore();
-  const meta = metaStore.getMeta(scene.id, scene);
-
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -936,27 +931,10 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
           </span>
         </div>
-        <div className="fp-scene-tagline">{scene.number} {meta.intExt}. {meta.location} — {meta.dayNight}</div>
+        <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
       </div>
 
       <div className="fp-scroll">
-        {/* Scene Heading */}
-        <div className="fp-section fp-section--pill">
-          <div className="fp-section-title">Scene Heading</div>
-          <div className="fp-row-3">
-            <FSelect label="INT/EXT" value={meta.intExt}
-              options={['INT', 'EXT']}
-              onChange={(v) => metaStore.setMeta(scene.id, { intExt: v as 'INT' | 'EXT' })} />
-            <FSelect label="Time of Day" value={meta.dayNight}
-              options={['DAY', 'NIGHT', 'DAWN', 'DUSK']}
-              onChange={(v) => metaStore.setMeta(scene.id, { dayNight: v as 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' })} />
-          </div>
-          <div style={{ marginTop: 6 }}>
-            <FInput label="Location" value={meta.location} placeholder="e.g. POLICE STATION - INTERROGATION ROOM"
-              onChange={(v) => metaStore.setMeta(scene.id, { location: v })} />
-          </div>
-        </div>
-
         {/* Synopsis */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
