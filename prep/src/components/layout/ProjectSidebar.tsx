@@ -8,7 +8,7 @@ interface ProjectSidebarProps {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
+  { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'continuity', label: 'Continuity', icon: ContinuityIcon },
   { id: 'budget', label: 'Budget', icon: BudgetIcon },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
@@ -73,7 +73,7 @@ function DashboardIcon() {
   );
 }
 
-function BreakdownIcon() {
+function ScriptIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>

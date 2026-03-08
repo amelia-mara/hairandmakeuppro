@@ -50,7 +50,7 @@ function App() {
           {activePage === 'dashboard' && (
             <ProjectDashboard projectId={selectedProjectId} />
           )}
-          {activePage === 'breakdown' && (
+          {activePage === 'script' && (
             <ScriptBreakdown projectId={selectedProjectId} />
           )}
         </ProjectLayout>

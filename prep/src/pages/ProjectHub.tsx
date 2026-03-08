@@ -125,7 +125,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
               Create New Project
             </span>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Start your breakdown
+              Start your script
             </span>
           </button>
 
