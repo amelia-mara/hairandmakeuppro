@@ -32,6 +32,7 @@ function useTheme() {
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
+  { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
   { id: 'continuity', label: 'Continuity', icon: ContinuityIcon },
   { id: 'budget', label: 'Budget', icon: BudgetIcon },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
@@ -288,6 +289,15 @@ function ScriptIcon() {
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
       <path d="M14 2v6h6"/>
       <path d="M16 13H8M16 17H8M10 9H8"/>
+    </svg>
+  );
+}
+
+function BreakdownIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
     </svg>
   );
 }
