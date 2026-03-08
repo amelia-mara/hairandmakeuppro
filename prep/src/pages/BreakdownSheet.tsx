@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, BREAKDOWN_CATEGORIES,
   useBreakdownStore, useTagStore, useSynopsisStore,
-  type Scene, type Character, type CharacterBreakdown, type SceneBreakdown,
+  type Scene, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
 
 /* ━━━ Helpers ━━━ */
@@ -204,7 +204,7 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
 
       {/* Spreadsheet */}
       <div className="bs-scroll" ref={scrollRef}>
-        {scenesWithCast.map((scene, sIdx) => {
+        {scenesWithCast.map((scene) => {
           const globalIdx = scenes.indexOf(scene);
           const bd = store.getBreakdown(scene.id);
           const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
