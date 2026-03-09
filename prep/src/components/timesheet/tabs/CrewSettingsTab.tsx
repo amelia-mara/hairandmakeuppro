@@ -8,6 +8,12 @@ import type {
   CrewMember,
   RateCard,
 } from '@/stores/timesheetStore';
+import {
+  CURRENCY_SYMBOLS,
+  BASE_CONTRACTS,
+  DAY_TYPES,
+} from '@/stores/timesheetStore';
+import type { BaseContract, BECTUDayType } from '@/stores/timesheetStore';
 
 interface CrewSettingsTabProps {
   production: ProductionSettings;
@@ -60,9 +66,7 @@ export function CrewSettingsTab({
             onUpdateRateCard={(updates) => onUpdateRateCard(selectedCrew.id, updates)}
           />
         ) : (
-          <div className="ts-empty-state">
-            <p>Select a crew member or add one to get started</p>
-          </div>
+          <RateCardPreview production={production} hasCrew={crew.length > 0} onAddCrew={() => setShowAddModal(true)} />
         )}
       </div>
 
@@ -77,6 +81,97 @@ export function CrewSettingsTab({
           onClose={() => setShowAddModal(false)}
         />
       )}
+    </div>
+  );
+}
+
+function RateCardPreview({ production, hasCrew, onAddCrew }: { production: ProductionSettings; hasCrew: boolean; onAddCrew: () => void }) {
+  const sym = CURRENCY_SYMBOLS[production.currency];
+  const contractLabel = BASE_CONTRACTS[production.defaultBaseContract]?.label ?? production.defaultBaseContract;
+  const dayTypeLabel = `${production.defaultDayType} — ${DAY_TYPES[production.defaultDayType]?.name ?? ''}`;
+
+  return (
+    <div className="ts-card ts-rate-card-panel ts-preview-panel">
+      <div className="ts-card-header">
+        <h3 className="ts-card-title" style={{ opacity: 0.5 }}>Crew Member Name</h3>
+        <span className="ts-type-badge ts-type-paye" style={{ opacity: 0.5 }}>PAYE</span>
+      </div>
+      <div className="ts-card-body">
+        <div className="ts-section-label">PERSONAL DETAILS</div>
+        <div className="ts-form-grid ts-form-grid-3">
+          <div className="ts-form-field">
+            <label className="ts-label">Name</label>
+            <input className="ts-input" disabled placeholder="—" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Position</label>
+            <input className="ts-input" disabled placeholder="—" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Department</label>
+            <select className="ts-select" disabled><option>Makeup</option></select>
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Employment Type</label>
+            <select className="ts-select" disabled><option>PAYE</option></select>
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Email</label>
+            <input className="ts-input" disabled placeholder="—" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Phone</label>
+            <input className="ts-input" disabled placeholder="—" />
+          </div>
+        </div>
+
+        <div className="ts-section-label" style={{ marginTop: 24 }}>RATE CARD</div>
+        <div className="ts-form-grid ts-form-grid-3">
+          <div className="ts-form-field">
+            <label className="ts-label">Daily Rate ({sym})</label>
+            <input className="ts-input" disabled placeholder="0" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Base Contract</label>
+            <select className="ts-select" disabled><option>{contractLabel}</option></select>
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Day Type</label>
+            <select className="ts-select" disabled><option>{dayTypeLabel}</option></select>
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Kit Rental ({sym})</label>
+            <input className="ts-input" disabled placeholder="0" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">OT Multiplier</label>
+            <input className="ts-input" disabled value="1.5" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Late Night Multiplier</label>
+            <input className="ts-input" disabled value="2" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Pre-Call Multiplier</label>
+            <input className="ts-input" disabled value="1.5" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">6th Day Multiplier</label>
+            <input className="ts-input" disabled value="1.5" />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">7th Day Multiplier</label>
+            <input className="ts-input" disabled value="2" />
+          </div>
+        </div>
+
+        <div className="ts-preview-overlay">
+          <p>{hasCrew ? 'Select a crew member to edit their details' : 'Add a crew member to get started'}</p>
+          {!hasCrew && (
+            <button className="ts-btn ts-btn-primary" onClick={onAddCrew}>+ Add Crew</button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

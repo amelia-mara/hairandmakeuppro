@@ -41,20 +41,13 @@ export function WeeklyViewTab({
 }: WeeklyViewTabProps) {
   const selectedCrew = crew.find(c => c.id === selectedCrewId);
 
-  if (crew.length === 0) {
-    return (
-      <div className="ts-empty-state">
-        <p>Add crew members in the Crew & Settings tab to begin</p>
-      </div>
-    );
-  }
-
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(selectedWeekStart, i);
     return { date, dayName: getDayName(date), shortDate: formatShortDate(date) };
   });
 
   const weekSummary = selectedCrewId ? getCrewWeekSummary(selectedCrewId, selectedWeekStart) : null;
+  const isEmpty = crew.length === 0;
 
   return (
     <div className="ts-weekly-tab">
@@ -63,14 +56,67 @@ export function WeeklyViewTab({
           weekStart={selectedWeekStart}
           onNavigate={onNavigateWeek}
         />
-        <WeeklyCrewSelector
-          crew={crew}
-          selectedCrewId={selectedCrewId}
-          onSelectCrew={onSelectCrew}
-        />
+        {!isEmpty && (
+          <WeeklyCrewSelector
+            crew={crew}
+            selectedCrewId={selectedCrewId}
+            onSelectCrew={onSelectCrew}
+          />
+        )}
       </div>
 
-      {selectedCrew && (
+      {isEmpty ? (
+        <div className="ts-weekly-grid ts-preview-grid">
+          {days.map(day => {
+            const isWeekend = day.dayName === 'Sat' || day.dayName === 'Sun';
+            return (
+              <div key={day.date} className={`ts-day-card ${isWeekend ? 'ts-day-card-weekend' : ''} ts-day-card-preview`}>
+                <div className="ts-day-header">
+                  <div className="ts-day-info">
+                    <span className="ts-day-name">{day.dayName}</span>
+                    <span className="ts-day-date">{day.shortDate}</span>
+                  </div>
+                </div>
+                <div className="ts-day-fields">
+                  <div className="ts-time-row">
+                    <div className="ts-time-field">
+                      <label className="ts-time-label">Pre-Call</label>
+                      <input className="ts-time-input" type="time" disabled />
+                    </div>
+                    <div className="ts-time-field">
+                      <label className="ts-time-label">Unit Call</label>
+                      <input className="ts-time-input" type="time" disabled />
+                    </div>
+                    <div className="ts-time-field">
+                      <label className="ts-time-label">Lunch</label>
+                      <input className="ts-time-input" type="time" disabled />
+                    </div>
+                    <div className="ts-time-field">
+                      <label className="ts-time-label">Out of Chair</label>
+                      <input className="ts-time-input" type="time" disabled />
+                    </div>
+                    <div className="ts-time-field">
+                      <label className="ts-time-label">Wrap Out</label>
+                      <input className="ts-time-input" type="time" disabled />
+                    </div>
+                  </div>
+                  <div className="ts-day-options">
+                    <select className="ts-select ts-select-sm" disabled><option>SWD</option></select>
+                    <label className="ts-checkbox-label"><input type="checkbox" disabled /> 6th Day</label>
+                    <label className="ts-checkbox-label"><input type="checkbox" disabled /> 7th Day</label>
+                  </div>
+                </div>
+                <div className="ts-day-notes">
+                  <input className="ts-notes-input" type="text" disabled placeholder="Notes..." />
+                </div>
+              </div>
+            );
+          })}
+          <div className="ts-preview-overlay ts-preview-overlay-weekly">
+            <p>Add crew members in the Crew & Settings tab to start logging time</p>
+          </div>
+        </div>
+      ) : selectedCrew ? (
         <div className="ts-weekly-grid">
           {days.map(day => {
             const entry = getEntry(selectedCrew.id, day.date);
@@ -96,7 +142,7 @@ export function WeeklyViewTab({
             />
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
