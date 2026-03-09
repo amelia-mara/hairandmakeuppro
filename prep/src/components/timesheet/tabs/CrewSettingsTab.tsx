@@ -13,7 +13,7 @@ import {
   BASE_CONTRACTS,
   DAY_TYPES,
 } from '@/stores/timesheetStore';
-import type { BaseContract, BECTUDayType } from '@/stores/timesheetStore';
+
 
 interface CrewSettingsTabProps {
   production: ProductionSettings;
