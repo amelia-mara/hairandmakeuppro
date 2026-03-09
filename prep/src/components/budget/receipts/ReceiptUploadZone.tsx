@@ -1,73 +1,85 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 
 interface ReceiptUploadZoneProps {
   onFileSelected: (file: File) => void;
   onApiSettings: () => void;
 }
 
-export function ReceiptUploadZone({ onFileSelected, onApiSettings }: ReceiptUploadZoneProps) {
-  const [isDragActive, setIsDragActive] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (file) onFileSelected(file);
-  }, [onFileSelected]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onFileSelected(file);
-    e.target.value = '';
-  };
-
-  return (
-    <div className="budget-upload-card">
-      <div className="budget-upload-header">
-        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1rem', fontWeight: 600 }}>
-          Upload Receipts
-        </h3>
-        <button className="btn-ghost budget-btn-sm" onClick={onApiSettings}>
-          <SettingsIcon />
-          API Settings
-        </button>
-      </div>
-
-      <div
-        className={`budget-drop-zone ${isDragActive ? 'active' : ''}`}
-        onDragEnter={(e) => { e.preventDefault(); setIsDragActive(true); }}
-        onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
-        onDragLeave={() => setIsDragActive(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/heic,application/pdf"
-          onChange={handleChange}
-          style={{ display: 'none' }}
-        />
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-          <CameraIcon />
-          <UploadIcon />
-        </div>
-        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
-          Drag and drop or click to browse
-        </div>
-        <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-          Accepts JPG, PNG, HEIC, PDF up to 10MB
-        </div>
-      </div>
-
-      <div className="budget-sync-note">
-        <SmartphoneIcon />
-        <span>Syncs with Checks Happy</span>
-      </div>
-    </div>
-  );
+export interface ReceiptUploadZoneHandle {
+  triggerFilePicker: () => void;
 }
+
+export const ReceiptUploadZone = forwardRef<ReceiptUploadZoneHandle, ReceiptUploadZoneProps>(
+  function ReceiptUploadZone({ onFileSelected, onApiSettings }, ref) {
+    const [isDragActive, setIsDragActive] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      triggerFilePicker: () => {
+        inputRef.current?.click();
+      },
+    }));
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragActive(false);
+      const file = e.dataTransfer.files[0];
+      if (file) onFileSelected(file);
+    }, [onFileSelected]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) onFileSelected(file);
+      e.target.value = '';
+    };
+
+    return (
+      <div className="budget-upload-card">
+        <div className="budget-upload-header">
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1rem', fontWeight: 600 }}>
+            Upload Receipts
+          </h3>
+          <button className="btn-ghost budget-btn-sm" onClick={onApiSettings}>
+            <SettingsIcon />
+            API Settings
+          </button>
+        </div>
+
+        <div
+          className={`budget-drop-zone ${isDragActive ? 'active' : ''}`}
+          onDragEnter={(e) => { e.preventDefault(); setIsDragActive(true); }}
+          onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+          onDragLeave={() => setIsDragActive(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/heic,application/pdf"
+            onChange={handleChange}
+            style={{ display: 'none' }}
+          />
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <CameraIcon />
+            <UploadIcon />
+          </div>
+          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+            Drag and drop or click to browse
+          </div>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            Accepts JPG, PNG, HEIC, PDF up to 10MB
+          </div>
+        </div>
+
+        <div className="budget-sync-note">
+          <SmartphoneIcon />
+          <span>Syncs with Checks Happy</span>
+        </div>
+      </div>
+    );
+  }
+);
 
 function CameraIcon() {
   return (
