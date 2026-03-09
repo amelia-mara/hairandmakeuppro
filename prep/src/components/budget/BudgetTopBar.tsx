@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { onSaveStatusChange, type CurrencyCode, CURRENCY_SYMBOLS } from '@/stores/budgetStore';
+import { onSaveStatusChange } from '@/stores/budgetStore';
 
 interface BudgetTopBarProps {
-  currency: CurrencyCode;
   onImportCSV: () => void;
   onExport: () => void;
 }
@@ -28,7 +27,7 @@ export function BudgetTopBar({ onImportCSV, onExport }: BudgetTopBarProps) {
         </button>
         {saveStatus !== 'idle' && (
           <div className="budget-save-indicator" style={{
-            opacity: saveStatus === 'idle' ? 0 : 1,
+            opacity: 1,
             transition: 'opacity 0.3s ease',
           }}>
             {saveStatus === 'saving' && (

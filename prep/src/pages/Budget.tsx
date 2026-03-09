@@ -56,7 +56,6 @@ export function Budget({ projectId }: BudgetProps) {
   return (
     <div className="budget-page">
       <BudgetTopBar
-        currency={currency}
         onImportCSV={() => {}}
         onExport={() => {}}
       />
