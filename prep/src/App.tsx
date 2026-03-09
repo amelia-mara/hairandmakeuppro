@@ -8,6 +8,7 @@ import { ScriptBreakdown } from '@/pages/ScriptBreakdown';
 import { BreakdownSheet } from '@/pages/BreakdownSheet';
 import { ContinuityTracker } from '@/pages/ContinuityTracker';
 import { Budget } from '@/pages/Budget';
+import { Timesheet } from '@/pages/Timesheet';
 import { useProjectStore } from '@/stores/projectStore';
 
 function App() {
@@ -64,6 +65,9 @@ function App() {
           )}
           {activePage === 'budget' && (
             <Budget projectId={selectedProjectId} />
+          )}
+          {activePage === 'timesheet' && (
+            <Timesheet projectId={selectedProjectId} />
           )}
         </ProjectLayout>
       </div>

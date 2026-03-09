@@ -6273,3 +6273,939 @@ body {
 [data-theme="light"] .budget-toast {
   color: white;
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TIMESHEET SYSTEM
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.ts-page {
+  padding: 0;
+  max-width: 100%;
+  min-height: calc(100vh - 80px);
+}
+
+.ts-content {
+  padding: 24px;
+}
+
+/* ── Top Bar ──────────────────────────────────── */
+
+.ts-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-card);
+  background: var(--bg-card);
+}
+
+.ts-top-bar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.ts-top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ts-save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ts-save-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(var(--a), 0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Tabs ─────────────────────────────────────── */
+
+.ts-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-card);
+  background: var(--bg-card);
+  padding: 0 24px;
+}
+
+.ts-tab {
+  padding: 12px 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.ts-tab:hover {
+  color: var(--text-primary);
+}
+
+.ts-tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Cards ────────────────────────────────────── */
+
+.ts-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ts-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.ts-card-body {
+  padding: 20px;
+}
+
+/* ── Forms ────────────────────────────────────── */
+
+.ts-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ts-form-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.ts-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ts-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.ts-input,
+.ts-select {
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: rgba(var(--a), 0.04);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ts-input:focus,
+.ts-select:focus {
+  border-color: var(--accent);
+}
+
+.ts-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.ts-select-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  padding-right: 24px;
+}
+
+.ts-help-text {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.ts-section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.ts-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.ts-section-subtitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0 0 12px 0;
+}
+
+/* ── Toggle ──────────────────────────────────── */
+
+.ts-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.ts-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ts-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--a), 0.15);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+.ts-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.ts-toggle input:checked + .ts-toggle-slider {
+  background: var(--accent);
+}
+
+.ts-toggle input:checked + .ts-toggle-slider::before {
+  transform: translateX(16px);
+}
+
+/* ── Crew Tab Layout ─────────────────────────── */
+
+.ts-crew-tab {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.ts-crew-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ts-crew-right {
+  min-height: 300px;
+}
+
+/* ── Crew List ───────────────────────────────── */
+
+.ts-crew-list-body {
+  padding: 0;
+}
+
+.ts-crew-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ts-crew-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-card);
+  transition: background 0.15s;
+}
+
+.ts-crew-row:last-child {
+  border-bottom: none;
+}
+
+.ts-crew-row:hover {
+  background: rgba(var(--a), 0.03);
+}
+
+.ts-crew-row-active {
+  background: rgba(var(--a), 0.06);
+  border-left: 3px solid var(--accent);
+}
+
+.ts-crew-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ts-crew-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ts-crew-position {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.ts-crew-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ts-crew-dept {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+/* ── Type Badges ─────────────────────────────── */
+
+.ts-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.ts-type-paye {
+  background: rgba(209, 123, 107, 0.12);
+  color: #d17b6b;
+}
+
+.ts-type-ltd {
+  background: rgba(107, 155, 209, 0.12);
+  color: #6b9bd1;
+}
+
+.ts-type-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ts-type-dot-paye {
+  background: #d17b6b;
+}
+
+.ts-type-dot-ltd {
+  background: #6b9bd1;
+}
+
+/* ── Buttons ─────────────────────────────────── */
+
+.ts-btn-sm {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  gap: 4px;
+}
+
+.ts-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.ts-delete-btn:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+/* ── Empty State ─────────────────────────────── */
+
+.ts-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.ts-empty-hint {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* ── Modal ───────────────────────────────────── */
+
+.ts-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.ts-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.ts-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-modal-header h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.ts-modal-body {
+  padding: 24px;
+}
+
+.ts-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-card);
+}
+
+/* ── Weekly View ─────────────────────────────── */
+
+.ts-weekly-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ts-weekly-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ts-week-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ts-week-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(var(--a), 0.06);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ts-week-nav-btn:hover {
+  background: rgba(var(--a), 0.12);
+  color: var(--text-primary);
+}
+
+.ts-week-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  white-space: nowrap;
+}
+
+/* ── Crew Chips ──────────────────────────────── */
+
+.ts-crew-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ts-crew-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: rgba(var(--a), 0.04);
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ts-crew-chip:hover {
+  background: rgba(var(--a), 0.08);
+}
+
+.ts-crew-chip-active {
+  background: rgba(var(--a), 0.10);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ts-crew-chip-name {
+  white-space: nowrap;
+}
+
+/* ── Day Cards ───────────────────────────────── */
+
+.ts-weekly-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ts-day-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.ts-day-card-weekend {
+  border-left: 3px solid rgba(var(--a), 0.15);
+}
+
+.ts-day-card-filled {
+  border-left: 3px solid var(--accent);
+}
+
+.ts-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-day-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ts-day-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ts-day-date {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.ts-day-total {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.ts-day-fields {
+  padding: 12px 16px;
+}
+
+.ts-time-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ts-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 100px;
+}
+
+.ts-time-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.ts-time-input {
+  padding: 6px 8px;
+  font-size: 0.8125rem;
+  font-family: 'DM Mono', 'SF Mono', monospace;
+  color: var(--text-primary);
+  background: rgba(var(--a), 0.04);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ts-time-input:focus {
+  border-color: var(--accent);
+}
+
+.ts-day-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(var(--a), 0.04);
+}
+
+.ts-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ts-checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+/* ── Day Breakdown ───────────────────────────── */
+
+.ts-day-breakdown {
+  padding: 8px 16px 12px;
+  border-top: 1px solid var(--border-card);
+}
+
+.ts-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.ts-breakdown-warn {
+  color: #f59e0b;
+}
+
+.ts-breakdown-flag {
+  color: #ef4444;
+}
+
+.ts-day-flags {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ts-flag-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 4px;
+  background: rgba(var(--a), 0.08);
+  color: var(--text-muted);
+}
+
+/* ── Notes ───────────────────────────────────── */
+
+.ts-day-notes {
+  padding: 0 16px 10px;
+}
+
+.ts-notes-input {
+  width: 100%;
+  padding: 6px 0;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ts-notes-input:focus {
+  border-bottom-color: var(--border-card);
+}
+
+.ts-notes-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ── Week Summary ────────────────────────────── */
+
+.ts-week-summary {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ts-week-summary-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-week-summary-body {
+  padding: 20px;
+}
+
+.ts-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ts-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ts-summary-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.ts-summary-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ts-summary-total {
+  color: var(--accent);
+}
+
+.ts-summary-breakdown {
+  border-top: 1px solid var(--border-card);
+  padding-top: 12px;
+}
+
+.ts-summary-break-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ── Export Tab ───────────────────────────────── */
+
+.ts-export-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ts-export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ts-export-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.ts-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ts-stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ts-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ts-export-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ts-export-table-wrap {
+  overflow-x: auto;
+}
+
+.ts-export-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.ts-export-table thead th {
+  padding: 10px 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 2px solid var(--border-card);
+}
+
+.ts-export-table tbody td {
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-export-table tfoot td {
+  padding: 12px 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-top: 2px solid var(--border-card);
+}
+
+.ts-cell-total {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.ts-export-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Toast ───────────────────────────────────── */
+
+.ts-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  animation: fadeInUp 0.25s ease;
+}
+
+/* ── Rate Card Panel ─────────────────────────── */
+
+.ts-rate-card-panel .ts-card-body {
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+}
+
+/* ── Light Theme Overrides ───────────────────── */
+
+[data-theme="light"] .ts-input,
+[data-theme="light"] .ts-select {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .ts-time-input {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .ts-modal {
+  background: var(--bg-card);
+}
+
+[data-theme="light"] .ts-toast {
+  color: white;
+  background: #333;
+}
