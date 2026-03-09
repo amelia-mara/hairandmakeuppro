@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { TimesheetTopBar } from '@/components/timesheet/TimesheetTopBar';
 import { TimesheetTabs } from '@/components/timesheet/TimesheetTabs';
+import { TimesheetSidebar } from '@/components/timesheet/TimesheetSidebar';
 import { CrewSettingsTab } from '@/components/timesheet/tabs/CrewSettingsTab';
 import { WeeklyViewTab } from '@/components/timesheet/tabs/WeeklyViewTab';
 import { ExportTab } from '@/components/timesheet/tabs/ExportTab';
@@ -46,49 +47,58 @@ export function Timesheet({ projectId }: TimesheetProps) {
       <TimesheetTopBar />
       <TimesheetTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="ts-content">
-        {activeTab === 'crew' && (
-          <CrewSettingsTab
-            production={production}
-            crew={crew}
-            selectedCrewId={selectedCrewId}
-            onSetProduction={setProduction}
-            onAddCrew={addCrew}
-            onUpdateCrew={updateCrew}
-            onRemoveCrew={removeCrew}
-            onUpdateRateCard={updateCrewRateCard}
-            onSelectCrew={setSelectedCrew}
-            onShowToast={showToast}
-          />
-        )}
-        {activeTab === 'weekly' && (
-          <WeeklyViewTab
-            crew={crew}
-            selectedCrewId={selectedCrewId}
-            selectedWeekStart={selectedWeekStart}
-            production={production}
-            onSelectCrew={setSelectedCrew}
-            onSetWeekStart={setSelectedWeekStart}
-            onNavigateWeek={navigateWeek}
-            getEntry={getEntry}
-            saveEntry={saveEntry}
-            calculateEntry={calculateEntry}
-            getPreviousWrapOut={getPreviousWrapOut}
-            getCrewWeekSummary={getCrewWeekSummary}
-          />
-        )}
-        {activeTab === 'export' && (
-          <ExportTab
-            crew={crew}
-            production={production}
-            selectedWeekStart={selectedWeekStart}
-            getCrewWeekSummary={getCrewWeekSummary}
-            getTotalLabourCost={getTotalLabourCost}
-            getLTDSavings={getLTDSavings}
-            getBudgetImpact={getBudgetImpact}
-            onShowToast={showToast}
-          />
-        )}
+      <div className="ts-page-body">
+        <TimesheetSidebar
+          crew={crew}
+          production={production}
+          selectedWeekStart={selectedWeekStart}
+          getCrewWeekSummary={getCrewWeekSummary}
+        />
+
+        <div className="ts-content">
+          {activeTab === 'crew' && (
+            <CrewSettingsTab
+              production={production}
+              crew={crew}
+              selectedCrewId={selectedCrewId}
+              onSetProduction={setProduction}
+              onAddCrew={addCrew}
+              onUpdateCrew={updateCrew}
+              onRemoveCrew={removeCrew}
+              onUpdateRateCard={updateCrewRateCard}
+              onSelectCrew={setSelectedCrew}
+              onShowToast={showToast}
+            />
+          )}
+          {activeTab === 'weekly' && (
+            <WeeklyViewTab
+              crew={crew}
+              selectedCrewId={selectedCrewId}
+              selectedWeekStart={selectedWeekStart}
+              production={production}
+              onSelectCrew={setSelectedCrew}
+              onSetWeekStart={setSelectedWeekStart}
+              onNavigateWeek={navigateWeek}
+              getEntry={getEntry}
+              saveEntry={saveEntry}
+              calculateEntry={calculateEntry}
+              getPreviousWrapOut={getPreviousWrapOut}
+              getCrewWeekSummary={getCrewWeekSummary}
+            />
+          )}
+          {activeTab === 'export' && (
+            <ExportTab
+              crew={crew}
+              production={production}
+              selectedWeekStart={selectedWeekStart}
+              getCrewWeekSummary={getCrewWeekSummary}
+              getTotalLabourCost={getTotalLabourCost}
+              getLTDSavings={getLTDSavings}
+              getBudgetImpact={getBudgetImpact}
+              onShowToast={showToast}
+            />
+          )}
+        </div>
       </div>
 
       {toast && (
