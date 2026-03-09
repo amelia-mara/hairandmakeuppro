@@ -6676,7 +6676,7 @@ body {
   text-transform: capitalize;
 }
 
-/* ── Type Badges ─────────────────────────────── */
+/* ── Type Badges — 3D glass capsules ────────── */
 
 .ts-type-badge {
   display: inline-block;
@@ -6686,18 +6686,81 @@ body {
   font-weight: 700;
   letter-spacing: 0.03em;
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rim highlight on top edge */
+.ts-type-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-radius: 999px 999px 0 0;
 }
 
 .ts-type-paye {
-  background: rgba(209, 123, 107, 0.18);
-  border-color: rgba(209, 123, 107, 0.3);
+  background: linear-gradient(
+    145deg,
+    rgba(209, 123, 107, 0.22) 0%,
+    rgba(209, 123, 107, 0.14) 50%,
+    rgba(209, 123, 107, 0.10) 100%
+  );
+  border-color: rgba(209, 123, 107, 0.30);
+  border-top-color: rgba(209, 123, 107, 0.38);
   color: #e08d79;
+  box-shadow:
+    1px 0 0 0 rgba(209, 123, 107, 0.10) inset,
+    0 1px 0 0 rgba(209, 123, 107, 0.12) inset,
+    -1px -1px 2px 0 rgba(0, 0, 0, 0.35) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.25) inset,
+    2px 2px 6px -1px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ts-type-paye::after {
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(209, 123, 107, 0.12) 30%,
+    rgba(230, 160, 145, 0.30) 55%,
+    rgba(240, 180, 165, 0.40) 70%,
+    rgba(230, 160, 145, 0.25) 85%,
+    transparent 100%
+  );
 }
 
 .ts-type-ltd {
-  background: rgba(107, 155, 209, 0.18);
-  border-color: rgba(107, 155, 209, 0.3);
+  background: linear-gradient(
+    145deg,
+    rgba(107, 155, 209, 0.22) 0%,
+    rgba(107, 155, 209, 0.14) 50%,
+    rgba(107, 155, 209, 0.10) 100%
+  );
+  border-color: rgba(107, 155, 209, 0.30);
+  border-top-color: rgba(107, 155, 209, 0.38);
   color: #82aed8;
+  box-shadow:
+    1px 0 0 0 rgba(107, 155, 209, 0.10) inset,
+    0 1px 0 0 rgba(107, 155, 209, 0.12) inset,
+    -1px -1px 2px 0 rgba(0, 0, 0, 0.35) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.25) inset,
+    2px 2px 6px -1px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ts-type-ltd::after {
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(107, 155, 209, 0.12) 30%,
+    rgba(140, 180, 225, 0.30) 55%,
+    rgba(160, 195, 235, 0.40) 70%,
+    rgba(140, 180, 225, 0.25) 85%,
+    transparent 100%
+  );
 }
 
 .ts-type-dot {
