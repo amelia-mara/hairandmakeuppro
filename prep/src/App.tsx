@@ -7,6 +7,7 @@ import { ProjectDashboard } from '@/pages/ProjectDashboard';
 import { ScriptBreakdown } from '@/pages/ScriptBreakdown';
 import { BreakdownSheet } from '@/pages/BreakdownSheet';
 import { ContinuityTracker } from '@/pages/ContinuityTracker';
+import { Budget } from '@/pages/Budget';
 import { useProjectStore } from '@/stores/projectStore';
 
 function App() {
@@ -60,6 +61,9 @@ function App() {
           )}
           {activePage === 'continuity' && (
             <ContinuityTracker projectId={selectedProjectId} />
+          )}
+          {activePage === 'budget' && (
+            <Budget projectId={selectedProjectId} />
           )}
         </ProjectLayout>
       </div>
