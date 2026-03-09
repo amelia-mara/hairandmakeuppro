@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { CopyToDropdown } from './CopyToDropdown';
 import { CURRENCY_SYMBOLS, type BudgetLineItem as LineItemType, type BudgetCategory, type CurrencyCode } from '@/stores/budgetStore';
 
@@ -24,7 +24,7 @@ export function BudgetLineItemRow({
   onCopy,
 }: BudgetLineItemProps) {
   const sym = CURRENCY_SYMBOLS[currency];
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const debouncedUpdate = useCallback((field: string, value: string | number) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
