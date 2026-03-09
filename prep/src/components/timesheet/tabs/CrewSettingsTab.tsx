@@ -97,71 +97,75 @@ function RateCardPreview({ production, hasCrew, onAddCrew }: { production: Produ
         <span className="ts-type-badge ts-type-paye" style={{ opacity: 0.5 }}>PAYE</span>
       </div>
       <div className="ts-card-body">
-        <div className="ts-section-label">PERSONAL DETAILS</div>
-        <div className="ts-form-grid ts-form-grid-3">
-          <div className="ts-form-field">
-            <label className="ts-label">Name</label>
-            <input className="ts-input" disabled placeholder="—" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Position</label>
-            <input className="ts-input" disabled placeholder="—" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Department</label>
-            <select className="ts-select" disabled><option>Makeup</option></select>
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Employment Type</label>
-            <select className="ts-select" disabled><option>PAYE</option></select>
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Email</label>
-            <input className="ts-input" disabled placeholder="—" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Phone</label>
-            <input className="ts-input" disabled placeholder="—" />
+        <div className="ts-section-block">
+          <div className="ts-section-label">PERSONAL DETAILS</div>
+          <div className="ts-form-grid ts-form-grid-3">
+            <div className="ts-form-field">
+              <label className="ts-label">Name</label>
+              <input className="ts-input" disabled placeholder="—" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Position</label>
+              <input className="ts-input" disabled placeholder="—" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Department</label>
+              <select className="ts-select" disabled><option>Makeup</option></select>
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Employment Type</label>
+              <select className="ts-select" disabled><option>PAYE</option></select>
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Email</label>
+              <input className="ts-input" disabled placeholder="—" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Phone</label>
+              <input className="ts-input" disabled placeholder="—" />
+            </div>
           </div>
         </div>
 
-        <div className="ts-section-label" style={{ marginTop: 24 }}>RATE CARD</div>
-        <div className="ts-form-grid ts-form-grid-3">
-          <div className="ts-form-field">
-            <label className="ts-label">Daily Rate ({sym})</label>
-            <input className="ts-input" disabled placeholder="0" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Base Contract</label>
-            <select className="ts-select" disabled><option>{contractLabel}</option></select>
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Day Type</label>
-            <select className="ts-select" disabled><option>{dayTypeLabel}</option></select>
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Kit Rental ({sym})</label>
-            <input className="ts-input" disabled placeholder="0" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">OT Multiplier</label>
-            <input className="ts-input" disabled value="1.5" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Late Night Multiplier</label>
-            <input className="ts-input" disabled value="2" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Pre-Call Multiplier</label>
-            <input className="ts-input" disabled value="1.5" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">6th Day Multiplier</label>
-            <input className="ts-input" disabled value="1.5" />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">7th Day Multiplier</label>
-            <input className="ts-input" disabled value="2" />
+        <div className="ts-section-block">
+          <div className="ts-section-label">RATE CARD</div>
+          <div className="ts-form-grid ts-form-grid-3">
+            <div className="ts-form-field">
+              <label className="ts-label">Daily Rate ({sym})</label>
+              <input className="ts-input" disabled placeholder="0" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Base Contract</label>
+              <select className="ts-select" disabled><option>{contractLabel}</option></select>
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Day Type</label>
+              <select className="ts-select" disabled><option>{dayTypeLabel}</option></select>
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Kit Rental ({sym})</label>
+              <input className="ts-input" disabled placeholder="0" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">OT Multiplier</label>
+              <input className="ts-input" disabled value="1.5" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Late Night Multiplier</label>
+              <input className="ts-input" disabled value="2" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Pre-Call Multiplier</label>
+              <input className="ts-input" disabled value="1.5" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">6th Day Multiplier</label>
+              <input className="ts-input" disabled value="1.5" />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">7th Day Multiplier</label>
+              <input className="ts-input" disabled value="2" />
+            </div>
           </div>
         </div>
 

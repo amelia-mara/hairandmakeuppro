@@ -28,45 +28,48 @@ export function RateCardPanel({ crew, onUpdateCrew, onUpdateRateCard }: RateCard
       </div>
       <div className="ts-card-body">
         {/* Personal Details */}
-        <div className="ts-section-label">PERSONAL DETAILS</div>
-        <div className="ts-form-grid ts-form-grid-3">
-          <div className="ts-form-field">
-            <label className="ts-label">Name</label>
-            <input className="ts-input" value={crew.name} onChange={e => onUpdateCrew({ name: e.target.value })} />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Position</label>
-            <input className="ts-input" value={crew.position} onChange={e => onUpdateCrew({ position: e.target.value })} />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Department</label>
-            <select className="ts-select" value={crew.department} onChange={e => onUpdateCrew({ department: e.target.value as Department })}>
-              <option value="hair">Hair</option>
-              <option value="makeup">Makeup</option>
-              <option value="sfx">SFX</option>
-              <option value="prosthetics">Prosthetics</option>
-            </select>
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Employment Type</label>
-            <select className="ts-select" value={crew.crewType} onChange={e => onUpdateCrew({ crewType: e.target.value as CrewType })}>
-              <option value="paye">PAYE</option>
-              <option value="ltd">LTD</option>
-            </select>
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Email</label>
-            <input className="ts-input" type="email" value={crew.email} onChange={e => onUpdateCrew({ email: e.target.value })} />
-          </div>
-          <div className="ts-form-field">
-            <label className="ts-label">Phone</label>
-            <input className="ts-input" type="tel" value={crew.phone} onChange={e => onUpdateCrew({ phone: e.target.value })} />
+        <div className="ts-section-block">
+          <div className="ts-section-label">PERSONAL DETAILS</div>
+          <div className="ts-form-grid ts-form-grid-3">
+            <div className="ts-form-field">
+              <label className="ts-label">Name</label>
+              <input className="ts-input" value={crew.name} onChange={e => onUpdateCrew({ name: e.target.value })} />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Position</label>
+              <input className="ts-input" value={crew.position} onChange={e => onUpdateCrew({ position: e.target.value })} />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Department</label>
+              <select className="ts-select" value={crew.department} onChange={e => onUpdateCrew({ department: e.target.value as Department })}>
+                <option value="hair">Hair</option>
+                <option value="makeup">Makeup</option>
+                <option value="sfx">SFX</option>
+                <option value="prosthetics">Prosthetics</option>
+              </select>
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Employment Type</label>
+              <select className="ts-select" value={crew.crewType} onChange={e => onUpdateCrew({ crewType: e.target.value as CrewType })}>
+                <option value="paye">PAYE</option>
+                <option value="ltd">LTD</option>
+              </select>
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Email</label>
+              <input className="ts-input" type="email" value={crew.email} onChange={e => onUpdateCrew({ email: e.target.value })} />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Phone</label>
+              <input className="ts-input" type="tel" value={crew.phone} onChange={e => onUpdateCrew({ phone: e.target.value })} />
+            </div>
           </div>
         </div>
 
         {/* Rate Card */}
-        <div className="ts-section-label" style={{ marginTop: 24 }}>RATE CARD</div>
-        <div className="ts-form-grid ts-form-grid-3">
+        <div className="ts-section-block">
+          <div className="ts-section-label">RATE CARD</div>
+          <div className="ts-form-grid ts-form-grid-3">
           <div className="ts-form-field">
             <label className="ts-label">Daily Rate ({sym})</label>
             <input
@@ -177,6 +180,7 @@ export function RateCardPanel({ crew, onUpdateCrew, onUpdateRateCard }: RateCard
               onChange={e => onUpdateRateCard({ seventhDayMultiplier: parseFloat(e.target.value) || 2 })}
             />
           </div>
+        </div>
         </div>
       </div>
     </div>
