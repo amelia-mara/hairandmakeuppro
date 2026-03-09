@@ -7084,9 +7084,10 @@ body {
 }
 
 .ts-content {
-  padding: 24px;
+  padding: 20px;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 /* ── Timesheet Sidebar ───────────────────────── */
@@ -7463,17 +7464,25 @@ body {
 .ts-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
 .ts-form-grid-3 {
   grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
 }
 
 .ts-form-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+}
+
+.ts-form-field .ts-input,
+.ts-form-field .ts-select {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ts-label {
@@ -7608,19 +7617,23 @@ body {
 
 .ts-crew-tab {
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 24px;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
   align-items: start;
+  min-width: 0;
 }
 
 .ts-crew-left {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .ts-crew-right {
   min-height: 300px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* ── Crew List ───────────────────────────────── */
@@ -8340,13 +8353,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 16px;
+}
+
+.ts-rate-card-panel .ts-form-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .ts-rate-card-panel .ts-section-block {
   background: rgba(var(--a), 0.04);
   border: 1px solid var(--border-card);
   border-radius: 10px;
-  padding: 16px;
+  padding: 14px;
+  min-width: 0;
 }
 
 .ts-rate-card-panel .ts-section-block .ts-section-label {
