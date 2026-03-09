@@ -6438,7 +6438,7 @@ body {
 
 .ts-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1px solid var(--border-medium);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -6488,7 +6488,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .ts-input,
@@ -6496,8 +6496,8 @@ body {
   padding: 8px 12px;
   font-size: 0.8125rem;
   color: var(--text-primary);
-  background: rgba(var(--a), 0.04);
-  border: 1px solid var(--border-card);
+  background: rgba(var(--a), 0.07);
+  border: 1px solid var(--border-medium);
   border-radius: 8px;
   outline: none;
   transition: border-color 0.2s;
@@ -6532,7 +6532,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--text-heading);
   margin-bottom: 12px;
 }
 
@@ -6672,7 +6672,7 @@ body {
 
 .ts-crew-dept {
   font-size: 0.6875rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-transform: capitalize;
 }
 
@@ -6680,21 +6680,24 @@ body {
 
 .ts-type-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+  border: 1px solid transparent;
 }
 
 .ts-type-paye {
-  background: rgba(209, 123, 107, 0.12);
-  color: #d17b6b;
+  background: rgba(209, 123, 107, 0.18);
+  border-color: rgba(209, 123, 107, 0.3);
+  color: #e08d79;
 }
 
 .ts-type-ltd {
-  background: rgba(107, 155, 209, 0.12);
-  color: #6b9bd1;
+  background: rgba(107, 155, 209, 0.18);
+  border-color: rgba(107, 155, 209, 0.3);
+  color: #82aed8;
 }
 
 .ts-type-dot {
@@ -6870,19 +6873,20 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-secondary);
-  background: rgba(var(--a), 0.04);
-  border: 1px solid var(--border-card);
+  background: rgba(var(--a), 0.06);
+  border: 1px solid var(--border-medium);
   border-radius: 999px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .ts-crew-chip:hover {
-  background: rgba(var(--a), 0.08);
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.25);
 }
 
 .ts-crew-chip-active {
-  background: rgba(var(--a), 0.10);
+  background: rgba(var(--a), 0.14);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -6901,14 +6905,14 @@ body {
 
 .ts-day-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1px solid var(--border-medium);
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.2s;
 }
 
 .ts-day-card-weekend {
-  border-left: 3px solid rgba(var(--a), 0.15);
+  border-left: 3px solid rgba(var(--a), 0.25);
 }
 
 .ts-day-card-filled {
@@ -6937,7 +6941,7 @@ body {
 
 .ts-day-date {
   font-size: 0.6875rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .ts-day-total {
@@ -6969,7 +6973,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .ts-time-input {
@@ -6977,8 +6981,8 @@ body {
   font-size: 0.8125rem;
   font-family: 'DM Mono', 'SF Mono', monospace;
   color: var(--text-primary);
-  background: rgba(var(--a), 0.04);
-  border: 1px solid var(--border-card);
+  background: rgba(var(--a), 0.07);
+  border: 1px solid var(--border-medium);
   border-radius: 6px;
   outline: none;
   transition: border-color 0.2s;
@@ -6994,7 +6998,7 @@ body {
   gap: 16px;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid rgba(var(--a), 0.04);
+  border-top: 1px solid rgba(var(--a), 0.10);
 }
 
 .ts-checkbox-label {
@@ -7042,14 +7046,15 @@ body {
 
 .ts-flag-pill {
   display: inline-block;
-  padding: 1px 6px;
+  padding: 2px 8px;
   font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   border-radius: 4px;
-  background: rgba(var(--a), 0.08);
-  color: var(--text-muted);
+  background: rgba(var(--a), 0.14);
+  border: 1px solid rgba(var(--a), 0.2);
+  color: var(--text-secondary);
 }
 
 /* ── Notes ───────────────────────────────────── */
@@ -7083,7 +7088,7 @@ body {
 
 .ts-week-summary {
   background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1px solid var(--border-medium);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -7115,7 +7120,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .ts-summary-value {
