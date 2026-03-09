@@ -1,11 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { BudgetTopBar } from '@/components/budget/BudgetTopBar';
 import { BudgetTabs } from '@/components/budget/BudgetTabs';
+import { BudgetSummarySidebar } from '@/components/budget/BudgetSummarySidebar';
 import { OverviewTab } from '@/components/budget/tabs/OverviewTab';
 import { ProposalTab } from '@/components/budget/tabs/ProposalTab';
-import { ReceiptsAndSpendTab } from '@/components/budget/tabs/ReceiptsAndSpendTab';
+import { ReceiptsAndSpendTab, type ReceiptsAndSpendTabHandle } from '@/components/budget/tabs/ReceiptsAndSpendTab';
 import { CompareTab } from '@/components/budget/tabs/CompareTab';
+import { ReceiptConfirmPanel, type ConfirmData } from '@/components/budget/receipts/ReceiptConfirmPanel';
 import { useBudgetStore, type BudgetLineItem } from '@/stores/budgetStore';
+import { useTimesheetStore } from '@/stores/timesheetStore';
 
 interface BudgetProps {
   projectId: string;
@@ -14,6 +17,8 @@ interface BudgetProps {
 export function Budget({ projectId }: BudgetProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState<string | null>(null);
+  const [sidebarExpenseOpen, setSidebarExpenseOpen] = useState(false);
+  const receiptsTabRef = useRef<ReceiptsAndSpendTabHandle>(null);
 
   const store = useBudgetStore(projectId);
   const categories = store(s => s.categories);
@@ -44,6 +49,14 @@ export function Budget({ projectId }: BudgetProps) {
   const perCategoryBudget = getPerCategoryBudget();
   const perCategorySpend = getPerCategorySpend();
 
+  // Timesheet store for crew cost data
+  const tsStore = useTimesheetStore(projectId);
+  const crew = tsStore(s => s.crew);
+  const selectedWeekStart = tsStore(s => s.selectedWeekStart);
+  const getTotalLabourCost = tsStore(s => s.getTotalLabourCost);
+  const hasTimesheetData = crew.length > 0;
+  const totalCrewCost = hasTimesheetData ? getTotalLabourCost(selectedWeekStart) : 0;
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2000);
@@ -53,6 +66,33 @@ export function Budget({ projectId }: BudgetProps) {
     updateLineItem(categoryId, itemId, { [field]: value } as Partial<BudgetLineItem>);
   }, [updateLineItem]);
 
+  // Sidebar: Add Expense opens confirm panel without switching tabs
+  const handleSidebarAddExpense = useCallback(() => {
+    setSidebarExpenseOpen(true);
+  }, []);
+
+  // Sidebar: Upload Receipt switches to receipts tab and triggers upload
+  const handleSidebarUploadReceipt = useCallback(() => {
+    setActiveTab('receipts');
+    // Slight delay to allow the tab to render before triggering upload
+    setTimeout(() => {
+      receiptsTabRef.current?.triggerUpload();
+    }, 100);
+  }, []);
+
+  const handleSidebarExpenseConfirm = useCallback((data: ConfirmData) => {
+    addExpense({
+      date: data.date,
+      supplier: data.supplier,
+      category: data.category,
+      lineItemId: data.lineItemId,
+      vat: data.vat,
+      amount: data.amount,
+      receiptImageUri: data.imageUri,
+    });
+    setSidebarExpenseOpen(false);
+  }, [addExpense]);
+
   return (
     <div className="budget-page">
       <BudgetTopBar
@@ -61,58 +101,88 @@ export function Budget({ projectId }: BudgetProps) {
       />
       <BudgetTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="budget-content">
-        {activeTab === 'overview' && (
-          <OverviewTab
-            totalBudget={totalBudget}
-            totalSpent={totalSpent}
-            remaining={remaining}
-            percentUsed={percentUsed}
-            categories={categories}
-            perCategoryBudget={perCategoryBudget}
-            perCategorySpend={perCategorySpend}
-            isLTD={isLTD}
-            onToggleLTD={setIsLTD}
-            currency={currency}
-          />
-        )}
-        {activeTab === 'proposal' && (
-          <ProposalTab
-            categories={categories}
-            currency={currency}
-            totalBudget={totalBudget}
-            perCategoryBudget={perCategoryBudget}
-            perCategorySpend={perCategorySpend}
-            getItemTotal={getLineItemTotal}
-            onAddCategory={addCategory}
-            onAddItem={addLineItem}
-            onUpdateItem={handleUpdateItem}
-            onDeleteItem={removeLineItem}
-            onCopyItem={copyLineItem}
-            onShowToast={showToast}
-          />
-        )}
-        {activeTab === 'receipts' && (
-          <ReceiptsAndSpendTab
-            expenses={expenses}
-            categories={categories}
-            currency={currency}
-            onAddExpense={addExpense}
-            onUpdateExpense={updateExpense}
-            onDeleteExpense={deleteExpense}
-          />
-        )}
-        {activeTab === 'compare' && (
-          <CompareTab
-            categories={categories}
-            perCategoryBudget={perCategoryBudget}
-            perCategorySpend={perCategorySpend}
-            totalBudget={totalBudget}
-            totalSpent={totalSpent}
-            currency={currency}
-          />
-        )}
+      <div className="budget-page-body">
+        <BudgetSummarySidebar
+          totalBudget={totalBudget}
+          totalSpent={totalSpent}
+          remaining={remaining}
+          percentUsed={percentUsed}
+          categories={categories}
+          perCategoryBudget={perCategoryBudget}
+          perCategorySpend={perCategorySpend}
+          currency={currency}
+          isLTD={isLTD}
+          totalCrewCost={totalCrewCost}
+          hasTimesheetData={hasTimesheetData}
+          onAddExpense={handleSidebarAddExpense}
+          onUploadReceipt={handleSidebarUploadReceipt}
+        />
+
+        <div className="budget-content">
+          {activeTab === 'overview' && (
+            <OverviewTab
+              totalBudget={totalBudget}
+              totalSpent={totalSpent}
+              remaining={remaining}
+              percentUsed={percentUsed}
+              categories={categories}
+              perCategoryBudget={perCategoryBudget}
+              perCategorySpend={perCategorySpend}
+              isLTD={isLTD}
+              onToggleLTD={setIsLTD}
+              currency={currency}
+            />
+          )}
+          {activeTab === 'proposal' && (
+            <ProposalTab
+              categories={categories}
+              currency={currency}
+              totalBudget={totalBudget}
+              perCategoryBudget={perCategoryBudget}
+              perCategorySpend={perCategorySpend}
+              getItemTotal={getLineItemTotal}
+              onAddCategory={addCategory}
+              onAddItem={addLineItem}
+              onUpdateItem={handleUpdateItem}
+              onDeleteItem={removeLineItem}
+              onCopyItem={copyLineItem}
+              onShowToast={showToast}
+            />
+          )}
+          {activeTab === 'receipts' && (
+            <ReceiptsAndSpendTab
+              ref={receiptsTabRef}
+              expenses={expenses}
+              categories={categories}
+              currency={currency}
+              onAddExpense={addExpense}
+              onUpdateExpense={updateExpense}
+              onDeleteExpense={deleteExpense}
+            />
+          )}
+          {activeTab === 'compare' && (
+            <CompareTab
+              categories={categories}
+              perCategoryBudget={perCategoryBudget}
+              perCategorySpend={perCategorySpend}
+              totalBudget={totalBudget}
+              totalSpent={totalSpent}
+              currency={currency}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Sidebar Add Expense panel — opens from any tab */}
+      <ReceiptConfirmPanel
+        open={sidebarExpenseOpen}
+        onClose={() => setSidebarExpenseOpen(false)}
+        onConfirm={handleSidebarExpenseConfirm}
+        onDiscard={() => setSidebarExpenseOpen(false)}
+        categories={categories}
+        currency={currency}
+        isManual
+      />
 
       {/* Toast notification */}
       {toast && (
