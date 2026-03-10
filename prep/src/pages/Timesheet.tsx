@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { TimesheetTopBar } from '@/components/timesheet/TimesheetTopBar';
 import { TimesheetTabs } from '@/components/timesheet/TimesheetTabs';
 import { TimesheetSidebar } from '@/components/timesheet/TimesheetSidebar';
 import { CrewSettingsTab } from '@/components/timesheet/tabs/CrewSettingsTab';
@@ -44,7 +43,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
 
   return (
     <div className="ts-page">
-      <TimesheetTopBar />
       <TimesheetTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="ts-page-body">
