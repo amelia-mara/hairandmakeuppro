@@ -1332,7 +1332,36 @@ body {
 .topbar-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+/* Brand logo — "Checks Happy." */
+.brand-logo {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: normal;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.brand-logo-checks {
+  color: var(--text-primary);
+}
+.brand-logo-happy {
+  font-style: italic;
+  color: var(--accent);
+}
+[data-theme="light"] .brand-logo-checks {
+  color: var(--text-heading);
+}
+
+/* Divider between logo and page title */
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-medium);
+  flex-shrink: 0;
 }
 
 .topbar-title {
