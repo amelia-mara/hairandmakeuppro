@@ -75,9 +75,14 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left side — title + subtitle + nav arrow, aligned with scene list */}
+        {/* Left side — logo + title + subtitle + nav arrow */}
         <div ref={dropRef} className="topbar-title-group">
           <div className="topbar-title-row">
+            <div className="brand-logo" aria-label="Checks Happy">
+              <span className="brand-logo-checks">Checks</span>{' '}
+              <span className="brand-logo-happy">Happy.</span>
+            </div>
+            <div className="topbar-divider" />
             <h1 className="topbar-title" title={title}>
               {title}
             </h1>
