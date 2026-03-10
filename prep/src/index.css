@@ -5517,19 +5517,32 @@ body {
   position: relative;
 }
 
-.budget-tabs-title {
+.budget-tabs-sidebar-section {
+  display: flex;
+  align-items: center;
+  width: 196px;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.budget-tabs-sidebar-label {
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-heading);
-  margin: 0;
-  padding: 12px 0;
   white-space: nowrap;
+}
+
+.budget-tabs-separator {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(var(--a), 0.15);
+  flex-shrink: 0;
 }
 
 .budget-tabs-nav {
   display: flex;
   gap: 0;
-  margin-left: 32px;
+  margin-left: 8px;
 }
 
 .budget-tabs-actions {
