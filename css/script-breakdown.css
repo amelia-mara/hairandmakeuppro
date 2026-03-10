@@ -16227,3 +16227,107 @@
         transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 }
+
+/* ============================================================================
+   SCENE CHARACTER CONFIRMATION (breakdown panel)
+   ============================================================================ */
+
+.scene-char-confirmation {
+    background: rgba(212, 175, 122, 0.08);
+    border: 1px solid rgba(212, 175, 122, 0.25);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.char-confirm-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.char-confirm-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--accent-gold);
+    color: var(--bg-dark);
+    border-radius: 50%;
+    font-size: 0.75em;
+    font-weight: 700;
+}
+
+.char-confirm-title {
+    font-weight: 600;
+    color: var(--accent-gold);
+    font-size: 0.9em;
+}
+
+.char-confirm-desc {
+    color: var(--text-muted);
+    font-size: 0.82em;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.char-confirm-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.char-confirm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.char-confirm-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.char-confirm-item input[type="checkbox"] {
+    accent-color: var(--accent-gold);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.char-confirm-name {
+    color: var(--text-light);
+    font-size: 0.88em;
+    font-weight: 500;
+}
+
+.char-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.char-confirm-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.char-confirm-btn.confirm {
+    background: var(--accent-gold);
+    color: var(--bg-dark);
+}
+
+.char-confirm-btn.confirm:hover {
+    background: var(--accent-gold-hover);
+}

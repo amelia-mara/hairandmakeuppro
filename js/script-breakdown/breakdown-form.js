@@ -7,6 +7,7 @@ import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, detectIntExt } from './utils.js';
 import { detectAIElements, generateDescription } from './ai-integration.js';
 import { getAllVersions, getCurrentVersion, getVersionById, copySceneFromVersion } from './version-manager.js';
+import { renderSceneCharacterConfirmation } from './script-upload.js';
 
 // ============================================================================
 // ELEMENT CATEGORIES
@@ -311,6 +312,9 @@ function renderSceneBreakdown(sceneIndex) {
                 </div>
             </div>
 
+            <!-- CHARACTER CONFIRMATION (if pending) -->
+            ${renderSceneCharacterConfirmation(sceneIndex)}
+
             <!-- CHARACTER CONTINUITY SECTION -->
             <div class="breakdown-section character-section">
                 <div class="section-header">
@@ -322,7 +326,7 @@ function renderSceneBreakdown(sceneIndex) {
                     : `<div class="no-characters">
                         <div>No characters detected in this scene.</div>
                         <button class="small-btn detect-chars-btn" onclick="detectSceneCharacters(${sceneIndex})" style="margin-top: 8px;">
-                            🔍 Auto-Detect Characters
+                            Auto-Detect Characters
                         </button>
                     </div>`}
 

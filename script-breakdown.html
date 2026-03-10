@@ -31,7 +31,7 @@
             </div>
             <div class="toolbar">
                 <button class="toolbar-btn" onclick="openToolsPanel()">Tools</button>
-                <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
+                <button class="toolbar-btn" onclick="showScriptUploadModal()">Import Script</button>
             </div>
         </div>
 
@@ -137,7 +137,7 @@
         </div>
     </div>
 
-    <!-- Import Modal -->
+    <!-- Import Modal (legacy text paste) -->
     <div class="modal" id="import-modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-title">Import Screenplay</div>
@@ -145,6 +145,46 @@
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeImportModal()">Cancel</button>
                 <button class="modal-btn primary" onclick="processScript()">Import & Analyze</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Upload Modal (PDF upload - primary method) -->
+    <div class="modal" id="script-upload-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 560px;">
+            <div class="modal-title">Upload Script</div>
+
+            <div class="modal-section">
+                <div style="color: var(--text-muted); font-size: 0.875em; margin-bottom: 16px;">
+                    Upload your screenplay PDF to automatically detect scenes and characters.
+                </div>
+
+                <!-- File Upload Area -->
+                <div class="file-upload-area" id="script-upload-area"
+                     style="padding: 40px 30px; text-align: center; border: 2px dashed var(--glass-border); border-radius: 12px; background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: all 0.2s ease;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
+                    <div style="color: var(--text-light); margin-bottom: 8px; font-weight: 500;">Click to upload or drag and drop</div>
+                    <div style="color: var(--text-muted); font-size: 0.875em;">PDF, FDX (Final Draft), Fountain, or TXT</div>
+                    <input type="file" id="script-upload-file" accept=".pdf,.fdx,.fountain,.txt" style="display: none;">
+                </div>
+
+                <!-- File Info (shown after selection) -->
+                <div id="script-upload-file-info" style="display: none; margin-top: 16px; padding: 14px; background: rgba(201, 169, 97, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 28px;">📄</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div id="script-upload-file-name" style="color: var(--text-light); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+                            <div id="script-upload-file-size" style="color: var(--text-muted); font-size: 0.875em;"></div>
+                        </div>
+                        <button onclick="clearScriptFile()" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #ef4444; cursor: pointer; font-size: 0.85em; flex-shrink: 0;">Remove</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 8px;">
+                <button class="modal-btn" onclick="closeScriptUploadModal()">Cancel</button>
+                <button class="modal-btn" onclick="closeScriptUploadModal(); openImportModal();" style="color: var(--text-muted);">Paste Text Instead</button>
+                <button class="modal-btn primary" id="script-upload-process-btn" onclick="processUploadedScript()" disabled>Upload & Analyze</button>
             </div>
         </div>
     </div>
@@ -601,8 +641,11 @@
             <!-- SCRIPT Section -->
             <div class="tools-section">
                 <div class="tools-section-title">SCRIPT</div>
-                <button class="tools-panel-btn" onclick="openImportModal(); closeToolsPanel();">
-                    Import New Script
+                <button class="tools-panel-btn" onclick="showScriptUploadModal(); closeToolsPanel();">
+                    Upload Script PDF
+                </button>
+                <button class="tools-panel-btn" onclick="openImportModal(); closeToolsPanel();" style="font-size: 0.85em; color: var(--text-muted);">
+                    Paste Script Text
                 </button>
                 <button class="tools-panel-btn" onclick="openSupervisorUploadModal(); closeToolsPanel();">
                     Upload Supervisor Breakdown
