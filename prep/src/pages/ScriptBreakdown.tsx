@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
-  useBreakdownStore, useTagStore, useSynopsisStore,
+  useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore,
   type Scene, type Character, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
   type ScriptTag,
 } from '@/stores/breakdownStore';
+import { useProjectStore } from '@/stores/projectStore';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DRAGGABLE PANEL RESIZE HOOK
@@ -83,7 +84,7 @@ const RIGHT_DEFAULT = 400;
 const RIGHT_MIN = 300;
 const RIGHT_MAX = 560;
 
-export function ScriptBreakdown({ projectId: _projectId }: Props) {
+export function ScriptBreakdown({ projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,6 +101,20 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
 
   const store = useBreakdownStore();
   const synopsisStore = useSynopsisStore();
+
+  /* Script upload state */
+  const scriptUpload = useScriptUploadStore();
+  const updateProject = useProjectStore((s) => s.updateProject);
+  const project = useProjectStore((s) => s.getProject(projectId));
+  const hasScript = !!scriptUpload.getScript(projectId);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  /* Auto-show upload modal when no script is uploaded */
+  useEffect(() => {
+    if (!hasScript) {
+      setShowUploadModal(true);
+    }
+  }, [hasScript]);
   const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
   const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!);
   const breakdown = store.getBreakdown(selectedSceneId);
@@ -350,7 +365,7 @@ export function ScriptBreakdown({ projectId: _projectId }: Props) {
               {toolsOpen && (
                 <div className="tools-dropdown">
                   <div className="tools-dropdown-section">
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Import script'); setToolsOpen(false); }}>
+                    <button className="tools-dropdown-item" onClick={() => { setShowUploadModal(true); setToolsOpen(false); }}>
                       <ImportIcon /> <span>Import New Script</span>
                     </button>
                     <button className="tools-dropdown-item" onClick={() => { console.log('Previous drafts'); setToolsOpen(false); }}>
@@ -782,6 +797,309 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           )}
         </div>
       )}
+
+      {/* Script Upload Modal */}
+      {showUploadModal && (
+        <ScriptUploadModal
+          projectId={projectId}
+          onClose={() => setShowUploadModal(false)}
+          onUploaded={(filename) => {
+            updateProject(projectId, { scriptFilename: filename });
+            setShowUploadModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ━━━ SCRIPT UPLOAD MODAL ━━━ */
+
+interface ScriptUploadModalProps {
+  projectId: string;
+  onClose: () => void;
+  onUploaded: (filename: string) => void;
+}
+
+function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModalProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState('');
+  const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const setScript = useScriptUploadStore((s) => s.setScript);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !processing) onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose, processing]);
+
+  const handleFileSelect = (file: File) => {
+    const validExts = ['.pdf', '.fdx', '.fountain', '.txt'];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!validExts.includes(ext)) {
+      setError('Invalid file type. Please upload a PDF, FDX, Fountain, or TXT file.');
+      return;
+    }
+    setError('');
+    setSelectedFile(file);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => setDragOver(false);
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const processFile = async () => {
+    if (!selectedFile) return;
+    setProcessing(true);
+    setProgress(10);
+    setStatusText('Reading file...');
+
+    try {
+      await new Promise(r => setTimeout(r, 300));
+
+      setProgress(40);
+      setStatusText('Extracting text...');
+
+      // Read the file as text (PDF parsing would need pdf.js — for now handle text-based formats)
+      let rawText = '';
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
+
+      if (ext === 'pdf') {
+        // For PDF files, read as base64 — full parsing handled by desktop script-upload.js
+        // Store the file info and let the breakdown page know a script was uploaded
+        rawText = '[PDF uploaded — ' + selectedFile.name + ']';
+      } else if (ext === 'fdx') {
+        const xml = await selectedFile.text();
+        // Extract text from FDX XML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xml, 'text/xml');
+        const paragraphs = doc.querySelectorAll('Paragraph');
+        rawText = Array.from(paragraphs).map(p => {
+          const text = p.querySelector('Text');
+          return text?.textContent || '';
+        }).filter(Boolean).join('\n');
+      } else {
+        rawText = await selectedFile.text();
+      }
+
+      setProgress(70);
+      setStatusText('Detecting scenes...');
+      await new Promise(r => setTimeout(r, 200));
+
+      // Count scenes by looking for scene headings
+      const scenePattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+/gim;
+      const matches = rawText.match(scenePattern);
+      const sceneCount = matches ? matches.length : 0;
+
+      setProgress(90);
+      setStatusText('Saving...');
+      await new Promise(r => setTimeout(r, 200));
+
+      // Store in the script upload store
+      setScript(projectId, {
+        projectId,
+        filename: selectedFile.name,
+        uploadedAt: new Date().toISOString(),
+        sceneCount,
+        rawText,
+      });
+
+      setProgress(100);
+      setStatusText('Done!');
+      await new Promise(r => setTimeout(r, 300));
+
+      onUploaded(selectedFile.name);
+    } catch (err) {
+      setError('Failed to process file. Please try again.');
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={!processing ? onClose : undefined}>
+      <div className="modal-glass" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '24px 28px 0',
+        }}>
+          <h2 style={{
+            fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--text-heading)', margin: 0,
+          }}>
+            Upload Script
+          </h2>
+          {!processing && (
+            <button onClick={onClose} style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', padding: 4,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <div style={{ padding: '20px 28px 28px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0 0 20px' }}>
+            Upload your screenplay to automatically detect scenes and characters.
+          </p>
+
+          {/* Processing state */}
+          {processing ? (
+            <div style={{ textAlign: 'center', padding: '32px 0' }}>
+              <div style={{
+                width: '100%', height: 6, borderRadius: 3,
+                background: 'var(--bg-tertiary)', overflow: 'hidden', marginBottom: 16,
+              }}>
+                <div style={{
+                  width: `${progress}%`, height: '100%', borderRadius: 3,
+                  background: 'var(--accent-gold, #c9a961)',
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+                {statusText}
+              </p>
+            </div>
+          ) : !selectedFile ? (
+            /* Drop zone */
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              style={{
+                width: '100%', padding: '40px 30px', textAlign: 'center',
+                border: `2px dashed ${dragOver ? 'var(--accent-gold, #c9a961)' : 'var(--border-subtle, rgba(255,255,255,0.08))'}`,
+                borderRadius: 12,
+                background: dragOver ? 'rgba(201, 169, 97, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                cursor: 'pointer', transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ fontSize: 48, marginBottom: 12 }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                  <path d="M14 2v6h6"/>
+                  <path d="M12 18v-6"/>
+                  <path d="M9 15l3-3 3 3"/>
+                </svg>
+              </div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 500 }}>
+                Click to upload or drag and drop
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                PDF, FDX (Final Draft), Fountain, or TXT
+              </div>
+            </button>
+          ) : (
+            /* File selected */
+            <div style={{
+              padding: 16, borderRadius: 10,
+              background: 'rgba(201, 169, 97, 0.08)',
+              border: '1px solid var(--accent-gold, #c9a961)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold, #c9a961)" strokeWidth="1.5">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                  <path d="M14 2v6h6"/>
+                </svg>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    color: 'var(--text-heading)', fontWeight: 500,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {selectedFile.name}
+                  </div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                    {formatSize(selectedFile.size)}
+                  </div>
+                </div>
+                <button onClick={() => { setSelectedFile(null); setError(''); }} style={{
+                  padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: '0.8125rem',
+                  background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#ef4444',
+                }}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <p style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: 12 }}>{error}</p>
+          )}
+
+          {/* Actions */}
+          {!processing && (
+            <div style={{
+              display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24,
+              borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+              paddingTop: 20,
+            }}>
+              <button onClick={onClose} style={{
+                padding: '8px 20px', borderRadius: 8, cursor: 'pointer',
+                background: 'transparent', border: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                color: 'var(--text-muted)', fontSize: '0.8125rem', fontWeight: 500,
+              }}>
+                Cancel
+              </button>
+              <button
+                onClick={processFile}
+                disabled={!selectedFile}
+                style={{
+                  padding: '8px 24px', borderRadius: 8, cursor: selectedFile ? 'pointer' : 'not-allowed',
+                  background: selectedFile ? 'var(--accent-gold, #c9a961)' : 'var(--bg-tertiary)',
+                  border: 'none',
+                  color: selectedFile ? '#1a1a1a' : 'var(--text-muted)',
+                  fontSize: '0.8125rem', fontWeight: 600,
+                  opacity: selectedFile ? 1 : 0.5,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Upload & Analyze
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.fdx,.fountain,.txt"
+          onChange={handleInputChange}
+          style={{ display: 'none' }}
+        />
+      </div>
     </div>
   );
 }
