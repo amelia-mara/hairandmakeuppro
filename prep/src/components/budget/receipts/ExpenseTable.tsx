@@ -36,7 +36,7 @@ export function ExpenseTable({
   return (
     <div className="budget-expense-card">
       <div className="budget-expense-card-header">
-        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1rem', fontWeight: 600 }}>
+        <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
           Expenses
         </h3>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -99,10 +99,10 @@ export function ExpenseTable({
                   TOTAL EXPENSES
                 </td>
                 <td colSpan={3} style={{
-                  fontFamily: "'Playfair Display', serif",
                   fontSize: '1.125rem',
                   fontWeight: 700,
                   color: 'var(--gold-primary)',
+                  letterSpacing: '-0.01em',
                 }}>
                   {sym}{totalExpenses.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>

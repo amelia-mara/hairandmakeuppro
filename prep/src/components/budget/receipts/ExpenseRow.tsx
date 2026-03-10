@@ -27,7 +27,7 @@ export function ExpenseRow({ expense, categories, currency, onEdit, onDelete, on
         {lineItem?.description || '—'}
       </td>
       <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{expense.vat || '—'}</td>
-      <td style={{ fontFamily: "'Playfair Display', serif", fontSize: '0.9375rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+      <td style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
         {sym}{expense.amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       <td>
