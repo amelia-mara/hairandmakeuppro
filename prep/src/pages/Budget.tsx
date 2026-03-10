@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { BudgetTabs } from '@/components/budget/BudgetTabs';
 import { BudgetSummarySidebar } from '@/components/budget/BudgetSummarySidebar';
-import { OverviewTab } from '@/components/budget/tabs/OverviewTab';
 import { ProposalTab } from '@/components/budget/tabs/ProposalTab';
 import { ReceiptsAndSpendTab, type ReceiptsAndSpendTabHandle } from '@/components/budget/tabs/ReceiptsAndSpendTab';
 import { CompareTab } from '@/components/budget/tabs/CompareTab';
@@ -14,7 +13,7 @@ interface BudgetProps {
 }
 
 export function Budget({ projectId }: BudgetProps) {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('proposal');
   const [toast, setToast] = useState<string | null>(null);
   const [sidebarExpenseOpen, setSidebarExpenseOpen] = useState(false);
   const receiptsTabRef = useRef<ReceiptsAndSpendTabHandle>(null);
@@ -109,25 +108,12 @@ export function Budget({ projectId }: BudgetProps) {
           isLTD={isLTD}
           totalCrewCost={totalCrewCost}
           hasTimesheetData={hasTimesheetData}
+          onToggleLTD={setIsLTD}
           onAddExpense={handleSidebarAddExpense}
           onUploadReceipt={handleSidebarUploadReceipt}
         />
 
         <div className="budget-content">
-          {activeTab === 'overview' && (
-            <OverviewTab
-              totalBudget={totalBudget}
-              totalSpent={totalSpent}
-              remaining={remaining}
-              percentUsed={percentUsed}
-              categories={categories}
-              perCategoryBudget={perCategoryBudget}
-              perCategorySpend={perCategorySpend}
-              isLTD={isLTD}
-              onToggleLTD={setIsLTD}
-              currency={currency}
-            />
-          )}
           {activeTab === 'proposal' && (
             <ProposalTab
               categories={categories}
