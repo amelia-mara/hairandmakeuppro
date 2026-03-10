@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import { BudgetTopBar } from '@/components/budget/BudgetTopBar';
 import { BudgetTabs } from '@/components/budget/BudgetTabs';
 import { BudgetSummarySidebar } from '@/components/budget/BudgetSummarySidebar';
 import { OverviewTab } from '@/components/budget/tabs/OverviewTab';
@@ -95,10 +94,6 @@ export function Budget({ projectId }: BudgetProps) {
 
   return (
     <div className="budget-page">
-      <BudgetTopBar
-        onImportCSV={() => {}}
-        onExport={() => {}}
-      />
       <BudgetTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="budget-page-body">
