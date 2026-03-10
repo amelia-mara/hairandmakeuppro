@@ -10,7 +10,7 @@ export function TimesheetTopBar() {
 
   return (
     <div className="ts-top-bar">
-      <h1 className="ts-top-bar-title">Timesheet System</h1>
+      <h1 className="ts-top-bar-title"><span className="heading-italic">Timesheet</span> System</h1>
       <div className="ts-top-bar-actions">
         {saveStatus !== 'idle' && (
           <div className="ts-save-indicator" style={{ opacity: 1, transition: 'opacity 0.3s ease' }}>

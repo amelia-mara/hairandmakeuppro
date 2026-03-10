@@ -53,13 +53,13 @@ export function ProjectDashboard({ projectId }: ProjectDashboardProps) {
       <div className="dashboard-header">
         <h1 style={{
           fontSize: '0.8125rem',
-          fontWeight: 500,
           letterSpacing: '0.1em',
           textTransform: 'uppercase' as const,
           color: 'var(--text-heading)',
           margin: 0,
         }}>
-          H&MU DASHBOARD
+          <span className="heading-italic">H&MU</span>{' '}
+          <span className="heading-regular">Dashboard</span>
         </h1>
         <button className="btn-action-gold" onClick={() => setShowAddModal(true)}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -82,13 +82,13 @@ export function ProjectDashboard({ projectId }: ProjectDashboardProps) {
           </div>
           <p style={{
             fontSize: '0.8125rem',
-            fontWeight: 500,
             color: 'var(--text-heading)',
             letterSpacing: '0.1em',
             textTransform: 'uppercase' as const,
             marginBottom: '8px',
           }}>
-            No widgets yet
+            <span className="heading-italic">No</span>{' '}
+            <span className="heading-regular">widgets yet</span>
           </p>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '24px' }}>
             Add widgets to customise your dashboard
@@ -294,9 +294,8 @@ function QuickActionsWidget() {
 function PlaceholderWidget({ name, description }: { name: string; description: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
-      <div style={{
+      <div className="heading-regular" style={{
         fontSize: '0.75rem',
-        fontWeight: 500,
         color: 'var(--text-heading)',
         letterSpacing: '0.1em',
         textTransform: 'uppercase' as const,
@@ -328,13 +327,13 @@ function AddWidgetModal({
         <div style={{ padding: '24px 28px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
             fontSize: '0.8125rem',
-            fontWeight: 500,
             letterSpacing: '0.1em',
             textTransform: 'uppercase' as const,
             color: 'var(--text-heading)',
             margin: 0,
           }}>
-            Add Widget
+            <span className="heading-italic">Add</span>{' '}
+            <span className="heading-regular">Widget</span>
           </h2>
           <button
             onClick={onClose}

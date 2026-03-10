@@ -12,7 +12,7 @@ export function CrewCostCard({ currency, totalCrewCost, hasTimesheetData, onGoTo
 
   return (
     <div className="budget-overview-card">
-      <h3 className="budget-card-title">Crew Costs</h3>
+      <h3 className="budget-card-title"><span className="heading-italic">Crew</span> Costs</h3>
       <p className="budget-card-subtitle">Pulled from Timesheet</p>
 
       {hasTimesheetData ? (

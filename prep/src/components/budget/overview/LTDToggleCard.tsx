@@ -12,7 +12,7 @@ export function LTDToggleCard({ isLTD, onToggle, wageImpact, currency }: LTDTogg
 
   return (
     <div className="budget-overview-card">
-      <h3 className="budget-card-title">Employment Settings</h3>
+      <h3 className="budget-card-title"><span className="heading-italic">Employment</span> Settings</h3>
 
       <div className="budget-ltd-toggle-row">
         <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>

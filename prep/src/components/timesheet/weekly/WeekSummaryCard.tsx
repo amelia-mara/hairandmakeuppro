@@ -13,7 +13,7 @@ export function WeekSummaryCard({ summary, currency, crewName }: WeekSummaryCard
   return (
     <div className="ts-week-summary">
       <div className="ts-week-summary-header">
-        <h3 className="ts-card-title">Week Summary — {crewName}</h3>
+        <h3 className="ts-card-title"><span className="heading-italic">Week</span> Summary — {crewName}</h3>
       </div>
       <div className="ts-week-summary-body">
         <div className="ts-summary-grid">

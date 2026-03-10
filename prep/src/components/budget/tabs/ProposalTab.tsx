@@ -44,7 +44,7 @@ export function ProposalTab({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="budget-grand-total">
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>Grand Total</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold-primary)', letterSpacing: '-0.01em' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold-primary)', letterSpacing: '-0.01em' }}>
               {sym}{totalBudget.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>

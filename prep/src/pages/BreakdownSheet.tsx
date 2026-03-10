@@ -205,7 +205,7 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
       {/* Header */}
       <div className="bs-header">
         <div className="bs-header-left">
-          <h1 className="bs-title">MASTER BREAKDOWN</h1>
+          <h1 className="bs-title"><span className="heading-italic">Master</span> Breakdown</h1>
           <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
         </div>
         <div className="bs-header-right">

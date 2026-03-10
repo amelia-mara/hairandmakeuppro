@@ -75,7 +75,7 @@ export function ExportTab({
   return (
     <div className="ts-export-tab">
       <div className="ts-export-header">
-        <h2 className="ts-section-title">Export & Reports</h2>
+        <h2 className="ts-section-title"><span className="heading-italic">Export</span> & Reports</h2>
         <span className="ts-week-label">{weekLabel}</span>
       </div>
 
@@ -104,7 +104,7 @@ export function ExportTab({
       {/* Per-Crew Breakdown */}
       {crew.length > 0 && (
         <div className="ts-export-section">
-          <h3 className="ts-section-subtitle">Crew Breakdown</h3>
+          <h3 className="ts-section-subtitle"><span className="heading-italic">Crew</span> Breakdown</h3>
           <div className="ts-export-table-wrap">
             <table className="ts-export-table">
               <thead>
@@ -157,7 +157,7 @@ export function ExportTab({
 
       {/* Export Actions */}
       <div className="ts-export-section">
-        <h3 className="ts-section-subtitle">Export Options</h3>
+        <h3 className="ts-section-subtitle"><span className="heading-italic">Export</span> Options</h3>
         <div className="ts-export-actions">
           <button className="btn-gold" onClick={handleExportCSV}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

@@ -12,7 +12,7 @@ export function CrewList({ crew, selectedCrewId, onSelectCrew, onRemoveCrew, onA
   return (
     <div className="ts-card">
       <div className="ts-card-header">
-        <h3 className="ts-card-title">Crew ({crew.length})</h3>
+        <h3 className="ts-card-title"><span className="heading-italic">Crew</span> ({crew.length})</h3>
         <button className="btn-gold ts-btn-sm" onClick={onAddCrew}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />

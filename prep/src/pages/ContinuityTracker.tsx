@@ -544,7 +544,7 @@ function AddEventForm({ sceneId: _sceneId, characterId, onAdd, onCancel }: {
 
   return (
     <div className="ct-event-form">
-      <h4 className="ct-form-title">Add Continuity Event</h4>
+      <h4 className="ct-form-title"><span className="heading-italic">Add</span> Continuity Event</h4>
 
       {/* Type selector */}
       <div className="ct-form-field">

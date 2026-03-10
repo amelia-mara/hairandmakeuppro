@@ -43,7 +43,7 @@ export function VarianceAnalysis({
   return (
     <div className="budget-compare-section" style={{ marginTop: 24 }}>
       <div className="budget-compare-header">
-        <h3 style={{ fontWeight: 600 }}>Variance Analysis</h3>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}><span className="heading-italic">Variance</span> Analysis</h3>
       </div>
       <div style={{ padding: 24 }}>
         {totalBudget === 0 ? (

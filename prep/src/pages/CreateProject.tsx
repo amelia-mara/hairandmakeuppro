@@ -73,13 +73,13 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
         }}>
           <h2 style={{
             fontSize: '0.8125rem',
-            fontWeight: 500,
             letterSpacing: '0.1em',
             textTransform: 'uppercase' as const,
             color: 'var(--text-heading)',
             margin: 0,
           }}>
-            New Project
+            <span className="heading-italic">New</span>{' '}
+            <span className="heading-regular">Project</span>
           </h2>
           <button
             onClick={onCancel}
