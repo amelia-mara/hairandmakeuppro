@@ -12,6 +12,7 @@ interface BudgetSummarySidebarProps {
   isLTD: boolean;
   totalCrewCost: number;
   hasTimesheetData: boolean;
+  onToggleLTD: (val: boolean) => void;
   onAddExpense: () => void;
   onUploadReceipt: () => void;
 }
@@ -28,40 +29,40 @@ export function BudgetSummarySidebar({
   isLTD,
   totalCrewCost,
   hasTimesheetData,
+  onToggleLTD,
   onAddExpense,
   onUploadReceipt,
 }: BudgetSummarySidebarProps) {
   const sym = CURRENCY_SYMBOLS[currency];
 
-  // Colour states: healthy (gold), at risk (amber), over budget (red)
+  // Colour states
   const remainingColor = percentUsed >= 100 ? '#ef4444' : percentUsed >= 75 ? '#f59e0b' : 'var(--gold-primary)';
+  const spentColor = percentUsed >= 100 ? '#ef4444' : percentUsed >= 75 ? '#f59e0b' : 'var(--text-primary)';
   const progressFill = percentUsed >= 100 ? '#ef4444' : percentUsed >= 75 ? '#f59e0b' : 'var(--gold-primary)';
-
-  // Over-budget categories
-  const overBudgetCategories = categories
-    .filter(cat => {
-      const budgeted = perCategoryBudget[cat.id] || 0;
-      const spent = perCategorySpend[cat.id] || 0;
-      return budgeted > 0 && spent > budgeted;
-    })
-    .map(cat => ({
-      name: cat.name,
-      overBy: (perCategorySpend[cat.id] || 0) - (perCategoryBudget[cat.id] || 0),
-    }));
 
   const formatAmount = (n: number) =>
     n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  // Categories with a budget set
+  const activeCategories = categories.filter(c => (perCategoryBudget[c.id] || 0) > 0);
+
   return (
     <aside className="budget-summary-sidebar">
-      {/* Section 1: Remaining Budget */}
+      {/* Section 1: Key Stats */}
       <div className="budget-sidebar-section">
-        <div className="budget-sidebar-label">REMAINING</div>
-        <div className="budget-sidebar-value" style={{ color: remainingColor }}>
-          {remaining < 0 ? '-' : ''}{sym}{formatAmount(Math.abs(remaining))}
+        <div className="budget-sidebar-stat-row">
+          <span className="budget-sidebar-stat-label">Total Budget</span>
+          <span className="budget-sidebar-stat-value">{sym}{formatAmount(totalBudget)}</span>
         </div>
-        <div className="budget-sidebar-fraction">
-          {sym}{formatAmount(totalSpent)} spent of {sym}{formatAmount(totalBudget)}
+        <div className="budget-sidebar-stat-row">
+          <span className="budget-sidebar-stat-label">Spent to Date</span>
+          <span className="budget-sidebar-stat-value" style={{ color: spentColor }}>{sym}{formatAmount(totalSpent)}</span>
+        </div>
+        <div className="budget-sidebar-stat-row">
+          <span className="budget-sidebar-stat-label">Remaining</span>
+          <span className="budget-sidebar-stat-value" style={{ color: remainingColor }}>
+            {remaining < 0 ? '-' : ''}{sym}{formatAmount(Math.abs(remaining))}
+          </span>
         </div>
         <div className="budget-sidebar-progress-track">
           <div
@@ -74,20 +75,48 @@ export function BudgetSummarySidebar({
         </div>
       </div>
 
-      {/* Section 2: Over-Budget Flags */}
-      {overBudgetCategories.length > 0 && (
-        <div className="budget-sidebar-section">
-          <div className="budget-sidebar-label" style={{ color: '#ef4444' }}>OVER BUDGET</div>
-          {overBudgetCategories.map(cat => (
-            <div key={cat.name} className="budget-sidebar-flag-row">
-              <span className="budget-sidebar-flag-name">{cat.name}</span>
-              <span className="budget-sidebar-flag-amount">+{sym}{formatAmount(cat.overBy)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Section 2: Category Breakdown */}
+      <div className="budget-sidebar-section">
+        <div className="budget-sidebar-label">CATEGORY BREAKDOWN</div>
+        {activeCategories.length === 0 ? (
+          <div className="budget-sidebar-empty">
+            No categories yet. Add items in the Budget Proposal tab.
+          </div>
+        ) : (
+          activeCategories.map(cat => {
+            const budget = perCategoryBudget[cat.id] || 0;
+            const spent = perCategorySpend[cat.id] || 0;
+            const percent = budget > 0 ? (spent / budget) * 100 : 0;
+            const isOver = percent >= 100;
+            const isAtRisk = percent >= 75 && percent < 100;
+            const barColor = isOver ? '#ef4444' : isAtRisk ? '#f59e0b' : 'var(--gold-primary)';
 
-      {/* Section 3: Crew Cost Impact */}
+            return (
+              <div key={cat.id} className="budget-sidebar-category">
+                <div className="budget-sidebar-category-header">
+                  <span className="budget-sidebar-category-name">
+                    {cat.name}
+                    {isOver && <span className="budget-sidebar-cat-badge budget-sidebar-cat-badge--over">OVER</span>}
+                    {isAtRisk && <span className="budget-sidebar-cat-badge budget-sidebar-cat-badge--risk">AT RISK</span>}
+                  </span>
+                  <span className="budget-sidebar-category-amount">{sym}{formatAmount(spent)}</span>
+                </div>
+                <div className="budget-sidebar-progress-track">
+                  <div
+                    className="budget-sidebar-progress-fill"
+                    style={{ width: `${Math.min(percent, 100)}%`, background: barColor }}
+                  />
+                </div>
+                <div className="budget-sidebar-category-meta">
+                  {percent.toFixed(0)}% of {sym}{formatAmount(budget)}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Section 3: Crew Costs */}
       <div className="budget-sidebar-section">
         <div className="budget-sidebar-label">CREW COSTS</div>
         {hasTimesheetData ? (
@@ -114,7 +143,26 @@ export function BudgetSummarySidebar({
         )}
       </div>
 
-      {/* Section 4: Quick Actions */}
+      {/* Section 4: Employment Settings */}
+      <div className="budget-sidebar-section">
+        <div className="budget-sidebar-label">EMPLOYMENT</div>
+        <div className="budget-sidebar-ltd-row">
+          <span className="budget-sidebar-ltd-text">LTD Company</span>
+          <button
+            className={`budget-sidebar-toggle ${isLTD ? 'active' : ''}`}
+            onClick={() => onToggleLTD(!isLTD)}
+            role="switch"
+            aria-checked={isLTD}
+          >
+            <span className="budget-sidebar-toggle-thumb" />
+          </button>
+        </div>
+        <div className="budget-sidebar-ltd-hint">
+          {isLTD ? 'Wages billed separately' : 'Wages affect budget'}
+        </div>
+      </div>
+
+      {/* Section 5: Quick Actions */}
       <div className="budget-sidebar-section">
         <div className="budget-sidebar-label">QUICK ACTIONS</div>
         <button className="budget-sidebar-action-btn" onClick={onAddExpense}>

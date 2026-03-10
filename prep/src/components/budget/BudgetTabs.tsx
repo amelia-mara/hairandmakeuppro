@@ -7,7 +7,6 @@ interface BudgetTabsProps {
 }
 
 const TABS = [
-  { id: 'overview', label: 'Overview' },
   { id: 'proposal', label: 'Budget Proposal' },
   { id: 'receipts', label: 'Receipts & Spend' },
   { id: 'compare', label: 'Compare' },
