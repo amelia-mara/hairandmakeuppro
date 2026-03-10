@@ -990,3 +990,43 @@ export const useContinuityTrackerStore = create<ContinuityTrackerState>()(
     }
   )
 );
+
+/* ━━━ Script Upload Store — tracks uploaded script file per project ━━━ */
+
+export interface UploadedScript {
+  projectId: string;
+  filename: string;
+  uploadedAt: string;
+  sceneCount: number;
+  rawText: string;
+}
+
+interface ScriptUploadState {
+  scripts: Record<string, UploadedScript>; // keyed by projectId
+  getScript: (projectId: string) => UploadedScript | undefined;
+  setScript: (projectId: string, data: UploadedScript) => void;
+  clearScript: (projectId: string) => void;
+}
+
+export const useScriptUploadStore = create<ScriptUploadState>()(
+  persist(
+    (set, get) => ({
+      scripts: {},
+
+      getScript: (projectId) => get().scripts[projectId],
+
+      setScript: (projectId, data) =>
+        set((s) => ({ scripts: { ...s.scripts, [projectId]: data } })),
+
+      clearScript: (projectId) =>
+        set((s) => {
+          const { [projectId]: _, ...rest } = s.scripts;
+          return { scripts: rest };
+        }),
+    }),
+    {
+      name: 'prep-happy-script-uploads',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
