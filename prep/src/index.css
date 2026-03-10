@@ -843,22 +843,22 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: 14px;
-  padding: 24px 28px 24px 36px;
+  padding: 24px 28px 24px 32px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--glass-shadow-stat);
   transition: all 0.2s ease;
 }
-/* Left accent bar */
+/* Left accent arc — follows the card's border-radius curve */
 .stat-card::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 12px;
-  bottom: 12px;
+  top: 0;
+  bottom: 0;
   width: 4px;
-  border-radius: 0 4px 4px 0;
   background: linear-gradient(180deg, var(--stat-accent-top, #E8621A) 0%, var(--stat-accent-bottom, #F0882A) 100%);
+  /* card's overflow:hidden + border-radius clips this into a natural ( curve */
 }
 /* Accent color variants via CSS custom properties */
 .stat-card:nth-child(1) { --stat-accent-top: #E8621A; --stat-accent-bottom: #F0882A; }
@@ -903,17 +903,17 @@ body {
   box-shadow: var(--glass-shadow);
   transition: all 0.2s ease;
 }
-/* Left accent bar */
+/* Left accent arc — follows the card's border-radius curve */
 .project-card::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 16px;
-  bottom: 16px;
+  top: 0;
+  bottom: 0;
   width: 4px;
-  border-radius: 0 4px 4px 0;
   background: linear-gradient(180deg, #E8621A 0%, #F0882A 100%);
   z-index: 2;
+  /* card's overflow:hidden + border-radius clips this into a natural ( curve */
 }
 .project-card:hover {
   border-color: var(--border-medium);
