@@ -66,7 +66,6 @@ export function TimesheetSidebar({
   return (
     <aside className="ts-sidebar">
       <div className="ts-sidebar-header">
-        <h3 className="ts-sidebar-title">Overview</h3>
         <span className="ts-sidebar-week-label">This Week</span>
       </div>
 
