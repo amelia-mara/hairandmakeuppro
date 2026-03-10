@@ -23,7 +23,7 @@ export function AddCategoryModal({ open, onClose, onAdd }: AddCategoryModalProps
     <div className="budget-modal-overlay" onClick={onClose}>
       <div className="budget-modal glass" onClick={e => e.stopPropagation()}>
         <div className="budget-modal-header">
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.125rem', fontWeight: 600 }}>
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
             Add Category
           </h3>
           <button className="budget-modal-close" onClick={onClose}>×</button>

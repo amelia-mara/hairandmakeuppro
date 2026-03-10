@@ -36,7 +36,7 @@ export const ReceiptUploadZone = forwardRef<ReceiptUploadZoneHandle, ReceiptUplo
     return (
       <div className="budget-upload-card">
         <div className="budget-upload-header">
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1rem', fontWeight: 600 }}>
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
             Upload Receipts
           </h3>
           <button className="btn-ghost budget-btn-sm" onClick={onApiSettings}>
