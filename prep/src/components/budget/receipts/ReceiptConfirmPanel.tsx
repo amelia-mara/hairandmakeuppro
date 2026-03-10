@@ -88,8 +88,9 @@ export function ReceiptConfirmPanel({
   return (
     <div className={`budget-confirm-panel ${open ? 'open' : ''}`}>
       <div className="budget-confirm-panel-header">
-        <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
-          Confirm Expense
+        <h3 style={{ fontSize: '0.8125rem', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
+          <span className="heading-italic">Confirm</span>{' '}
+          <span className="heading-regular">Expense</span>
         </h3>
         <button className="budget-modal-close" onClick={onClose}>×</button>
       </div>

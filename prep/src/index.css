@@ -705,7 +705,22 @@ body {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    BRAND TYPOGRAPHY — Playfair Display for headings
    DM Sans is the base (set via --font-sans)
+   Artistic italic accent for split-word headings
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Artistic italic accent — used for the first word in split headings */
+.heading-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* The non-italic portion of a split heading */
+.heading-regular {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 700;
+}
 .topbar-title,
 .stat-card .stat-value,
 .dashboard-header h1,
@@ -716,7 +731,16 @@ body {
 .cv-name,
 .cv-look-name,
 .fp-scene-num,
-.cb-name {
+.cb-name,
+.bs-title,
+.ct-card-title,
+.ct-event-name,
+.budget-top-bar-title,
+.budget-card-title,
+.ts-top-bar-title,
+.ts-card-title,
+.ts-section-title,
+.ts-section-subtitle {
   font-family: var(--font-display);
 }
 
@@ -3610,7 +3634,8 @@ body {
 .bs-header-left { display: flex; align-items: baseline; gap: 14px; }
 
 .bs-title {
-  font-size: 0.875rem; font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 0.875rem; font-weight: 700;
   color: var(--text-heading); text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -3932,6 +3957,7 @@ body {
   margin-bottom: 12px;
 }
 .ct-card-title {
+  font-family: var(--font-display);
   font-size: 1rem; font-weight: 800;
   color: var(--accent);
   text-transform: uppercase;
@@ -4086,6 +4112,7 @@ body {
   margin-bottom: 8px;
 }
 .ct-event-name {
+  font-family: var(--font-display);
   font-size: 0.9375rem; font-weight: 700;
   color: var(--text-heading);
   margin: 0 0 4px; padding-right: 24px;
@@ -4251,6 +4278,7 @@ body {
   display: flex; flex-direction: column; gap: 16px;
 }
 .ct-form-title {
+  font-family: var(--font-display);
   font-size: 0.8125rem; font-weight: 700;
   color: var(--text-heading);
   margin: 0;
@@ -4489,9 +4517,9 @@ body {
 }
 
 .budget-top-bar-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-heading);
   margin: 0;
 }
@@ -4775,9 +4803,9 @@ body {
 }
 
 .budget-card-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 4px;
 }
@@ -6314,8 +6342,9 @@ body {
 }
 
 .ts-top-bar-title {
+  font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-heading);
   margin: 0;
 }
@@ -6365,8 +6394,9 @@ body {
 }
 
 .ts-tabs-overview-title {
+  font-family: var(--font-display);
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-heading);
   margin: 0;
   padding: 12px 0;
@@ -6458,8 +6488,9 @@ body {
 }
 
 .ts-card-title {
+  font-family: var(--font-display);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-heading);
   margin: 0;
 }
@@ -6565,15 +6596,17 @@ body {
 }
 
 .ts-section-title {
+  font-family: var(--font-display);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-heading);
   margin: 0;
 }
 
 .ts-section-subtitle {
+  font-family: var(--font-display);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-heading);
   margin: 0 0 12px 0;
 }

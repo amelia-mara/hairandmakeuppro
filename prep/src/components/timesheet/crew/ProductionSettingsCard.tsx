@@ -17,7 +17,7 @@ export function ProductionSettingsCard({ production, onUpdate }: ProductionSetti
   return (
     <div className="ts-card">
       <div className="ts-card-header">
-        <h3 className="ts-card-title">Production Settings</h3>
+        <h3 className="ts-card-title"><span className="heading-italic">Production</span> Settings</h3>
       </div>
       <div className="ts-card-body">
         <div className="ts-form-grid">

@@ -951,10 +951,11 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           padding: '24px 28px 0',
         }}>
           <h2 style={{
-            fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--text-heading)', margin: 0,
+            fontSize: '0.8125rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
           }}>
-            Upload Script
+            <span className="heading-italic">Upload</span>{' '}
+            <span className="heading-regular">Script</span>
           </h2>
           {!processing && (
             <button onClick={onClose} style={{

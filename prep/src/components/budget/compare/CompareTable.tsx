@@ -27,8 +27,8 @@ export function CompareTable({
   return (
     <div className="budget-compare-section">
       <div className="budget-compare-header">
-        <h3 style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 12 }}>
-          Budget vs Actual Comparison
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="heading-italic">Budget</span> vs Actual Comparison
         </h3>
         <button className="btn-ghost budget-btn-sm">Export Report</button>
       </div>

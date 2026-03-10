@@ -121,8 +121,9 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
                 <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
               </svg>
             </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
-              Create New Project
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+              <span className="heading-italic">Create</span>{' '}
+              <span className="heading-regular">New Project</span>
             </span>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
               Start your script
@@ -165,7 +166,7 @@ function ProjectCard({
     <div className="project-card">
       {/* Header */}
       <div className="project-card-header" style={{ cursor: 'pointer' }} onClick={onClick}>
-        <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+        <h3 className="project-card-name" style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
           {project.title}
         </h3>
         <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>

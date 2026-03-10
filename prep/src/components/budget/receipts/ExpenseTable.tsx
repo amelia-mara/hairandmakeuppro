@@ -36,8 +36,8 @@ export function ExpenseTable({
   return (
     <div className="budget-expense-card">
       <div className="budget-expense-card-header">
-        <h3 style={{ fontSize: '0.8125rem', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
-          Expenses
+        <h3 style={{ fontSize: '0.8125rem', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0 }}>
+          <span className="heading-italic">Expenses</span>
         </h3>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input
