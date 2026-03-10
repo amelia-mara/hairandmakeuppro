@@ -837,6 +837,125 @@ body {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HUB HERO
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.hub-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 80px 40px 60px;
+  text-align: center;
+}
+.hub-hero-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hub-hero-badge {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 8px 24px;
+  margin-bottom: 28px;
+}
+.hub-hero-heading {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-heading);
+  margin-bottom: 20px;
+}
+.hub-hero-heading em {
+  font-style: italic;
+  color: var(--accent);
+}
+.hub-hero-subtitle {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 480px;
+  margin-bottom: 32px;
+}
+.hub-hero-cta {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 40px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.hub-hero-cta:hover {
+  background: var(--accent-cue-hover);
+  transform: translateY(-1px);
+}
+
+/* Rainbow swirl decoration */
+.hub-hero-rainbow {
+  position: absolute;
+  top: -60px;
+  right: -120px;
+  width: 500px;
+  height: 500px;
+  z-index: 1;
+  opacity: 0.25;
+  pointer-events: none;
+}
+.rainbow-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid transparent;
+}
+.rainbow-ring--1 {
+  width: 500px;
+  height: 500px;
+  top: 0;
+  left: 0;
+  border-color: rgba(232, 98, 26, 0.5);
+}
+.rainbow-ring--2 {
+  width: 420px;
+  height: 420px;
+  top: 40px;
+  left: 40px;
+  border-color: rgba(240, 136, 42, 0.45);
+}
+.rainbow-ring--3 {
+  width: 340px;
+  height: 340px;
+  top: 80px;
+  left: 80px;
+  border-color: rgba(212, 148, 58, 0.4);
+}
+.rainbow-ring--4 {
+  width: 260px;
+  height: 260px;
+  top: 120px;
+  left: 120px;
+  border-color: rgba(196, 82, 42, 0.35);
+}
+.rainbow-ring--5 {
+  width: 180px;
+  height: 180px;
+  top: 160px;
+  left: 160px;
+  border-color: rgba(74, 191, 176, 0.3);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    STAT CARD
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .stat-card {

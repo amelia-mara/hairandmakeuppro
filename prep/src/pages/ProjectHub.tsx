@@ -32,33 +32,33 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
       return 0;
     });
 
-  const activeCount = projects.filter((p) => p.status === 'active').length;
-  const setupCount = projects.filter((p) => p.status === 'setup').length;
-  const avgProgress = projects.length > 0
-    ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
-    : 0;
 
   return (
     <div className="animate-fade-in">
-      {/* Stats Row */}
-      <div style={{ padding: '24px 40px 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-          <div className="stat-card">
-            <div className="stat-label">Total Projects</div>
-            <div className="stat-value">{projects.length}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Active</div>
-            <div className="stat-value">{activeCount}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">In Setup</div>
-            <div className="stat-value">{setupCount}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Avg Progress</div>
-            <div className="stat-value">{avgProgress}%</div>
-          </div>
+      {/* Hero Section */}
+      <div className="hub-hero">
+        {/* Rainbow swirl decoration */}
+        <div className="hub-hero-rainbow">
+          <div className="rainbow-ring rainbow-ring--1" />
+          <div className="rainbow-ring rainbow-ring--2" />
+          <div className="rainbow-ring rainbow-ring--3" />
+          <div className="rainbow-ring rainbow-ring--4" />
+          <div className="rainbow-ring rainbow-ring--5" />
+        </div>
+
+        <div className="hub-hero-content">
+          <span className="hub-hero-badge">FOR FILM AND TV DEPARTMENTS</span>
+          <h2 className="hub-hero-heading">
+            Manage the Magic<br />
+            <em>Behind the Camera.</em>
+          </h2>
+          <p className="hub-hero-subtitle">
+            Continuity tracking, script breakdowns, budgets, and timesheets.
+            Everything your department needs, beautifully organised.
+          </p>
+          <button className="hub-hero-cta" onClick={onCreateProject}>
+            Get Started
+          </button>
         </div>
       </div>
 
