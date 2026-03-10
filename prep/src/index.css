@@ -5504,6 +5504,7 @@ body {
 /* ── Tabs ──────────────────────────────────────────── */
 .budget-tabs {
   display: flex;
+  align-items: center;
   gap: 0;
   border-bottom: 1px solid var(--border-card);
   padding: 0 32px;
@@ -5514,6 +5515,28 @@ body {
   );
   flex-shrink: 0;
   position: relative;
+}
+
+.budget-tabs-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+  padding: 12px 0;
+  white-space: nowrap;
+}
+
+.budget-tabs-nav {
+  display: flex;
+  gap: 0;
+  margin-left: 32px;
+}
+
+.budget-tabs-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .budget-tab {
