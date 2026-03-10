@@ -169,12 +169,12 @@ function RateCardPreview({ production, hasCrew, onAddCrew }: { production: Produ
           </div>
         </div>
 
-        <div className="ts-preview-overlay">
-          <p>{hasCrew ? 'Select a crew member to edit their details' : 'Add a crew member to get started'}</p>
-          {!hasCrew && (
-            <button className="ts-btn ts-btn-primary" onClick={onAddCrew}>+ Add Crew</button>
-          )}
-        </div>
+      </div>
+      <div className="ts-preview-overlay">
+        <p>{hasCrew ? 'Select a crew member to edit their details' : 'Add a crew member to get started'}</p>
+        {!hasCrew && (
+          <button className="ts-btn ts-btn-primary" onClick={onAddCrew}>+ Add Crew</button>
+        )}
       </div>
     </div>
   );

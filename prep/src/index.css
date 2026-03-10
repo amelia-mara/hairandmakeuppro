@@ -8590,8 +8590,6 @@ body {
 /* ── Rate Card Panel ─────────────────────────── */
 
 .ts-rate-card-panel .ts-card-body {
-  max-height: calc(100vh - 280px);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -8623,7 +8621,7 @@ body {
 }
 
 .ts-preview-panel > .ts-card-header,
-.ts-preview-panel > .ts-card-body .ts-section-block {
+.ts-preview-panel > .ts-card-body {
   opacity: 0.35;
   pointer-events: none;
   user-select: none;
@@ -8638,6 +8636,9 @@ body {
   justify-content: center;
   gap: 12px;
   z-index: 2;
+  background: rgba(10, 9, 8, 0.82);
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
 }
 
 .ts-preview-overlay p {
