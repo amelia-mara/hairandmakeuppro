@@ -166,7 +166,7 @@ function ProjectCard({
     <div className="project-card">
       {/* Header */}
       <div className="project-card-header" style={{ cursor: 'pointer' }} onClick={onClick}>
-        <h3 className="project-card-name" style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-heading)', marginBottom: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+        <h3 className="project-card-name" style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '6px', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
           {project.title}
         </h3>
         <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
@@ -224,19 +224,21 @@ function StatItem({ label, value, bold }: { label: string; value: string; bold?:
   return (
     <div>
       <div style={{
+        fontFamily: 'var(--font-sans)',
         fontSize: '0.6875rem',
-        fontWeight: 500,
+        fontWeight: 600,
         textTransform: 'uppercase' as const,
-        letterSpacing: '0.06em',
+        letterSpacing: '0.08em',
         color: 'var(--text-muted)',
-        marginBottom: '4px',
+        marginBottom: '6px',
       }}>
         {label}
       </div>
       <div style={{
-        fontSize: '1rem',
+        fontFamily: 'var(--font-display)',
+        fontSize: '1.125rem',
         fontWeight: bold ? 700 : 600,
-        color: 'var(--text-heading)',
+        color: 'var(--text-primary)',
       }}>
         {value}
       </div>
