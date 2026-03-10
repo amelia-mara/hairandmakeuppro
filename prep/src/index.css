@@ -118,11 +118,11 @@
   --accent-cue-hover: #F5A623;
 
   /* Brand light mode — warm cream base */
-  --bg-primary: #F5EFE0;
-  --bg-surface: #F5EFE0;
-  --bg-card: #F5EFE0;
-  --bg-card-hover: #EDE4D0;
-  --bg-elevated: #F5EFE0;
+  --bg-primary: #EDE4D0;
+  --bg-surface: #EDE4D0;
+  --bg-card: #FAF7F0;
+  --bg-card-hover: #F5F0E5;
+  --bg-elevated: #FAF7F0;
 
   --text-primary: #2A1A08;
   --text-secondary: #5A3E28;
@@ -305,8 +305,12 @@
 
 /* New project card */
 [data-theme="light"] .new-project-card {
-  background: rgba(0,0,0,0.02) !important;
-  border-color: rgba(0,0,0,0.08) !important;
+  background: transparent !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+[data-theme="light"] .new-project-card:hover {
+  background: var(--bg-card) !important;
+  border-color: var(--accent) !important;
 }
 
 /* Sticky headers */
@@ -332,32 +336,32 @@
 /* Filter pills (project list) */
 [data-theme="light"] .filter-pill {
   background: var(--bg-card) !important;
-  border-color: rgba(0,0,0,0.10) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
   color: var(--text-secondary) !important;
 }
 [data-theme="light"] .filter-pill::after {
   display: none !important;
 }
 [data-theme="light"] .filter-pill:hover {
-  background: #faf8f5 !important;
-  border-color: rgba(var(--a), 0.30) !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+  background: #FAF7F0 !important;
+  border-color: rgba(var(--a), 0.25) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
   color: var(--text-primary) !important;
 }
 [data-theme="light"] .filter-pill.active {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
-  border-color: var(--accent-dark) !important;
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
   color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(var(--a), 0.25) !important;
+  box-shadow: 0 2px 6px rgba(var(--a), 0.20) !important;
 }
 
 /* Input & select fields */
 [data-theme="light"] .input-field,
 [data-theme="light"] .select-field {
-  background: #f8f6f2 !important;
+  background: #FAF7F0 !important;
   border-color: rgba(0,0,0,0.10) !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03) !important;
 }
 [data-theme="light"] .input-field:focus,
 [data-theme="light"] .select-field:focus {
@@ -418,19 +422,26 @@
   color: var(--text-muted) !important;
 }
 
-/* Stat cards — remove dark gradients */
+/* Stat cards in light mode */
 [data-theme="light"] .stat-card {
   border-color: rgba(0,0,0,0.06) !important;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
 }
+[data-theme="light"] .stat-card .stat-value {
+  color: var(--text-primary) !important;
+}
 
-/* Project cards */
+/* Project cards in light mode */
 [data-theme="light"] .project-card {
-  border-color: rgba(0,0,0,0.08) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  border-color: rgba(0,0,0,0.06) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
 [data-theme="light"] .project-card:hover {
   box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .project-card-footer {
+  background: rgba(0,0,0,0.02) !important;
+  border-color: rgba(0,0,0,0.06) !important;
 }
 
 /* Production type cards in new project modal */
@@ -832,29 +843,46 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: 14px;
-  padding: 24px 28px;
+  padding: 24px 28px 24px 36px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--glass-shadow-stat);
   transition: all 0.2s ease;
 }
+/* Left accent bar */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, var(--stat-accent-top, #E8621A) 0%, var(--stat-accent-bottom, #F0882A) 100%);
+}
+/* Accent color variants via CSS custom properties */
+.stat-card:nth-child(1) { --stat-accent-top: #E8621A; --stat-accent-bottom: #F0882A; }
+.stat-card:nth-child(2) { --stat-accent-top: #F0882A; --stat-accent-bottom: #F5A623; }
+.stat-card:nth-child(3) { --stat-accent-top: #4ABFB0; --stat-accent-bottom: #3DA89A; }
+.stat-card:nth-child(4) { --stat-accent-top: #D4943A; --stat-accent-bottom: #E8621A; }
 .stat-card:hover {
   border-color: var(--border-medium);
   box-shadow: var(--glass-shadow-hover);
 }
 .stat-card .stat-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-label);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--stat-accent-top, var(--accent));
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 8px;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
   position: relative;
 }
 .stat-card .stat-value {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--accent-gold);
+  color: var(--text-primary);
   line-height: 1;
   letter-spacing: -0.02em;
   position: relative;
@@ -875,24 +903,36 @@ body {
   box-shadow: var(--glass-shadow);
   transition: all 0.2s ease;
 }
+/* Left accent bar */
+.project-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #E8621A 0%, #F0882A 100%);
+  z-index: 2;
+}
 .project-card:hover {
   border-color: var(--border-medium);
   box-shadow: var(--glass-shadow-hover);
 }
 .project-card-header {
-  padding: 24px 24px 16px;
+  padding: 24px 24px 16px 32px;
   position: relative;
   z-index: 1;
 }
 .project-card-body {
-  padding: 0 24px 20px;
+  padding: 0 24px 20px 32px;
   flex: 1;
   position: relative;
   z-index: 1;
 }
 .project-card-footer {
-  padding: 14px 20px;
-  background: rgba(0, 0, 0, 0.08);
+  padding: 14px 20px 14px 32px;
+  background: rgba(0, 0, 0, 0.03);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -927,7 +967,7 @@ body {
 
 /* New project card */
 .new-project-card {
-  border: 2px dashed var(--border-medium);
+  border: 1.5px dashed var(--border-medium);
   border-radius: 14px;
   min-height: 340px;
   display: flex;
@@ -942,7 +982,8 @@ body {
 .new-project-card:hover {
   border-color: var(--accent);
   border-style: solid;
-  background: rgba(var(--a), 0.04);
+  background: var(--bg-card);
+  box-shadow: var(--glass-shadow);
 }
 .new-project-card .icon-circle {
   width: 56px;
