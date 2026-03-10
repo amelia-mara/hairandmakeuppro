@@ -22,7 +22,10 @@ export function BudgetTabs({ activeTab, onTabChange }: BudgetTabsProps) {
 
   return (
     <div className="budget-tabs">
-      <h3 className="budget-tabs-title">Budget System</h3>
+      <div className="budget-tabs-sidebar-section">
+        <span className="budget-tabs-sidebar-label">Remaining</span>
+      </div>
+      <div className="budget-tabs-separator" />
       <div className="budget-tabs-nav">
         {TABS.map((tab) => (
           <button
