@@ -105,7 +105,6 @@ export function ScriptBreakdown({ projectId }: Props) {
   /* Script upload state */
   const scriptUpload = useScriptUploadStore();
   const updateProject = useProjectStore((s) => s.updateProject);
-  const project = useProjectStore((s) => s.getProject(projectId));
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
@@ -410,6 +409,18 @@ export function ScriptBreakdown({ projectId }: Props) {
           />
         </div>
       </div>
+
+      {/* Script Upload Modal */}
+      {showUploadModal && (
+        <ScriptUploadModal
+          projectId={projectId}
+          onClose={() => setShowUploadModal(false)}
+          onUploaded={(filename) => {
+            updateProject(projectId, { scriptFilename: filename });
+            setShowUploadModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -798,17 +809,6 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
         </div>
       )}
 
-      {/* Script Upload Modal */}
-      {showUploadModal && (
-        <ScriptUploadModal
-          projectId={projectId}
-          onClose={() => setShowUploadModal(false)}
-          onUploaded={(filename) => {
-            updateProject(projectId, { scriptFilename: filename });
-            setShowUploadModal(false);
-          }}
-        />
-      )}
     </div>
   );
 }
