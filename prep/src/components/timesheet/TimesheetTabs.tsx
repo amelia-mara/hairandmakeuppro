@@ -21,7 +21,11 @@ export function TimesheetTabs({ activeTab, onTabChange }: TimesheetTabsProps) {
 
   return (
     <div className="ts-tabs">
-      <h3 className="ts-tabs-overview-title">Overview</h3>
+      <div className="ts-tabs-sidebar-section">
+        <h3 className="ts-tabs-overview-title">Overview</h3>
+        <span className="ts-tabs-week-label">This Week</span>
+      </div>
+      <div className="ts-tabs-separator" />
       <div className="ts-tabs-nav">
         {TABS.map(tab => (
           <button

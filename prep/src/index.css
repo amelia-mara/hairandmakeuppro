@@ -7314,7 +7314,6 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 6px 14px;
-  border-bottom: 1px solid rgba(var(--a), 0.12);
   margin-bottom: 14px;
 }
 
@@ -7541,6 +7540,15 @@ body {
   position: relative;
 }
 
+.ts-tabs-sidebar-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 252px;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
 .ts-tabs-overview-title {
   font-size: 0.9375rem;
   font-weight: 600;
@@ -7550,10 +7558,24 @@ body {
   white-space: nowrap;
 }
 
+.ts-tabs-week-label {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.ts-tabs-separator {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(var(--a), 0.15);
+  flex-shrink: 0;
+}
+
 .ts-tabs-nav {
   display: flex;
   gap: 0;
-  margin-left: 32px;
+  margin-left: 8px;
 }
 
 .ts-tabs-actions {
