@@ -34,6 +34,8 @@ import { initVersionManagement, saveCurrentVersionState, setStateReference } fro
 import { renderVersionSelector } from './version-ui.js';
 // AI Chat Assistant
 import './chat-assistant.js';
+// Script upload (PDF parsing and character detection)
+import { initScriptUpload, showScriptUploadModal } from './script-upload.js';
 
 // ============================================================================
 // GLOBAL APPLICATION STATE
@@ -134,14 +136,15 @@ export async function init() {
         // Mark as initialized
         state.isInitialized = true;
 
-        // Check if script exists - if not, auto-open import modal
+        // Initialize script upload system (drag-drop, file input listeners)
+        initScriptUpload();
+
+        // Check if script exists - if not, auto-open upload modal
         const hasScript = state.currentProject?.scriptContent && state.scenes.length > 0;
         if (!hasScript) {
-            console.log('No script found - opening import modal');
-            // Use setTimeout to ensure DOM is ready
-            setTimeout(async () => {
-                const { openImportModal } = await import('./export-handlers.js');
-                openImportModal();
+            console.log('No script found - opening script upload modal');
+            setTimeout(() => {
+                showScriptUploadModal();
             }, 100);
         }
 
