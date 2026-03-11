@@ -791,7 +791,6 @@ body {
 .budget-stat-value,
 .cv-name,
 .cv-look-name,
-.fp-scene-num,
 .ct-card-title,
 .ct-event-name,
 .budget-top-bar-title,
@@ -3457,7 +3456,7 @@ body {
   flex-shrink: 0;
 }
 
-.fp-scene-num { font-size: 0.8125rem; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-display); }
+.fp-scene-num { font-size: 0.8125rem; font-weight: 700; color: #8B4513; text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-sans); }
 .fp-scene-tagline { font-size: 0.7rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; margin: 2px 0 0; line-height: 1.35; }
 .fp-scene-loc { font-size: 0.875rem; color: var(--text-primary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; margin-bottom: 20px; }
 
