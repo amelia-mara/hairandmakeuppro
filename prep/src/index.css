@@ -338,7 +338,8 @@
 
 /* Sticky headers */
 [data-theme="light"] .fp-header {
-  background: var(--bg-primary) !important;
+  background: transparent !important;
+  border-bottom: 1px solid rgba(0,0,0,0.10) !important;
 }
 [data-theme="light"] .sl-header {
   background: transparent !important;
