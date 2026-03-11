@@ -614,7 +614,9 @@
 
 /* Strengthen definition — borders & surfaces */
 [data-theme="light"] .bd-left {
-  background: transparent !important;
+  background: rgba(250, 247, 240, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
   border-right: 1px solid rgba(0,0,0,0.10) !important;
 }
 [data-theme="light"] .bd-right {
