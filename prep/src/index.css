@@ -2952,13 +2952,14 @@ body {
 }
 
 .sv-heading {
-  font-weight: 700;
-  font-size: 1.1em;
+  font-weight: 600;
+  font-size: 0.95em;
   color: #1a1510;
   margin-bottom: 28px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  font-family: var(--font-sans);
+  font-family: 'Courier New', 'Courier', monospace;
+  text-transform: uppercase;
 }
 
 .sv-line {
