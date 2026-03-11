@@ -3552,7 +3552,7 @@ body {
 .fp-section-title {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #8B5E3C;
+  color: #E8621A;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 18px;
@@ -3560,6 +3560,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.fp-section--bordered .fp-section-title {
+  color: #8B5E3C;
 }
 
 .fp-section-count {
