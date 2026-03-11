@@ -306,11 +306,18 @@
 /* New project card */
 [data-theme="light"] .new-project-card {
   background: transparent !important;
-  border-color: rgba(0,0,0,0.12) !important;
+  border: 2px dashed rgba(0,0,0,0.12) !important;
 }
 [data-theme="light"] .new-project-card:hover {
   background: var(--bg-card) !important;
   border-color: var(--accent) !important;
+}
+[data-theme="light"] .new-project-card .icon-circle {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+[data-theme="light"] .new-project-card span {
+  color: var(--text-primary) !important;
 }
 
 /* Sticky headers */
@@ -437,6 +444,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
 [data-theme="light"] .project-card:hover {
+  border-color: #E8621A !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
 }
 [data-theme="light"] .project-card-footer {
@@ -1057,7 +1065,7 @@ body {
   background:
     linear-gradient(135deg, rgba(var(--a), 0.03) 0%, transparent 60%),
     var(--bg-card);
-  border: 2px solid #C05A1A;
+  border: 1.5px solid #C05A1A;
   border-radius: 14px;
   overflow: hidden;
   min-height: 280px;
@@ -1076,7 +1084,7 @@ body {
 }
 .project-card:hover {
   border-color: #E8621A;
-  box-shadow: var(--glass-shadow-hover), 0 0 24px rgba(var(--a), 0.06);
+  box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
 }
 .project-card-header {
@@ -1203,7 +1211,8 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background: var(--accent);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1211,8 +1220,7 @@ body {
   transition: all 0.2s ease;
 }
 .new-project-card:hover .icon-circle {
-  border-color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--accent-cue-hover, #F5A623);
 }
 
 /* ━━━ Buttons ━━━ */
