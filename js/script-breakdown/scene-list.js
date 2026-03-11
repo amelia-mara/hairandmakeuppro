@@ -60,6 +60,11 @@ export function renderSceneList() {
         // Build info line: "Day X · Time · INT/EXT"
         const infoLine = buildInfoLine(scene, sceneType);
 
+        // Determine breakdown completion status for dot indicator
+        const isBreakdownComplete = scene.isComplete || breakdown.isComplete || false;
+        const statusDotClass = isBreakdownComplete ? 'breakdown-dot-complete' : 'breakdown-dot-incomplete';
+        const statusDotTitle = isBreakdownComplete ? 'Breakdown complete' : 'Breakdown incomplete';
+
         return `
             <div class="scene-item ${sceneTypeClassName} ${isActive ? 'active' : ''}"
                  onclick="selectScene(${index})"
@@ -69,7 +74,10 @@ export function renderSceneList() {
                     <span class="scene-number">${scene.number || index + 1}</span>
                     <span class="scene-location">${escapeHtml(truncateText(location, 30))}</span>
                     ${sceneType.timeOfDay ? `<span class="scene-time-badge">${sceneType.timeOfDay}</span>` : ''}
-                    ${characterCount > 0 ? `<span class="char-count" title="${characterCount} characters">${characterCount}</span>` : ''}
+                    <span class="scene-info-right">
+                        ${sceneType.intExt ? `<span class="scene-intext-label">${sceneType.intExt}</span>` : ''}
+                        <span class="${statusDotClass}" title="${statusDotTitle}"></span>
+                    </span>
                 </div>
 
                 <div class="scene-info-line">
@@ -215,8 +223,22 @@ function getSceneIndicators(sceneIndex, analysis, scene = null) {
 function renderExpandedDetails(scene, cast) {
     const sceneIndex = state.scenes.indexOf(scene);
 
+    // Build timeline info
+    let timelineHtml = '';
+    if (scene.storyDay || scene.storyTimeOfDay) {
+        const dayText = scene.storyDay ? `Day ${scene.storyDay}` : '';
+        timelineHtml = `
+            <div class="scene-detail-section">
+                <span class="scene-section-label">Timeline</span>
+                <div class="scene-section-content">${escapeHtml(dayText)}</div>
+            </div>
+        `;
+    }
+
     return `
         <div class="scene-expanded">
+            ${timelineHtml}
+
             <!-- SYNOPSIS SECTION -->
             <div class="scene-synopsis-section" data-scene-index="${sceneIndex}">
                 <div class="scene-synopsis-header">
@@ -237,8 +259,11 @@ function renderExpandedDetails(scene, cast) {
             </div>
 
             ${cast.length > 0 ? `
-                <div class="scene-cast-list">
-                    ${cast.map(c => `<span class="char-pill">${escapeHtml(c)}</span>`).join('')}
+                <div class="scene-detail-section">
+                    <span class="scene-section-label">Characters</span>
+                    <div class="scene-cast-list">
+                        ${cast.map(c => `<span class="char-pill">${escapeHtml(c)}</span>`).join('')}
+                    </div>
                 </div>
             ` : ''}
         </div>
