@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
+  useCharacterOverridesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
   type ScriptTag,
 } from '@/stores/breakdownStore';
@@ -1174,6 +1175,8 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
   const looks = allLooks.filter((l) => l.characterId === char.id);
   const scenes = allScenes.filter((s) => s.characterIds.includes(char.id));
   const tagStore = useTagStore();
+  const charOverrides = useCharacterOverridesStore();
+  const resolvedChar = charOverrides.getCharacter(char);
   const allCharTags = tagStore.getTagsForCharacter(char.id);
   /* Only show tags with descriptions or non-name tags in Script Notes.
      Cast tags that are just the character's name serve only to trigger the tab. */
@@ -1185,13 +1188,28 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
     return true;
   });
 
+  const updateField = useCallback((field: string, value: string) => {
+    charOverrides.updateCharacter(char.id, { [field]: value });
+  }, [char.id, charOverrides]);
+
+  const profileFields: { label: string; key: keyof Character; wide?: boolean }[] = [
+    { label: 'Age', key: 'age' },
+    { label: 'Gender', key: 'gender' },
+    { label: 'Hair Colour', key: 'hairColour' },
+    { label: 'Hair Type', key: 'hairType' },
+    { label: 'Eye Colour', key: 'eyeColour' },
+    { label: 'Skin Tone', key: 'skinTone' },
+    { label: 'Build', key: 'build' },
+    { label: 'Features', key: 'distinguishingFeatures' },
+  ];
+
   return (
     <div className="cv-wrap">
       <div className="cv-header">
-        <div className="cv-avatar">{char.name.split(' ').map((n) => n[0]).join('')}</div>
+        <div className="cv-avatar">{resolvedChar.name.split(' ').map((n) => n[0]).join('')}</div>
         <div>
-          <div className="cv-name">{char.name}</div>
-          <div className="cv-meta">{ordinal(char.billing)} Billing · {char.gender} · Age {char.age}</div>
+          <div className="cv-name">{resolvedChar.name}</div>
+          <div className="cv-meta">{ordinal(resolvedChar.billing)} Billing · {resolvedChar.gender} · Age {resolvedChar.age}</div>
         </div>
       </div>
       <div className="cv-subtabs">
@@ -1206,14 +1224,27 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
       <div className="cv-content">
         {activeSubTab === 'profile' && (
           <div className="cv-grid">
-            {([['Age', char.age], ['Gender', char.gender], ['Hair Colour', char.hairColour],
-              ['Hair Type', char.hairType], ['Eye Colour', char.eyeColour], ['Skin Tone', char.skinTone],
-              ['Build', char.build], ['Features', char.distinguishingFeatures]] as [string, string][]).map(([l, v]) => (
-              <div key={l} className="cv-field"><span className="cv-field-label">{l}</span><span className="cv-field-value">{v || '—'}</span></div>
+            {profileFields.map(({ label, key }) => (
+              <div key={label} className="cv-field">
+                <label className="cv-field-label">{label}</label>
+                <input
+                  className="fi-input cv-field-input"
+                  value={resolvedChar[key] as string || ''}
+                  onChange={(e) => updateField(key, e.target.value)}
+                  placeholder={`Enter ${label.toLowerCase()}…`}
+                />
+              </div>
             ))}
-            {char.notes && (
-              <div className="cv-field cv-field--wide"><span className="cv-field-label">Notes</span><span className="cv-field-value">{char.notes}</span></div>
-            )}
+            <div className="cv-field cv-field--wide">
+              <label className="cv-field-label">Notes</label>
+              <textarea
+                className="fi-input cv-field-textarea"
+                value={resolvedChar.notes || ''}
+                onChange={(e) => updateField('notes', e.target.value)}
+                placeholder="Enter notes…"
+                rows={3}
+              />
+            </div>
           </div>
         )}
         {activeSubTab === 'lookbook' && (

@@ -1074,6 +1074,7 @@ interface ParsedScriptState {
   getParsedData: (projectId: string) => ProjectParsedData | undefined;
   setParsedData: (projectId: string, data: ProjectParsedData) => void;
   clearParsedData: (projectId: string) => void;
+  updateCharacter: (projectId: string, characterId: string, data: Partial<ParsedCharacterData>) => void;
 }
 
 export const useParsedScriptStore = create<ParsedScriptState>()(
@@ -1091,9 +1092,52 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
           const { [projectId]: _, ...rest } = s.projects;
           return { projects: rest };
         }),
+
+      updateCharacter: (projectId, characterId, data) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const characters = project.characters.map((c) =>
+            c.id === characterId ? { ...c, ...data } : c
+          );
+          return { projects: { ...s.projects, [projectId]: { ...project, characters } } };
+        }),
     }),
     {
       name: 'prep-happy-parsed-scripts',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
+/* ━━━ Character Overrides Store — editable character profile data ━━━ */
+
+interface CharacterOverridesState {
+  overrides: Record<string, Partial<Character>>; // keyed by character id
+  getCharacter: (char: Character) => Character;
+  updateCharacter: (characterId: string, data: Partial<Character>) => void;
+}
+
+export const useCharacterOverridesStore = create<CharacterOverridesState>()(
+  persist(
+    (set, get) => ({
+      overrides: {},
+
+      getCharacter: (char) => {
+        const o = get().overrides[char.id];
+        return o ? { ...char, ...o } : char;
+      },
+
+      updateCharacter: (characterId, data) =>
+        set((s) => ({
+          overrides: {
+            ...s.overrides,
+            [characterId]: { ...s.overrides[characterId], ...data },
+          },
+        })),
+    }),
+    {
+      name: 'prep-happy-character-overrides',
       storage: createJSONStorage(() => localStorage),
     }
   )
