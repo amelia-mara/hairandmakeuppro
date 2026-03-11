@@ -2661,11 +2661,11 @@ body {
 
 .sl-expand-label {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.5625rem;
   font-weight: 700;
   color: var(--accent-gold);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   margin-bottom: 4px;
 }
 
@@ -3550,11 +3550,11 @@ body {
 }
 
 .fp-section-title {
-  font-size: 0.9rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  color: var(--accent-gold);
+  color: #8B5E3C;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   margin-bottom: 18px;
   line-height: 1.5;
   display: flex;
@@ -3783,7 +3783,7 @@ body {
   border-radius: 14px 14px 0 0;
 }
 .cb-header-right { display: flex; align-items: center; gap: 6px; }
-.cb-name { font-size: 0.9rem; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.4; }
+.cb-name { font-size: 0.875rem; font-weight: 700; color: #E8621A; line-height: 1.4; }
 .cb-billing-badge {
   font-size: 0.5625rem;
   font-weight: 700;
