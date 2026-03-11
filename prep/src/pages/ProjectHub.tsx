@@ -97,12 +97,12 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
             {/* New project card */}
             <button className="new-project-card" onClick={onCreateProject}>
               <div className="icon-circle">
-                <Plus size={22} style={{ color: 'var(--text-muted)' }} />
+                <Plus size={22} style={{ color: '#fff' }} />
               </div>
               <span style={{
                 fontSize: '0.8125rem',
-                fontWeight: 500,
-                color: 'var(--text-muted)',
+                fontWeight: 600,
+                color: '#fff',
               }}>
                 New Project
               </span>
