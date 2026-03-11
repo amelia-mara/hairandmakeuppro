@@ -124,22 +124,25 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [hasScript, parsedData]);
 
-  /* Reset selected scene when data source changes */
+  /* Reset selected scene when data source changes — synchronous derivation
+     avoids a render frame where scene is undefined */
+  const validSceneId = ALL_SCENES.find(s => s.id === selectedSceneId) ? selectedSceneId : ALL_SCENES[0]?.id ?? '';
   useEffect(() => {
-    if (ALL_SCENES.length > 0 && !ALL_SCENES.find(s => s.id === selectedSceneId)) {
-      setSelectedSceneId(ALL_SCENES[0].id);
+    if (validSceneId !== selectedSceneId) {
+      setSelectedSceneId(validSceneId);
+      setActiveTab('script'); // reset to script tab when data source changes
     }
-  }, [ALL_SCENES, selectedSceneId]);
+  }, [validSceneId, selectedSceneId]);
 
-  const scene = ALL_SCENES.find((s) => s.id === selectedSceneId)!;
-  const sceneCharacters = scene ? scene.characterIds.map((id) => ALL_CHARACTERS.find((c) => c.id === id)!).filter(Boolean) : [];
-  const breakdown = store.getBreakdown(selectedSceneId);
+  const scene = ALL_SCENES.find((s) => s.id === validSceneId);
+  const sceneCharacters = scene ? scene.characterIds.map((id) => ALL_CHARACTERS.find((c) => c.id === id)).filter((c): c is Character => !!c) : [];
+  const breakdown = store.getBreakdown(validSceneId);
 
   useEffect(() => {
     if (!scene) return;
-    if (!store.getBreakdown(selectedSceneId)) {
-      store.setBreakdown(selectedSceneId, {
-        sceneId: selectedSceneId,
+    if (!store.getBreakdown(validSceneId)) {
+      store.setBreakdown(validSceneId, {
+        sceneId: validSceneId,
         timeline: { day: '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
         characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
@@ -151,7 +154,7 @@ export function ScriptBreakdown({ projectId }: Props) {
         continuityEvents: [],
       });
     }
-  }, [selectedSceneId, store, scene]);
+  }, [validSceneId, store, scene]);
 
   const triggerSave = useCallback(() => {
     setSaveStatus('saving');
@@ -353,13 +356,15 @@ export function ScriptBreakdown({ projectId }: Props) {
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : sceneCharacters.find((c) => c.id === activeTab) ? (
               <CharacterView
                 char={sceneCharacters.find((c) => c.id === activeTab)!}
                 subTab="profile"
                 allScenes={ALL_SCENES}
                 allLooks={ALL_LOOKS}
               />
+            ) : (
+              <div className="cv-empty" style={{ padding: 24 }}>Character not found. Select a character tab above.</div>
             )}
           </div>
         </div>
@@ -414,6 +419,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               )}
             </div>
           </div>
+          {scene && (
           <BreakdownFormPanel
             scene={scene} characters={sceneCharacters} breakdown={breakdown}
             activeCharacterId={activeTab !== 'script' ? activeTab : null}
@@ -422,12 +428,13 @@ export function ScriptBreakdown({ projectId }: Props) {
             allScenes={ALL_SCENES}
             allLooks={ALL_LOOKS}
             onNavigate={selectScene}
-            onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
-            onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
-            onAddEvent={(evt) => { store.addContinuityEvent(selectedSceneId, evt); triggerSave(); }}
-            onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(selectedSceneId, eventId, data); triggerSave(); }}
-            onRemoveEvent={(id) => { store.removeContinuityEvent(selectedSceneId, id); triggerSave(); }}
+            onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
+            onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
+            onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
+            onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
+            onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
           />
+          )}
         </div>
       </div>
 
