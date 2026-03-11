@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  MOCK_SCENES, MOCK_CHARACTERS, BREAKDOWN_CATEGORIES, emptyHMW,
-  useBreakdownStore, useTagStore, useSynopsisStore,
-  type Scene, type CharacterBreakdown, type SceneBreakdown,
+  MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, emptyHMW,
+  useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore, useScriptUploadStore,
+  type Scene, type Character, type Look, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
 
 /* ━━━ Helpers ━━━ */
@@ -56,8 +56,11 @@ function buildContinuityNotes(
   const injTags = tags.filter((t) => t.categoryId === 'injuries' || t.categoryId === 'health');
   if (injTags.length > 0) parts.push(injTags.map((t) => t.text).join(', '));
 
-  // "Same as Sc X" logic
-  if (parts.length === 0 && cb && !cb.entersWith.hair && !cb.entersWith.makeup) {
+  // "Same as Sc X" logic — only show when no data at all for this character
+  const hasHairTag = tags.some((t) => t.categoryId === 'hair');
+  const hasMakeupTag = tags.some((t) => t.categoryId === 'makeup');
+  const hasManualEntry = cb && (cb.entersWith.hair || cb.entersWith.makeup || cb.entersWith.wardrobe || cb.sfx);
+  if (parts.length === 0 && !hasManualEntry && !hasHairTag && !hasMakeupTag) {
     const prev = findPrevScene(charId, sceneIdx, scenes);
     if (prev !== null) parts.push(`Same as Sc ${prev}`);
   }
@@ -95,17 +98,21 @@ function CopyIcon() {
 
 /* ━━━ Main Component ━━━ */
 
-export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
+export function BreakdownSheet({ projectId }: { projectId: string }) {
   const store = useBreakdownStore();
   const tagStore = useTagStore();
   const synopsisStore = useSynopsisStore();
+  const parsedScriptStore = useParsedScriptStore();
 
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const scenes = MOCK_SCENES;
-  const characters = MOCK_CHARACTERS;
+  /* Resolve data source: parsed script → mock data fallback */
+  const parsedData = parsedScriptStore.getParsedData(projectId);
+  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
+  const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
   const firstAppearances = calcFirstAppearances(scenes);
 
   /* Ensure every scene has a breakdown — initialise any that are missing
@@ -139,14 +146,15 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
     return true;
   });
 
-  /* Copy to clipboard as TSV */
-  const handleCopy = useCallback(() => {
-    const headers = ['Scene', 'Character', '1st', 'Hair', 'Makeup', 'SFX', 'Continuity Notes'];
+  /** Build an export row for a character in a scene (shared between copy & CSV) */
+  const buildExportRows = useCallback(() => {
+    const headers = ['Scene', 'Day', 'Character', '1st', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < scenes.length; idx++) {
       const s = scenes[idx];
       const bd = store.getBreakdown(s.id);
       const charIds = filterChar ? s.characterIds.filter((c) => c === filterChar) : s.characterIds;
+      const storyDay = bd?.timeline.day || s.storyDay || '';
       for (const cid of charIds) {
         const ch = characters.find((c) => c.id === cid);
         if (!ch) continue;
@@ -154,51 +162,46 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
         const isFirst = firstAppearances[cid] === s.id;
         const tags = tagStore.getTagsForScene(s.id).filter((t) => t.characterId === cid);
         const notes = buildContinuityNotes(cb, cid, idx, scenes, bd, tags);
+
+        const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
+        const hairTags = tags.filter((t) => t.categoryId === 'hair');
+        const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
+        const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
+        const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
+
+        const resolve = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) =>
+          manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
+
         rows.push([
           String(s.number),
+          storyDay,
           ch.name,
           isFirst ? '*' : '',
-          cb?.entersWith.hair || '',
-          cb?.entersWith.makeup || '',
-          cb?.sfx || '',
+          resolve(cb?.entersWith.hair, hairTags, charLook?.hair),
+          resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup),
+          resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
+          cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '',
           notes,
         ]);
       }
     }
+    return rows;
+  }, [store, tagStore, scenes, characters, looks, firstAppearances, filterChar]);
+
+  /* Copy to clipboard as TSV */
+  const handleCopy = useCallback(() => {
+    const rows = buildExportRows();
     const tsv = rows.map((r) => r.join('\t')).join('\n');
     navigator.clipboard.writeText(tsv);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [store, tagStore, scenes, characters, firstAppearances, filterChar]);
+  }, [buildExportRows]);
 
   /* Export CSV */
   const handleExport = useCallback(() => {
-    const headers = ['Scene', 'Character', '1st', 'Hair', 'Makeup', 'SFX', 'Continuity Notes'];
-    const rows: string[][] = [headers];
-    for (let idx = 0; idx < scenes.length; idx++) {
-      const s = scenes[idx];
-      const bd = store.getBreakdown(s.id);
-      const charIds = filterChar ? s.characterIds.filter((c) => c === filterChar) : s.characterIds;
-      for (const cid of charIds) {
-        const ch = characters.find((c) => c.id === cid);
-        if (!ch) continue;
-        const cb = bd?.characters.find((c) => c.characterId === cid);
-        const isFirst = firstAppearances[cid] === s.id;
-        const tags = tagStore.getTagsForScene(s.id).filter((t) => t.characterId === cid);
-        const notes = buildContinuityNotes(cb, cid, idx, scenes, bd, tags);
-        rows.push([
-          String(s.number),
-          ch.name,
-          isFirst ? '*' : '',
-          cb?.entersWith.hair || '',
-          cb?.entersWith.makeup || '',
-          cb?.sfx || '',
-          notes,
-        ]);
-      }
-    }
+    const rows = buildExportRows();
     exportCSV(rows, 'master-breakdown.csv');
-  }, [store, tagStore, scenes, characters, firstAppearances, filterChar]);
+  }, [buildExportRows]);
 
   return (
     <div className="bs-page">
@@ -238,13 +241,16 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
           const timelineType = bd?.timeline.type;
           const showBadge = timelineType && timelineType !== 'Normal' && timelineType !== '';
 
+          /* Resolve story day: breakdown timeline → scene-level storyDay */
+          const storyDay = bd?.timeline.day || scene.storyDay || '';
+
           return (
             <div key={scene.id} className="bs-scene-block">
               {/* Scene header */}
               <div className="bs-scene-header">
                 <div className="bs-scene-header-main">
                   <span className="bs-scene-num">SC {scene.number}</span>
-                  {bd?.timeline.day && <span className="bs-scene-day">{bd.timeline.day}</span>}
+                  {storyDay && <span className="bs-scene-day">{storyDay}</span>}
                   <span className="bs-scene-location">
                     {scene.intExt}. {scene.location} — {scene.dayNight}
                   </span>
@@ -263,6 +269,7 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
                     <th className="bs-col-first">1st</th>
                     <th className="bs-col-hair">Hair</th>
                     <th className="bs-col-makeup">Makeup</th>
+                    <th className="bs-col-wardrobe">Wardrobe</th>
                     <th className="bs-col-sfx">SFX / Prosthetics</th>
                     <th className="bs-col-notes">Continuity Notes</th>
                   </tr>
@@ -274,14 +281,34 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
                     const cb = bd?.characters.find((c) => c.characterId === cid);
                     const isFirst = firstAppearances[cid] === scene.id;
                     const tags = tagStore.getTagsForScene(scene.id).filter((t) => t.characterId === cid);
-                    const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
 
-                    // Gather category tag pills
+                    // Gather category tags
                     const hairTags = tags.filter((t) => t.categoryId === 'hair');
                     const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
+                    const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
                     const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
 
+                    // Resolve values: manual entry → tag text → look defaults
+                    const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
+                    const resolveField = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) => {
+                      if (manual) return manual;
+                      if (tagList.length > 0) return tagList.map((t) => t.text).join(', ');
+                      if (lookField) return lookField;
+                      return '';
+                    };
+
+                    const hair = resolveField(cb?.entersWith.hair, hairTags, charLook?.hair);
+                    const makeup = resolveField(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
+                    const wardrobe = resolveField(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
+                    const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
+
+                    // Build continuity notes
+                    const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
                     const hasEvents = bd?.continuityEvents.some((e) => e.characterId === cid);
+
+                    // Change info
+                    const hasChange = cb?.changeType === 'change';
+                    const hasExit = hasChange && (cb?.exitsWith.hair || cb?.exitsWith.makeup || cb?.exitsWith.wardrobe);
 
                     return (
                       <tr key={cid}
@@ -290,29 +317,42 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
                           <div className="bs-char-stack">
                             <span className="bs-char-name">{ch.name}</span>
                             <span className="bs-char-billing">{ordinal(ch.billing)}</span>
+                            {charLook && <span className="bs-char-look">{charLook.name}</span>}
                           </div>
                         </td>
                         <td className="bs-col-first">
                           {isFirst && <span className="bs-first-mark">*</span>}
                         </td>
                         <td className="bs-col-hair">
-                          {cb?.entersWith.hair || <span className="bs-empty">—</span>}
-                          <TagPills tags={hairTags} catId="hair" />
+                          {hair || <span className="bs-empty">—</span>}
+                          {hasChange && cb?.exitsWith.hair && (
+                            <div className="bs-exit-note">Exit: {cb.exitsWith.hair}</div>
+                          )}
                         </td>
                         <td className="bs-col-makeup">
-                          {cb?.entersWith.makeup || <span className="bs-empty">—</span>}
-                          <TagPills tags={makeupTags} catId="makeup" />
+                          {makeup || <span className="bs-empty">—</span>}
+                          {hasChange && cb?.exitsWith.makeup && (
+                            <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>
+                          )}
+                        </td>
+                        <td className="bs-col-wardrobe">
+                          {wardrobe || <span className="bs-empty">—</span>}
+                          {hasChange && cb?.exitsWith.wardrobe && (
+                            <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>
+                          )}
                         </td>
                         <td className="bs-col-sfx">
-                          {cb?.sfx || <span className="bs-empty">—</span>}
-                          <TagPills tags={sfxTags} catId="sfx" />
+                          {sfx || <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-notes">
+                          {hasChange && cb?.changeNotes && (
+                            <div className="bs-change-note">{cb.changeNotes}</div>
+                          )}
                           {continuity
                             ? continuity.startsWith('Same as')
                               ? <span className="bs-same-ref">{continuity}</span>
                               : continuity
-                            : <span className="bs-empty">—</span>}
+                            : !hasChange ? <span className="bs-empty">—</span> : null}
                         </td>
                       </tr>
                     );
