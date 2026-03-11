@@ -287,8 +287,10 @@ export function BreakdownSheet({ projectId: _pid }: { projectId: string }) {
                       <tr key={cid}
                         className={`bs-row ${isFirst ? 'bs-row--first' : ''} ${hasEvents ? 'bs-row--continuity' : ''}`}>
                         <td className="bs-col-char">
-                          <span className="bs-char-name">{ch.name}</span>
-                          <span className="bs-char-billing">{ordinal(ch.billing)}</span>
+                          <div className="bs-char-stack">
+                            <span className="bs-char-name">{ch.name}</span>
+                            <span className="bs-char-billing">{ordinal(ch.billing)}</span>
+                          </div>
                         </td>
                         <td className="bs-col-first">
                           {isFirst && <span className="bs-first-mark">*</span>}
