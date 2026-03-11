@@ -319,6 +319,10 @@
   background: var(--accent) !important;
   border-color: var(--accent) !important;
 }
+[data-theme="light"] .new-project-card:hover .icon-circle {
+  background: var(--accent-cue-hover, #F5A623) !important;
+  border-color: var(--accent-cue-hover, #F5A623) !important;
+}
 [data-theme="light"] .new-project-card span {
   color: var(--text-primary) !important;
 }
