@@ -23,6 +23,13 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
     return (
       <div className="animate-fade-in">
         <div className="hub-projects">
+          {/* Rainbow swirl decoration — same as hero */}
+          <div className="hub-hero-rainbow hub-projects-rainbow">
+            <div className="rainbow-ring rainbow-ring--1" />
+            <div className="rainbow-ring rainbow-ring--2" />
+            <div className="rainbow-ring rainbow-ring--3" />
+          </div>
+
           <div className="hub-projects-header">
             <h2 className="hub-projects-title">
               <span className="heading-italic">Your</span>{' '}
