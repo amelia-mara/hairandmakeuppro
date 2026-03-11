@@ -79,7 +79,7 @@ export function SceneList({ onSceneSelect }: SceneListProps) {
                     'px-3 py-1.5 text-xs font-medium rounded-full transition-colors touch-manipulation',
                     {
                       'bg-gold text-white': sceneFilter === filter.id,
-                      'bg-cream-dark text-[#5A3E28] hover:bg-peach': sceneFilter !== filter.id,
+                      'bg-gray-100 text-text-secondary hover:bg-gray-200': sceneFilter !== filter.id,
                     }
                   )}
                 >
@@ -142,8 +142,8 @@ function EmptyState({ filter, hasSearch }: EmptyStateProps) {
 
   return (
     <div className="text-center py-12">
-      <div className="w-16 h-16 rounded-full bg-cream-dark flex items-center justify-center mx-auto mb-4">
-        <svg className="w-8 h-8 text-[#5A3E28]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
         </svg>
       </div>
