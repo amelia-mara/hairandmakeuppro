@@ -262,7 +262,7 @@ function renderExpandedDetails(scene, cast) {
                 <div class="scene-detail-section">
                     <span class="scene-section-label">Characters</span>
                     <div class="scene-cast-list">
-                        ${cast.map(c => `<span class="char-pill">${escapeHtml(c)}</span>`).join('')}
+                        ${cast.map(c => `<span class="char-pill">${escapeHtml(c)}<button class="char-pill-remove" onclick="event.stopPropagation(); removeCharacterGlobally('${escapeHtml(c).replace(/'/g, "\\'")}')" title="Remove ${escapeHtml(c)} from project">&times;</button></span>`).join('')}
                     </div>
                 </div>
             ` : ''}

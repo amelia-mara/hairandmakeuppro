@@ -86,6 +86,7 @@ export function renderCharacterTabs() {
         tab.innerHTML = `
             <div class="file-tab-content">
                 <div class="file-tab-label">${escapeHtml(charName)}</div>
+                <button class="file-tab-close" onclick="event.stopPropagation(); removeCharacterGlobally('${escapeHtml(charName).replace(/'/g, "\\'")}')" title="Remove ${escapeHtml(charName)}">&times;</button>
             </div>
         `;
 

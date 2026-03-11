@@ -1574,6 +1574,79 @@ window.removeCharacterFromScene = function(sceneIndex, characterName) {
 };
 
 /**
+ * Remove a character globally from all scenes, confirmedCharacters, and tabs
+ */
+window.removeCharacterGlobally = function(characterName) {
+    if (!characterName) return;
+
+    if (!confirm(`Remove "${characterName}" from the entire project?\n\nThis will remove them from all scenes, character tabs, and the confirmed characters list.`)) {
+        return;
+    }
+
+    // Remove from confirmedCharacters
+    if (state.confirmedCharacters) {
+        state.confirmedCharacters.delete(characterName);
+    }
+
+    // Remove from all scene breakdowns
+    Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+        const breakdown = state.sceneBreakdowns[sceneIdx];
+        if (breakdown?.cast) {
+            breakdown.cast = breakdown.cast.filter(c => c !== characterName);
+        }
+        if (breakdown?.suggestedCharacters) {
+            breakdown.suggestedCharacters = breakdown.suggestedCharacters.filter(c => c !== characterName);
+        }
+    });
+
+    // Remove character states
+    Object.keys(state.characterStates || {}).forEach(sceneIdx => {
+        if (state.characterStates[sceneIdx]?.[characterName]) {
+            delete state.characterStates[sceneIdx][characterName];
+        }
+    });
+
+    // Remove from castProfiles
+    if (state.castProfiles?.[characterName]) {
+        delete state.castProfiles[characterName];
+    }
+
+    // Remove from continuityEvents
+    if (state.continuityEvents?.[characterName]) {
+        delete state.continuityEvents[characterName];
+    }
+
+    // Remove from characterLooks
+    if (state.characterLooks?.[characterName]) {
+        delete state.characterLooks[characterName];
+    }
+
+    // Remove from masterContext if present
+    if (window.masterContext?.characters?.[characterName]) {
+        delete window.masterContext.characters[characterName];
+    }
+
+    // Save and refresh everything
+    saveToLocalStorage();
+    renderBreakdownPanel();
+
+    // Refresh scene list
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+
+    // Refresh character tabs
+    if (typeof window.renderCharacterTabs === 'function') {
+        window.renderCharacterTabs();
+    }
+    if (typeof window.renderCharacterTabPanels === 'function') {
+        window.renderCharacterTabPanels();
+    }
+
+    showStoryDayToast(`${characterName} removed from project`);
+};
+
+/**
  * Open modal to add a character to a scene
  */
 window.openAddCharacterModal = function(sceneIndex) {
