@@ -3457,7 +3457,7 @@ body {
   flex-shrink: 0;
 }
 
-.fp-scene-num { font-size: 0.8125rem; font-weight: 700; color: var(--text-heading); text-transform: uppercase; letter-spacing: 0.08em; }
+.fp-scene-num { font-size: 0.8125rem; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-display); }
 .fp-scene-tagline { font-size: 0.7rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; margin: 2px 0 0; line-height: 1.35; }
 .fp-scene-loc { font-size: 0.875rem; color: var(--text-primary); font-family: 'Courier New', monospace; letter-spacing: 0.02em; margin-bottom: 20px; }
 
@@ -3553,7 +3553,7 @@ body {
 .fp-section-title {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #E8621A;
+  color: #8B5E3C;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 18px;
@@ -3784,7 +3784,7 @@ body {
   border-radius: 14px 14px 0 0;
 }
 .cb-header-right { display: flex; align-items: center; gap: 6px; }
-.cb-name { font-size: 0.875rem; font-weight: 700; color: var(--text-heading); line-height: 1.4; }
+.cb-name { font-size: 0.875rem; font-weight: 700; color: #E8621A; line-height: 1.4; font-family: var(--font-display); }
 .cb-billing-badge {
   font-size: 0.5625rem;
   font-weight: 700;
