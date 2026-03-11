@@ -440,7 +440,7 @@
 
 /* Project cards in light mode */
 [data-theme="light"] .project-card {
-  border-color: rgba(0,0,0,0.06) !important;
+  border-color: #C05A1A !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
 [data-theme="light"] .project-card:hover {
