@@ -5,6 +5,7 @@ interface TopBarProps {
   activePage?: string;
   onNavigate?: (page: string) => void;
   projectType?: string;
+  onBackToHub?: () => void;
 }
 
 function useTheme() {
@@ -41,7 +42,7 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function TopBar({ title = 'Projects', activePage, onNavigate, projectType }: TopBarProps) {
+export function TopBar({ title = 'Projects', activePage, onNavigate, projectType, onBackToHub }: TopBarProps) {
   const [navOpen, setNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -75,39 +76,60 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left side — logo + title + subtitle + nav arrow */}
+        {/* Left side — logo + PREP label + project name with nav dropdown */}
         <div ref={dropRef} className="topbar-title-group">
           <div className="topbar-title-row">
             <div className="brand-logo" aria-label="Checks Happy">
               <span className="brand-logo-checks">Checks</span>{' '}
               <span className="brand-logo-happy">Happy.</span>
             </div>
-            <div className="topbar-divider" />
-            <h1 className="topbar-title" title={title}>
-              {title}
-            </h1>
-            {activePage && activePage !== 'dashboard' && onNavigate && (
-              <button
-                className="topbar-nav-arrow"
-                onClick={() => setNavOpen(!navOpen)}
-                aria-label="Open navigation"
-              >
-                <svg
-                  width="10" height="10" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" strokeWidth="3"
-                  strokeLinecap="round" strokeLinejoin="round"
-                  style={{
-                    transition: 'transform 0.2s ease',
-                    transform: navOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                  }}
+            {onBackToHub && (
+              <>
+                <button
+                  className="topbar-back-arrow"
+                  onClick={onBackToHub}
+                  aria-label="Back to projects"
+                  title="Back to projects"
                 >
-                  <path d="m6 9 6 6 6-6"/>
-                </svg>
-              </button>
+                  <svg
+                    width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2.5"
+                    strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d="M19 12H5"/>
+                    <path d="m12 19-7-7 7-7"/>
+                  </svg>
+                </button>
+                <span className="topbar-prep-label">PREP</span>
+              </>
+            )}
+            {!onBackToHub && (
+              <>
+                <div className="topbar-divider" />
+                <h1 className="topbar-title" title={title}>
+                  {title}
+                </h1>
+              </>
             )}
           </div>
-          {projectType && (
-            <span className="topbar-subtitle">{projectType}</span>
+          {onBackToHub && (
+            <button
+              className="topbar-project-name"
+              onClick={() => setNavOpen(!navOpen)}
+            >
+              <span title={title}>{title}</span>
+              <svg
+                width="10" height="10" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" strokeWidth="3"
+                strokeLinecap="round" strokeLinejoin="round"
+                style={{
+                  transition: 'transform 0.2s ease',
+                  transform: navOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              >
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </button>
           )}
 
           {navOpen && onNavigate && (

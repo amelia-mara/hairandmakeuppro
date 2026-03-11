@@ -251,6 +251,15 @@
   border-bottom: 1px solid rgba(0,0,0,0.06) !important;
 }
 
+/* TopBar back arrow — light mode */
+[data-theme="light"] .topbar-back-arrow {
+  border-color: rgba(0,0,0,0.10) !important;
+}
+[data-theme="light"] .topbar-back-arrow:hover {
+  background: rgba(0,0,0,0.04) !important;
+  border-color: rgba(0,0,0,0.16) !important;
+}
+
 /* Project card footer */
 [data-theme="light"] .project-card-footer {
   background: rgba(0,0,0,0.02) !important;
@@ -1677,6 +1686,67 @@ body {
   opacity: 0.6;
   margin-top: 2px;
   padding-left: 1px;
+}
+
+/* Back arrow — navigates to project hub */
+.topbar-back-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.topbar-back-arrow:hover {
+  color: var(--accent);
+  border-color: var(--border-medium);
+  background: rgba(var(--a), 0.06);
+}
+
+/* PREP label — section identifier */
+.topbar-prep-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Project name button — shows project title with dropdown */
+.topbar-project-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0 1px;
+  margin-top: 2px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  transition: color 0.15s ease;
+  max-width: 200px;
+}
+.topbar-project-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar-project-name:hover {
+  color: var(--text-secondary);
 }
 
 .topbar-nav-arrow {

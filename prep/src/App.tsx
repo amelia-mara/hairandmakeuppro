@@ -44,6 +44,7 @@ function App() {
           activePage={activePage}
           onNavigate={setActivePage}
           projectType={project?.type}
+          onBackToHub={handleBackToHub}
         />
         <ProjectLayout
           projectId={selectedProjectId}
