@@ -1220,6 +1220,7 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events' | 'notes'>('profile');
   const looks = allLooks.filter((l) => l.characterId === char.id);
   const scenes = allScenes.filter((s) => s.characterIds.includes(char.id));
+  const bdStore = useBreakdownStore();
   const tagStore = useTagStore();
   const charOverrides = useCharacterOverridesStore();
   const resolvedChar = charOverrides.getCharacter(char);
@@ -1307,12 +1308,17 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
         )}
         {activeSubTab === 'timeline' && (
           <div className="cv-timeline">
-            {scenes.map((s) => (
-              <div key={s.id} className="cv-tl-item">
-                <span className="cv-tl-num">Sc {s.number}</span>
-                <span className="cv-tl-loc">{s.intExt}. {s.location} — {s.dayNight}</span>
-              </div>
-            ))}
+            {scenes.map((s) => {
+              const bd = bdStore.getBreakdown(s.id);
+              const storyDay = bd?.timeline?.day || '';
+              return (
+                <div key={s.id} className="cv-tl-item">
+                  <span className="cv-tl-num">Sc {s.number}</span>
+                  <span className="cv-tl-loc">{s.intExt}. {s.location} — {s.dayNight}</span>
+                  {storyDay && <span className="cv-tl-day">{storyDay}</span>}
+                </div>
+              );
+            })}
           </div>
         )}
         {activeSubTab === 'events' && <p className="cv-empty">No continuity events for this character.</p>}
