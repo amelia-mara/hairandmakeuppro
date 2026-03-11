@@ -30,14 +30,15 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
             <div className="rainbow-ring rainbow-ring--3" />
           </div>
 
-          <div className="hub-projects-header">
-            <h2 className="hub-projects-title">
-              <span className="heading-italic">Your</span>{' '}
-              <span className="heading-regular">Projects</span>
-            </h2>
-          </div>
+          <div className="hub-projects-board">
+            <div className="hub-projects-header">
+              <h2 className="hub-projects-title">
+                <span className="heading-italic">Your</span>{' '}
+                <span className="heading-regular">Projects</span>
+              </h2>
+            </div>
 
-          <div className="hub-projects-grid">
+            <div className="hub-projects-grid">
             {projects.map((project) => {
               const Icon = TYPE_ICONS[project.type as ProjectType] || Film;
               return (
@@ -106,6 +107,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
                 New Project
               </span>
             </button>
+          </div>
           </div>
         </div>
       </div>
