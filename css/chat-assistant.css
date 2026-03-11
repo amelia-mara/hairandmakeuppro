@@ -3,15 +3,15 @@
  * AI Chat Assistant for Hair & Makeup Pro
  */
 
-/* CSS Variables */
+/* CSS Variables — Brand palette */
 :root {
-    --chat-accent: #c9a961;
-    --chat-accent-hover: #d4b872;
-    --chat-bg-dark: rgba(26, 26, 32, 0.98);
-    --chat-bg-glass: rgba(40, 40, 50, 0.85);
-    --chat-text-primary: #f0eeeb;
-    --chat-text-secondary: rgba(240, 238, 235, 0.7);
-    --chat-border: rgba(201, 169, 97, 0.3);
+    --chat-accent: #D4943A;              /* Gold — decorative accent */
+    --chat-accent-hover: #F5A623;        /* Amber — hover state */
+    --chat-bg-dark: rgba(26, 18, 8, 0.98);
+    --chat-bg-glass: rgba(46, 32, 16, 0.85);
+    --chat-text-primary: #F5EFE0;        /* Cream Base */
+    --chat-text-secondary: rgba(245, 239, 224, 0.7);
+    --chat-border: rgba(212, 148, 58, 0.3);  /* Gold */
 }
 
 /* Toggle Button */
@@ -22,7 +22,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--chat-accent) 0%, #a88b4a 100%);
+    background: linear-gradient(135deg, var(--chat-accent) 0%, #E8621A 100%);
     border: none;
     cursor: pointer;
     box-shadow: 0 4px 20px rgba(201, 169, 97, 0.4);
@@ -39,7 +39,7 @@
 }
 
 .chat-assistant-toggle.active {
-    background: linear-gradient(135deg, #a88b4a 0%, #8a7240 100%);
+    background: linear-gradient(135deg, #E8621A 0%, #C4522A 100%);
 }
 
 .chat-assistant-toggle .chat-icon {
@@ -262,7 +262,7 @@
 }
 
 .chat-message.user .chat-message-content {
-    background: linear-gradient(135deg, var(--chat-accent) 0%, #a88b4a 100%);
+    background: linear-gradient(135deg, var(--chat-accent) 0%, #E8621A 100%);
     color: #1a1a20;
     border-bottom-right-radius: 4px;
 }
@@ -390,7 +390,7 @@
 }
 
 .chat-assistant-send {
-    background: linear-gradient(135deg, var(--chat-accent) 0%, #a88b4a 100%);
+    background: linear-gradient(135deg, var(--chat-accent) 0%, #E8621A 100%);
     border: none;
     border-radius: 12px;
     padding: 10px 18px;

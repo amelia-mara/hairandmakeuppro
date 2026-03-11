@@ -1795,7 +1795,7 @@ function addCharacterModalStyles() {
         }
 
         .add-character-modal .modal-btn.primary {
-            background: var(--accent-gold, #d4af7a);
+            background: var(--accent-gold, #D4943A);
             border: none;
             color: #000;
             font-weight: 500;

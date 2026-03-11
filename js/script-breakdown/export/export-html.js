@@ -130,20 +130,20 @@ function generateTimelineHTML(timelines) {
         .subtitle { color: #666; margin-bottom: 40px; font-size: 18px; }
         .character-section { margin-bottom: 50px; page-break-inside: avoid; }
         .character-name {
-            color: #c9a961;
+            color: #D4943A;
             font-size: 28px;
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #c9a961;
+            border-bottom: 2px solid #D4943A;
         }
         .timeline-item {
             background: #fafafa;
             padding: 20px;
             margin-bottom: 15px;
-            border-left: 4px solid #c9a961;
+            border-left: 4px solid #D4943A;
             border-radius: 4px;
         }
-        .scene-number { font-weight: bold; color: #c9a961; font-size: 16px; margin-bottom: 8px; }
+        .scene-number { font-weight: bold; color: #D4943A; font-size: 16px; margin-bottom: 8px; }
         .description { margin-bottom: 12px; color: #444; }
         .label { font-weight: 600; color: #666; margin-bottom: 5px; }
         .tag {
@@ -258,11 +258,11 @@ function generateLookbookHTML(lookbooks) {
         .subtitle { color: #666; margin-bottom: 40px; font-size: 18px; }
         .character-section { margin-bottom: 60px; page-break-inside: avoid; }
         .character-name {
-            color: #c9a961;
+            color: #D4943A;
             font-size: 32px;
             margin-bottom: 30px;
             padding-bottom: 15px;
-            border-bottom: 3px solid #c9a961;
+            border-bottom: 3px solid #D4943A;
         }
         .section { margin-bottom: 30px; }
         .section-title { font-size: 20px; color: #444; margin-bottom: 15px; font-weight: 600; }
@@ -273,10 +273,10 @@ function generateLookbookHTML(lookbooks) {
             background: #fafafa;
             padding: 20px;
             margin-bottom: 15px;
-            border-left: 4px solid #c9a961;
+            border-left: 4px solid #D4943A;
             border-radius: 4px;
         }
-        .phase-header { font-weight: 600; color: #c9a961; font-size: 18px; margin-bottom: 10px; }
+        .phase-header { font-weight: 600; color: #D4943A; font-size: 18px; margin-bottom: 10px; }
         .phase-scenes { color: #666; font-size: 14px; margin-bottom: 12px; }
         .tag {
             display: inline-block;
@@ -447,25 +447,25 @@ function generateBibleHTML(bible) {
         .cover {
             text-align: center;
             padding: 60px 20px;
-            border-bottom: 3px solid #c9a961;
+            border-bottom: 3px solid #D4943A;
             margin-bottom: 50px;
         }
         h1 { color: #1a1a1a; margin-bottom: 20px; font-size: 48px; }
         .subtitle { color: #666; font-size: 24px; margin-bottom: 10px; }
         .meta { color: #999; font-size: 14px; margin-top: 20px; }
         .toc { margin-bottom: 50px; padding: 30px; background: #fafafa; border-radius: 8px; }
-        .toc h2 { color: #c9a961; margin-bottom: 20px; }
+        .toc h2 { color: #D4943A; margin-bottom: 20px; }
         .toc ul { list-style: none; }
         .toc li { margin-bottom: 10px; padding-left: 20px; }
         .toc a { color: #333; text-decoration: none; }
-        .toc a:hover { color: #c9a961; }
+        .toc a:hover { color: #D4943A; }
         .character-section { margin-bottom: 80px; page-break-inside: avoid; }
         .character-name {
-            color: #c9a961;
+            color: #D4943A;
             font-size: 36px;
             margin-bottom: 40px;
             padding-bottom: 15px;
-            border-bottom: 3px solid #c9a961;
+            border-bottom: 3px solid #D4943A;
         }
         .subsection { margin-bottom: 40px; }
         .subsection-title { font-size: 24px; color: #444; margin-bottom: 20px; font-weight: 600; }
@@ -549,8 +549,8 @@ function generateTimelineSection(timelineData) {
     if (timelineData.timeline && Array.isArray(timelineData.timeline)) {
         timelineData.timeline.forEach(item => {
             html += `
-            <div style="margin-bottom: 20px; padding: 15px; background: white; border-left: 4px solid #c9a961; border-radius: 4px;">
-                <div style="font-weight: bold; color: #c9a961; margin-bottom: 8px;">Scene ${item.sceneNumber}</div>
+            <div style="margin-bottom: 20px; padding: 15px; background: white; border-left: 4px solid #D4943A; border-radius: 4px;">
+                <div style="font-weight: bold; color: #D4943A; margin-bottom: 8px;">Scene ${item.sceneNumber}</div>
                 <div style="margin-bottom: 8px;">${item.description || 'No description'}</div>
 `;
             if (item.changes && item.changes.length > 0) {
@@ -597,7 +597,7 @@ function generateLookbookSection(lookbookData) {
         lookbookData.looksByPhase.forEach(phase => {
             html += `
             <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 4px;">
-                <div style="font-weight: bold; color: #c9a961;">${phase.phase || 'Unknown Phase'} (${phase.scenes || 'Scenes not specified'})</div>
+                <div style="font-weight: bold; color: #D4943A;">${phase.phase || 'Unknown Phase'} (${phase.scenes || 'Scenes not specified'})</div>
                 <div style="margin-top: 8px;">${phase.description || ''}</div>
                 ${phase.hair ? `<div style="margin-top: 8px;"><strong>Hair:</strong> ${phase.hair}</div>` : ''}
                 ${phase.makeup ? `<div style="margin-top: 8px;"><strong>Makeup:</strong> ${phase.makeup}</div>` : ''}

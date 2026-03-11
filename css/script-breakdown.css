@@ -1,20 +1,20 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --bg-dark: #0a0908;
-            --bg-medium: rgba(18, 16, 14, 0.85);
-            --card-bg: rgba(28, 25, 22, 0.5);
-            --text-light: #e8e6e3;
-            --text-muted: #9a8f7f;
-            --accent-gold: #d4af7a;
-            --accent-gold-hover: #e0c08f;
-            --accent-blue: #667eea;
+            --bg-dark: #1A1208;
+            --bg-medium: rgba(26, 18, 8, 0.85);
+            --card-bg: rgba(46, 32, 16, 0.5);
+            --text-light: #F5EFE0;                /* Cream Base */
+            --text-muted: #5A3E28;                /* Text Mid */
+            --accent-gold: #D4943A;               /* Gold */
+            --accent-gold-hover: #F5A623;         /* Amber */
+            --accent-blue: #4ABFB0;               /* Teal — accent contrast */
             --glass-border: rgba(255, 255, 255, 0.06);
-            --glass-bg: rgba(20, 18, 16, 0.6);
+            --glass-bg: rgba(26, 18, 8, 0.6);
             --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --success: #52c186;
+            --success: #4ABFB0;                   /* Teal */
             --error: #ff6b6b;
-            --warning: #e8a87c;
+            --warning: #F5A623;                   /* Amber */
             
             /* Scene type color coding per spec: INT/DAY=White, EXT/DAY=Yellow, INT/NIGHT=Blue, EXT/NIGHT=Green */
             --int-day: rgba(255, 255, 255, 0.12);
@@ -1433,11 +1433,11 @@
         }
 
         .event-badge.healing {
-            border-left: 3px solid #e8a87c;
+            border-left: 3px solid #F5A623;
         }
 
         .event-badge.healed {
-            border-left: 3px solid #52c186;
+            border-left: 3px solid #4ABFB0;
         }
 
         .event-badge-icon {
@@ -4883,7 +4883,7 @@
         
         .modal-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
         .modal-btn.primary:hover {
-            background: linear-gradient(135deg, #d4af7a, #c09861);
+            background: linear-gradient(135deg, #D4943A, #c09861);
             transform: translateY(-1px);
         }
 
@@ -11115,7 +11115,7 @@
     font-size: 0.6em;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--accent-gold, #d4af7a);
+    color: var(--accent-gold, #D4943A);
     margin: 0 0 6px 0;
     padding-bottom: 4px;
     border-bottom: 1px solid rgba(212, 175, 122, 0.2);
@@ -11187,7 +11187,7 @@
 .timeline-input:focus,
 .timeline-section .story-day-select:focus {
     outline: none;
-    border-color: var(--accent-gold, #d4af7a);
+    border-color: var(--accent-gold, #D4943A);
 }
 
 /* Responsive adjustments */
@@ -13579,7 +13579,7 @@
 
 /* Visual Identity Section */
 .visual-identity-section {
-    border-left: 3px solid #e8a87c;
+    border-left: 3px solid #F5A623;
 }
 
 .visual-profile-content {

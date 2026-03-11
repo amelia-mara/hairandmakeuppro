@@ -318,7 +318,7 @@ function getEventColor(category) {
         'makeup': '#FFB6C1', // Pink
         'physical': '#FFD700' // Gold
     };
-    return colors[category?.toLowerCase()] || '#C9A961';
+    return colors[category?.toLowerCase()] || '#D4943A';
 }
 
 /**

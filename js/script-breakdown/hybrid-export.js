@@ -191,7 +191,7 @@ export function exportHybridBreakdownHTML() {
         h3 { font-size: 1.2em; margin-top: 30px; margin-bottom: 15px; color: #3a3a3a; }
 
         .header {
-            border-bottom: 3px solid #d4af7a;
+            border-bottom: 3px solid #D4943A;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
@@ -220,7 +220,7 @@ export function exportHybridBreakdownHTML() {
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #d4af7a 0%, #e0c08f 100%);
+            background: linear-gradient(90deg, #D4943A 0%, #F5A623 100%);
             transition: width 0.5s ease;
         }
 
@@ -241,7 +241,7 @@ export function exportHybridBreakdownHTML() {
         .stat-value {
             font-size: 2em;
             font-weight: bold;
-            color: #d4af7a;
+            color: #D4943A;
         }
 
         .stat-label {
@@ -255,7 +255,7 @@ export function exportHybridBreakdownHTML() {
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border-left: 4px solid #d4af7a;
+            border-left: 4px solid #D4943A;
         }
 
         .scene-header {
@@ -327,7 +327,7 @@ export function exportHybridBreakdownHTML() {
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 0.75em;
-            background: #d4af7a;
+            background: #D4943A;
             color: white;
         }
 

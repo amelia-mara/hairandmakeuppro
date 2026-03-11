@@ -160,7 +160,7 @@ function showTagEditModal(tag, sceneIndex) {
             }
             .tag-edit-content {
                 background: var(--glass-bg, rgba(28, 25, 22, 0.95));
-                border: 1px solid var(--accent-gold, #d4af7a);
+                border: 1px solid var(--accent-gold, #D4943A);
                 border-radius: 12px;
                 width: 420px;
                 max-width: 90vw;
@@ -179,7 +179,7 @@ function showTagEditModal(tag, sceneIndex) {
                 margin: 0;
                 font-size: 1em;
                 font-weight: 600;
-                color: var(--accent-gold, #d4af7a);
+                color: var(--accent-gold, #D4943A);
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }
@@ -218,7 +218,7 @@ function showTagEditModal(tag, sceneIndex) {
                 border: 1px solid rgba(212, 175, 122, 0.3);
                 border-radius: 6px;
                 font-size: 0.9em;
-                color: var(--accent-gold, #d4af7a);
+                color: var(--accent-gold, #D4943A);
                 font-weight: 500;
             }
             .tag-edit-context {
@@ -242,7 +242,7 @@ function showTagEditModal(tag, sceneIndex) {
             }
             .tag-edit-field select:focus {
                 outline: none;
-                border-color: var(--accent-gold, #d4af7a);
+                border-color: var(--accent-gold, #D4943A);
             }
             .tag-edit-meta {
                 font-size: 0.75em;
@@ -281,7 +281,7 @@ function showTagEditModal(tag, sceneIndex) {
                 border-color: rgba(255, 255, 255, 0.3);
             }
             .tag-edit-btn.save {
-                background: linear-gradient(135deg, var(--accent-gold, #d4af7a), #b89651);
+                background: linear-gradient(135deg, var(--accent-gold, #D4943A), #b89651);
                 border: none;
                 color: #0a0908;
             }
@@ -506,7 +506,7 @@ function populateCharacterDropdown(select) {
     // Build the HTML for the dropdown
     let optionsHTML = `
         <option value="">General Note (no character)</option>
-        <option value="__ADD_NEW__" style="font-weight: bold; color: #667eea;">+ Add New Character</option>
+        <option value="__ADD_NEW__" style="font-weight: bold; color: #4ABFB0;">+ Add New Character</option>
     `;
 
     if (allCharacters.length > 0) {
@@ -1007,7 +1007,7 @@ export function applyHighlight(tag) {
 
     // Get category color
     const category = categories.find(c => c.id === tag.category);
-    const color = category?.color || '#667eea';
+    const color = category?.color || '#4ABFB0';
 
     // Find and highlight the relevant text portion
     const text = element.innerHTML;

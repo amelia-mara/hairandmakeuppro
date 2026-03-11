@@ -37,11 +37,11 @@
   --bg-card-hover: #3A2A16;
   --bg-elevated: #2E2010;
 
-  --text-primary: #F5EFE0;
-  --text-secondary: #7A5C3A;
-  --text-heading: #F5EFE0;
-  --text-muted: #7A5C3A;
-  --text-label: #7A5C3A;
+  --text-primary: #F5EFE0;              /* Cream Base */
+  --text-secondary: #5A3E28;             /* Text Mid */
+  --text-heading: #F5EFE0;               /* Cream Base */
+  --text-muted: #5A3E28;                 /* Text Mid */
+  --text-label: #5A3E28;                 /* Text Mid */
 
   /* Brand colours */
   --brand-orange: #E8621A;
@@ -118,17 +118,17 @@
   --accent-cue-hover: #F5A623;
 
   /* Brand light mode — warm cream base */
-  --bg-primary: #EDE4D0;
-  --bg-surface: #EDE4D0;
+  --bg-primary: #F5EFE0;                 /* Cream Base — page background */
+  --bg-surface: #EDE4D0;                 /* Cream Dark — section backgrounds */
   --bg-card: #FAF7F0;
   --bg-card-hover: #F5F0E5;
   --bg-elevated: #FAF7F0;
 
-  --text-primary: #2A1A08;
-  --text-secondary: #5A3E28;
-  --text-heading: #4A3020;
-  --text-muted: #7A5C3A;
-  --text-label: #5A3E28;
+  --text-primary: #2A1A08;                /* Text Dark */
+  --text-secondary: #5A3E28;              /* Text Mid */
+  --text-heading: #2A1A08;                /* Text Dark */
+  --text-muted: #5A3E28;                  /* Text Mid */
+  --text-label: #5A3E28;                  /* Text Mid */
 
   --border-subtle: rgba(0, 0, 0, 0.05);
   --border-card: rgba(0, 0, 0, 0.06);
@@ -4379,7 +4379,7 @@ body {
   border-color: rgba(var(--a), 0.25);
 }
 .ct-status-btn--complete {
-  background: rgba(82, 193, 134, 0.12); color: #52c186;
+  background: rgba(82, 193, 134, 0.12); color: #4ABFB0;
   border-color: rgba(82, 193, 134, 0.25);
 }
 
@@ -4704,7 +4704,7 @@ body {
 }
 .ct-copy-btn:hover { border-color: var(--border-medium); color: var(--text-primary); }
 .ct-complete-btn {
-  background: rgba(82, 193, 134, 0.10); color: #52c186;
+  background: rgba(82, 193, 134, 0.10); color: #4ABFB0;
   border-color: rgba(82, 193, 134, 0.20);
 }
 .ct-complete-btn:hover {
@@ -6667,11 +6667,11 @@ body {
 }
 
 .ts-sidebar-paye-label {
-  color: #e8a87c;
+  color: #F5A623;
 }
 
 .ts-sidebar-paye-value {
-  color: #e8a87c;
+  color: #F5A623;
   font-weight: 600;
 }
 
@@ -6718,7 +6718,7 @@ body {
 .ts-sidebar-crew-badge {
   font-size: 0.5625rem;
   font-weight: 700;
-  color: #e8a87c;
+  color: #F5A623;
   background: rgba(232, 168, 124, 0.12);
   padding: 1px 5px;
   border-radius: 3px;
@@ -6750,7 +6750,7 @@ body {
   justify-content: space-between;
   align-items: center;
   font-size: 0.625rem;
-  color: #e8a87c;
+  color: #F5A623;
   margin-top: 3px;
   padding-top: 3px;
   border-top: 1px dashed rgba(232, 168, 124, 0.15);

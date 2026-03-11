@@ -37,7 +37,7 @@ const applyTheme = (resolvedTheme: 'light' | 'dark') => {
     if (metaThemeColor) {
       metaThemeColor.setAttribute(
         'content',
-        resolvedTheme === 'dark' ? '#000000' : '#f5f4f2'
+        resolvedTheme === 'dark' ? '#1A1208' : '#F5EFE0'
       );
     }
   }
