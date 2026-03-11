@@ -164,7 +164,6 @@
 [data-theme="light"] .fp-event,
 [data-theme="light"] .cb-event,
 [data-theme="light"] .cb-block,
-[data-theme="light"] .cv-field,
 [data-theme="light"] .cv-look-card,
 [data-theme="light"] .cv-look-sub-card {
   background: var(--bg-card) !important;
@@ -3176,8 +3175,8 @@ body {
     inset 0 1px 2px rgba(var(--a), 0.08);
 }
 
-.cv-name { font-size: 1rem; font-weight: 600; color: var(--text-heading); }
-.cv-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.cv-name { font-size: 1rem; font-weight: 600; color: var(--text-heading); font-family: var(--font-sans); }
+.cv-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; font-family: var(--font-sans); }
 
 .cv-subtabs {
   display: flex;
@@ -3205,31 +3204,40 @@ body {
 
 .cv-content { animation: fadeIn 0.15s ease; }
 
-.cv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 .cv-field {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-top-color: rgba(var(--a), 0.10);
-  border-radius: 10px;
-  padding: 10px 14px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(var(--a), 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 .cv-field--wide { grid-column: 1 / -1; }
 
 .cv-field-label {
   display: block;
-  font-size: 0.5625rem;
+  font-size: 0.625rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-heading);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  line-height: 1.4;
 }
 
 .cv-field-value { font-size: 0.8125rem; color: var(--text-primary); line-height: 1.4; }
+
+.cv-field-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cv-field-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.6;
+}
 
 .cv-looks { display: flex; flex-direction: column; gap: 10px; }
 
