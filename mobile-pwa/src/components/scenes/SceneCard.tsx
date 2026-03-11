@@ -9,48 +9,39 @@ interface SceneCardProps {
   onClick: () => void;
 }
 
-/**
- * Get the border color class based on INT/EXT + DAY/NIGHT combination
- */
 export function SceneCard({ scene, captures, onClick }: SceneCardProps) {
   const statusIcon = getSceneStatusIcon(scene, captures);
-  const isDay = scene.timeOfDay === 'DAY' || scene.timeOfDay === 'MORNING';
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={clsx(
-        'w-full bg-cream rounded-[10px] p-3.5 text-left touch-manipulation transition-all',
-        'border border-cream-dark hover:shadow-card-hover active:scale-[0.99]',
-      )}
+      className="w-full card flex items-start gap-3 text-left touch-manipulation transition-shadow hover:shadow-card-hover active:scale-[0.99]"
     >
-      <div className="flex items-start gap-3">
-        {/* Scene number */}
-        <div className="flex-shrink-0 pt-0.5">
-          <span className="text-sm font-bold text-[#5A3E28]">{scene.sceneNumber}</span>
+      {/* Scene number */}
+      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+        <span className="text-sm font-bold text-text-primary">{scene.sceneNumber}</span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {/* Slugline */}
+        <div className="text-sm font-medium text-text-primary truncate mb-1">
+          {formatSlugline(scene.slugline)}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Slugline */}
-          <div className="text-sm font-semibold text-[#2A1A08] truncate mb-1.5">
-            {formatSlugline(scene.slugline)}
-          </div>
-
-          {/* Badges row */}
-          <div className="flex items-center gap-2">
-            <Badge variant={isDay ? 'day' : 'night'} size="sm">
-              {scene.timeOfDay}
-            </Badge>
-            <span className="text-xs text-[#5A3E28]">{scene.intExt}</span>
-          </div>
+        {/* Badges row */}
+        <div className="flex items-center gap-2">
+          <Badge variant={scene.intExt === 'INT' ? 'int' : 'ext'} size="sm">
+            {scene.intExt}
+          </Badge>
+          <span className="text-xs text-text-muted">{scene.timeOfDay}</span>
         </div>
+      </div>
 
-        {/* Breakdown status dot */}
-        <div className="flex-shrink-0 pt-1">
-          <BreakdownDot status={statusIcon} />
-        </div>
+      {/* Status icon */}
+      <div className="flex-shrink-0">
+        <StatusIcon status={statusIcon} />
       </div>
     </button>
   );
@@ -65,21 +56,33 @@ function formatSlugline(slugline: string): string {
   return formatted;
 }
 
-// Breakdown status dot: teal = complete, orange = incomplete/empty
-interface BreakdownDotProps {
+// Status icon component
+interface StatusIconProps {
   status: 'empty' | 'incomplete' | 'complete';
 }
 
-function BreakdownDot({ status }: BreakdownDotProps) {
+function StatusIcon({ status }: StatusIconProps) {
   if (status === 'complete') {
     return (
-      <div className="w-3.5 h-3.5 rounded-full bg-teal" title="Breakdown complete" />
+      <div className="w-6 h-6 rounded-full bg-success flex items-center justify-center">
+        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
     );
   }
 
-  // Incomplete or empty — orange dot
+  if (status === 'incomplete') {
+    return (
+      <div className="w-6 h-6 rounded-full bg-warning flex items-center justify-center">
+        <span className="text-white font-bold text-sm">!</span>
+      </div>
+    );
+  }
+
+  // Empty/not started
   return (
-    <div className="w-3.5 h-3.5 rounded-full bg-gold" title="Breakdown incomplete" />
+    <div className="w-6 h-6 rounded-full border-2 border-gray-300" />
   );
 }
 
@@ -99,13 +102,15 @@ export function CompactSceneCard({ scene, isActive, onClick }: CompactSceneCardP
         'flex items-center gap-2 px-3 py-2 rounded-lg touch-manipulation transition-all',
         {
           'bg-gold text-white': isActive,
-          'bg-cream-dark text-[#5A3E28] hover:bg-peach': !isActive,
+          'bg-gray-100 text-text-secondary hover:bg-gray-200': !isActive,
         }
       )}
     >
       <span className="font-semibold text-sm">{scene.sceneNumber}</span>
       {scene.isComplete && (
-        <div className={clsx('w-2.5 h-2.5 rounded-full', isActive ? 'bg-white' : 'bg-teal')} />
+        <svg className={clsx('w-4 h-4', isActive ? 'text-white' : 'text-success')} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
       )}
     </button>
   );
