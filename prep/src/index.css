@@ -2773,8 +2773,8 @@ body {
   padding: 6px 20px;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(var(--a), 0.10);
-  background: rgba(8, 7, 6, 1);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  box-shadow: none;
   gap: 12px;
   position: relative;
   z-index: 1;
