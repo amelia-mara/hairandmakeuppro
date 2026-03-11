@@ -997,7 +997,9 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
 
       onUploaded(selectedFile.name);
     } catch (err) {
-      setError('Failed to process file. Please try again.');
+      console.error('Script processing error:', err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to process file: ${message}`);
       setProcessing(false);
     }
   };
