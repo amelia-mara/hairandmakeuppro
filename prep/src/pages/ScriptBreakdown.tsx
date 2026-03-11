@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
-  useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore,
-  type Scene, type Character, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
+  useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
+  type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
   type ScriptTag,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DRAGGABLE PANEL RESIZE HOOK
@@ -104,27 +105,42 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   /* Script upload state */
   const scriptUpload = useScriptUploadStore();
+  const parsedScriptStore = useParsedScriptStore();
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
+  /* Resolve data source: parsed script → mock data fallback */
+  const parsedData = parsedScriptStore.getParsedData(projectId);
+  const ALL_SCENES: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const ALL_CHARACTERS: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
+  const ALL_LOOKS: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
+
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
-    if (!hasScript) {
+    if (!hasScript && !parsedData) {
       setShowUploadModal(true);
     }
-  }, [hasScript]);
-  const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
-  const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!);
+  }, [hasScript, parsedData]);
+
+  /* Reset selected scene when data source changes */
+  useEffect(() => {
+    if (ALL_SCENES.length > 0 && !ALL_SCENES.find(s => s.id === selectedSceneId)) {
+      setSelectedSceneId(ALL_SCENES[0].id);
+    }
+  }, [ALL_SCENES, selectedSceneId]);
+
+  const scene = ALL_SCENES.find((s) => s.id === selectedSceneId)!;
+  const sceneCharacters = scene ? scene.characterIds.map((id) => ALL_CHARACTERS.find((c) => c.id === id)!).filter(Boolean) : [];
   const breakdown = store.getBreakdown(selectedSceneId);
 
   useEffect(() => {
+    if (!scene) return;
     if (!store.getBreakdown(selectedSceneId)) {
-      const sc = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
       store.setBreakdown(selectedSceneId, {
         sceneId: selectedSceneId,
-        timeline: { day: '', time: sc.dayNight === 'DAY' ? 'Day' : sc.dayNight === 'NIGHT' ? 'Night' : sc.dayNight === 'DAWN' ? 'Dawn' : sc.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
-        characters: sc.characterIds.map((cid) => ({
+        timeline: { day: '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
+        characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },
           sfx: '', changeType: 'no-change', changeNotes: '',
@@ -134,7 +150,7 @@ export function ScriptBreakdown({ projectId }: Props) {
         continuityEvents: [],
       });
     }
-  }, [selectedSceneId, store]);
+  }, [selectedSceneId, store, scene]);
 
   const triggerSave = useCallback(() => {
     setSaveStatus('saving');
@@ -169,7 +185,7 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [selectedSceneId]);
 
-  const filteredScenes = MOCK_SCENES.filter((s) => {
+  const filteredScenes = ALL_SCENES.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return s.location.toLowerCase().includes(q) || String(s.number).includes(q);
@@ -214,7 +230,7 @@ export function ScriptBreakdown({ projectId }: Props) {
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
-            <span className="sl-header-count">{MOCK_SCENES.length}</span>
+            <span className="sl-header-count">{ALL_SCENES.length}</span>
           </div>
           <div className="sl-search">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
@@ -265,7 +281,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                           <span className="sl-expand-label">Characters</span>
                           <div className="sl-expand-chars">
                             {s.characterIds.map((cid) => {
-                              const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
+                              const ch = ALL_CHARACTERS.find((c) => c.id === cid);
                               return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span> : null;
                             })}
                           </div>
@@ -319,7 +335,8 @@ export function ScriptBreakdown({ projectId }: Props) {
             {activeTab === 'script' ? (
               <div className="sv-wrapper">
                 <ScriptView
-                  scenes={MOCK_SCENES}
+                  scenes={ALL_SCENES}
+                  characters={ALL_CHARACTERS}
                   selectedSceneId={selectedSceneId}
                   onSceneVisible={onSceneVisible}
                   fontSize={fontSize}
@@ -339,6 +356,8 @@ export function ScriptBreakdown({ projectId }: Props) {
               <CharacterView
                 char={sceneCharacters.find((c) => c.id === activeTab)!}
                 subTab="profile"
+                allScenes={ALL_SCENES}
+                allLooks={ALL_LOOKS}
               />
             )}
           </div>
@@ -399,7 +418,8 @@ export function ScriptBreakdown({ projectId }: Props) {
             activeCharacterId={activeTab !== 'script' ? activeTab : null}
             saveStatus={saveStatus}
             scenes={filteredScenes}
-            allScenes={MOCK_SCENES}
+            allScenes={ALL_SCENES}
+            allLooks={ALL_LOOKS}
             onNavigate={selectScene}
             onUpdate={(cid, data) => { store.updateCharacterBreakdown(selectedSceneId, cid, data); triggerSave(); }}
             onUpdateTimeline={(tl) => { store.updateTimeline(selectedSceneId, tl); triggerSave(); }}
@@ -456,14 +476,15 @@ interface TagPopupState {
   matchedName?: string;
 }
 
-function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
+function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
   scenes: Scene[];
+  characters: Character[];
   selectedSceneId: string;
   onSceneVisible: (id: string) => void;
   fontSize: number;
   onCharClick: (id: string) => void;
 }) {
-  const charNames = MOCK_CHARACTERS.map((c) => c.name);
+  const charNames = characters.map((c) => c.name);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const isScrollingTo = useRef(false);
@@ -527,7 +548,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
     if (!popup) return;
     /* If it's a 'cast' category, check if the text matches a character name */
     if (catId === 'cast') {
-      const matched = MOCK_CHARACTERS.find((c) => c.name === popup.text.trim().toUpperCase() || c.name === popup.text.trim());
+      const matched = characters.find((c) => c.name === popup.text.trim().toUpperCase() || c.name === popup.text.trim());
       if (matched) {
         tagStore.addTag({
           id: `tag-${Date.now()}`,
@@ -612,7 +633,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           return cue === name;
         });
         if (matched) {
-          const ch = MOCK_CHARACTERS.find((c) => c.name === matched)!;
+          const ch = characters.find((c) => c.name === matched)!;
           return <div key={`${scene.id}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{line}</div>;
         }
         return <div key={`${scene.id}-${i}`} className="sv-line">{line || '\u00A0'}</div>;
@@ -643,7 +664,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
 
       if (!hasTag) {
         if (isCue) {
-          const ch = MOCK_CHARACTERS.find((c) => c.name === matched)!;
+          const ch = characters.find((c) => c.name === matched)!;
           return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{lo.line}</div>;
         }
         return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line || '\u00A0'}</div>;
@@ -660,7 +681,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
           parts.push(
             <span key={`${seg.start}-${seg.end}`} className="sv-highlight"
               style={{ backgroundColor: `${cat?.color || '#888'}33`, borderBottom: `2px solid ${cat?.color || '#888'}` }}
-              title={`${cat?.label || 'Tag'}${seg.tag.characterId ? ` → ${MOCK_CHARACTERS.find(c => c.id === seg.tag!.characterId)?.name || ''}` : ''}`}
+              title={`${cat?.label || 'Tag'}${seg.tag.characterId ? ` → ${characters.find(c => c.id === seg.tag!.characterId)?.name || ''}` : ''}`}
             >{segText}</span>
           );
         } else {
@@ -670,7 +691,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
 
       return (
         <div key={`${scene.id}-${lineIdx}`} className={`sv-line${isCue ? ' sv-cue' : ''}`}
-          onClick={isCue && matched ? () => { const ch = MOCK_CHARACTERS.find((c) => c.name === matched); if (ch) onCharClick(ch.id); } : undefined}>
+          onClick={isCue && matched ? () => { const ch = characters.find((c) => c.name === matched); if (ch) onCharClick(ch.id); } : undefined}>
           {parts}
         </div>
       );
@@ -723,7 +744,7 @@ function ScriptView({ scenes, selectedSceneId, onSceneVisible, fontSize, onCharC
   }, []);
 
   /* All characters available for tag assignment */
-  const popupChars = MOCK_CHARACTERS;
+  const popupChars = characters;
 
   return (
     <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
@@ -830,6 +851,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setScript = useScriptUploadStore((s) => s.setScript);
+  const setParsedData = useParsedScriptStore((s) => s.setParsedData);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -882,53 +904,91 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
     setStatusText('Reading file...');
 
     try {
-      await new Promise(r => setTimeout(r, 300));
+      // Use the real script parser (PDF, FDX, Fountain, TXT)
+      const parsed: ParsedScript = await parseScriptFile(selectedFile, (status) => {
+        setStatusText(status);
+      });
 
-      setProgress(40);
-      setStatusText('Extracting text...');
-
-      // Read the file as text (PDF parsing would need pdf.js — for now handle text-based formats)
-      let rawText = '';
-      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
-
-      if (ext === 'pdf') {
-        // For PDF files, read as base64 — full parsing handled by desktop script-upload.js
-        // Store the file info and let the breakdown page know a script was uploaded
-        rawText = '[PDF uploaded — ' + selectedFile.name + ']';
-      } else if (ext === 'fdx') {
-        const xml = await selectedFile.text();
-        // Extract text from FDX XML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xml, 'text/xml');
-        const paragraphs = doc.querySelectorAll('Paragraph');
-        rawText = Array.from(paragraphs).map(p => {
-          const text = p.querySelector('Text');
-          return text?.textContent || '';
-        }).filter(Boolean).join('\n');
-      } else {
-        rawText = await selectedFile.text();
-      }
-
-      setProgress(70);
-      setStatusText('Detecting scenes...');
+      setProgress(50);
+      setStatusText('Detecting characters...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Count scenes by looking for scene headings
-      const scenePattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+/gim;
-      const matches = rawText.match(scenePattern);
-      const sceneCount = matches ? matches.length : 0;
+      // Convert parsed data to the Scene/Character format the app expects
+      // Build character ID mapping
+      const charIdMap = new Map<string, string>();
+      const characters: Character[] = parsed.characters.map((pc, idx) => {
+        const id = `pc-${idx + 1}`;
+        charIdMap.set(pc.normalizedName, id);
+        return {
+          id,
+          name: pc.name,
+          billing: idx + 1,
+          age: '',
+          gender: '',
+          hairColour: '',
+          hairType: '',
+          eyeColour: '',
+          skinTone: '',
+          build: '',
+          distinguishingFeatures: '',
+          notes: `Appears in ${pc.sceneCount} scene${pc.sceneCount !== 1 ? 's' : ''}`,
+        };
+      });
+
+      setProgress(70);
+      setStatusText('Building scenes...');
+
+      // Deduplicate scene numbers
+      const seenSceneNumbers = new Map<string, number>();
+      const scenes: Scene[] = parsed.scenes.map((ps, idx) => {
+        let sceneNum = ps.sceneNumber;
+        const count = (seenSceneNumbers.get(sceneNum) || 0) + 1;
+        seenSceneNumbers.set(sceneNum, count);
+        if (count > 1) sceneNum = `${sceneNum}-${count}`;
+
+        const charIds = ps.characters
+          .map(name => charIdMap.get(name))
+          .filter((id): id is string => !!id);
+
+        const dayNight = ps.timeOfDay === 'MORNING' ? 'DAWN' as const
+          : ps.timeOfDay === 'EVENING' ? 'DUSK' as const
+          : ps.timeOfDay === 'CONTINUOUS' ? 'DAY' as const
+          : ps.timeOfDay as 'DAY' | 'NIGHT';
+
+        return {
+          id: `ps-${idx + 1}`,
+          number: idx + 1,
+          intExt: ps.intExt,
+          dayNight,
+          location: ps.location,
+          storyDay: '',
+          timeInfo: '',
+          characterIds: charIds,
+          synopsis: '',
+          scriptContent: ps.content.replace(/^[^\n]*\n/, '').trim(), // Remove slugline from content
+        };
+      });
 
       setProgress(90);
       setStatusText('Saving...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Store in the script upload store
+      // Store parsed data
+      setParsedData(projectId, {
+        scenes,
+        characters,
+        looks: [], // No looks for freshly parsed scripts
+        filename: selectedFile.name,
+        parsedAt: new Date().toISOString(),
+      });
+
+      // Also store in script upload store for backward compat
       setScript(projectId, {
         projectId,
         filename: selectedFile.name,
         uploadedAt: new Date().toISOString(),
-        sceneCount,
-        rawText,
+        sceneCount: scenes.length,
+        rawText: parsed.rawText,
       });
 
       setProgress(100);
@@ -1107,10 +1167,10 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
 
 /* ━━━ CHARACTER VIEW ━━━ */
 
-function CharacterView({ char }: { char: Character; subTab: string }) {
+function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab: string; allScenes: Scene[]; allLooks: Look[] }) {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events' | 'notes'>('profile');
-  const looks = MOCK_LOOKS.filter((l) => l.characterId === char.id);
-  const scenes = MOCK_SCENES.filter((s) => s.characterIds.includes(char.id));
+  const looks = allLooks.filter((l) => l.characterId === char.id);
+  const scenes = allScenes.filter((s) => s.characterIds.includes(char.id));
   const tagStore = useTagStore();
   const allCharTags = tagStore.getTagsForCharacter(char.id);
   /* Only show tags with descriptions or non-name tags in Script Notes.
@@ -1183,7 +1243,7 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
               <p className="cv-empty">No script notes yet. Highlight text in the script and assign it to this character.</p>
             ) : (
               charTags.map((tag) => {
-                const tagScene = MOCK_SCENES.find((s) => s.id === tag.sceneId);
+                const tagScene = allScenes.find((s) => s.id === tag.sceneId);
                 const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
                 return (
                   <div key={tag.id} className="cv-note-card">
@@ -1210,10 +1270,10 @@ function CharacterView({ char }: { char: Character; subTab: string }) {
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
-  scenes: Scene[]; allScenes: Scene[]; onNavigate: (id: string) => void;
+  scenes: Scene[]; allScenes: Scene[]; allLooks: Look[]; onNavigate: (id: string) => void;
   onUpdate: (cid: string, d: Partial<CharacterBreakdown>) => void;
   onUpdateTimeline: (t: SceneBreakdown['timeline']) => void;
   onAddEvent: (e: ContinuityEvent) => void;
@@ -1302,7 +1362,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             return (
               <CharBlock key={ch.id} char={ch} cb={cb}
                 sceneId={scene.id}
-                looks={MOCK_LOOKS.filter((l) => l.characterId === ch.id)}
+                looks={allLooks.filter((l) => l.characterId === ch.id)}
                 highlighted={activeCharacterId === ch.id}
                 onUpdate={(d) => onUpdate(ch.id, d)}
                 characterEvents={charEvents}
