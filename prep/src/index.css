@@ -2376,13 +2376,13 @@ body {
   background: transparent;
 }
 
-/* Right panel — transparent so page rainbow shows through */
+/* Right panel — semi-transparent so page rainbow shows through */
 .bd-right {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
-  background: transparent;
+  background: rgba(46, 32, 16, 0.55);
   border-left: 1px solid var(--border-card);
   position: relative;
 }
@@ -2934,14 +2934,13 @@ body {
     0 8px 20px rgba(0, 0, 0, 0.4);
   scroll-margin-top: 8px;
 }
-/* Subtle highlight on the currently selected scene page */
+/* Subtle highlight on the currently selected scene page — no orange glow */
 .sv-paper--active {
-  border-color: rgba(var(--a), 0.35);
+  border-color: rgba(255, 255, 255, 0.10);
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.2),
     0 8px 20px rgba(0, 0, 0, 0.35),
-    0 20px 50px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(var(--a), 0.15);
+    0 20px 50px rgba(0, 0, 0, 0.4);
 }
 /* Scene page break gap */
 .sv-paper + .sv-paper {
