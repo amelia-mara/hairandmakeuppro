@@ -321,8 +321,8 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
     bgClass: 'bg-amber-100',
     textClass: 'text-amber-600',
     borderClass: 'border-amber-400',
-    color: '#d97706',
-    glassOverlay: 'rgba(245, 158, 11, 0.15)',
+    color: '#F5A623',
+    glassOverlay: 'rgba(245, 166, 35, 0.15)',
   },
   'complete': {
     label: 'Complete',
@@ -330,8 +330,8 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
     bgClass: 'bg-green-100',
     textClass: 'text-green-600',
     borderClass: 'border-green-400',
-    color: '#16a34a',
-    glassOverlay: 'rgba(34, 197, 94, 0.15)',
+    color: '#4ABFB0',
+    glassOverlay: 'rgba(74, 191, 176, 0.15)',
   },
 };
 
