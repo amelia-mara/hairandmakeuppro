@@ -1052,7 +1052,7 @@ body {
   background:
     linear-gradient(135deg, rgba(var(--a), 0.03) 0%, transparent 60%),
     var(--bg-card);
-  border: 1.5px solid rgba(232, 98, 26, 0.45);
+  border: 2px solid #C05A1A;
   border-radius: 14px;
   overflow: hidden;
   min-height: 280px;
@@ -1070,7 +1070,7 @@ body {
   display: none;
 }
 .project-card:hover {
-  border-color: rgba(232, 98, 26, 0.7);
+  border-color: #E8621A;
   box-shadow: var(--glass-shadow-hover), 0 0 24px rgba(var(--a), 0.06);
   transform: translateY(-2px);
 }
@@ -1176,7 +1176,7 @@ body {
 
 /* New project card */
 .new-project-card {
-  border: 1.5px dashed rgba(232, 98, 26, 0.3);
+  border: none;
   border-radius: 14px;
   min-height: 280px;
   display: flex;
@@ -1186,20 +1186,19 @@ body {
   padding: 60px 24px;
   cursor: pointer;
   transition: all 0.25s ease;
-  background: transparent;
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(232, 98, 26, 0.25);
 }
 .new-project-card:hover {
-  border-color: var(--accent);
-  border-style: solid;
-  background: linear-gradient(135deg, rgba(var(--a), 0.03) 0%, transparent 60%), var(--bg-card);
-  box-shadow: var(--glass-shadow), 0 0 24px rgba(var(--a), 0.06);
+  background: var(--accent-cue-hover);
+  box-shadow: 0 4px 16px rgba(232, 98, 26, 0.35);
   transform: translateY(-2px);
 }
 .new-project-card .icon-circle {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 1.5px solid var(--border-medium);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1207,8 +1206,8 @@ body {
   transition: all 0.2s ease;
 }
 .new-project-card:hover .icon-circle {
-  border-color: var(--accent);
-  background: var(--accent-gold-soft);
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* ━━━ Buttons ━━━ */
