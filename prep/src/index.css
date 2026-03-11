@@ -211,6 +211,11 @@
 }
 [data-theme="light"] .sl-expand-pill {
   background: rgba(0,0,0,0.04) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .sl-card-char-tag {
+  background: rgba(0,0,0,0.05) !important;
+  border-color: rgba(0,0,0,0.12) !important;
 }
 [data-theme="light"] .fi-input:focus,
 [data-theme="light"] .fi-select:focus,
@@ -2667,8 +2672,8 @@ body {
 }
 
 .sl-expand-pill {
-  background: rgba(0, 0, 0, 0.03);
-  border: none;
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   padding: 8px 10px;
 }
@@ -2700,8 +2705,8 @@ body {
   font-size: 0.5625rem;
   font-weight: 600;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 4px;
   padding: 2px 7px;
 }
