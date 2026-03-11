@@ -155,7 +155,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
         </div>
 
         <div className="hub-feature-card">
-          <div className="hub-feature-icon hub-feature-icon--orange">
+          <div className="hub-feature-icon hub-feature-icon--yellow">
             <DollarSign size={16} />
           </div>
           <h3 className="hub-feature-title">Budget &amp; Timesheet Tracking</h3>
