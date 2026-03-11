@@ -533,25 +533,25 @@
   color: var(--accent-dark) !important;
 }
 
-/* Script panel bottom fade — remove dark gradient */
+/* Script panel bottom fade — subtle transparent fade */
 [data-theme="light"] .cp-body::after {
-  background: linear-gradient(to bottom, transparent, #EDE4D0) !important;
+  background: linear-gradient(to bottom, transparent, rgba(245, 239, 224, 0.6)) !important;
 }
 
-/* Script paper — white and warm */
+/* Script paper — white with shadow only, no orange glow */
 [data-theme="light"] .sv-paper {
   background: var(--bg-card) !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12) !important;
 }
 [data-theme="light"] .sv-paper--active {
-  border-color: rgba(var(--a), 0.3) !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(var(--a), 0.12) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10), 0 8px 24px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Script scroll area */
+/* Script scroll area — transparent so page rainbow shows through */
 [data-theme="light"] .sv-scroll {
-  background: #EDE4D0;
+  background: transparent;
 }
 
 /* Tag popup — light theme */
@@ -598,18 +598,18 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.10) !important;
 }
 
-/* Right panel header — remove dark shadow */
+/* Right panel header — translucent */
 [data-theme="light"] .fp-panel-header {
-  background: linear-gradient(180deg, rgba(var(--a), 0.04) 0%, rgba(var(--a), 0.01) 100%) !important;
+  background: rgba(250, 247, 240, 0.5) !important;
   border-bottom: 1px solid rgba(0,0,0,0.08) !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
 }
 
-/* Toolbar — remove dark shadow */
+/* Toolbar — transparent so page rainbow shows through */
 [data-theme="light"] .cp-toolbar {
-  background: #EDE4D0 !important;
+  background: transparent !important;
   border-bottom-color: rgba(0,0,0,0.08) !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+  box-shadow: none !important;
 }
 
 /* Strengthen definition — borders & surfaces */
@@ -618,7 +618,9 @@
   border-right: 1px solid rgba(0,0,0,0.10) !important;
 }
 [data-theme="light"] .bd-right {
-  background: transparent !important;
+  background: rgba(250, 247, 240, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
   border-left: 1px solid rgba(0,0,0,0.10) !important;
 }
 [data-theme="light"] .sl-card {
