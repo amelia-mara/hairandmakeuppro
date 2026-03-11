@@ -1030,3 +1030,71 @@ export const useScriptUploadStore = create<ScriptUploadState>()(
     }
   )
 );
+
+/* ━━━ Parsed Script Store — persists parsed scenes & characters per project ━━━ */
+
+export interface ParsedSceneData {
+  id: string;
+  number: number;
+  intExt: 'INT' | 'EXT';
+  dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
+  location: string;
+  storyDay: string;
+  timeInfo: string;
+  characterIds: string[];
+  synopsis: string;
+  scriptContent: string;
+}
+
+export interface ParsedCharacterData {
+  id: string;
+  name: string;
+  billing: number;
+  age: string;
+  gender: string;
+  hairColour: string;
+  hairType: string;
+  eyeColour: string;
+  skinTone: string;
+  build: string;
+  distinguishingFeatures: string;
+  notes: string;
+}
+
+interface ProjectParsedData {
+  scenes: ParsedSceneData[];
+  characters: ParsedCharacterData[];
+  looks: Look[];
+  filename: string;
+  parsedAt: string;
+}
+
+interface ParsedScriptState {
+  projects: Record<string, ProjectParsedData>; // keyed by projectId
+  getParsedData: (projectId: string) => ProjectParsedData | undefined;
+  setParsedData: (projectId: string, data: ProjectParsedData) => void;
+  clearParsedData: (projectId: string) => void;
+}
+
+export const useParsedScriptStore = create<ParsedScriptState>()(
+  persist(
+    (set, get) => ({
+      projects: {},
+
+      getParsedData: (projectId) => get().projects[projectId],
+
+      setParsedData: (projectId, data) =>
+        set((s) => ({ projects: { ...s.projects, [projectId]: data } })),
+
+      clearParsedData: (projectId) =>
+        set((s) => {
+          const { [projectId]: _, ...rest } = s.projects;
+          return { projects: rest };
+        }),
+    }),
+    {
+      name: 'prep-happy-parsed-scripts',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
