@@ -683,9 +683,9 @@
 [data-theme="light"] .fi-input,
 [data-theme="light"] .fi-select,
 [data-theme="light"] .cb-textarea {
-  background: #EDE4D0 !important;
-  border-color: rgba(0,0,0,0.12) !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+  background: rgba(0,0,0,0.03) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03) !important;
 }
 [data-theme="light"] .cb-block {
   border-color: rgba(0,0,0,0.10) !important;
