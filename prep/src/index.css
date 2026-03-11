@@ -4334,12 +4334,13 @@ body {
 /* Column widths */
 .bs-col-char { width: 150px; }
 .bs-col-first { width: 44px; text-align: center; }
-.bs-col-hair { width: 190px; }
-.bs-col-makeup { width: 190px; }
-.bs-col-sfx { width: 160px; }
-.bs-col-notes { min-width: 220px; }
+.bs-col-hair { width: 170px; }
+.bs-col-makeup { width: 170px; }
+.bs-col-wardrobe { width: 170px; }
+.bs-col-sfx { width: 140px; }
+.bs-col-notes { min-width: 200px; }
 
-/* Character cell — stacked name + billing */
+/* Character cell — stacked name + billing + look */
 .bs-char-stack {
   display: flex; flex-direction: column; gap: 1px;
 }
@@ -4356,6 +4357,34 @@ body {
   margin-left: 0;
   opacity: 0.7;
   text-transform: none;
+}
+.bs-char-look {
+  font-size: 0.625rem; font-weight: 500;
+  color: var(--accent-cue);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Exit state note (shown below main value) */
+.bs-exit-note {
+  font-size: 0.6875rem;
+  color: var(--accent-cue);
+  font-style: italic;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(var(--a), 0.12);
+}
+
+/* Change notes in continuity column */
+.bs-change-note {
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background: rgba(var(--a), 0.06);
+  border-radius: 4px;
+  border-left: 3px solid var(--accent-cue);
 }
 
 /* First appearance row — left accent bar */
