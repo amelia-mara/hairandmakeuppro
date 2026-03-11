@@ -85,21 +85,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
             </div>
             {onBackToHub && (
               <>
-                <button
-                  className="topbar-back-arrow"
-                  onClick={onBackToHub}
-                  aria-label="Back to projects"
-                  title="Back to projects"
-                >
-                  <svg
-                    width="14" height="14" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="2.5"
-                    strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d="M19 12H5"/>
-                    <path d="m12 19-7-7 7-7"/>
-                  </svg>
-                </button>
+                <div className="topbar-divider" />
                 <span className="topbar-prep-label">PREP</span>
               </>
             )}
@@ -113,23 +99,40 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
             )}
           </div>
           {onBackToHub && (
-            <button
-              className="topbar-project-name"
-              onClick={() => setNavOpen(!navOpen)}
-            >
-              <span title={title}>{title}</span>
-              <svg
-                width="10" height="10" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" strokeWidth="3"
-                strokeLinecap="round" strokeLinejoin="round"
-                style={{
-                  transition: 'transform 0.2s ease',
-                  transform: navOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                }}
+            <div className="topbar-project-row">
+              <button
+                className="topbar-project-name"
+                onClick={() => setNavOpen(!navOpen)}
               >
-                <path d="m6 9 6 6 6-6"/>
-              </svg>
-            </button>
+                <span title={title}>{title}</span>
+                <svg
+                  width="10" height="10" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="3"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  style={{
+                    transition: 'transform 0.2s ease',
+                    transform: navOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}
+                >
+                  <path d="m6 9 6 6 6-6"/>
+                </svg>
+              </button>
+              <button
+                className="topbar-back-arrow"
+                onClick={onBackToHub}
+                aria-label="Back to projects"
+                title="Back to projects"
+              >
+                <svg
+                  width="10" height="10" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2.5"
+                  strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <path d="M19 12H5"/>
+                  <path d="m12 19-7-7 7-7"/>
+                </svg>
+              </button>
+            </div>
           )}
 
           {navOpen && onNavigate && (
