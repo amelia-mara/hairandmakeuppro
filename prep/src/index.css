@@ -168,6 +168,12 @@
 [data-theme="light"] .cv-look-sub-card {
   background: var(--bg-card) !important;
 }
+[data-theme="light"] .cv-wrap {
+  background: rgba(250, 247, 240, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-color: rgba(0,0,0,0.10) !important;
+}
 
 /* Header pseudo-elements for light mode */
 [data-theme="light"] .app-header::after {
@@ -3167,7 +3173,16 @@ body {
 
 /* ━━━ Character View ━━━ */
 
-.cv-wrap { padding: 24px; max-width: 680px; margin: 0 auto; flex: 1; overflow-y: auto; }
+.cv-wrap {
+  padding: 24px;
+  max-width: 680px;
+  margin: 12px auto 0;
+  flex: 1;
+  overflow-y: auto;
+  background: rgba(46, 32, 16, 0.55);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+}
 
 .cv-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
 
