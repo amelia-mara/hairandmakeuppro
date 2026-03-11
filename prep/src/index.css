@@ -1704,7 +1704,7 @@ body {
   height: 20px;
   padding: 0;
   background: none;
-  border: 1px solid var(--border-card);
+  border: none;
   border-radius: 5px;
   color: var(--text-muted);
   cursor: pointer;
@@ -1713,14 +1713,13 @@ body {
 }
 .topbar-back-arrow:hover {
   color: var(--accent);
-  border-color: var(--border-medium);
   background: rgba(var(--a), 0.06);
 }
 
 /* PREP label — section identifier */
 .topbar-prep-label {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
