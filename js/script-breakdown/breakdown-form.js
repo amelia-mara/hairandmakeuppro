@@ -424,8 +424,8 @@ function renderCharacterFields(character, sceneIndex, scene) {
                         ${prevScene !== null ? '↓ Copy' : '1st'}
                     </button>
                     <button class="remove-character-btn"
-                            onclick="removeCharacterFromScene(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}')"
-                            title="Remove ${escapeHtml(character)} from this scene">
+                            onclick="showRemoveCharacterModal(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}')"
+                            title="Remove ${escapeHtml(character)}">
                         ✕
                     </button>
                 </div>
@@ -1645,6 +1645,255 @@ window.removeCharacterGlobally = function(characterName) {
 
     showStoryDayToast(`${characterName} removed from project`);
 };
+
+/**
+ * Show a removal choice modal when the X button is clicked on a character
+ * Asks whether the character is just not in this scene, or not a character at all
+ */
+window.showRemoveCharacterModal = function(sceneIndex, characterName) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene || !characterName) return;
+
+    // Remove any existing modal
+    const existing = document.querySelector('.remove-character-modal-overlay');
+    if (existing) existing.remove();
+
+    // Add styles
+    addRemoveCharacterModalStyles();
+
+    const sceneLabel = scene.number || sceneIndex + 1;
+
+    const modalHTML = `
+        <div class="remove-character-modal-overlay" onclick="closeRemoveCharacterModal()">
+            <div class="remove-character-modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3>Remove ${escapeHtml(characterName)}?</h3>
+                    <button class="modal-close-btn" onclick="closeRemoveCharacterModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="remove-modal-question">Is <strong>${escapeHtml(characterName)}</strong> just not in this scene, or not a character at all?</p>
+                    <div class="remove-modal-options">
+                        <button class="remove-option-btn scene-only" onclick="confirmRemoveFromScene(${sceneIndex}, '${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                            <span class="remove-option-icon">🎬</span>
+                            <span class="remove-option-text">
+                                <strong>Not in this scene</strong>
+                                <span>Remove from Scene ${sceneLabel} only</span>
+                            </span>
+                        </button>
+                        <button class="remove-option-btn entire-script" onclick="confirmRemoveFromScript('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                            <span class="remove-option-icon">🗑</span>
+                            <span class="remove-option-text">
+                                <strong>Not a character at all</strong>
+                                <span>Remove from the entire script</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+/**
+ * Close the remove character modal
+ */
+window.closeRemoveCharacterModal = function() {
+    const modal = document.querySelector('.remove-character-modal-overlay');
+    if (modal) modal.remove();
+};
+
+/**
+ * Confirm removal from scene only (called from modal)
+ */
+window.confirmRemoveFromScene = function(sceneIndex, characterName) {
+    closeRemoveCharacterModal();
+
+    // Remove from scene breakdown cast
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+    if (breakdown?.cast) {
+        breakdown.cast = breakdown.cast.filter(c => c !== characterName);
+    }
+
+    // Remove character state data for this scene
+    if (state.characterStates[sceneIndex]?.[characterName]) {
+        delete state.characterStates[sceneIndex][characterName];
+    }
+
+    // Save and refresh
+    saveToLocalStorage();
+    renderBreakdownPanel();
+
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+
+    showStoryDayToast(`${characterName} removed from scene`);
+};
+
+/**
+ * Confirm removal from entire script (called from modal)
+ */
+window.confirmRemoveFromScript = function(characterName) {
+    closeRemoveCharacterModal();
+
+    // Reuse the global removal logic directly (skip its confirm dialog)
+    if (state.confirmedCharacters) {
+        state.confirmedCharacters.delete(characterName);
+    }
+
+    Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+        const breakdown = state.sceneBreakdowns[sceneIdx];
+        if (breakdown?.cast) {
+            breakdown.cast = breakdown.cast.filter(c => c !== characterName);
+        }
+        if (breakdown?.suggestedCharacters) {
+            breakdown.suggestedCharacters = breakdown.suggestedCharacters.filter(c => c !== characterName);
+        }
+    });
+
+    Object.keys(state.characterStates || {}).forEach(sceneIdx => {
+        if (state.characterStates[sceneIdx]?.[characterName]) {
+            delete state.characterStates[sceneIdx][characterName];
+        }
+    });
+
+    if (state.castProfiles?.[characterName]) delete state.castProfiles[characterName];
+    if (state.continuityEvents?.[characterName]) delete state.continuityEvents[characterName];
+    if (state.characterLooks?.[characterName]) delete state.characterLooks[characterName];
+    if (window.masterContext?.characters?.[characterName]) delete window.masterContext.characters[characterName];
+
+    saveToLocalStorage();
+    renderBreakdownPanel();
+
+    if (typeof renderSceneList === 'function') renderSceneList();
+    if (typeof window.renderCharacterTabs === 'function') window.renderCharacterTabs();
+    if (typeof window.renderCharacterTabPanels === 'function') window.renderCharacterTabPanels();
+
+    showStoryDayToast(`${characterName} removed from project`);
+};
+
+/**
+ * Add styles for the remove character modal
+ */
+function addRemoveCharacterModalStyles() {
+    if (document.getElementById('remove-character-modal-styles')) return;
+
+    const styles = document.createElement('style');
+    styles.id = 'remove-character-modal-styles';
+    styles.textContent = `
+        .remove-character-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .remove-character-modal {
+            background: var(--bg-secondary, #1e1e2e);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 420px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .remove-character-modal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-tertiary, #252536);
+            border-bottom: 1px solid var(--border-color, #3d3d5c);
+        }
+
+        .remove-character-modal .modal-header h3 {
+            margin: 0;
+            font-size: 1em;
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        .remove-character-modal .modal-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary, #a1a1aa);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .remove-character-modal .modal-body {
+            padding: 20px;
+        }
+
+        .remove-modal-question {
+            font-size: 0.9em;
+            color: var(--text-secondary, #a1a1aa);
+            margin: 0 0 16px 0;
+            line-height: 1.5;
+        }
+
+        .remove-modal-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .remove-option-btn {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: var(--bg-primary, #13131a);
+            border: 1px solid var(--border-color, #3d3d5c);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            width: 100%;
+        }
+
+        .remove-option-btn:hover {
+            border-color: var(--accent-gold, #c9a961);
+            background: rgba(201, 169, 97, 0.08);
+        }
+
+        .remove-option-btn.entire-script:hover {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .remove-option-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .remove-option-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .remove-option-text strong {
+            font-size: 0.9em;
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        .remove-option-text span {
+            font-size: 0.78em;
+            color: var(--text-muted, #71717a);
+        }
+    `;
+    document.head.appendChild(styles);
+}
 
 /**
  * Open modal to add a character to a scene
