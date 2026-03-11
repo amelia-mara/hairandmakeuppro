@@ -1,5 +1,5 @@
 import { useProjectStore } from '@/stores/projectStore';
-import { Film, Tv, Clapperboard, Music, Video, Plus } from 'lucide-react';
+import { Film, Tv, Clapperboard, Music, Video, Plus, FileText, DollarSign, Eye } from 'lucide-react';
 import type { ProjectType } from '@/types';
 
 const TYPE_ICONS: Record<ProjectType, typeof Film> = {
@@ -137,8 +137,41 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
             Everything your department needs, beautifully organised.
           </p>
           <button className="hub-hero-cta" onClick={onCreateProject}>
-            Get Started
+            Get Started Free
           </button>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="hub-features">
+        <div className="hub-feature-card">
+          <div className="hub-feature-icon hub-feature-icon--orange">
+            <FileText size={16} />
+          </div>
+          <h3 className="hub-feature-title">Script Breakdowns</h3>
+          <p className="hub-feature-desc">
+            Automatic scene identification that reduces a 15-hour manual process to under 2 hours.
+          </p>
+        </div>
+
+        <div className="hub-feature-card">
+          <div className="hub-feature-icon hub-feature-icon--orange">
+            <DollarSign size={16} />
+          </div>
+          <h3 className="hub-feature-title">Budget &amp; Timesheet Tracking</h3>
+          <p className="hub-feature-desc">
+            Real-time spend tracking with receipt scanning and automatic expense logging. Track your hours and export timesheets and invoices.
+          </p>
+        </div>
+
+        <div className="hub-feature-card">
+          <div className="hub-feature-icon hub-feature-icon--teal">
+            <Eye size={16} />
+          </div>
+          <h3 className="hub-feature-title">Continuity</h3>
+          <p className="hub-feature-desc">
+            Track every look, every scene, every character. Never lose a continuity note again.
+          </p>
         </div>
       </div>
 
