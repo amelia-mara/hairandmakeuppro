@@ -684,7 +684,8 @@
 }
 [data-theme="light"] .fi-input,
 [data-theme="light"] .fi-select,
-[data-theme="light"] .cb-textarea {
+[data-theme="light"] .cb-textarea,
+[data-theme="light"] .cb-select {
   background: rgba(0,0,0,0.03) !important;
   border-color: rgba(0,0,0,0.08) !important;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.03) !important;
