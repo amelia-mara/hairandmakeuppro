@@ -8,20 +8,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        /* Core brand colours */
         gold: {
-          DEFAULT: '#E8621A',
+          DEFAULT: '#E8621A',       /* Orange Primary — CTAs, primary actions */
           dark: '#C4522A',
-          light: '#F0882A',
+          light: '#F0882A',         /* Orange Warm — hover states */
           50: '#FFF5ED',
           100: '#FFE8D6',
           200: '#FECCA8',
           300: '#FDAC74',
-          400: '#F0882A',
-          500: '#E8621A',
+          400: '#F0882A',           /* Orange Warm */
+          500: '#E8621A',           /* Orange Primary */
           600: '#C4522A',
           700: '#A04020',
           800: '#7A3218',
           900: '#4A3020',
+        },
+        amber: {
+          DEFAULT: '#F5A623',       /* Amber — accents, badges, warnings */
+        },
+        'brand-gold': '#D4943A',    /* Gold — icons, decorative elements */
+        teal: {
+          DEFAULT: '#4ABFB0',       /* Teal — success, accent contrast, links */
+        },
+        peach: '#F2C4A0',           /* Peach — tag backgrounds, soft highlights */
+        cream: {
+          DEFAULT: '#F5EFE0',       /* Cream Base — page background */
+          dark: '#EDE4D0',          /* Cream Dark — section backgrounds, borders */
         },
         // Theme colors using CSS variables (respects dark mode)
         background: 'var(--color-background)',
@@ -33,8 +46,8 @@ export default {
         'text-muted': 'var(--color-text-muted)',
         'text-light': 'var(--color-text-light)',
         'text-placeholder': 'var(--color-text-placeholder)',
-        success: '#4CAF50',
-        warning: '#FF9800',
+        success: '#4ABFB0',         /* Teal — success states */
+        warning: '#F5A623',         /* Amber — warning states */
         error: '#f44336',
         // Dark mode specific colors - warm brown solids
         'dark-bg': '#1A1208',

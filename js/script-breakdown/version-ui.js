@@ -1184,7 +1184,7 @@ function showToast(message, type = 'info') {
         bottom: 24px;
         right: 24px;
         padding: 12px 24px;
-        background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#d4af7a'};
+        background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#D4943A'};
         color: ${type === 'info' ? 'var(--bg-dark)' : 'white'};
         border-radius: 8px;
         z-index: 10001;

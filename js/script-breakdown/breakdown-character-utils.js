@@ -60,7 +60,7 @@ export function showToast(message, type = 'info') {
     const colors = {
         success: '#22c55e',
         error: '#ef4444',
-        info: '#d4af7a',
+        info: '#D4943A',
         warning: '#f59e0b'
     };
 

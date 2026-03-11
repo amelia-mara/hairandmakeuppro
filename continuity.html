@@ -1488,7 +1488,7 @@
         }
 
         .prev-photo-thumb:hover {
-            border-color: #c9a961;
+            border-color: #D4943A;
             transform: scale(1.02);
         }
 
@@ -1586,7 +1586,7 @@
             width: 32px;
             height: 32px;
             border: 3px solid rgba(201, 169, 97, 0.2);
-            border-top-color: #c9a961;
+            border-top-color: #D4943A;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -1624,7 +1624,7 @@
             height: 28px;
             margin: -14px 0 0 -14px;
             border: 3px solid rgba(201, 169, 97, 0.2);
-            border-top-color: #c9a961;
+            border-top-color: #D4943A;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             z-index: 6;
@@ -3232,7 +3232,7 @@
 
             if (status === 'saving') {
                 indicator.innerHTML = `
-                    <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #c9a961; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
+                    <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #D4943A; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
                     <span>Saving...</span>
                 `;
                 indicator.style.borderColor = 'rgba(201, 169, 97, 0.3)';
@@ -3240,8 +3240,8 @@
                 indicator.style.transform = 'translateY(0)';
             } else if (status === 'saved') {
                 indicator.innerHTML = `
-                    <span style="color: #52c186;">✓</span>
-                    <span style="color: #52c186;">Saved</span>
+                    <span style="color: #4ABFB0;">✓</span>
+                    <span style="color: #4ABFB0;">Saved</span>
                 `;
                 indicator.style.borderColor = 'rgba(82, 193, 134, 0.3)';
                 indicator.style.opacity = '1';

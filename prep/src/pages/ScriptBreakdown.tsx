@@ -983,7 +983,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
               }}>
                 <div style={{
                   width: `${progress}%`, height: '100%', borderRadius: 3,
-                  background: 'var(--accent-gold, #c9a961)',
+                  background: 'var(--accent-gold, #D4943A)',
                   transition: 'width 0.3s ease',
                 }} />
               </div>
@@ -1000,7 +1000,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
               onDragLeave={handleDragLeave}
               style={{
                 width: '100%', padding: '40px 30px', textAlign: 'center',
-                border: `2px dashed ${dragOver ? 'var(--accent-gold, #c9a961)' : 'var(--border-subtle, rgba(255,255,255,0.08))'}`,
+                border: `2px dashed ${dragOver ? 'var(--accent-gold, #D4943A)' : 'var(--border-subtle, rgba(255,255,255,0.08))'}`,
                 borderRadius: 12,
                 background: dragOver ? 'rgba(201, 169, 97, 0.08)' : 'rgba(255, 255, 255, 0.02)',
                 cursor: 'pointer', transition: 'all 0.2s ease',
@@ -1026,10 +1026,10 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
             <div style={{
               padding: 16, borderRadius: 10,
               background: 'rgba(201, 169, 97, 0.08)',
-              border: '1px solid var(--accent-gold, #c9a961)',
+              border: '1px solid var(--accent-gold, #D4943A)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold, #c9a961)" strokeWidth="1.5">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold, #D4943A)" strokeWidth="1.5">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
                   <path d="M14 2v6h6"/>
                 </svg>
@@ -1078,7 +1078,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
                 disabled={!selectedFile}
                 style={{
                   padding: '8px 24px', borderRadius: 8, cursor: selectedFile ? 'pointer' : 'not-allowed',
-                  background: selectedFile ? 'var(--accent-gold, #c9a961)' : 'var(--bg-tertiary)',
+                  background: selectedFile ? 'var(--accent-gold, #D4943A)' : 'var(--bg-tertiary)',
                   border: 'none',
                   color: selectedFile ? '#1a1a1a' : 'var(--text-muted)',
                   fontSize: '0.8125rem', fontWeight: 600,

@@ -196,13 +196,13 @@ function createMoodboardElement(element, index) {
 
         case 'swatch':
             wrapper.innerHTML = `
-                <div style="width: 60px; height: 60px; background: ${element.color || '#c9a961'};
+                <div style="width: 60px; height: 60px; background: ${element.color || '#D4943A'};
                             border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
                             border: 2px solid rgba(255,255,255,0.2);">
                 </div>
                 <span style="display: block; text-align: center; margin-top: 4px;
                              font-size: 0.7em; color: var(--text-muted);">
-                    ${element.color || '#c9a961'}
+                    ${element.color || '#D4943A'}
                 </span>
             `;
             break;
@@ -351,7 +351,7 @@ function addNoteToMoodboard() {
 }
 
 function addSwatchToMoodboard() {
-    const color = prompt('Enter colour (hex code):', '#c9a961');
+    const color = prompt('Enter colour (hex code):', '#D4943A');
     if (!color) return;
 
     const element = {

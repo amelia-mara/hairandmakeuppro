@@ -124,10 +124,10 @@ export const CONTINUITY_EVENT_TYPES = ['Wound', 'Bruise', 'Prosthetic', 'Scar', 
 
 export const BREAKDOWN_CATEGORIES = [
   { id: 'cast', label: 'Cast', color: '#6ba3f7' },
-  { id: 'hair', label: 'Hair', color: '#c4ac74' },
-  { id: 'makeup', label: 'Makeup', color: '#e8a87c' },
+  { id: 'hair', label: 'Hair', color: '#D4943A' },
+  { id: 'makeup', label: 'Makeup', color: '#F2C4A0' },
   { id: 'sfx', label: 'SFX', color: '#ef4444' },
-  { id: 'health', label: 'Health', color: '#52c186' },
+  { id: 'health', label: 'Health', color: '#4ABFB0' },
   { id: 'injuries', label: 'Injuries', color: '#f97316' },
   { id: 'stunts', label: 'Stunts', color: '#a855f7' },
   { id: 'weather', label: 'Weather', color: '#38bdf8' },
