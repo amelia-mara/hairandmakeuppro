@@ -973,6 +973,18 @@ body {
   border-color: rgba(74, 191, 176, 0.45);
 }
 
+/* Rainbow decoration — persistent across all inner pages */
+.page-rainbow {
+  position: fixed;
+  top: -80px;
+  right: -140px;
+  width: 600px;
+  height: 600px;
+  z-index: 0;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    FEATURES SECTION (Landing Hero)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */

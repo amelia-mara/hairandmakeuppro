@@ -39,6 +39,12 @@ function App() {
 
     return (
       <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        {/* Rainbow swirl decoration — consistent across all pages */}
+        <div className="page-rainbow">
+          <div className="rainbow-ring rainbow-ring--1" />
+          <div className="rainbow-ring rainbow-ring--2" />
+          <div className="rainbow-ring rainbow-ring--3" />
+        </div>
         <TopBar
           title={projectTitle}
           activePage={activePage}
