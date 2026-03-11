@@ -132,7 +132,23 @@ function renderSceneBreakdown(sceneIndex) {
         scene.castMembers = characters;
     }
 
-    const storyDay = scene.storyDay || extractStoryDay(sceneIndex) || '';
+    let storyDay = scene.storyDay || extractStoryDay(sceneIndex) || '';
+
+    // Auto-populate from lookbook if no day is set yet
+    if (!storyDay) {
+        const lookbookDay = getStoryDayFromLookbook(sceneIndex);
+        if (lookbookDay) {
+            storyDay = lookbookDay;
+            // Persist the auto-populated day so it shows in the dropdown
+            // and is available to the lookbook system
+            scene.storyDay = lookbookDay;
+            scene.storyDaySource = 'lookbook';
+            scene.storyDayConfidence = 'medium';
+            scene.storyDayConfirmed = false;
+            saveToLocalStorage();
+        }
+    }
+
     const timeOfDay = scene.timeOfDay || extractTimeFromHeading(scene.heading) || '';
 
     const analysis = window.scriptMasterContext || window.masterContext || {};
@@ -270,6 +286,10 @@ function renderSceneBreakdown(sceneIndex) {
                 ${scene.storyDayCue ? `
                     <div class="detection-hint-compact">
                         Auto: "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'})
+                    </div>
+                ` : scene.storyDaySource === 'lookbook' ? `
+                    <div class="detection-hint-compact">
+                        Auto: from lookbook (matching look)
                     </div>
                 ` : ''}
 
@@ -817,6 +837,96 @@ function extractStoryDay(sceneIndex) {
     return '';
 }
 
+/**
+ * Get the story day for a scene based on lookbook data.
+ * Finds the character look in this scene, then checks other scenes with the
+ * same look that already have a storyDay assigned.
+ * Returns the day if a consistent match is found, empty string otherwise.
+ */
+function getStoryDayFromLookbook(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return '';
+
+    const breakdown = state.sceneBreakdowns?.[sceneIndex];
+    const characters = breakdown?.cast || scene.castMembers || [];
+    if (characters.length === 0) return '';
+
+    // For each character in the scene, check if their look matches
+    // a look in other scenes that have a storyDay assigned
+    for (const characterName of characters) {
+        const charState = state.characterStates?.[sceneIndex]?.[characterName];
+        if (!charState) continue;
+
+        // Build a look key from this scene's character appearance
+        const hair = (charState.hair || charState.enterHair || '').trim().toLowerCase();
+        const makeup = (charState.makeup || charState.enterMakeup || '').trim().toLowerCase();
+        const wardrobe = (charState.wardrobe || charState.enterWardrobe || '').trim().toLowerCase();
+
+        // Skip if no look data
+        if (!hair && !makeup && !wardrobe) continue;
+
+        const lookKey = `${hair}||${makeup}||${wardrobe}`;
+
+        // Find other scenes with the same look that have a storyDay
+        const matchingDays = new Set();
+        (state.scenes || []).forEach((otherScene, otherIndex) => {
+            if (otherIndex === sceneIndex) return;
+            if (!otherScene.storyDay || otherScene.storyDay.trim() === '') return;
+
+            const otherBreakdown = state.sceneBreakdowns?.[otherIndex];
+            if (!otherBreakdown?.cast?.includes(characterName)) return;
+
+            const otherCharState = state.characterStates?.[otherIndex]?.[characterName];
+            if (!otherCharState) return;
+
+            const otherHair = (otherCharState.hair || otherCharState.enterHair || '').trim().toLowerCase();
+            const otherMakeup = (otherCharState.makeup || otherCharState.enterMakeup || '').trim().toLowerCase();
+            const otherWardrobe = (otherCharState.wardrobe || otherCharState.enterWardrobe || '').trim().toLowerCase();
+            const otherKey = `${otherHair}||${otherMakeup}||${otherWardrobe}`;
+
+            if (otherKey === lookKey) {
+                matchingDays.add(otherScene.storyDay.trim());
+            }
+        });
+
+        // If all matching scenes agree on a single day, use it
+        if (matchingDays.size === 1) {
+            return Array.from(matchingDays)[0];
+        }
+
+        // If multiple days but we can find the closest scene with same look, use its day
+        if (matchingDays.size > 1) {
+            let closestDay = '';
+            let closestDistance = Infinity;
+
+            (state.scenes || []).forEach((otherScene, otherIndex) => {
+                if (otherIndex === sceneIndex) return;
+                if (!otherScene.storyDay || otherScene.storyDay.trim() === '') return;
+
+                const otherCharState = state.characterStates?.[otherIndex]?.[characterName];
+                if (!otherCharState) return;
+
+                const otherHair = (otherCharState.hair || otherCharState.enterHair || '').trim().toLowerCase();
+                const otherMakeup = (otherCharState.makeup || otherCharState.enterMakeup || '').trim().toLowerCase();
+                const otherWardrobe = (otherCharState.wardrobe || otherCharState.enterWardrobe || '').trim().toLowerCase();
+                const otherKey = `${otherHair}||${otherMakeup}||${otherWardrobe}`;
+
+                if (otherKey === lookKey) {
+                    const distance = Math.abs(otherIndex - sceneIndex);
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestDay = otherScene.storyDay.trim();
+                    }
+                }
+            });
+
+            if (closestDay) return closestDay;
+        }
+    }
+
+    return '';
+}
+
 // ============================================================================
 // STORY DAY MANAGEMENT FUNCTIONS
 // ============================================================================
@@ -877,7 +987,8 @@ function getSourceIcon(source) {
         'day_night_transition': '[D]',
         'user_assigned': '[U]',
         'copied': '[C]',
-        'inferred': '[I]'
+        'inferred': '[I]',
+        'lookbook': '[L]'
     };
     return icons[source] || '[-]';
 }
@@ -894,7 +1005,8 @@ function formatSource(source) {
         'day_night_transition': 'Day/night transition',
         'user_assigned': 'User assigned',
         'copied': 'Copied from another scene',
-        'inferred': 'Auto-inferred'
+        'inferred': 'Auto-inferred',
+        'lookbook': 'From lookbook'
     };
     return labels[source] || source;
 }
