@@ -344,6 +344,8 @@ function isCharacterCue(line) {
         'HERE', 'THERE', 'WHERE', 'WHEN', 'THEN', 'NOW', 'SOON', 'AGO',
         'AGAIN', 'ONCE', 'OKAY', 'YEAH', 'SURE', 'RIGHT', 'WRONG', 'YES', 'NO',
         'LIKE', 'RED', 'BLUE', 'GREEN', 'YELLOW', 'BLACK', 'WHITE',
+        'EPISODE', 'CHAPTER', 'SEASON', 'PART', 'ACT', 'PROLOGUE', 'EPILOGUE',
+        'PILOT', 'FINALE', 'TEASER', 'COLD', 'OPEN', 'SERIES',
     ]);
 
     if (wordCount === 1) {
@@ -369,7 +371,11 @@ function isCharacterCue(line) {
             'STOCK FOOTAGE', 'NEXT DAY', 'SAME DAY', 'THAT NIGHT',
             'DREAM SEQUENCE', 'TITLE SEQUENCE', 'ACTION SEQUENCE',
             'THE END', 'TO BE',
+            'COLD OPEN', 'COLD OPENING',
         ]);
+
+        // Also reject lines that start with episode/chapter numbering patterns
+        if (/^(EPISODE|CHAPTER|SEASON|PART|ACT)\s*\d/i.test(nameWithoutParen)) return false;
         if (nonCharacterPhrases.has(nameWithoutParen)) return false;
     }
 
