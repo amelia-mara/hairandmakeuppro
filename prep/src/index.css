@@ -860,8 +860,8 @@ body {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgb(94, 234, 212);
-  background: rgba(94, 234, 212, 0.08);
-  border: 1px solid rgba(94, 234, 212, 0.1);
+  background: rgba(94, 234, 212, 0.18);
+  border: 1px solid rgba(94, 234, 212, 0.35);
   border-radius: 999px;
   padding: 8px 24px;
   margin-bottom: 28px;
@@ -908,51 +908,41 @@ body {
   position: absolute;
   top: -60px;
   right: -120px;
-  width: 500px;
-  height: 500px;
+  width: 600px;
+  height: 600px;
   z-index: 1;
-  opacity: 0.25;
+  opacity: 0.55;
   pointer-events: none;
 }
 .rainbow-ring {
   position: absolute;
   border-radius: 50%;
-  border: 3px solid transparent;
+  border-style: solid;
+  border-color: transparent;
 }
 .rainbow-ring--1 {
-  width: 500px;
-  height: 500px;
+  width: 600px;
+  height: 600px;
   top: 0;
   left: 0;
-  border-color: rgba(232, 98, 26, 0.5);
+  border-width: 28px;
+  border-color: rgba(232, 98, 26, 0.6);
 }
 .rainbow-ring--2 {
-  width: 420px;
-  height: 420px;
-  top: 40px;
-  left: 40px;
-  border-color: rgba(240, 136, 42, 0.45);
+  width: 480px;
+  height: 480px;
+  top: 60px;
+  left: 60px;
+  border-width: 24px;
+  border-color: rgba(240, 136, 42, 0.55);
 }
 .rainbow-ring--3 {
-  width: 340px;
-  height: 340px;
-  top: 80px;
-  left: 80px;
-  border-color: rgba(212, 148, 58, 0.4);
-}
-.rainbow-ring--4 {
-  width: 260px;
-  height: 260px;
+  width: 360px;
+  height: 360px;
   top: 120px;
   left: 120px;
-  border-color: rgba(196, 82, 42, 0.35);
-}
-.rainbow-ring--5 {
-  width: 180px;
-  height: 180px;
-  top: 160px;
-  left: 160px;
-  border-color: rgba(74, 191, 176, 0.3);
+  border-width: 20px;
+  border-color: rgba(74, 191, 176, 0.45);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

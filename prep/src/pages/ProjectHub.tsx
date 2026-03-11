@@ -15,8 +15,6 @@ export function ProjectHub({ onCreateProject, onSelectProject: _onSelectProject 
           <div className="rainbow-ring rainbow-ring--1" />
           <div className="rainbow-ring rainbow-ring--2" />
           <div className="rainbow-ring rainbow-ring--3" />
-          <div className="rainbow-ring rainbow-ring--4" />
-          <div className="rainbow-ring rainbow-ring--5" />
         </div>
 
         <div className="hub-hero-content">
