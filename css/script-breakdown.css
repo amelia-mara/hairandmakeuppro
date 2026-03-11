@@ -17,15 +17,15 @@
             --warning: #F5A623;                   /* Amber */
             
             /* Scene type color coding using brand palette */
-            --int-day: #D4943A;              /* Gold */
-            --ext-day: #F5A623;              /* Amber */
-            --int-night: #E8621A;            /* Orange Primary */
-            --ext-night: #F0882A;            /* Orange Warm */
+            --int-day: #EDE4D0;              /* Cream — INT. DAY */
+            --ext-day: #F5A623;              /* Amber — EXT. DAY */
+            --int-night: #4ABFB0;            /* Teal — INT. NIGHT */
+            --ext-night: #3D7A5F;            /* Forest Green — EXT. NIGHT */
 
-            --int-day-border: #D4943A;       /* Gold */
+            --int-day-border: #EDE4D0;       /* Cream Dark */
             --ext-day-border: #F5A623;       /* Amber */
-            --int-night-border: #E8621A;     /* Orange Primary */
-            --ext-night-border: #F0882A;     /* Orange Warm */
+            --int-night-border: #4ABFB0;     /* Teal */
+            --ext-night-border: #3D7A5F;     /* Forest Green */
 
             /* Breakdown status dot colours */
             --breakdown-complete: #4ABFB0;   /* Teal */
@@ -208,23 +208,19 @@
         /* Left Sidebar - Scenes */
         .left-sidebar {
             width: 340px;
-            background: 
-                linear-gradient(to right, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
-                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
-            backdrop-filter: blur(24px) saturate(180%);
-            border-right: 1px solid var(--glass-border);
+            background: #F5EFE0;
+            border-right: 1px solid #EDE4D0;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: var(--shadow-sm), inset 1px 0 0 rgba(255, 255, 255, 0.03);
         }
         
-        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); }
-        .sidebar-title { 
-            font-size: 0.875em; 
-            font-weight: 600; 
-            text-transform: uppercase; 
-            color: var(--text-muted); 
+        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid #EDE4D0; background: transparent; }
+        .sidebar-title {
+            font-size: 0.875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #E8621A;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
@@ -233,8 +229,8 @@
         }
         
         .scene-count {
-            background: var(--accent-gold);
-            color: var(--bg-dark);
+            background: #E8621A;
+            color: #F5EFE0;
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 0.75em;
@@ -244,13 +240,13 @@
         .scene-search {
             width: 100%;
             padding: 8px 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
+            background: #FAF7F0;
+            border: 1px solid #EDE4D0;
             border-radius: 6px;
-            color: var(--text-light);
+            color: #2A1A08;
             font-size: 0.8125em;
         }
-        .scene-search:focus { outline: none; border-color: var(--accent-gold); }
+        .scene-search:focus { outline: none; border-color: #E8621A; }
 
         /* Search Results Styling */
         .scene-item.search-match {
@@ -320,14 +316,13 @@
         }
 
         .scene-item:hover {
-            border-color: var(--accent-gold);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
         /* Active scene gets full coloured border matching scene type */
         .scene-item.active {
-            border: 2px solid var(--accent-gold);
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            border: 2px solid #E8621A;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         .scene-item.active.int-day {
             border-color: var(--int-day-border);
@@ -366,7 +361,7 @@
             font-weight: 600;
         }
 
-        /* Time of day badge - DAY gets warm amber, NIGHT gets dark brown */
+        /* Time of day badge - uses scene type colors */
         .scene-time-badge {
             font-size: 0.6em;
             font-weight: 700;
@@ -378,11 +373,20 @@
             letter-spacing: 0.05em;
         }
 
-        /* DAY-specific badge colour via JS class or inline override */
+        /* DAY badge — amber */
         .scene-item.ext-day .scene-time-badge,
         .scene-item.int-day .scene-time-badge {
             background: #F5A623;
             color: #2A1A08;
+        }
+        /* NIGHT badge — dark (teal text) */
+        .scene-item.int-night .scene-time-badge {
+            background: #2A1A08;
+            color: #4ABFB0;
+        }
+        .scene-item.ext-night .scene-time-badge {
+            background: #2A1A08;
+            color: #3D7A5F;
         }
 
         .char-count {
