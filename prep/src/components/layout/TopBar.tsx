@@ -42,7 +42,7 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function TopBar({ title = 'Projects', activePage, onNavigate, projectType, onBackToHub }: TopBarProps) {
+export function TopBar({ title = 'Projects', activePage, onNavigate, projectType: _projectType, onBackToHub }: TopBarProps) {
   const [navOpen, setNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
