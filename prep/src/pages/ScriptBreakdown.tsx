@@ -8,6 +8,7 @@ import {
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
+import { generateLooksFromScript } from '@/utils/lookGenerator';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DRAGGABLE PANEL RESIZE HOOK
@@ -1006,15 +1007,24 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
         };
       });
 
-      setProgress(90);
+      setProgress(85);
+      setStatusText('Generating looks...');
+      await new Promise(r => setTimeout(r, 200));
+
+      // Auto-generate looks per character using story day detection
+      // Mirrors the mobile app (Checks Happy) approach: detect story days from
+      // time-of-day transitions, then create one look per character per story day
+      const { looks: generatedLooks, scenes: scenesWithStoryDays } = generateLooksFromScript(scenes, characters);
+
+      setProgress(95);
       setStatusText('Saving...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Store parsed data
+      // Store parsed data with generated looks and story day assignments
       setParsedData(projectId, {
-        scenes,
+        scenes: scenesWithStoryDays,
         characters,
-        looks: [], // No looks for freshly parsed scripts
+        looks: generatedLooks,
         filename: selectedFile.name,
         parsedAt: new Date().toISOString(),
       });
