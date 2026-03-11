@@ -1,11 +1,111 @@
+import { useProjectStore } from '@/stores/projectStore';
+import { Film, Tv, Clapperboard, Music, Video, Plus } from 'lucide-react';
+import type { ProjectType } from '@/types';
+
+const TYPE_ICONS: Record<ProjectType, typeof Film> = {
+  'Feature Film': Film,
+  'TV Series': Tv,
+  'Commercial': Clapperboard,
+  'Music Video': Music,
+  'Short Film': Video,
+};
+
 interface ProjectHubProps {
   onCreateProject: () => void;
   onSelectProject: (id: string) => void;
 }
 
-export function ProjectHub({ onCreateProject, onSelectProject: _onSelectProject }: ProjectHubProps) {
+export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps) {
+  const projects = useProjectStore((s) => s.projects);
 
+  // If projects exist, show project cards instead of hero
+  if (projects.length > 0) {
+    return (
+      <div className="animate-fade-in">
+        <div className="hub-projects">
+          <div className="hub-projects-header">
+            <h2 className="hub-projects-title">
+              <span className="heading-italic">Your</span>{' '}
+              <span className="heading-regular">Projects</span>
+            </h2>
+          </div>
 
+          <div className="hub-projects-grid">
+            {projects.map((project) => {
+              const Icon = TYPE_ICONS[project.type as ProjectType] || Film;
+              return (
+                <button
+                  key={project.id}
+                  className="project-card"
+                  onClick={() => onSelectProject(project.id)}
+                >
+                  <div className="project-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <div className="project-card-icon">
+                        <Icon size={16} />
+                      </div>
+                      <span className="project-card-type">{project.type}</span>
+                    </div>
+                    <h3 className="project-card-title">{project.title}</h3>
+                    {project.genre && (
+                      <span className="project-card-genre">{project.genre}</span>
+                    )}
+                  </div>
+
+                  <div className="project-card-body">
+                    <div className="project-card-stats">
+                      <div className="project-card-stat">
+                        <span className="project-card-stat-value">{project.scenes}</span>
+                        <span className="project-card-stat-label">Scenes</span>
+                      </div>
+                      <div className="project-card-stat">
+                        <span className="project-card-stat-value">{project.characters}</span>
+                        <span className="project-card-stat-label">Characters</span>
+                      </div>
+                    </div>
+                    <div className="progress-bar-track" style={{ marginTop: '16px' }}>
+                      <div
+                        className="progress-bar-fill"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="project-card-footer">
+                    <span className={`status-dot ${project.status}`} />
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      color: 'var(--text-secondary)',
+                      textTransform: 'capitalize',
+                    }}>
+                      {project.status}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+
+            {/* New project card */}
+            <button className="new-project-card" onClick={onCreateProject}>
+              <div className="icon-circle">
+                <Plus size={22} style={{ color: 'var(--text-muted)' }} />
+              </div>
+              <span style={{
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                color: 'var(--text-muted)',
+              }}>
+                New Project
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Welcome hero — no projects yet
   return (
     <div className="animate-fade-in">
       {/* Hero Section */}
