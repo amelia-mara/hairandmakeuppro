@@ -15,10 +15,8 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
           'inline-flex items-center justify-center font-bold uppercase tracking-wider',
           {
             // Variants
-            'bg-cream-dark text-[#5A3E28]': variant === 'default',
+            'bg-cream-dark text-[#5A3E28]': variant === 'default' || variant === 'int' || variant === 'ext',
             'bg-gold text-white': variant === 'gold',
-            'bg-cream-dark text-[#5A3E28]': variant === 'int',
-            'bg-cream-dark text-[#5A3E28]': variant === 'ext',
             'bg-teal text-white': variant === 'success',
             'bg-amber text-[#2A1A08]': variant === 'warning',
             'bg-red-100 text-red-700': variant === 'error',

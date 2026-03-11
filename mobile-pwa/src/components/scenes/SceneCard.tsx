@@ -12,20 +12,9 @@ interface SceneCardProps {
 /**
  * Get the border color class based on INT/EXT + DAY/NIGHT combination
  */
-function getSceneTypeBorderColor(scene: Scene): string {
-  const isInt = scene.intExt === 'INT';
-  const isDay = scene.timeOfDay === 'DAY' || scene.timeOfDay === 'MORNING' || scene.timeOfDay === 'AFTERNOON';
-
-  if (isInt && isDay) return 'border-brand-gold';        // Gold #D4943A
-  if (!isInt && isDay) return 'border-amber';             // Amber #F5A623
-  if (isInt && !isDay) return 'border-gold';              // Orange Primary #E8621A
-  return 'border-gold-light';                              // Orange Warm #F0882A
-}
-
 export function SceneCard({ scene, captures, onClick }: SceneCardProps) {
   const statusIcon = getSceneStatusIcon(scene, captures);
-  const borderColor = getSceneTypeBorderColor(scene);
-  const isDay = scene.timeOfDay === 'DAY' || scene.timeOfDay === 'MORNING' || scene.timeOfDay === 'AFTERNOON';
+  const isDay = scene.timeOfDay === 'DAY' || scene.timeOfDay === 'MORNING';
 
   return (
     <button
