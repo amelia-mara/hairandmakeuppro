@@ -541,7 +541,7 @@
 
 /* Script paper — white with shadow only, no orange glow */
 [data-theme="light"] .sv-paper {
-  background: var(--bg-card) !important;
+  background: #ffffff !important;
   border-color: rgba(0, 0, 0, 0.06) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12) !important;
 }
@@ -2962,6 +2962,7 @@ body {
   margin-bottom: 28px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  font-family: var(--font-display);
 }
 
 .sv-line {
