@@ -339,6 +339,7 @@ function isCharacterCue(line: string): boolean {
     /^(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)/i,
     /^(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)/i,
     /^(SUPERIMPOSE|SUBTITLE|CAPTION)/i,
+    /^(EPISODE|CHAPTER|PART|ACT|SCENE|PILOT)\s*\d*\s*$/i,
   ];
 
   for (const pattern of nonCharPatterns) {

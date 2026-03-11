@@ -298,7 +298,8 @@ export function detectCharacters(scriptText) {
         'LATER', 'CONTINUOUS', 'SAME', 'MORNING', 'AFTERNOON', 'EVENING',
         'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT', 'MORE',
         'ANGLE ON', 'CLOSE ON', 'WIDE ON', 'POV', 'INTERCUT', 'PRELAP',
-        'BEGIN', 'END', 'RESUME', 'OMITTED', 'REVISED', 'FINAL DRAFT'
+        'BEGIN', 'END', 'RESUME', 'OMITTED', 'REVISED', 'FINAL DRAFT',
+        'EPISODE', 'CHAPTER', 'PART', 'ACT', 'SCENE', 'PILOT'
     ]);
 
     // Flag list - words that need context to determine if character
@@ -1728,7 +1729,8 @@ function extractCharacterNamesFromText(scriptText) {
         'INT', 'EXT', 'FADE', 'CUT', 'DISSOLVE', 'CONTINUED', 'THE END',
         'TITLE', 'SUPER', 'INSERT', 'BACK TO', 'FLASHBACK', 'END FLASHBACK',
         'LATER', 'CONTINUOUS', 'SAME', 'MORNING', 'AFTERNOON', 'EVENING',
-        'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT'
+        'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT',
+        'EPISODE', 'CHAPTER', 'PART', 'ACT', 'SCENE', 'PILOT'
     ]);
 
     let match;
