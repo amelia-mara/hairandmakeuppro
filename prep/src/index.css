@@ -205,9 +205,9 @@
   background: rgba(var(--a), 0.08) !important;
 }
 
-/* Breakdown panels */
+/* Breakdown panels — transparent so page rainbow shows through */
 [data-theme="light"] .bd-center {
-  background: var(--bg-card) !important;
+  background: transparent !important;
 }
 [data-theme="light"] .sl-expand-pill {
   background: rgba(0,0,0,0.04) !important;
@@ -398,9 +398,9 @@
   border-color: rgba(0,0,0,0.10) !important;
 }
 
-/* Tab strip background */
+/* Tab strip background — transparent so page rainbow shows through */
 [data-theme="light"] .cp-tabstrip {
-  background: #EDE4D0 !important;
+  background: transparent !important;
 }
 
 /* Character tabs */
@@ -614,11 +614,11 @@
 
 /* Strengthen definition — borders & surfaces */
 [data-theme="light"] .bd-left {
-  background: linear-gradient(180deg, #f2efe9 0%, #edeae4 100%) !important;
+  background: transparent !important;
   border-right: 1px solid rgba(0,0,0,0.10) !important;
 }
 [data-theme="light"] .bd-right {
-  background: #EDE4D0 !important;
+  background: transparent !important;
   border-left: 1px solid rgba(0,0,0,0.10) !important;
 }
 [data-theme="light"] .sl-card {
@@ -981,7 +981,7 @@ body {
   width: 600px;
   height: 600px;
   z-index: 0;
-  opacity: 0.35;
+  opacity: 0.55;
   pointer-events: none;
 }
 
@@ -2315,33 +2315,33 @@ body {
 
 /* ━━━ Panel Surfaces — 3 distinct elevation levels ━━━ */
 
-/* Left panel */
+/* Left panel — transparent so page rainbow shows through */
 .bd-left {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
-  background: var(--bg-surface);
+  background: transparent;
   border-right: 1px solid var(--border-card);
 }
 
-/* Center — workspace surface */
+/* Center — workspace surface (transparent so page rainbow shows through) */
 .bd-center {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: transparent;
 }
 
-/* Right panel — elevated form surface */
+/* Right panel — transparent so page rainbow shows through */
 .bd-right {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
-  background: var(--bg-elevated);
+  background: transparent;
   border-left: 1px solid var(--border-card);
   position: relative;
 }
@@ -2672,7 +2672,7 @@ body {
   flex-shrink: 0;
   position: relative;
   z-index: 2;
-  background: rgba(6, 6, 5, 1);
+  background: transparent;
 }
 
 .cp-tabs-row {
