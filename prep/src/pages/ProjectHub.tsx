@@ -102,7 +102,7 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
               <span style={{
                 fontSize: '0.8125rem',
                 fontWeight: 600,
-                color: '#fff',
+                color: 'var(--text-secondary)',
               }}>
                 New Project
               </span>

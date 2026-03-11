@@ -306,11 +306,12 @@
 /* New project card */
 [data-theme="light"] .new-project-card {
   background: transparent !important;
-  border: 2px dashed rgba(0,0,0,0.12) !important;
+  border: 1.5px solid transparent !important;
+  box-shadow: none !important;
 }
 [data-theme="light"] .new-project-card:hover {
   background: var(--bg-card) !important;
-  border-color: var(--accent) !important;
+  border: 1.5px solid #E8621A !important;
 }
 [data-theme="light"] .new-project-card .icon-circle {
   background: var(--accent) !important;
@@ -1065,7 +1066,7 @@ body {
   background:
     linear-gradient(135deg, rgba(var(--a), 0.03) 0%, transparent 60%),
     var(--bg-card);
-  border: 1.5px solid #C05A1A;
+  border: 1.5px solid #E8621A;
   border-radius: 14px;
   overflow: hidden;
   min-height: 280px;
@@ -1189,7 +1190,7 @@ body {
 
 /* New project card */
 .new-project-card {
-  border: none;
+  border: 1.5px solid transparent;
   border-radius: 14px;
   min-height: 280px;
   display: flex;
@@ -1199,12 +1200,13 @@ body {
   padding: 60px 24px;
   cursor: pointer;
   transition: all 0.25s ease;
-  background: var(--accent);
-  box-shadow: 0 2px 8px rgba(232, 98, 26, 0.25);
+  background: transparent;
+  box-shadow: none;
 }
 .new-project-card:hover {
-  background: var(--accent-cue-hover);
-  box-shadow: 0 4px 16px rgba(232, 98, 26, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #E8621A;
+  box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
 }
 .new-project-card .icon-circle {
