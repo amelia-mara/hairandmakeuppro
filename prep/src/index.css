@@ -2957,7 +2957,7 @@ body {
   margin-bottom: 28px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
 }
 
 .sv-line {
