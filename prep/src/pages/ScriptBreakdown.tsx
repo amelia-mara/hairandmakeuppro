@@ -632,6 +632,26 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
     const sceneTags = tagStore.getTagsForScene(scene.id);
     const lines = scene.scriptContent.split('\n');
 
+    /* Pre-compute dialogue line indices: lines following a character cue until blank line */
+    const dialogueSet = new Set<number>();
+    let inDialogue = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      const isCue = charNames.some((name) => {
+        const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
+        return cue === name;
+      });
+      if (isCue) {
+        inDialogue = true;
+      } else if (inDialogue) {
+        if (trimmed === '') {
+          inDialogue = false;
+        } else {
+          dialogueSet.add(i);
+        }
+      }
+    }
+
     if (sceneTags.length === 0) {
       /* Plain rendering (no tags to show) */
       return lines.map((line, i) => {
@@ -642,7 +662,10 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         });
         if (matched) {
           const ch = characters.find((c) => c.name === matched)!;
-          return <div key={`${scene.id}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{line}</div>;
+          return <div key={`${scene.id}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{trimmed}</div>;
+        }
+        if (dialogueSet.has(i)) {
+          return <div key={`${scene.id}-${i}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
         return <div key={`${scene.id}-${i}`} className="sv-line">{line || '\u00A0'}</div>;
       });
@@ -670,10 +693,15 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       const lineSegs = segments.filter((s) => s.start < lo.end + 1 && s.end > lo.start);
       const hasTag = lineSegs.some((s) => s.tag);
 
+      const isDialogueLine = dialogueSet.has(lineIdx);
+
       if (!hasTag) {
         if (isCue) {
           const ch = characters.find((c) => c.name === matched)!;
-          return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{lo.line}</div>;
+          return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{trimmed}</div>;
+        }
+        if (isDialogueLine) {
+          return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
         return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line || '\u00A0'}</div>;
       }
@@ -697,8 +725,9 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         }
       }
 
+      const lineClass = `sv-line${isCue ? ' sv-cue' : isDialogueLine ? ' sv-dialogue' : ''}`;
       return (
-        <div key={`${scene.id}-${lineIdx}`} className={`sv-line${isCue ? ' sv-cue' : ''}`}
+        <div key={`${scene.id}-${lineIdx}`} className={lineClass}
           onClick={isCue && matched ? () => { const ch = characters.find((c) => c.name === matched); if (ch) onCharClick(ch.id); } : undefined}>
           {parts}
         </div>
