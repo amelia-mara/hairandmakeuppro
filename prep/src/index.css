@@ -3304,7 +3304,17 @@ body {
     inset 0 1px 0 rgba(var(--a), 0.02);
 }
 .cv-tl-num { font-size: 0.75rem; font-weight: 700; color: var(--accent-gold); min-width: 40px; }
-.cv-tl-loc { font-size: 0.75rem; color: var(--text-secondary); }
+.cv-tl-loc { font-size: 0.75rem; color: var(--text-secondary); flex: 1; }
+.cv-tl-day {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  background: rgba(var(--a), 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-left: auto;
+}
 
 /* Script Notes sub-tab */
 .cv-subtab-badge {
