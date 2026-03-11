@@ -151,6 +151,18 @@ function renderSceneBreakdown(sceneIndex) {
 
     const timeOfDay = scene.timeOfDay || extractTimeFromHeading(scene.heading) || '';
 
+    // Auto-detect scene type from heading/content if no type has been set yet
+    if (!scene.sceneTypeDetected && !scene.isFlashback && !scene.isFlashForward &&
+        !scene.isTimeJump && !scene.isDream && !scene.isMontage) {
+        const detectedType = detectSceneTypeFromHeading(scene);
+        if (detectedType) {
+            scene[detectedType] = true;
+            scene.sceneTypeSource = 'auto';
+            scene.sceneTypeDetected = true;
+            saveToLocalStorage();
+        }
+    }
+
     const analysis = window.scriptMasterContext || window.masterContext || {};
     const alerts = extractSceneAlerts(scene, sceneIndex, analysis);
     const environment = analysis.environments?.[`scene_${sceneIndex}`];
@@ -820,6 +832,36 @@ function renderSceneEvents(sceneIndex) {
 /**
  * Extract story day from master context timeline
  */
+/**
+ * Detect scene type (flashback, dream, montage, etc.) from heading and content.
+ * Checks for keywords matching the dropdown options.
+ * Returns the flag name (e.g. 'isFlashback') or null if nothing detected.
+ */
+function detectSceneTypeFromHeading(scene) {
+    const heading = (scene.heading || '').toUpperCase();
+    const contentStart = (scene.content || scene.text || '').substring(0, 500).toUpperCase();
+    const text = heading + ' ' + contentStart;
+
+    // Check in priority order - more specific types first
+    if (/\bFLASH\s*FORWARD\b|\bFLASH\s*FWD\b/i.test(text)) {
+        return 'isFlashForward';
+    }
+    if (/\bFLASHBACK\b|\bFLASH\s*BACK\b/i.test(text)) {
+        return 'isFlashback';
+    }
+    if (/\bTIME\s*JUMP\b/i.test(text)) {
+        return 'isTimeJump';
+    }
+    if (/\bDREAM\b|\bNIGHTMARE\b/i.test(text)) {
+        return 'isDream';
+    }
+    if (/\bMONTAGE\b|\bSERIES\s+OF\s+SHOTS?\b|\bINTERCUT\b/i.test(text)) {
+        return 'isMontage';
+    }
+
+    return null;
+}
+
 function extractStoryDay(sceneIndex) {
     if (!window.masterContext?.storyStructure?.timeline) return '';
 
@@ -1610,6 +1652,10 @@ window.updateSceneType = function(sceneIndex, typeValue) {
     if (!state.scenes[sceneIndex]) return;
 
     const scene = state.scenes[sceneIndex];
+
+    // Mark as user-set so auto-detection doesn't override
+    scene.sceneTypeSource = 'user_assigned';
+    scene.sceneTypeDetected = true;
 
     // Clear all type flags
     scene.isFlashback = false;
