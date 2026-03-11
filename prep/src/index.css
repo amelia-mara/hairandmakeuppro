@@ -3353,7 +3353,7 @@ body {
 }
 
 .fp-panel-title {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--accent-gold);
   text-transform: uppercase;
@@ -3553,7 +3553,7 @@ body {
 .fp-section-title {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: var(--text-heading);
+  color: #E8621A;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 18px;
