@@ -3,7 +3,7 @@ interface ProjectHubProps {
   onSelectProject: (id: string) => void;
 }
 
-export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps) {
+export function ProjectHub({ onCreateProject, onSelectProject: _onSelectProject }: ProjectHubProps) {
 
 
   return (
