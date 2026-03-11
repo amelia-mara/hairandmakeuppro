@@ -31,6 +31,7 @@ function useTheme() {
 }
 
 const NAV_ITEMS = [
+  { id: 'projects', label: 'Projects', icon: ProjectsIcon },
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
@@ -117,21 +118,6 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                   <path d="m6 9 6 6 6-6"/>
                 </svg>
               </button>
-              <button
-                className="topbar-back-arrow"
-                onClick={onBackToHub}
-                aria-label="Back to projects"
-                title="Back to projects"
-              >
-                <svg
-                  width="10" height="10" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" strokeWidth="2.5"
-                  strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <path d="M19 12H5"/>
-                  <path d="m12 19-7-7 7-7"/>
-                </svg>
-              </button>
             </div>
           )}
 
@@ -142,7 +128,11 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                   key={item.id}
                   className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
                   onClick={() => {
-                    onNavigate(item.id);
+                    if (item.id === 'projects' && onBackToHub) {
+                      onBackToHub();
+                    } else {
+                      onNavigate(item.id);
+                    }
                     setNavOpen(false);
                   }}
                 >
@@ -302,6 +292,14 @@ function ThemeIceIcon() {
 }
 
 /* ━━━ SVG Icons ━━━ */
+
+function ProjectsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+    </svg>
+  );
+}
 
 function DashboardIcon() {
   return (

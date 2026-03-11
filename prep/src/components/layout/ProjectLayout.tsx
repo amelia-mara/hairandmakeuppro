@@ -9,6 +9,7 @@ interface ProjectLayoutProps {
 }
 
 const NAV_ITEMS = [
+  { id: 'projects', label: 'Projects', icon: ProjectsIcon },
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
@@ -20,7 +21,7 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function ProjectLayout({ activePage, onNavigate, children }: ProjectLayoutProps) {
+export function ProjectLayout({ activePage, onNavigate, onBackToHub, children }: ProjectLayoutProps) {
   const showSidebar = activePage === 'dashboard';
 
   return (
@@ -31,7 +32,13 @@ export function ProjectLayout({ activePage, onNavigate, children }: ProjectLayou
             <button
               key={item.id}
               className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => {
+                if (item.id === 'projects') {
+                  onBackToHub();
+                } else {
+                  onNavigate(item.id);
+                }
+              }}
             >
               <item.icon />
               <span>{item.label}</span>
@@ -47,6 +54,14 @@ export function ProjectLayout({ activePage, onNavigate, children }: ProjectLayou
 }
 
 /* ━━━ SVG Icons (same as TopBar) ━━━ */
+
+function ProjectsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+    </svg>
+  );
+}
 
 function DashboardIcon() {
   return (
