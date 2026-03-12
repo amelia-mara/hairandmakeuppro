@@ -972,7 +972,26 @@ export function parseScriptText(text: string): ParsedScript {
       currentSceneContent += line + '\n';
     }
 
-    if (isCharacterCue(trimmed)) {
+    // Before treating a line as a dialogue cue, check if it's actually the
+    // first half of a character introduction split across two lines by PDF
+    // word-wrap.  e.g. "JASPER\nMONTGOMERY, 70, he looks like..."
+    // Without this check, "JASPER" is consumed as a dialogue cue and the
+    // next line ("MONTGOMERY, 70, ...") is treated as dialogue — so the
+    // character introduction is completely missed.
+    let isSplitCharacterIntro = false;
+    if (
+      isCharacterCue(trimmed) &&
+      /^[A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,2}$/.test(trimmed) &&
+      i + 1 < lines.length
+    ) {
+      const nextTrimmed = lines[i + 1].trim();
+      // Next line starts with ALL CAPS word(s) followed by age/comma → split intro
+      if (/^[A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,2}\s*(?:[,(]\s*\d{1,3}\b|\d{1,3}\s*[,)])/.test(nextTrimmed)) {
+        isSplitCharacterIntro = true;
+      }
+    }
+
+    if (!isSplitCharacterIntro && isCharacterCue(trimmed)) {
       const charName = trimmed;
       let normalized = normalizeCharacterName(charName);
       // Resolve single-name cues: "LENNON" → "LENNON BOWIE"
@@ -981,7 +1000,7 @@ export function parseScriptText(text: string): ParsedScript {
       registerCharacter(charName, normalized, currentScene);
       lastLineWasCharacter = true;
       dialogueCount = 0;
-    } else if (lastLineWasCharacter && trimmed.length > 0) {
+    } else if (!isSplitCharacterIntro && lastLineWasCharacter && trimmed.length > 0) {
       dialogueCount++;
       if (dialogueCount > 3 || trimmed.length === 0) {
         lastLineWasCharacter = false;
