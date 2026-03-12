@@ -134,8 +134,53 @@ async function extractTextFromPDF(file: File): Promise<string> {
 /**
  * Normalize script text to fix common PDF extraction issues
  */
+/**
+ * Map of written-out number words to digits for scene heading normalization.
+ * Handles formats like "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ */
+const WORD_TO_NUMBER_MAP: Record<string, string> = {
+  'ONE': '1', 'TWO': '2', 'THREE': '3', 'FOUR': '4', 'FIVE': '5',
+  'SIX': '6', 'SEVEN': '7', 'EIGHT': '8', 'NINE': '9', 'TEN': '10',
+  'ELEVEN': '11', 'TWELVE': '12', 'THIRTEEN': '13', 'FOURTEEN': '14',
+  'FIFTEEN': '15', 'SIXTEEN': '16', 'SEVENTEEN': '17', 'EIGHTEEN': '18',
+  'NINETEEN': '19', 'TWENTY': '20', 'TWENTY-ONE': '21', 'TWENTY-TWO': '22',
+  'TWENTY-THREE': '23', 'TWENTY-FOUR': '24', 'TWENTY-FIVE': '25',
+  'TWENTY-SIX': '26', 'TWENTY-SEVEN': '27', 'TWENTY-EIGHT': '28',
+  'TWENTY-NINE': '29', 'THIRTY': '30', 'THIRTY-ONE': '31', 'THIRTY-TWO': '32',
+  'THIRTY-THREE': '33', 'THIRTY-FOUR': '34', 'THIRTY-FIVE': '35',
+  'THIRTY-SIX': '36', 'THIRTY-SEVEN': '37', 'THIRTY-EIGHT': '38',
+  'THIRTY-NINE': '39', 'FORTY': '40', 'FORTY-ONE': '41', 'FORTY-TWO': '42',
+  'FORTY-THREE': '43', 'FORTY-FOUR': '44', 'FORTY-FIVE': '45',
+  'FORTY-SIX': '46', 'FORTY-SEVEN': '47', 'FORTY-EIGHT': '48',
+  'FORTY-NINE': '49', 'FIFTY': '50',
+};
+
+const SCENE_WORD_KEYS_SORTED = Object.keys(WORD_TO_NUMBER_MAP).sort((a, b) => b.length - a.length).join('|');
+const SCENE_WORD_PREFIX_RE = new RegExp(
+  `^\\s*SCENE\\s+(${SCENE_WORD_KEYS_SORTED})\\s*[:\\-–—]?\\s*`,
+  'i'
+);
+
+/**
+ * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
+ * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ */
+function normalizeSceneWordPrefix(line: string): string {
+  const match = line.match(SCENE_WORD_PREFIX_RE);
+  if (match) {
+    const num = WORD_TO_NUMBER_MAP[match[1].toUpperCase()];
+    if (num) return num + ' ' + line.slice(match[0].length);
+  }
+  // Also handle "SCENE 2:" with numeric digit
+  const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+  if (numMatch) {
+    return numMatch[1] + ' ' + line.slice(numMatch[0].length);
+  }
+  return line;
+}
+
 function normalizeScriptText(text: string): string {
-  return text
+  let normalized = text
     // Fix split INT/EXT headings (e.g., "INT" on one line, ". LOCATION" on next)
     .replace(/\b(INT|EXT)\s*\n\s*\./g, '$1.')
     .replace(/\b(INT|EXT)\s*\n\s*\/\s*(INT|EXT)/g, '$1/$2')
@@ -152,6 +197,21 @@ function normalizeScriptText(text: string): string {
     // Clean up scene number patterns like "1 ." -> "1."
     .replace(/(\d+[A-Z]?)\s+\./g, '$1.')
     .trim();
+
+  // Join character introductions split across line breaks (PDF word-wrap artifact).
+  // When a line has content ending with an ALL CAPS word and the next line starts
+  // with ALL CAPS word(s) followed by comma + age or comma + lowercase description,
+  // join them into a single line.
+  // e.g. "...on foot. JASPER\nMONTGOMERY, 70, he looks..." → single line
+  normalized = normalized.replace(
+    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*,\s*(?:\d{1,3}\b|[a-z]))/g,
+    '$1 $2',
+  );
+
+  // Normalize "SCENE WORD:" prefixes to numeric scene numbers
+  normalized = normalized.split('\n').map(line => normalizeSceneWordPrefix(line)).join('\n');
+
+  return normalized;
 }
 
 /**
@@ -339,6 +399,7 @@ function isCharacterCue(line: string): boolean {
     /^(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)/i,
     /^(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)/i,
     /^(SUPERIMPOSE|SUBTITLE|CAPTION)/i,
+    /^(EPISODE|CHAPTER|PART|ACT|SCENE|PILOT)\s*\d*\s*$/i,
   ];
 
   for (const pattern of nonCharPatterns) {
@@ -566,8 +627,8 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
 
   if (!trimmed || trimmed.length < 5) return invalidResult;
 
-  // Remove revision asterisks from end
-  let cleanLine = trimmed.replace(/\s*\*+\s*$/, '').trim();
+  // Normalize "SCENE WORD:" prefix before parsing (safety net if not pre-normalized)
+  let cleanLine = normalizeSceneWordPrefix(trimmed).replace(/\s*\*+\s*$/, '').trim();
 
   // Pattern to match scene numbers (with optional letter/word suffix)
   // Handles: "33", "33A", "33AA", "33AB", "145PT1", "A1", etc.

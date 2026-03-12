@@ -1,0 +1,553 @@
+/* ── Weekly View ─────────────────────────────── */
+
+.ts-weekly-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ts-weekly-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ts-week-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ts-week-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(var(--a), 0.06);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ts-week-nav-btn:hover {
+  background: rgba(var(--a), 0.12);
+  color: var(--text-primary);
+}
+
+.ts-week-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  white-space: nowrap;
+}
+
+/* ── Crew Chips ──────────────────────────────── */
+
+.ts-crew-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ts-crew-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: rgba(var(--a), 0.06);
+  border: 1px solid var(--border-medium);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ts-crew-chip:hover {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.25);
+}
+
+.ts-crew-chip-active {
+  background: rgba(var(--a), 0.14);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ts-crew-chip-name {
+  white-space: nowrap;
+}
+
+/* ── Day Cards ───────────────────────────────── */
+
+.ts-weekly-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ts-day-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.ts-day-card-weekend {
+  border-left: 3px solid rgba(var(--a), 0.25);
+}
+
+.ts-day-card-filled {
+  border-left: 3px solid var(--accent);
+}
+
+.ts-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-day-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ts-day-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ts-day-date {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.ts-day-total {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.ts-day-fields {
+  padding: 12px 16px;
+}
+
+.ts-time-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ts-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 100px;
+}
+
+.ts-time-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.ts-time-input {
+  padding: 6px 8px;
+  font-size: 0.8125rem;
+  font-family: 'DM Mono', 'SF Mono', monospace;
+  color: var(--text-primary);
+  background: rgba(var(--a), 0.07);
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ts-time-input:focus {
+  border-color: var(--accent);
+}
+
+.ts-day-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(var(--a), 0.10);
+}
+
+.ts-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ts-checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+/* ── Day Breakdown ───────────────────────────── */
+
+.ts-day-breakdown {
+  padding: 8px 16px 12px;
+  border-top: 1px solid var(--border-card);
+}
+
+.ts-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.ts-breakdown-warn {
+  color: #f59e0b;
+}
+
+.ts-breakdown-flag {
+  color: #ef4444;
+}
+
+.ts-day-flags {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ts-flag-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 4px;
+  background: rgba(var(--a), 0.14);
+  border: 1px solid rgba(var(--a), 0.2);
+  color: var(--text-secondary);
+}
+
+/* ── Notes ───────────────────────────────────── */
+
+.ts-day-notes {
+  padding: 0 16px 10px;
+}
+
+.ts-notes-input {
+  width: 100%;
+  padding: 6px 0;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ts-notes-input:focus {
+  border-bottom-color: var(--border-card);
+}
+
+.ts-notes-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ── Week Summary ────────────────────────────── */
+
+.ts-week-summary {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ts-week-summary-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-week-summary-body {
+  padding: 20px;
+}
+
+.ts-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ts-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ts-summary-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.ts-summary-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ts-summary-total {
+  color: var(--accent);
+}
+
+.ts-summary-breakdown {
+  border-top: 1px solid var(--border-card);
+  padding-top: 12px;
+}
+
+.ts-summary-break-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ── Export Tab ───────────────────────────────── */
+
+.ts-export-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ts-export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ts-export-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.ts-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ts-stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ts-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ts-export-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ts-export-table-wrap {
+  overflow-x: auto;
+}
+
+.ts-export-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.ts-export-table thead th {
+  padding: 10px 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 2px solid var(--border-card);
+}
+
+.ts-export-table tbody td {
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-export-table tfoot td {
+  padding: 12px 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-top: 2px solid var(--border-card);
+}
+
+.ts-cell-total {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.ts-export-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Toast ───────────────────────────────────── */
+
+.ts-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  animation: fadeInUp 0.25s ease;
+}
+
+/* ── Rate Card Panel ─────────────────────────── */
+
+.ts-rate-card-panel .ts-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+}
+
+.ts-rate-card-panel .ts-form-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.ts-rate-card-panel .ts-section-block {
+  background: rgba(var(--a), 0.04);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 0;
+}
+
+.ts-rate-card-panel .ts-section-block .ts-section-label {
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+/* ── Preview / Placeholder States ────────────── */
+
+.ts-preview-panel {
+  position: relative;
+}
+
+.ts-preview-panel > .ts-card-header,
+.ts-preview-panel > .ts-card-body {
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ts-preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 2;
+  background: rgba(10, 9, 8, 0.82);
+  border-radius: 12px;
+  /* backdrop-filter removed */
+}
+
+.ts-preview-overlay p {
+  color: var(--text-secondary, #aaa);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.ts-preview-grid {
+  position: relative;
+}
+
+.ts-preview-grid .ts-day-card-preview {
+  opacity: 0.3;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ts-preview-overlay-weekly {
+  pointer-events: none;
+}
+
+.ts-preview-overlay-weekly p {
+  background: var(--bg-card, rgba(30, 30, 30, 0.9));
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary, rgba(255, 255, 255, 0.1));
+}
+
+/* ── Light Theme Overrides ───────────────────── */
+
+[data-theme="light"] .ts-input,
+[data-theme="light"] .ts-select {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .ts-time-input {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .ts-modal {
+  background: var(--bg-card);
+}
+
+[data-theme="light"] .ts-toast {
+  color: white;
+  background: #333;
+}

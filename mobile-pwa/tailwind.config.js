@@ -8,20 +8,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        /* Core brand colours */
         gold: {
-          DEFAULT: '#C9A962',
-          dark: '#B8962E',
-          light: '#D4BC7D',
-          50: '#FAF7F0',
-          100: '#F5EFE1',
-          200: '#EBE0C4',
-          300: '#E1D1A7',
-          400: '#D4BC7D',
-          500: '#C9A962',
-          600: '#B8962E',
-          700: '#8F7424',
-          800: '#66531A',
-          900: '#3D3210',
+          DEFAULT: '#E8621A',       /* Orange Primary — CTAs, primary actions */
+          dark: '#C4522A',
+          light: '#F0882A',         /* Orange Warm — hover states */
+          50: '#FFF5ED',
+          100: '#FFE8D6',
+          200: '#FECCA8',
+          300: '#FDAC74',
+          400: '#F0882A',           /* Orange Warm */
+          500: '#E8621A',           /* Orange Primary */
+          600: '#C4522A',
+          700: '#A04020',
+          800: '#7A3218',
+          900: '#4A3020',
+        },
+        amber: {
+          DEFAULT: '#F5A623',       /* Amber — accents, badges, warnings */
+        },
+        'brand-gold': '#D4943A',    /* Gold — icons, decorative elements */
+        teal: {
+          DEFAULT: '#4ABFB0',       /* Teal — success, accent contrast, links */
+        },
+        peach: '#F2C4A0',           /* Peach — tag backgrounds, soft highlights */
+        cream: {
+          DEFAULT: '#F5EFE0',       /* Cream Base — page background */
+          dark: '#EDE4D0',          /* Cream Dark — section backgrounds, borders */
         },
         // Theme colors using CSS variables (respects dark mode)
         background: 'var(--color-background)',
@@ -33,18 +46,18 @@ export default {
         'text-muted': 'var(--color-text-muted)',
         'text-light': 'var(--color-text-light)',
         'text-placeholder': 'var(--color-text-placeholder)',
-        success: '#4CAF50',
-        warning: '#FF9800',
+        success: '#4ABFB0',         /* Teal — success states */
+        warning: '#F5A623',         /* Amber — warning states */
         error: '#f44336',
-        // Dark mode specific colors
-        'dark-bg': '#000000',
-        'dark-bg-secondary': 'rgba(20, 18, 16, 0.95)',
-        'dark-bg-tertiary': 'rgba(26, 24, 22, 0.9)',
-        'dark-card': 'rgba(26, 24, 22, 0.8)',
-        'dark-card-hover': 'rgba(32, 30, 28, 0.9)',
-        'dark-input-bg': 'rgba(20, 18, 16, 0.6)',
-        'dark-border': 'rgba(201, 169, 97, 0.15)',
-        'dark-border-focus': 'rgba(201, 169, 97, 0.35)',
+        // Dark mode specific colors - warm brown solids
+        'dark-bg': '#1A1208',
+        'dark-bg-secondary': '#201808',
+        'dark-bg-tertiary': '#251A0A',
+        'dark-card': '#2E2010',
+        'dark-card-hover': '#3A2A16',
+        'dark-input-bg': '#251A0A',
+        'dark-border': 'rgba(255, 255, 255, 0.06)',
+        'dark-border-focus': 'rgba(232, 98, 26, 0.35)',
         'dark-text-primary': '#ffffff',
         'dark-text-secondary': '#a0a0a0',
         'dark-text-muted': '#777777',
@@ -52,6 +65,7 @@ export default {
       },
       fontFamily: {
         sans: [
+          '"DM Sans"',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
@@ -88,15 +102,10 @@ export default {
         'card': '0 2px 8px rgba(0, 0, 0, 0.04)',
         'card-hover': '0 4px 12px rgba(0, 0, 0, 0.08)',
         'nav': '0 -2px 10px rgba(0, 0, 0, 0.05)',
-        // Dark mode shadows with gold glow
-        'dark-card': '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 1px rgba(201, 169, 97, 0.1)',
-        'dark-card-hover': '0 8px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(201, 169, 97, 0.15)',
-        'dark-nav': '0 -2px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(201, 169, 97, 0.05)',
-        'dark-glow': '0 0 20px rgba(201, 169, 97, 0.15)',
-        'dark-glow-strong': '0 0 30px rgba(201, 169, 97, 0.25)',
-      },
-      backdropBlur: {
-        'glass': '20px',
+        // Dark mode shadows - clean, no glow
+        'dark-card': '0 4px 20px rgba(0, 0, 0, 0.3)',
+        'dark-card-hover': '0 8px 30px rgba(0, 0, 0, 0.4)',
+        'dark-nav': '0 -2px 20px rgba(0, 0, 0, 0.5)',
       },
     },
   },

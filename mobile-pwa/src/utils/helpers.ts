@@ -172,14 +172,14 @@ export function truncate(text: string, maxLength: number): string {
  */
 export function generateAvatarColor(): string {
   const colors = [
-    '#C9A962', // Gold
-    '#5B8DEF', // Blue
-    '#7B68EE', // Purple
-    '#4CAF50', // Green
-    '#FF7043', // Orange
-    '#EC407A', // Pink
-    '#26A69A', // Teal
-    '#AB47BC', // Violet
+    '#D4943A', // Gold (brand)
+    '#4ABFB0', // Teal (brand)
+    '#E8621A', // Orange Primary (brand)
+    '#F0882A', // Orange Warm (brand)
+    '#F5A623', // Amber (brand)
+    '#F2C4A0', // Peach (brand)
+    '#5A3E28', // Text Mid (brand)
+    '#2A1A08', // Text Dark (brand)
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
