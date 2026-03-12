@@ -10,7 +10,7 @@ export function WelcomeScreen() {
       {/* Rainbow arc motif — subtle concentric arcs peeking from right */}
       <div
         className="absolute pointer-events-none z-0"
-        style={{ top: '0%', right: '-85%', width: '130%', aspectRatio: '1', }}
+        style={{ top: '-15%', right: '-85%', width: '130%', aspectRatio: '1', }}
       >
         {/* Outermost — warm peach */}
         <div className="absolute inset-0 rounded-full border-[28px] border-[#F0C8A0] opacity-20" />
