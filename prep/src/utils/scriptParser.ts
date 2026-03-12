@@ -286,6 +286,7 @@ const SUPPORTING_ARTIST_ROLES = new Set([
   'DANCER', 'SINGER', 'MUSICIAN', 'DRUMMER', 'GUITARIST',
   'ACTOR', 'ACTRESS', 'PERFORMER', 'ENTERTAINER', 'DJ',
   'CYCLIST', 'JOGGER', 'RUNNER', 'SWIMMER', 'SKATER',
+  'COWBOY', 'COWGIRL', 'RANCHER', 'FARMER', 'FISHERMAN',
   // Street / crowd roles
   'PASSER BY', 'PASSERBY', 'PASSER-BY', 'PEDESTRIAN', 'BYSTANDER',
   'STRANGER', 'HOMELESS MAN', 'HOMELESS WOMAN', 'BEGGAR',
@@ -385,6 +386,28 @@ function extractCharactersFromActionLine(line: string): string[] {
 
   const actionVerbs = 'enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates|pulls|pushes|picks|puts|takes|gives|throws|catches|drops|lifts|carries|follows|leads|chases|hugs|kisses|slaps|punches|kicks|shoots|stabs|struggles|fights|ducks|dodges|rolls|slides|stumbles|trips|collapses|faints|wakes|sleeps|eats|drinks|reads|writes|drives|flies|swims|dances|sings|plays|works|tries|helps|saves|kills|dies';
 
+  /* Title Case name + action verb: "Lennon rides", "Dedra watches"
+     Skip pronouns/articles/common words that aren't character names */
+  const nonNameWords = new Set([
+    // Pronouns & determiners
+    'SHE', 'HER', 'HIS', 'HIM', 'THE', 'THEY', 'THEM', 'THIS', 'THAT',
+    'WHO', 'WHAT', 'ITS', 'OUR', 'YOUR', 'ONE', 'TWO', 'ALL', 'EACH',
+    'SOME', 'BOTH', 'FEW', 'MANY', 'MOST', 'OTHER', 'SUCH',
+    // Common nouns / generic roles — never character names from action lines
+    'MAN', 'WOMAN', 'BOY', 'GIRL', 'CHILD', 'BABY', 'TEEN', 'KID', 'LADY', 'GUY',
+    'COWBOY', 'HORSE', 'DOG', 'CAT', 'ANIMAL', 'BIRD',
+    'DRIVER', 'OFFICER', 'GUARD', 'SOLDIER', 'DOCTOR', 'NURSE', 'JUDGE',
+    'WAITER', 'WAITRESS', 'BARTENDER', 'CLERK', 'MAID', 'BUTLER',
+    'STRANGER', 'FIGURE', 'PERSON', 'PEOPLE', 'CROWD', 'GROUP',
+    'DANCER', 'SINGER', 'CYCLIST', 'JOGGER', 'RUNNER', 'SWIMMER',
+    'THUG', 'THIEF', 'VICTIM', 'WITNESS', 'SUSPECT', 'PASSENGER',
+    'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'HUSBAND', 'WIFE',
+    // Common verbs that appear in Title Case at sentence start
+    'ANOTHER', 'INSIDE', 'OUTSIDE', 'BEHIND', 'AROUND', 'THROUGH',
+    'BEFORE', 'AFTER', 'ABOUT', 'BETWEEN', 'AGAINST', 'WITHOUT',
+    'NOTHING', 'SOMETHING', 'EVERYTHING', 'EVERYONE', 'SOMEONE', 'NOBODY',
+  ]);
+
   const titleCasePattern = new RegExp(
     `(?:^|[,;]\\s*|\\.\\s+)([A-Z][a-z]{2,}(?:\\s+(?:and|&)\\s+[A-Z][a-z]{2,})*)\\s+(?:${actionVerbs})`,
     'g'
@@ -394,7 +417,7 @@ function extractCharactersFromActionLine(line: string): string[] {
     const names = match[1].split(/\s+(?:and|&)\s+/i);
     for (const name of names) {
       const upperName = name.trim().toUpperCase();
-      if (upperName.length >= 3 && upperName.length <= 20) {
+      if (upperName.length >= 3 && upperName.length <= 20 && !nonNameWords.has(upperName)) {
         characters.push(upperName);
       }
     }
@@ -742,6 +765,53 @@ export function parseScriptText(text: string): ParsedScript {
   if (currentScene) {
     currentScene.content = currentSceneContent.trim();
     scenes.push(currentScene);
+  }
+
+  /* ── Deduplication: merge single-name fragments into full-name characters ──
+     If we have both "LENNON BOWIE" and "LENNON" as separate entries, merge
+     "LENNON" into "LENNON BOWIE" (add its scenes, remove the fragment).
+     Also merge "MONTGOMERY" into "DEDRA MONTGOMERY", etc. */
+  const fullNames = Array.from(characterMap.keys()).filter(k => k.includes(' '));
+  const fragmentsToRemove = new Set<string>();
+
+  for (const fullName of fullNames) {
+    const parts = fullName.split(/\s+/);
+    for (const part of parts) {
+      if (part.length < 3) continue;
+      // If there's a separate entry that's just this fragment, merge it
+      if (characterMap.has(part) && part !== fullName) {
+        const fragment = characterMap.get(part)!;
+        const parent = characterMap.get(fullName)!;
+
+        // Merge scenes from fragment into parent
+        for (const sceneNum of fragment.scenes) {
+          if (!parent.scenes.includes(sceneNum)) {
+            parent.scenes.push(sceneNum);
+            parent.sceneCount++;
+          }
+        }
+        // Merge variants
+        for (const v of fragment.variants) {
+          if (!parent.variants.includes(v)) parent.variants.push(v);
+        }
+        // Update scene character lists: replace fragment with full name
+        for (const scene of scenes) {
+          const idx = scene.characters.indexOf(part);
+          if (idx !== -1) {
+            scene.characters.splice(idx, 1);
+            if (!scene.characters.includes(fullName)) {
+              scene.characters.push(fullName);
+            }
+          }
+        }
+        fragmentsToRemove.add(part);
+      }
+    }
+  }
+
+  // Remove merged fragments from the map
+  for (const key of fragmentsToRemove) {
+    characterMap.delete(key);
   }
 
   const characters = Array.from(characterMap.values())
