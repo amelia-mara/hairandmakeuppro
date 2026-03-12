@@ -479,6 +479,18 @@ function extractCharactersFromActionLine(line: string): string[] {
     }
   }
 
+  /* Catch-all: ANY ALL CAPS multi-word (2+) name followed by age digits anywhere in the
+     line. This is the broadest pattern and handles cases where the text before the name
+     has unexpected formatting from PDF extraction (e.g., missing space after period).
+     Requires 2+ ALL CAPS words to minimise false positives. */
+  const catchAllIntroRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
+  while ((match = catchAllIntroRe.exec(trimmed)) !== null) {
+    const name = match[1].trim();
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET|FARM|SCENE)\b/.test(name)) {
+      characters.push(name);
+    }
+  }
+
   return [...new Set(characters)];
 }
 
@@ -808,6 +820,16 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
         addName(candidate);
       }
     }
+
+    // Pattern 8: Catch-all — ANY ALL CAPS multi-word (2+) name followed by age digits,
+    // regardless of what precedes it. This is the broadest pattern and handles cases
+    // where the text before the name has unexpected formatting (e.g., "foot.JASPER
+    // MONTGOMERY, 70" with no space after period, or other PDF extraction quirks).
+    // Requires 2+ ALL CAPS words to avoid false positives on single uppercase words.
+    const catchAllAgeRegex = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
+    while ((m = catchAllAgeRegex.exec(trimmed)) !== null) {
+      addName(m[1].trim());
+    }
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -967,14 +989,17 @@ export function parseScriptText(text: string): ParsedScript {
     } else {
       lastLineWasCharacter = false;
 
-      if (currentScene && trimmed.length > 10) {
-        // Try extracting characters from this line alone
-        let actionCharacters = extractCharactersFromActionLine(trimmed);
+      if (currentScene && trimmed.length > 3) {
+        // Try extracting characters from this line alone (only if long enough for patterns)
+        let actionCharacters = trimmed.length > 10
+          ? extractCharactersFromActionLine(trimmed)
+          : [];
 
         // Cross-line detection: if this line ends with ALL CAPS word(s) (potential
         // split character name), combine with the next line and re-extract.
         // This catches "...on foot. JASPER\nMONTGOMERY, 70, ..." even when the
         // normalizeScriptText join regex didn't merge the lines.
+        // Also handles short lines like just "JASPER" on its own line.
         if (/[A-Z][A-Z'-]{2,}\s*$/.test(trimmed) && i + 1 < lines.length) {
           const nextTrimmed = lines[i + 1].trim();
           if (nextTrimmed && nextTrimmed.length > 2) {
