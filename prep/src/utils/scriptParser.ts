@@ -321,6 +321,11 @@ function isSupportingArtistRole(normalizedName: string): boolean {
   const withoutNumber = normalizedName.replace(/\s*#?\d+\s*$/, '').trim();
   if (withoutNumber !== normalizedName && SUPPORTING_ARTIST_ROLES.has(withoutNumber)) return true;
 
+  // Check for word-numbered variants: "COWBOY ONE", "WAITER TWO", "GIRL THREE"
+  const wordNumbers = /\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE)$/;
+  const withoutWordNumber = normalizedName.replace(wordNumbers, '').trim();
+  if (withoutWordNumber !== normalizedName && SUPPORTING_ARTIST_ROLES.has(withoutWordNumber)) return true;
+
   // Check for "THE X" or "A X" prefix
   const withoutArticle = normalizedName.replace(/^(THE|A|AN)\s+/, '').trim();
   if (withoutArticle !== normalizedName && SUPPORTING_ARTIST_ROLES.has(withoutArticle)) return true;
@@ -768,50 +773,56 @@ export function parseScriptText(text: string): ParsedScript {
   }
 
   /* ── Deduplication: merge single-name fragments into full-name characters ──
-     If we have both "LENNON BOWIE" and "LENNON" as separate entries, merge
-     "LENNON" into "LENNON BOWIE" (add its scenes, remove the fragment).
-     Also merge "MONTGOMERY" into "DEDRA MONTGOMERY", etc. */
+     If "LENNON" exists as a standalone entry AND "LENNON BOWIE" exists as a
+     multi-word entry, merge "LENNON" into "LENNON BOWIE". Only merge when
+     exactly ONE full-name parent contains the fragment — if "LENNON" appears
+     in both "LENNON BOWIE" and "LENNON TATE", skip the merge (ambiguous). */
   const fullNames = Array.from(characterMap.keys()).filter(k => k.includes(' '));
+  const singleNames = Array.from(characterMap.keys()).filter(k => !k.includes(' ') && k.length >= 3);
   const fragmentsToRemove = new Set<string>();
 
-  for (const fullName of fullNames) {
-    const parts = fullName.split(/\s+/);
-    for (const part of parts) {
-      if (part.length < 3) continue;
-      // If there's a separate entry that's just this fragment, merge it
-      if (characterMap.has(part) && part !== fullName) {
-        const fragment = characterMap.get(part)!;
-        const parent = characterMap.get(fullName)!;
+  for (const fragment of singleNames) {
+    // Find all full-name characters that contain this fragment as a word
+    const parents = fullNames.filter(fn => fn.split(/\s+/).includes(fragment));
+    // Only merge if there's exactly one unambiguous parent
+    if (parents.length === 1) {
+      const parentName = parents[0];
+      const fragChar = characterMap.get(fragment)!;
+      const parentChar = characterMap.get(parentName)!;
 
-        // Merge scenes from fragment into parent
-        for (const sceneNum of fragment.scenes) {
-          if (!parent.scenes.includes(sceneNum)) {
-            parent.scenes.push(sceneNum);
-            parent.sceneCount++;
-          }
+      // Merge scenes from fragment into parent
+      for (const sceneNum of fragChar.scenes) {
+        if (!parentChar.scenes.includes(sceneNum)) {
+          parentChar.scenes.push(sceneNum);
+          parentChar.sceneCount++;
         }
-        // Merge variants
-        for (const v of fragment.variants) {
-          if (!parent.variants.includes(v)) parent.variants.push(v);
-        }
-        // Update scene character lists: replace fragment with full name
-        for (const scene of scenes) {
-          const idx = scene.characters.indexOf(part);
-          if (idx !== -1) {
-            scene.characters.splice(idx, 1);
-            if (!scene.characters.includes(fullName)) {
-              scene.characters.push(fullName);
-            }
-          }
-        }
-        fragmentsToRemove.add(part);
       }
+      // Merge variants
+      for (const v of fragChar.variants) {
+        if (!parentChar.variants.includes(v)) parentChar.variants.push(v);
+      }
+      // Update scene character lists: replace fragment with full name
+      for (const scene of scenes) {
+        const idx = scene.characters.indexOf(fragment);
+        if (idx !== -1) {
+          scene.characters.splice(idx, 1);
+          if (!scene.characters.includes(parentName)) {
+            scene.characters.push(parentName);
+          }
+        }
+      }
+      fragmentsToRemove.add(fragment);
     }
   }
 
   // Remove merged fragments from the map
   for (const key of fragmentsToRemove) {
     characterMap.delete(key);
+  }
+
+  // Deduplicate scene character lists (remove any duplicates from merging)
+  for (const scene of scenes) {
+    scene.characters = [...new Set(scene.characters)];
   }
 
   const characters = Array.from(characterMap.values())
