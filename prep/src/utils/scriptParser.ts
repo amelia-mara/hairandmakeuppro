@@ -971,37 +971,13 @@ export function parseScriptText(text: string): ParsedScript {
     char.dialogueCount = char.variants.length;
   });
 
-  /* Post-processing: scan scene content for mentions of known character names.
-     This catches characters who appear in action/description lines by first name,
-     last name, or possessive (e.g. "Lennon's six pack abs") but weren't detected
-     by the cue or action-line patterns.
-     Only search using the FULL character name — individual name parts are too
-     prone to false positives. Single-name characters (e.g. "FLEABAG") are
-     searched as-is. */
-  for (const scene of scenes) {
-    for (const char of characters) {
-      if (scene.characters.includes(char.normalizedName)) continue;
-      const nameParts = char.normalizedName.split(/\s+/);
-      const searchTerms: string[] = [char.normalizedName];
-      // Only add individual name parts if they are 4+ chars and not common words
-      for (const part of nameParts) {
-        if (part.length >= 4 && !NAME_SCAN_EXCLUSIONS.has(part.toUpperCase())) {
-          searchTerms.push(part);
-        }
-      }
-      const found = searchTerms.some((term) => {
-        const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:'[Ss])?\\b`, 'i');
-        return re.test(scene.content);
-      });
-      if (found) {
-        scene.characters.push(char.normalizedName);
-        if (!char.scenes.includes(scene.sceneNumber)) {
-          char.scenes.push(scene.sceneNumber);
-          char.sceneCount++;
-        }
-      }
-    }
-  }
+  /* NOTE: We intentionally do NOT do a broad "name-mention scan" of scene content.
+     Characters are only associated with a scene if they have a dialogue cue or
+     are detected in an action line (intro pattern or Title Case + action verb).
+     A character merely *mentioned* in dialogue ("Told Dedra to pack her bags")
+     is NOT physically present in the scene — for hair & makeup departments,
+     only physically present characters matter. The pre-scan + main parse +
+     dedup safety net above handle detection accurately. */
 
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
