@@ -4,6 +4,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { Button, Input } from '@/components/ui';
 import type { ProductionType, Project } from '@/types';
 import { PRODUCTION_TYPES } from '@/types';
+import { DEPARTMENT_OPTIONS, type DepartmentType } from '@/config/department';
 
 // Owner role options (same set as the join flow)
 const OWNER_ROLES = [
@@ -21,6 +22,7 @@ export function CreateProjectScreen() {
   const { goBack, createProject, isLoading, error, clearError } = useAuthStore();
 
   const [name, setName] = useState('');
+  const [department, setDepartment] = useState<DepartmentType>('hmu');
   const [productionType, setProductionType] = useState<ProductionType>('film');
   const [ownerRole, setOwnerRole] = useState<OwnerRole>('designer');
 
@@ -30,7 +32,7 @@ export function CreateProjectScreen() {
 
     if (!name.trim()) return;
 
-    const result = await createProject(name.trim(), productionType, ownerRole);
+    const result = await createProject(name.trim(), productionType, ownerRole, department);
 
     if (result.success && result.code) {
       // Go directly to the upload files flow instead of showing success screen
@@ -40,6 +42,7 @@ export function CreateProjectScreen() {
         const project: Project = {
           id: membership.projectId,
           name: membership.projectName,
+          department,
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
           scenes: [],
@@ -99,6 +102,27 @@ export function CreateProjectScreen() {
             disabled={isLoading}
             autoComplete="off"
           />
+
+          {/* Department selector */}
+          <div>
+            <label className="field-label block mb-2">Department</label>
+            <div className="grid grid-cols-2 gap-2">
+              {DEPARTMENT_OPTIONS.map((dept) => (
+                <button
+                  key={dept.value}
+                  type="button"
+                  onClick={() => setDepartment(dept.value)}
+                  className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                    department === dept.value
+                      ? 'border-gold bg-gold-50 text-gold'
+                      : 'border-border bg-card text-text-secondary hover:border-gold-300'
+                  }`}
+                >
+                  {dept.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Production type select */}
           <div>
