@@ -159,6 +159,16 @@ function normalizeScriptText(text: string): string {
     .replace(/(\d+[A-Z]?)\s+\./g, '$1.')
     .trim();
 
+  // Join character introductions split across line breaks (PDF word-wrap artifact).
+  // When a line has content ending with an ALL CAPS word and the next line starts
+  // with ALL CAPS word(s) followed by comma + age or comma + lowercase description,
+  // join them into a single line.
+  // e.g. "...on foot. JASPER\nMONTGOMERY, 70, he looks..." → single line
+  normalized = normalized.replace(
+    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*,\s*(?:\d{1,3}\b|[a-z]))/g,
+    '$1 $2',
+  );
+
   // Normalize "SCENE WORD:" prefixes to numeric scene numbers
   normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
 
