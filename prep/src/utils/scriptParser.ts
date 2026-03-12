@@ -301,10 +301,17 @@ const SUPPORTING_ARTIST_ROLES = new Set([
   'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'HUSBAND', 'WIFE',
   'SON', 'DAUGHTER', 'UNCLE', 'AUNT', 'GRANDMOTHER', 'GRANDFATHER',
   'GRANDMA', 'GRANDPA',
+  // Sports / competition
+  'REFEREE', 'REF', 'UMPIRE', 'OPPONENT', 'FIGHTER', 'BOXER', 'WRESTLER',
+  'COACH', 'TRAINER', 'COMMENTATOR', 'ANNOUNCER',
+  // Historical / military extras
+  'CENTURION', 'WARRIOR', 'GLADIATOR', 'KNIGHT', 'SQUIRE', 'HERALD',
+  'DRUID', 'LEGIONNAIRE', 'BARBARIAN', 'SLAVE', 'SERVANT', 'PEASANT',
+  'PRAETORIAN', 'TRIBUNE', 'SENATOR', 'CONSUL', 'EMPEROR',
   // Group / crowd
   'CROWD', 'CROWD MEMBER', 'ONLOOKER', 'SPECTATOR', 'AUDIENCE MEMBER',
   'GUEST', 'CUSTOMER', 'PATIENT', 'CLIENT', 'VICTIM', 'WITNESS',
-  'INMATE', 'PRISONER', 'SUSPECT',
+  'INMATE', 'PRISONER', 'SUSPECT', 'HENCHMAN', 'GOON', 'MINION',
   // Titled generics
   'MR SMITH', 'MRS SMITH', 'THE MAN', 'THE WOMAN', 'THE BOY', 'THE GIRL',
   'A MAN', 'A WOMAN', 'A BOY', 'A GIRL',
@@ -644,12 +651,198 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   return { sceneNumber, intExt, location, timeOfDay, rawSlugline: trimmed, isValid: true };
 }
 
+/* ━━━ Pre-scan: discover character introductions ━━━ */
+
+/**
+ * Words that can start an ALL CAPS line but are NOT character names.
+ * Prevents "WE END on..." or "THE BUTLER" from being treated as intros.
+ */
+const INTRO_EXCLUDED_STARTS = new Set([
+  'INT', 'EXT', 'CUT', 'FADE', 'SCENE', 'EPISODE', 'CHAPTER', 'ACT', 'PART',
+  'WE', 'HE', 'SHE', 'THE', 'A', 'AN', 'IT', 'AS', 'AT', 'IF', 'IN', 'ON',
+  'OR', 'TO', 'SO', 'NO', 'OF', 'BY', 'UP', 'IS', 'BE', 'DO', 'GO', 'MY',
+  'HIS', 'HER', 'ITS', 'OUR', 'ALL', 'BUT', 'FOR', 'NOT', 'AND', 'YET',
+  'NOR', 'THEY', 'THEM', 'THIS', 'THAT', 'THEN', 'THAN', 'FROM', 'WITH',
+  'INTO', 'OVER', 'BACK', 'DOWN', 'JUST', 'ALSO', 'EVEN', 'STILL',
+  'FRIDAY', 'SATURDAY', 'SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY',
+  'TITLES', 'TITLE', 'SUPER', 'SUPERIMPOSE', 'INSERT', 'INTERCUT',
+  'FLASHBACK', 'MONTAGE', 'SERIES', 'STOCK', 'BASED', 'ELEVEN', 'TWELVE',
+]);
+
+/** Age modifiers that precede character names: "YOUNG BRY TYRELL" → "BRY TYRELL" */
+const NAME_MODIFIERS = new Set([
+  'YOUNG', 'OLD', 'ELDERLY', 'MIDDLE-AGED', 'LITTLE', 'TEENAGE', 'BABY',
+  'DETECTIVE', 'AGENT', 'OFFICER', 'DOCTOR', 'DR', 'EMPEROR', 'KING', 'QUEEN',
+  'PRINCE', 'PRINCESS', 'LORD', 'LADY', 'SIR', 'DAME', 'PROFESSOR', 'PROF',
+  'CAPTAIN', 'LIEUTENANT', 'SERGEANT', 'COLONEL', 'GENERAL', 'COMMANDER',
+  'MR', 'MRS', 'MS', 'MISS', 'MASTER',
+]);
+
+/**
+ * Pre-scan the entire script to find character introductions.
+ * Returns a Map of single-name fragments → full character names,
+ * allowing dialogue cues like "LENNON" to resolve to "LENNON BOWIE".
+ *
+ * Detects these introduction patterns:
+ *  1. FULL NAME, age — "LENNON BOWIE, 28, is a cowboy..."
+ *  2. FULL NAME age  — "DEDRA MONTGOMERY 29, an icy beauty..."
+ *  3. FULL NAME (age) — "LIZZY BENNET (20s), stumbles into..."
+ *  4. FULL NAME, description — "ARCHIBALD CHRISTIE, dashing, holds..."
+ *  5. FULL NAME + lowercase — "AGATHA CHRISTIE let's out a cry..."
+ *  6. Mid-line: ...sentence. FULL NAME, age — "...on foot. JASPER MONTGOMERY, 70"
+ */
+function prescanCharacterIntros(lines: string[]): Map<string, string> {
+  const fullNames: string[] = [];
+  const seen = new Set<string>();
+
+  function addName(raw: string) {
+    if (raw.length < 3) return;
+    const firstWord = raw.split(/\s+/)[0];
+    if (INTRO_EXCLUDED_STARTS.has(firstWord)) return;
+    // Strip leading modifiers: "YOUNG BRY TYRELL" → "BRY TYRELL"
+    let cleaned = raw;
+    const words = raw.split(/\s+/);
+    while (words.length > 1 && NAME_MODIFIERS.has(words[0])) {
+      words.shift();
+    }
+    cleaned = words.join(' ');
+    // Must have 2+ words to be a "full name"
+    if (cleaned.split(/\s+/).length < 2) return;
+    // Skip if it's a supporting artist role
+    if (isSupportingArtistRole(cleaned)) return;
+    if (!seen.has(cleaned)) {
+      seen.add(cleaned);
+      fullNames.push(cleaned);
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Skip scene headings
+    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+
+    // Pattern 1: ALL CAPS name + comma/space + age digits (anywhere in line)
+    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" (even mid-sentence)
+    const ageIntroRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(]\s*\d{1,3}\b/g;
+    let m;
+    while ((m = ageIntroRegex.exec(trimmed)) !== null) {
+      addName(m[1].trim());
+    }
+
+    // Pattern 2: ALL CAPS name + parenthetical age — "LIZZY BENNET (20s)"
+    const parenAgeRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*\(\d{1,3}[s']?\)/g;
+    while ((m = parenAgeRegex.exec(trimmed)) !== null) {
+      addName(m[1].trim());
+    }
+
+    // Pattern 3: Start of line ALL CAPS 2+ word name + comma (no age needed)
+    // "AGATHA CHRISTIE, dashing" or "NAN WATTS, a prim-looking woman"
+    const commaIntro = trimmed.match(/^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*,/);
+    if (commaIntro) {
+      addName(commaIntro[1].trim());
+    }
+
+    // Pattern 4: Start of line ALL CAPS 2+ word name followed by lowercase word
+    // "AGATHA CHRISTIE let's out a cry" — name acts in an action line
+    const actionIntro = trimmed.match(/^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s+[a-z]/);
+    if (actionIntro) {
+      addName(actionIntro[1].trim());
+    }
+
+    // Pattern 5: Mid-line character intro after period/sentence break
+    // "She sees Lennon on foot. JASPER MONTGOMERY, 70, he looks like..."
+    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+    while ((m = midLineRegex.exec(trimmed)) !== null) {
+      addName(m[1].trim());
+    }
+
+    // Pattern 6: Mid-sentence intro with article: "...sister, ROSALIND, is..." or "...for NAN WATTS, a..."
+    const midSentenceRegex = /[,]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(]/g;
+    while ((m = midSentenceRegex.exec(trimmed)) !== null) {
+      const candidate = m[1].trim();
+      // Only accept if it's 2+ words OR if the single word is not a common word
+      if (candidate.split(/\s+/).length >= 2) {
+        addName(candidate);
+      }
+    }
+  }
+
+  // Build fragment → full name resolution map
+  // If "LENNON" appears in "LENNON BOWIE" only, map LENNON → LENNON BOWIE
+  // If "MONTGOMERY" appears in both "DEDRA MONTGOMERY" and "JASPER MONTGOMERY", skip (ambiguous)
+  const resolveMap = new Map<string, string>();
+
+  for (const fullName of fullNames) {
+    const parts = fullName.split(/\s+/);
+    for (const part of parts) {
+      if (part.length < 3) continue;
+      if (NAME_SCAN_EXCLUSIONS.has(part)) continue;
+      if (isSupportingArtistRole(part)) continue;
+
+      if (!resolveMap.has(part)) {
+        resolveMap.set(part, fullName);
+      } else if (resolveMap.get(part) !== fullName) {
+        resolveMap.set(part, ''); // ambiguous — maps to multiple full names
+      }
+    }
+  }
+
+  // Remove ambiguous entries
+  for (const [key, value] of resolveMap) {
+    if (value === '') resolveMap.delete(key);
+  }
+
+  return resolveMap;
+}
+
 /* ━━━ Main parser ━━━ */
 
 export function parseScriptText(text: string): ParsedScript {
   const lines = text.split('\n');
   const scenes: ParsedScene[] = [];
   const characterMap = new Map<string, ParsedCharacter>();
+
+  // Pre-scan: find full character names from introductions
+  const nameResolveMap = prescanCharacterIntros(lines);
+
+  /** Resolve a single-word character name to its full name if known */
+  function resolveCharacterName(normalized: string): string {
+    if (!normalized.includes(' ') && nameResolveMap.has(normalized)) {
+      return nameResolveMap.get(normalized)!;
+    }
+    return normalized;
+  }
+
+  /** Register a character in the characterMap and current scene */
+  function registerCharacter(rawName: string, resolved: string, scene: ParsedScene | null) {
+    if (resolved.length < 2) return;
+
+    if (scene && !scene.characters.includes(resolved)) {
+      scene.characters.push(resolved);
+    }
+
+    if (!characterMap.has(resolved)) {
+      characterMap.set(resolved, {
+        name: resolved,
+        normalizedName: resolved,
+        category: isSupportingArtistRole(resolved) ? 'supporting_artist' : 'principal',
+        sceneCount: 0,
+        dialogueCount: 0,
+        scenes: [],
+        variants: [],
+      });
+    }
+
+    const char = characterMap.get(resolved)!;
+    if (!char.variants.includes(rawName)) {
+      char.variants.push(rawName);
+    }
+    if (scene && !char.scenes.includes(scene.sceneNumber)) {
+      char.scenes.push(scene.sceneNumber);
+      char.sceneCount++;
+    }
+  }
 
   let currentScene: ParsedScene | null = null;
   let fallbackSceneNumber = 0;
@@ -693,39 +886,13 @@ export function parseScriptText(text: string): ParsedScript {
 
     if (isCharacterCue(trimmed)) {
       const charName = trimmed;
-      const normalized = normalizeCharacterName(charName);
+      let normalized = normalizeCharacterName(charName);
+      // Resolve single-name cues: "LENNON" → "LENNON BOWIE"
+      normalized = resolveCharacterName(normalized);
 
-      if (normalized.length >= 2) {
-        if (currentScene && !currentScene.characters.includes(normalized)) {
-          currentScene.characters.push(normalized);
-        }
-
-        if (!characterMap.has(normalized)) {
-          characterMap.set(normalized, {
-            name: normalized,
-            normalizedName: normalized,
-            category: isSupportingArtistRole(normalized) ? 'supporting_artist' : 'principal',
-            sceneCount: 0,
-            dialogueCount: 0,
-            scenes: [],
-            variants: [],
-          });
-        }
-
-        const char = characterMap.get(normalized)!;
-
-        if (!char.variants.includes(charName)) {
-          char.variants.push(charName);
-        }
-
-        if (currentScene && !char.scenes.includes(currentScene.sceneNumber)) {
-          char.scenes.push(currentScene.sceneNumber);
-          char.sceneCount++;
-        }
-
-        lastLineWasCharacter = true;
-        dialogueCount = 0;
-      }
+      registerCharacter(charName, normalized, currentScene);
+      lastLineWasCharacter = true;
+      dialogueCount = 0;
     } else if (lastLineWasCharacter && trimmed.length > 0) {
       dialogueCount++;
       if (dialogueCount > 3 || trimmed.length === 0) {
@@ -737,31 +904,10 @@ export function parseScriptText(text: string): ParsedScript {
       if (currentScene && trimmed.length > 10) {
         const actionCharacters = extractCharactersFromActionLine(trimmed);
         for (const charName of actionCharacters) {
-          const normalized = normalizeCharacterName(charName);
-
-          if (normalized.length >= 2) {
-            if (!currentScene.characters.includes(normalized)) {
-              currentScene.characters.push(normalized);
-            }
-
-            if (!characterMap.has(normalized)) {
-              characterMap.set(normalized, {
-                name: normalized,
-                normalizedName: normalized,
-                category: isSupportingArtistRole(normalized) ? 'supporting_artist' : 'principal',
-                sceneCount: 0,
-                dialogueCount: 0,
-                scenes: [],
-                variants: [],
-              });
-            }
-
-            const char = characterMap.get(normalized)!;
-            if (!char.scenes.includes(currentScene.sceneNumber)) {
-              char.scenes.push(currentScene.sceneNumber);
-              char.sceneCount++;
-            }
-          }
+          let normalized = normalizeCharacterName(charName);
+          // Resolve single-name action references: "Lennon" → "LENNON BOWIE"
+          normalized = resolveCharacterName(normalized);
+          registerCharacter(charName, normalized, currentScene);
         }
       }
     }
@@ -772,36 +918,29 @@ export function parseScriptText(text: string): ParsedScript {
     scenes.push(currentScene);
   }
 
-  /* ── Deduplication: merge single-name fragments into full-name characters ──
-     If "LENNON" exists as a standalone entry AND "LENNON BOWIE" exists as a
-     multi-word entry, merge "LENNON" into "LENNON BOWIE". Only merge when
-     exactly ONE full-name parent contains the fragment — if "LENNON" appears
-     in both "LENNON BOWIE" and "LENNON TATE", skip the merge (ambiguous). */
+  /* ── Deduplication safety net: merge any remaining single-name fragments ──
+     If the pre-scan missed an intro but a full name was detected during parsing,
+     merge fragments that match exactly one full-name parent. */
   const fullNames = Array.from(characterMap.keys()).filter(k => k.includes(' '));
   const singleNames = Array.from(characterMap.keys()).filter(k => !k.includes(' ') && k.length >= 3);
   const fragmentsToRemove = new Set<string>();
 
   for (const fragment of singleNames) {
-    // Find all full-name characters that contain this fragment as a word
     const parents = fullNames.filter(fn => fn.split(/\s+/).includes(fragment));
-    // Only merge if there's exactly one unambiguous parent
     if (parents.length === 1) {
       const parentName = parents[0];
       const fragChar = characterMap.get(fragment)!;
       const parentChar = characterMap.get(parentName)!;
 
-      // Merge scenes from fragment into parent
       for (const sceneNum of fragChar.scenes) {
         if (!parentChar.scenes.includes(sceneNum)) {
           parentChar.scenes.push(sceneNum);
           parentChar.sceneCount++;
         }
       }
-      // Merge variants
       for (const v of fragChar.variants) {
         if (!parentChar.variants.includes(v)) parentChar.variants.push(v);
       }
-      // Update scene character lists: replace fragment with full name
       for (const scene of scenes) {
         const idx = scene.characters.indexOf(fragment);
         if (idx !== -1) {
@@ -815,12 +954,11 @@ export function parseScriptText(text: string): ParsedScript {
     }
   }
 
-  // Remove merged fragments from the map
   for (const key of fragmentsToRemove) {
     characterMap.delete(key);
   }
 
-  // Deduplicate scene character lists (remove any duplicates from merging)
+  // Deduplicate scene character lists
   for (const scene of scenes) {
     scene.characters = [...new Set(scene.characters)];
   }
@@ -837,22 +975,22 @@ export function parseScriptText(text: string): ParsedScript {
      This catches characters who appear in action/description lines by first name,
      last name, or possessive (e.g. "Lennon's six pack abs") but weren't detected
      by the cue or action-line patterns.
-     Once a character is identified (e.g. "GWEN LAWSON" from dialogue), subsequent
-     scenes mentioning just "Gwen" or "Lawson" will correctly associate them. */
+     Only search using the FULL character name — individual name parts are too
+     prone to false positives. Single-name characters (e.g. "FLEABAG") are
+     searched as-is. */
   for (const scene of scenes) {
     for (const char of characters) {
       if (scene.characters.includes(char.normalizedName)) continue;
-      /* Build search terms: full name, first name (3+ chars), last name (3+ chars)
-         Skip common English words to avoid false positives (e.g. "WILL" as a verb) */
       const nameParts = char.normalizedName.split(/\s+/);
       const searchTerms: string[] = [char.normalizedName];
+      // Only add individual name parts if they are 4+ chars and not common words
       for (const part of nameParts) {
-        if (part.length >= 3 && !NAME_SCAN_EXCLUSIONS.has(part.toUpperCase())) {
+        if (part.length >= 4 && !NAME_SCAN_EXCLUSIONS.has(part.toUpperCase())) {
           searchTerms.push(part);
         }
       }
       const found = searchTerms.some((term) => {
-        const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:'S)?\\b`, 'i');
+        const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:'[Ss])?\\b`, 'i');
         return re.test(scene.content);
       });
       if (found) {
