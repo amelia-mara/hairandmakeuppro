@@ -752,9 +752,8 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       characterId: charId,
     });
     onTagCreated(popup.sceneId, charId, popup.categoryId, popup.text);
-    onCharClick(charId);
     setPopup(null);
-  }, [popup, tagStore, onCharClick, onTagCreated]);
+  }, [popup, tagStore, onTagCreated]);
 
   const parsedScriptStore = useParsedScriptStore();
 
@@ -782,9 +781,8 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       categoryId: 'cast',
       characterId: charId,
     });
-    onCharClick(charId);
     setPopup(null);
-  }, [popup, tagStore, parsedScriptStore, projectId, onCharClick]);
+  }, [popup, tagStore, parsedScriptStore, projectId]);
 
   /* Cast: user creates a brand new character from the highlighted text */
   const handleCastCreateNew = useCallback(() => {
@@ -816,9 +814,8 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       categoryId: 'cast',
       characterId: newId,
     });
-    onCharClick(newId);
     setPopup(null);
-  }, [popup, tagStore, parsedScriptStore, projectId, onCharClick]);
+  }, [popup, tagStore, parsedScriptStore, projectId]);
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
