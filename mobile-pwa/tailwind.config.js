@@ -58,10 +58,10 @@ export default {
         'dark-input-bg': '#251A0A',
         'dark-border': 'rgba(255, 255, 255, 0.06)',
         'dark-border-focus': 'rgba(232, 98, 26, 0.35)',
-        'dark-text-primary': '#ffffff',
-        'dark-text-secondary': '#a0a0a0',
-        'dark-text-muted': '#777777',
-        'dark-text-light': '#666666',
+        'dark-text-primary': '#F5EFE0',
+        'dark-text-secondary': '#C4A882',
+        'dark-text-muted': '#9A8068',
+        'dark-text-light': '#7A5C3A',
       },
       fontFamily: {
         sans: [
