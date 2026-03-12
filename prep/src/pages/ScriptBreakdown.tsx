@@ -427,13 +427,28 @@ export function ScriptBreakdown({ projectId }: Props) {
             saveStatus={saveStatus}
             scenes={filteredScenes}
             allScenes={ALL_SCENES}
+            allCharacters={ALL_CHARACTERS}
             allLooks={ALL_LOOKS}
+            projectId={projectId}
             onNavigate={selectScene}
             onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
             onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
             onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
             onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
             onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
+            onRemoveCharacter={(charId, action, mergeTargetId) => {
+              if (action === 'not-in-scene') {
+                parsedScriptStore.removeCharacterFromScene(projectId, validSceneId, charId);
+                store.removeCharacterBreakdown(validSceneId, charId);
+              } else if (action === 'not-a-character') {
+                parsedScriptStore.removeCharacterEntirely(projectId, charId);
+                store.removeCharacterFromAllBreakdowns(charId);
+              } else if (action === 'duplicate' && mergeTargetId) {
+                parsedScriptStore.mergeCharacters(projectId, charId, mergeTargetId);
+                store.mergeCharacterBreakdowns(charId, mergeTargetId);
+              }
+              triggerSave();
+            }}
           />
           )}
         </div>
@@ -1355,15 +1370,18 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, projectId, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
-  scenes: Scene[]; allScenes: Scene[]; allLooks: Look[]; onNavigate: (id: string) => void;
+  scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
+  projectId: string;
+  onNavigate: (id: string) => void;
   onUpdate: (cid: string, d: Partial<CharacterBreakdown>) => void;
   onUpdateTimeline: (t: SceneBreakdown['timeline']) => void;
   onAddEvent: (e: ContinuityEvent) => void;
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (id: string) => void;
+  onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
 }) {
   if (!breakdown) return null;
 
@@ -1376,6 +1394,18 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const synopsisStore = useSynopsisStore();
   const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
   const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
+
+  /* Auto-populate DAY options from story days in scene data */
+  const storyDayOptions = useMemo(() => {
+    const days = new Set<string>();
+    allScenes.forEach((s) => { if (s.storyDay) days.add(s.storyDay); });
+    const sorted = Array.from(days).sort((a, b) => {
+      const na = parseInt(a.replace(/\D/g, '')) || 0;
+      const nb = parseInt(b.replace(/\D/g, '')) || 0;
+      return na - nb;
+    });
+    return ['', ...sorted];
+  }, [allScenes]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -1416,7 +1446,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
           <div className="fp-section-title">Timeline</div>
           <div className="fp-row-3">
             <FSelect label="Day" value={breakdown.timeline.day}
-              options={['', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10']}
+              options={storyDayOptions}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, day: v })} />
             <FSelect label="Time" value={breakdown.timeline.time}
               options={['', 'Day', 'Night', 'Dawn', 'Dusk']}
@@ -1447,17 +1477,20 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             return (
               <CharBlock key={ch.id} char={ch} cb={cb}
                 sceneId={scene.id}
+                projectId={projectId}
                 looks={allLooks.filter((l) => l.characterId === ch.id)}
                 highlighted={activeCharacterId === ch.id}
                 onUpdate={(d) => onUpdate(ch.id, d)}
                 characterEvents={charEvents}
                 allScenes={allScenes}
+                allCharacters={allCharacters}
                 onAddCharEvent={(charId) => onAddEvent({
                   id: `ce-${Date.now()}`, type: 'Wound', characterId: charId,
                   description: '', sceneRange: `${scene.number}-${scene.number}`,
                 })}
                 onUpdateEvent={onUpdateEvent}
-                onRemoveEvent={onRemoveEvent} />
+                onRemoveEvent={onRemoveEvent}
+                onRemoveCharacter={onRemoveCharacter} />
             );
           })}
         </div>
@@ -1519,18 +1552,46 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, sceneId }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, projectId, onRemoveCharacter }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
   allScenes: Scene[];
+  allCharacters: Character[];
   onAddCharEvent: (charId: string) => void;
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (eventId: string) => void;
   sceneId: string;
+  projectId: string;
+  onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
+
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState('');
+  const [showProfile, setShowProfile] = useState(false);
+  const charOverrides = useCharacterOverridesStore();
+  const resolvedChar = charOverrides.getCharacter(char);
+
+  /* Characters available for merge — exclude self, sort by billing (most likely merge targets first) */
+  const mergeOptions = useMemo(() =>
+    allCharacters
+      .filter((c) => c.id !== char.id)
+      .sort((a, b) => a.billing - b.billing),
+    [allCharacters, char.id]
+  );
+
+  const profileFields: { label: string; key: keyof Character }[] = [
+    { label: 'Age', key: 'age' },
+    { label: 'Gender', key: 'gender' },
+    { label: 'Hair Colour', key: 'hairColour' },
+    { label: 'Hair Type', key: 'hairType' },
+    { label: 'Eye Colour', key: 'eyeColour' },
+    { label: 'Skin Tone', key: 'skinTone' },
+    { label: 'Build', key: 'build' },
+    { label: 'Features', key: 'distinguishingFeatures' },
+  ];
 
   const tagStore = useTagStore();
   const sceneTags = tagStore.getTagsForScene(sceneId).filter((t) => t.characterId === char.id);
@@ -1575,6 +1636,7 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
         <span className="cb-name">{char.name}</span>
         <div className="cb-header-right">
           <span className="cb-billing-badge">{ordinal(char.billing)}</span>
+          <button className="cb-remove-char-btn" onClick={() => setShowRemoveModal(true)} title="Remove character">×</button>
         </div>
       </div>
 
@@ -1661,6 +1723,39 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
 
       <FInput label="Notes" value={cb.notes} onChange={(v) => onUpdate({ notes: v })} />
 
+      {/* Expandable character profile section */}
+      <div className="cb-profile-section">
+        <button className="cb-profile-toggle" onClick={() => setShowProfile(!showProfile)}>
+          <svg className={`cb-profile-chevron${showProfile ? ' cb-profile-chevron--open' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          Character Profile
+        </button>
+        {showProfile && (
+          <div className="cb-profile-grid">
+            {profileFields.map(({ label, key }) => (
+              <div key={key} className="cb-profile-field">
+                <label className="cb-profile-label">{label}</label>
+                <input
+                  className="fi-input cb-profile-input"
+                  value={resolvedChar[key] as string || ''}
+                  onChange={(e) => charOverrides.updateCharacter(char.id, { [key]: e.target.value })}
+                  placeholder={`Enter ${label.toLowerCase()}…`}
+                />
+              </div>
+            ))}
+            <div className="cb-profile-field cb-profile-field--wide">
+              <label className="cb-profile-label">Notes</label>
+              <textarea
+                className="fi-input cb-profile-textarea"
+                value={resolvedChar.notes || ''}
+                onChange={(e) => charOverrides.updateCharacter(char.id, { notes: e.target.value })}
+                placeholder="Enter notes…"
+                rows={2}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Per-character continuity events */}
       <div className="cb-continuity">
         <div className="cb-continuity-header">
@@ -1685,6 +1780,36 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
           </div>
         ))}
       </div>
+
+      {/* Character removal modal */}
+      {showRemoveModal && (
+        <div className="cb-remove-overlay" onClick={() => setShowRemoveModal(false)}>
+          <div className="cb-remove-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cb-remove-modal-title">Remove {char.name}</div>
+            <button className="cb-remove-option" onClick={() => { onRemoveCharacter(char.id, 'not-in-scene'); setShowRemoveModal(false); }}>
+              <strong>Not in this scene</strong>
+              <span className="cb-remove-option-desc">Remove from this scene only</span>
+            </button>
+            <button className="cb-remove-option cb-remove-option--danger" onClick={() => { onRemoveCharacter(char.id, 'not-a-character'); setShowRemoveModal(false); }}>
+              <strong>Not a character</strong>
+              <span className="cb-remove-option-desc">Remove from the entire script breakdown</span>
+            </button>
+            <div className="cb-remove-option-group">
+              <div className="cb-remove-option-label"><strong>Duplicate character</strong></div>
+              <span className="cb-remove-option-desc">Merge into another character</span>
+              <select className="cb-merge-select" value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)}>
+                <option value="">Select character to merge into…</option>
+                {mergeOptions.map((c) => <option key={c.id} value={c.id}>{c.name} ({ordinal(c.billing)})</option>)}
+              </select>
+              <button className="cb-merge-btn" disabled={!mergeTargetId}
+                onClick={() => { onRemoveCharacter(char.id, 'duplicate', mergeTargetId); setShowRemoveModal(false); }}>
+                Merge
+              </button>
+            </div>
+            <button className="cb-remove-cancel" onClick={() => setShowRemoveModal(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
