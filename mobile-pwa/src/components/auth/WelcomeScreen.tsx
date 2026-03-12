@@ -9,16 +9,16 @@ export function WelcomeScreen() {
     }}>
       {/* Department pill */}
       <div className="flex items-center justify-center pt-14 px-8">
-        <span className="px-5 py-2 rounded-pill text-sm font-medium text-teal border border-teal/30 bg-teal/5">
+        <span className="px-5 py-2 rounded-pill text-sm font-medium text-[#3A9E91] border border-[#3A9E91]/30 bg-[#3A9E91]/5">
           Hair &amp; Makeup &amp; Costume
         </span>
       </div>
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Text logo — stacked with overlap */}
-        <div className="flex flex-col items-center mb-8">
-          <span className="text-[46px] leading-none font-serif font-bold text-[#2A1A08]">
+        {/* Text logo — stacked with overlap, "Happy." offset left */}
+        <div className="flex flex-col items-start mb-8 pl-4">
+          <span className="text-[46px] leading-none font-serif font-bold text-[#2A1A08] self-end pr-2">
             Checks
           </span>
           <span className="text-[46px] leading-none font-serif font-bold italic text-gold -mt-3">
