@@ -1268,9 +1268,10 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           : ps.timeOfDay === 'CONTINUOUS' ? 'DAY' as const
           : ps.timeOfDay as 'DAY' | 'NIGHT';
 
+        const parsedNum = parseInt(sceneNum, 10);
         return {
           id: `ps-${idx + 1}`,
-          number: idx + 1,
+          number: isNaN(parsedNum) ? idx + 1 : parsedNum,
           intExt: ps.intExt,
           dayNight,
           location: ps.location,
