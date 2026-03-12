@@ -8,6 +8,7 @@ import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, 
 import { detectAIElements, generateDescription } from './ai-integration.js';
 import { getAllVersions, getCurrentVersion, getVersionById, copySceneFromVersion } from './version-manager.js';
 import { renderSceneCharacterConfirmation } from './script-upload.js';
+import { detectStoryDay } from './script-analysis.js';
 
 // ============================================================================
 // ELEMENT CATEGORIES
@@ -134,16 +135,16 @@ function renderSceneBreakdown(sceneIndex) {
 
     let storyDay = scene.storyDay || extractStoryDay(sceneIndex) || '';
 
-    // Auto-populate from lookbook if no day is set yet
+    // Auto-populate from lookbook/narrative analysis/detection if no day is set yet
     if (!storyDay) {
-        const lookbookDay = getStoryDayFromLookbook(sceneIndex);
-        if (lookbookDay) {
-            storyDay = lookbookDay;
+        const autoDay = getStoryDayFromLookbook(sceneIndex);
+        if (autoDay) {
+            storyDay = autoDay;
             // Persist the auto-populated day so it shows in the dropdown
             // and is available to the lookbook system
-            scene.storyDay = lookbookDay;
-            scene.storyDaySource = 'lookbook';
-            scene.storyDayConfidence = 'medium';
+            scene.storyDay = autoDay;
+            scene.storyDaySource = scene.storyDaySource || 'lookbook';
+            scene.storyDayConfidence = scene.storyDayConfidence || 'medium';
             scene.storyDayConfirmed = false;
             saveToLocalStorage();
         }
@@ -302,6 +303,10 @@ function renderSceneBreakdown(sceneIndex) {
                 ` : scene.storyDaySource === 'lookbook' ? `
                     <div class="detection-hint-compact">
                         Auto: from lookbook (matching look)
+                    </div>
+                ` : (storyDay && !scene.storyDayConfirmed && scene.storyDaySource !== 'user_assigned') ? `
+                    <div class="detection-hint-compact">
+                        Auto: ${scene.storyDaySource === 'copied' ? 'copied from adjacent scene' : 'detected from script'}
                     </div>
                 ` : ''}
 
@@ -880,21 +885,41 @@ function extractStoryDay(sceneIndex) {
 }
 
 /**
- * Get the story day for a scene based on lookbook data.
- * Finds the character look in this scene, then checks other scenes with the
- * same look that already have a storyDay assigned.
- * Returns the day if a consistent match is found, empty string otherwise.
+ * Get the story day for a scene based on lookbook data, narrative analysis,
+ * or script-level detection. Checks multiple sources:
+ * 1. Master context / narrative analysis timeline
+ * 2. Character look matching (scenes with same look that already have a storyDay)
+ * 3. Script-level story day detection (heading cues, time passages, etc.)
+ * Returns the day if found, empty string otherwise.
  */
 function getStoryDayFromLookbook(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     if (!scene) return '';
 
+    // --- Source 1: Master context / narrative analysis timeline ---
+    const masterCtx = window.scriptMasterContext || window.masterContext;
+    if (masterCtx?.storyTimeline?.days) {
+        const sceneNumber = scene.number || sceneIndex + 1;
+        for (const dayEntry of masterCtx.storyTimeline.days) {
+            if (dayEntry.scenes && dayEntry.scenes.includes(sceneNumber)) {
+                return dayEntry.day || '';
+            }
+        }
+    }
+    // Also check storyStructure.timeline format
+    if (masterCtx?.storyStructure?.timeline) {
+        const sceneNumber = scene.number || sceneIndex + 1;
+        for (const dayEntry of masterCtx.storyStructure.timeline) {
+            if (dayEntry.scenes && dayEntry.scenes.includes(sceneNumber)) {
+                return dayEntry.day || dayEntry.storyDay || '';
+            }
+        }
+    }
+
+    // --- Source 2: Character look matching from lookbook data ---
     const breakdown = state.sceneBreakdowns?.[sceneIndex];
     const characters = breakdown?.cast || scene.castMembers || [];
-    if (characters.length === 0) return '';
 
-    // For each character in the scene, check if their look matches
-    // a look in other scenes that have a storyDay assigned
     for (const characterName of characters) {
         const charState = state.characterStates?.[sceneIndex]?.[characterName];
         if (!charState) continue;
@@ -936,7 +961,7 @@ function getStoryDayFromLookbook(sceneIndex) {
             return Array.from(matchingDays)[0];
         }
 
-        // If multiple days but we can find the closest scene with same look, use its day
+        // If multiple days, use the closest scene with same look
         if (matchingDays.size > 1) {
             let closestDay = '';
             let closestDistance = Infinity;
@@ -966,6 +991,18 @@ function getStoryDayFromLookbook(sceneIndex) {
         }
     }
 
+    // --- Source 3: Script-level story day detection ---
+    // Use the same detection logic as script analysis to infer from heading cues
+    try {
+        const previousScene = sceneIndex > 0 ? state.scenes[sceneIndex - 1] : null;
+        const detection = detectStoryDay(scene, previousScene, sceneIndex);
+        if (detection?.storyDay && detection.confidence !== 'low') {
+            return detection.storyDay;
+        }
+    } catch (e) {
+        // detectStoryDay not available, skip
+    }
+
     return '';
 }
 
@@ -992,28 +1029,45 @@ function getExistingStoryDays() {
 }
 
 /**
- * Render story day dropdown with existing options
+ * Render story day dropdown with existing options.
+ * Always renders a dropdown so the auto-detected day is visible and selectable.
+ * If the current value isn't in the existing days list, it's added as an option.
+ * Manual editing is always available via the "+ New Day..." option.
  */
 function renderStoryDayDropdown(sceneIndex, currentValue) {
     const existingDays = getExistingStoryDays();
 
-    if (existingDays.length === 0) {
-        // No existing story days, show text input only
-        return '';
+    // Build the full options list: existing days + current value if not already present
+    const allDays = [...existingDays];
+    if (currentValue && currentValue.trim() && !allDays.includes(currentValue.trim())) {
+        allDays.push(currentValue.trim());
+        // Re-sort naturally
+        allDays.sort((a, b) => {
+            const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+            const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+            return numA - numB;
+        });
     }
 
     return `
         <select id="story-day-select-${sceneIndex}"
                 class="story-day-select"
                 onchange="updateStoryDayFromSelect(${sceneIndex}, this.value)">
-            <option value="">Select or type...</option>
-            ${existingDays.map(day => `
+            <option value="">${allDays.length > 0 ? 'Select day...' : 'No days yet...'}</option>
+            ${allDays.map(day => `
                 <option value="${escapeHtml(day)}" ${currentValue === day ? 'selected' : ''}>
                     ${escapeHtml(day)}
                 </option>
             `).join('')}
             <option value="__new__">+ New Day...</option>
         </select>
+        <input type="text"
+               id="story-day-input-${sceneIndex}"
+               class="timeline-input story-day-new-input"
+               style="display: none; margin-top: 4px;"
+               placeholder="e.g., Day 5"
+               onchange="updateStoryDayFromInput(${sceneIndex}, this.value)"
+               onkeydown="if(event.key==='Enter'){updateStoryDayFromInput(${sceneIndex}, this.value)}">
     `;
 }
 
