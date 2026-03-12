@@ -737,6 +737,61 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
     setPopup(null);
   }, [popup, tagStore, onCharClick, onTagCreated]);
 
+  /* Build a regex that matches any known character name (full name or first/last)
+     within action/description lines, so we can highlight them inline.
+     Sorted longest-first so "LENNON BOWIE" matches before "LENNON". */
+  const charNamePattern = useMemo(() => {
+    const allNames: { name: string; char: Character }[] = [];
+    for (const c of characters) {
+      allNames.push({ name: c.name, char: c });
+      // Also match individual name parts (first name, last name)
+      for (const part of c.name.split(/\s+/)) {
+        if (part.length >= 3) {
+          allNames.push({ name: part, char: c });
+        }
+      }
+    }
+    // Sort longest first for greedy matching
+    allNames.sort((a, b) => b.name.length - a.name.length);
+    if (allNames.length === 0) return null;
+    const escaped = allNames.map(n => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const re = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+    return { re, lookup: allNames };
+  }, [characters]);
+
+  /** Render a text string with inline character name highlights.
+      Character names get the sv-cue-inline class and are clickable. */
+  const highlightCharNames = useCallback((text: string, keyPrefix: string): React.ReactNode => {
+    if (!charNamePattern || !text) return text;
+    const { re, lookup } = charNamePattern;
+    re.lastIndex = 0;
+    const parts: React.ReactNode[] = [];
+    let lastIdx = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const matchText = m[0];
+      const upper = matchText.toUpperCase();
+      // Find which character this matches
+      const entry = lookup.find(n => n.name.toUpperCase() === upper);
+      if (!entry) continue;
+      // Push text before the match
+      if (m.index > lastIdx) {
+        parts.push(<span key={`${keyPrefix}-t${lastIdx}`}>{text.slice(lastIdx, m.index)}</span>);
+      }
+      parts.push(
+        <span key={`${keyPrefix}-c${m.index}`} className="sv-cue-inline" onClick={(e) => { e.stopPropagation(); onCharClick(entry.char.id); }}>
+          {matchText}
+        </span>
+      );
+      lastIdx = m.index + matchText.length;
+    }
+    if (lastIdx === 0) return text; // no matches
+    if (lastIdx < text.length) {
+      parts.push(<span key={`${keyPrefix}-t${lastIdx}`}>{text.slice(lastIdx)}</span>);
+    }
+    return <>{parts}</>;
+  }, [charNamePattern, onCharClick]);
+
   /* Render a scene's content with inline highlights */
   const renderSceneContent = useCallback((scene: Scene) => {
     const sceneTags = tagStore.getTagsForScene(scene.id);
@@ -784,7 +839,8 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         if (dialogueSet.has(i)) {
           return <div key={`${scene.id}-${i}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
-        return <div key={`${scene.id}-${i}`} className="sv-line">{trimmed || '\u00A0'}</div>;
+        // Action/description lines: highlight character names inline
+        return <div key={`${scene.id}-${i}`} className="sv-line">{trimmed ? highlightCharNames(trimmed, `${scene.id}-${i}`) : '\u00A0'}</div>;
       });
     }
 
@@ -820,7 +876,7 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         if (isDialogueLine) {
           return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
-        return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line || '\u00A0'}</div>;
+        return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line ? highlightCharNames(lo.line, `${scene.id}-${lineIdx}`) : '\u00A0'}</div>;
       }
 
       /* Render with highlighted spans */
@@ -850,7 +906,7 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         </div>
       );
     });
-  }, [tagStore, charNames, onCharClick]);
+  }, [tagStore, charNames, onCharClick, highlightCharNames]);
 
   /* Scroll to scene when selected from the scene list */
   useEffect(() => {
