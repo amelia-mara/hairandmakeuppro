@@ -340,6 +340,11 @@ export function ScriptBreakdown({ projectId }: Props) {
                 <button key={c.id} className={`cp-divider-tab ${activeTab === c.id ? 'cp-divider-tab--active' : ''}`}
                   onClick={() => setActiveTab(c.id)}>{c.name}</button>
               ))}
+              {/* Show tab for active character even if not in this scene */}
+              {activeTab !== 'script' && activeTab !== 'supporting-artists' && !scenePrincipals.find(c => c.id === activeTab) && ALL_CHARACTERS.find(c => c.id === activeTab) && (
+                <button className="cp-divider-tab cp-divider-tab--active"
+                  onClick={() => setActiveTab(activeTab)}>{ALL_CHARACTERS.find(c => c.id === activeTab)!.name}</button>
+              )}
               {sceneSupportingArtists.length > 0 && (
                 <button className={`cp-divider-tab ${activeTab === 'supporting-artists' ? 'cp-divider-tab--active' : ''}`}
                   onClick={() => setActiveTab('supporting-artists')}
@@ -441,9 +446,9 @@ export function ScriptBreakdown({ projectId }: Props) {
               </div>
             ) : activeTab === 'supporting-artists' ? (
               <SupportingArtistsPanel artists={sceneSupportingArtists} scene={scene!} allScenes={ALL_SCENES} />
-            ) : sceneCharacters.find((c) => c.id === activeTab) ? (
+            ) : ALL_CHARACTERS.find((c) => c.id === activeTab) ? (
               <CharacterView
-                char={sceneCharacters.find((c) => c.id === activeTab)!}
+                char={ALL_CHARACTERS.find((c) => c.id === activeTab)!}
                 subTab="profile"
                 allScenes={ALL_SCENES}
                 allLooks={ALL_LOOKS}
