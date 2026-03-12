@@ -113,13 +113,13 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-2 min-w-0 active:opacity-70 transition-opacity"
             >
-              <div className="w-7 h-7 rounded-lg gold-gradient flex items-center justify-center flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                </svg>
+              {/* Text logo — Checks Happy. */}
+              <div className="flex items-baseline gap-1 flex-shrink-0">
+                <span className="text-base font-serif font-bold text-text-primary leading-none">Checks</span>
+                <span className="text-base font-serif font-bold italic text-gold leading-none">Happy.</span>
               </div>
               <div className="min-w-0">
-                <span className="text-sm font-semibold text-text-primary truncate max-w-[200px] block leading-tight">
+                <span className="text-xs text-text-secondary truncate max-w-[140px] block leading-tight">
                   {currentProject.name}
                 </span>
                 {subtitle && (
@@ -146,7 +146,7 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
               {/* Account icon */}
               <button
                 onClick={onNavigateToProfile}
-                className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
+                className="w-8 h-8 rounded-full bg-gold flex items-center justify-center text-white text-xs font-bold active:scale-95 transition-transform"
               >
                 {getInitials()}
               </button>

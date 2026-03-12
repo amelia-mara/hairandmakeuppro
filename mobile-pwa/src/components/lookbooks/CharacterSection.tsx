@@ -50,7 +50,7 @@ export function CharacterSection({
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
               style={{
-                background: `linear-gradient(135deg, ${character.avatarColour || '#C9A962'} 0%, ${adjustColor(character.avatarColour || '#C9A962', -20)} 100%)`,
+                background: `linear-gradient(135deg, ${character.avatarColour || '#E8621A'} 0%, ${adjustColor(character.avatarColour || '#E8621A', -20)} 100%)`,
               }}
             >
               {character.actorNumber ?? character.initials}
