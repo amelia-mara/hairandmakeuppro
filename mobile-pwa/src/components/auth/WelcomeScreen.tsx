@@ -38,7 +38,7 @@ export function WelcomeScreen() {
         </p>
 
         {/* Feature icons — bold, filled style */}
-        <div className="flex items-center justify-center w-full max-w-md mb-12">
+        <div className="flex items-center justify-center w-full max-w-md mb-12 mt-4">
           {/* Capture — bold filled camera */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
