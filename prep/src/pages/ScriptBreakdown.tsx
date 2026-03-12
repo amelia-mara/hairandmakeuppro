@@ -1040,33 +1040,45 @@ function ScriptView({ scenes, characters, selectedSceneId, scrollTrigger, onScen
     }
   }, [selectedSceneId, scrollTrigger]);
 
-  /* IntersectionObserver to detect which scene is visible while scrolling */
+  /* Detect which scene is most visible while scrolling.
+     Uses a scroll listener instead of IntersectionObserver so we always
+     evaluate ALL scene elements on every scroll frame, not just the ones
+     that happen to cross a threshold boundary. */
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
+    let rafId = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
         if (isScrollingTo.current) return;
-        let best: IntersectionObserverEntry | null = null;
-        for (const entry of entries) {
-          if (entry.isIntersecting && (!best || entry.intersectionRatio > best.intersectionRatio)) {
-            best = entry;
+        const containerRect = container.getBoundingClientRect();
+        // Target zone: top 40% of the container — the area the user is reading
+        const zoneTop = containerRect.top;
+        const zoneBottom = containerRect.top + containerRect.height * 0.4;
+
+        let bestId: string | null = null;
+        let bestOverlap = 0;
+
+        for (const [id, el] of pageRefs.current.entries()) {
+          const r = el.getBoundingClientRect();
+          const overlapTop = Math.max(r.top, zoneTop);
+          const overlapBottom = Math.min(r.bottom, zoneBottom);
+          const overlap = Math.max(0, overlapBottom - overlapTop);
+          if (overlap > bestOverlap) {
+            bestOverlap = overlap;
+            bestId = id;
           }
         }
-        if (best) {
-          const id = (best.target as HTMLElement).dataset.sceneId;
-          if (id) onSceneVisible(id);
-        }
-      },
-      { root: container, threshold: [0.1, 0.3, 0.5, 0.7], rootMargin: '-10% 0px -60% 0px' }
-    );
+        if (bestId) onSceneVisible(bestId);
+      });
+    };
 
-    for (const el of pageRefs.current.values()) {
-      observer.observe(el);
-    }
-
-    return () => observer.disconnect();
+    container.addEventListener('scroll', onScroll, { passive: true });
+    // Run once on mount to sync initial state
+    onScroll();
+    return () => { container.removeEventListener('scroll', onScroll); cancelAnimationFrame(rafId); };
   }, [scenes, onSceneVisible]);
 
   const setPageRef = useCallback((id: string, el: HTMLDivElement | null) => {
