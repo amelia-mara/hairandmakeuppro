@@ -346,6 +346,56 @@ export function ScriptBreakdown({ projectId }: Props) {
                   onSceneVisible={onSceneVisible}
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
+                  onTagCreated={(sceneId, characterId, categoryId, text) => {
+                    const charOverrides = useCharacterOverridesStore.getState();
+                    /* Auto-fill breakdown fields based on category */
+                    const fieldMap: Record<string, { field: 'entersWith'; key: 'hair' | 'makeup' | 'wardrobe' } | { field: 'sfx' }> = {
+                      hair: { field: 'entersWith', key: 'hair' },
+                      makeup: { field: 'entersWith', key: 'makeup' },
+                      wardrobe: { field: 'entersWith', key: 'wardrobe' },
+                    };
+                    const mapping = fieldMap[categoryId];
+                    if (mapping) {
+                      const bd = store.getBreakdown(sceneId);
+                      const cb = bd?.characters.find((c) => c.characterId === characterId);
+                      if (cb) {
+                        if ('key' in mapping) {
+                          const existing = cb[mapping.field][mapping.key];
+                          const newVal = existing ? `${existing}, ${text}` : text;
+                          store.updateCharacterBreakdown(sceneId, characterId, {
+                            [mapping.field]: { ...cb[mapping.field], [mapping.key]: newVal },
+                          });
+                        }
+                      }
+                    } else if (categoryId === 'sfx') {
+                      const bd = store.getBreakdown(sceneId);
+                      const cb = bd?.characters.find((c) => c.characterId === characterId);
+                      if (cb) {
+                        const existing = cb.sfx;
+                        store.updateCharacterBreakdown(sceneId, characterId, {
+                          sfx: existing ? `${existing}, ${text}` : text,
+                        });
+                      }
+                    }
+                    /* Parse description text for profile data and auto-fill character profile */
+                    const extracted = extractProfileData(text);
+                    if (Object.keys(extracted).length > 0) {
+                      const char = ALL_CHARACTERS.find((c) => c.id === characterId);
+                      if (char) {
+                        const resolved = charOverrides.getCharacter(char);
+                        const updates: Partial<Character> = {};
+                        for (const [key, value] of Object.entries(extracted)) {
+                          if (!resolved[key as keyof Character]) {
+                            updates[key as keyof Character] = value;
+                          }
+                        }
+                        if (Object.keys(updates).length > 0) {
+                          charOverrides.updateCharacter(characterId, updates);
+                        }
+                      }
+                    }
+                    triggerSave();
+                  }}
                 />
                 <div className="bd-zoom-float">
                   <button className="bd-zoom-btn" onClick={() => setFontSize((s) => Math.max(10, s - 1))}>
@@ -491,22 +541,75 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick category, Step 2: assign character + description, Step 3: offer highlight-all for cast */
-  step: 'category' | 'character' | 'highlight-all';
+  /** Step 1: pick character, Step 2: pick category */
+  step: 'character' | 'category';
   categoryId?: string;
-  description?: string;
-  /** For highlight-all: the matched character */
-  matchedCharId?: string;
-  matchedName?: string;
+  characterId?: string;
 }
 
-function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontSize, onCharClick }: {
+/** Extract profile-relevant data from a description string */
+function extractProfileData(text: string): Partial<Record<'age' | 'gender' | 'hairColour' | 'hairType' | 'eyeColour' | 'skinTone' | 'build' | 'distinguishingFeatures', string>> {
+  const result: Record<string, string> = {};
+  const t = text.toLowerCase();
+
+  // Age patterns: "aged 32", "32 years old", "early 30s", "mid-twenties", "(32)"
+  const ageMatch = t.match(/\b(?:aged?\s+|age\s+)?(\d{1,3})\s*(?:years?\s*old|yrs?\s*old|y\.?o\.?)?\b/) ||
+    t.match(/\b(early|mid|late)\s*-?\s*(teens|twenties|thirties|forties|fifties|sixties|seventies|eighties)\b/) ||
+    t.match(/\b(early|mid|late)\s*-?\s*(\d0)s\b/);
+  if (ageMatch) result.age = ageMatch[0].trim();
+
+  // Gender patterns
+  if (/\b(female|woman|girl|she)\b/i.test(t)) result.gender = 'Female';
+  else if (/\b(male|man|boy|he)\b/i.test(t) && !/\bshe\b/i.test(t)) result.gender = 'Male';
+
+  // Hair colour
+  const hairColourMatch = t.match(/\b(blonde?|brunette|red(?:head)?|auburn|black|dark\s*brown|light\s*brown|brown|grey|gray|silver|white|ginger|strawberry\s*blonde?|sandy|chestnut|raven|platinum)\b.*?hair/i) ||
+    t.match(/hair.*?\b(blonde?|brunette|red|auburn|black|dark\s*brown|light\s*brown|brown|grey|gray|silver|white|ginger|strawberry\s*blonde?|sandy|chestnut|raven|platinum)\b/i);
+  if (hairColourMatch) result.hairColour = hairColourMatch[1].charAt(0).toUpperCase() + hairColourMatch[1].slice(1);
+
+  // Hair type
+  const hairTypeMatch = t.match(/\b(curly|straight|wavy|frizzy|coiled|braided|dreadlocks|afro|bald|shaved|buzz\s*cut|bob|ponytail|bun|long|short|shoulder[- ]length|cropped|thinning|thick|fine)\b.*?hair/i) ||
+    t.match(/hair.*?\b(curly|straight|wavy|frizzy|coiled|braided|dreadlocks|afro|bald|shaved|buzz\s*cut|bob|ponytail|bun|long|short|shoulder[- ]length|cropped|thinning|thick|fine)\b/i);
+  if (hairTypeMatch) result.hairType = hairTypeMatch[1].charAt(0).toUpperCase() + hairTypeMatch[1].slice(1);
+
+  // Eye colour
+  const eyeMatch = t.match(/\b(blue|green|brown|hazel|grey|gray|amber|dark|light)\b.*?eyes?/i) ||
+    t.match(/eyes?.*?\b(blue|green|brown|hazel|grey|gray|amber|dark|light)\b/i);
+  if (eyeMatch) result.eyeColour = eyeMatch[1].charAt(0).toUpperCase() + eyeMatch[1].slice(1);
+
+  // Skin tone
+  const skinMatch = t.match(/\b(pale|fair|light|medium|olive|tan(?:ned)?|dark|deep|warm|cool|ebony|porcelain)\b.*?(?:skin|complex)/i);
+  if (skinMatch) result.skinTone = skinMatch[1].charAt(0).toUpperCase() + skinMatch[1].slice(1);
+
+  // Build
+  const buildMatch = t.match(/\b(slim|slender|thin|petite|athletic|muscular|stocky|heavy[- ]?set|broad|tall|short|lanky|wiry|stout|bulky|lean|average)\b.*?(?:build|frame|physique|figure)?/i);
+  if (buildMatch) result.build = buildMatch[1].charAt(0).toUpperCase() + buildMatch[1].slice(1);
+
+  // Distinguishing features — scars, tattoos, birthmarks, piercings, glasses, etc.
+  const featurePatterns = [
+    /\b(scar\b[^.;,]*)/i, /\b(tattoo\b[^.;,]*)/i, /\b(birthmark\b[^.;,]*)/i,
+    /\b(piercing\b[^.;,]*)/i, /\b(glasses\b)/i, /\b(freckles\b)/i,
+    /\b(beard\b[^.;,]*)/i, /\b(moustache\b[^.;,]*)/i, /\b(limp\b[^.;,]*)/i,
+    /\b(missing\s+\w+[^.;,]*)/i, /\b(prosthetic\b[^.;,]*)/i,
+  ];
+  const features: string[] = [];
+  for (const pat of featurePatterns) {
+    const m = t.match(pat);
+    if (m) features.push(m[1].trim());
+  }
+  if (features.length > 0) result.distinguishingFeatures = features.join(', ');
+
+  return result;
+}
+
+function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontSize, onCharClick, onTagCreated }: {
   scenes: Scene[];
   characters: Character[];
   selectedSceneId: string;
   onSceneVisible: (id: string) => void;
   fontSize: number;
   onCharClick: (id: string) => void;
+  onTagCreated: (sceneId: string, characterId: string, categoryId: string, text: string) => void;
 }) {
   const charNames = characters.map((c) => c.name);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -562,86 +665,34 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       startOffset: startIdx,
       endOffset: startIdx + text.length,
       text,
-      step: 'category',
+      step: 'character',
     });
 
     sel.removeAllRanges();
   }, [scenes]);
 
-  const handleCategoryPick = useCallback((catId: string) => {
+  /* Step 1: User picks which character this text describes */
+  const handleCharacterPick = useCallback((charId: string) => {
     if (!popup) return;
-    /* If it's a 'cast' category, check if the text matches a character name */
-    if (catId === 'cast') {
-      const matched = characters.find((c) => c.name === popup.text.trim().toUpperCase() || c.name === popup.text.trim());
-      if (matched) {
-        tagStore.addTag({
-          id: `tag-${Date.now()}`,
-          sceneId: popup.sceneId,
-          startOffset: popup.startOffset,
-          endOffset: popup.endOffset,
-          text: popup.text,
-          categoryId: catId,
-          characterId: matched.id,
-        });
-        /* Offer to highlight all other occurrences */
-        setPopup({ ...popup, step: 'highlight-all', categoryId: catId, matchedCharId: matched.id, matchedName: matched.name });
-        return;
-      }
-    }
-    /* Move to character assignment step */
-    setPopup({ ...popup, step: 'character', categoryId: catId });
-  }, [popup, tagStore, onCharClick]);
+    setPopup({ ...popup, step: 'category', characterId: charId });
+  }, [popup]);
 
-  const handleHighlightAll = useCallback(() => {
-    if (!popup || !popup.matchedCharId || !popup.categoryId || !popup.matchedName) return;
-    const name = popup.matchedName;
-    const catId = popup.categoryId;
-    const charId = popup.matchedCharId;
-    const existingTags = tagStore.tags;
-
-    for (const scene of scenes) {
-      const content = scene.scriptContent;
-      /* Find all occurrences of the name (case-insensitive) */
-      const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(content)) !== null) {
-        const start = match.index;
-        const end = start + match[0].length;
-        /* Skip if this exact range is already tagged in this scene */
-        const alreadyTagged = existingTags.some(
-          (t) => t.sceneId === scene.id && t.startOffset === start && t.endOffset === end
-        );
-        if (alreadyTagged) continue;
-        tagStore.addTag({
-          id: `tag-${Date.now()}-${scene.id}-${start}`,
-          sceneId: scene.id,
-          startOffset: start,
-          endOffset: end,
-          text: match[0],
-          categoryId: catId,
-          characterId: charId,
-        });
-      }
-    }
-    onCharClick(charId);
-    setPopup(null);
-  }, [popup, tagStore, scenes, onCharClick]);
-
-  const handleCharacterPick = useCallback((charId: string | null) => {
-    if (!popup || !popup.categoryId) return;
+  /* Step 2: User picks category → tag is created and auto-fill fires */
+  const handleCategoryPick = useCallback((catId: string) => {
+    if (!popup || !popup.characterId) return;
     tagStore.addTag({
       id: `tag-${Date.now()}`,
       sceneId: popup.sceneId,
       startOffset: popup.startOffset,
       endOffset: popup.endOffset,
       text: popup.text,
-      categoryId: popup.categoryId,
-      characterId: charId || undefined,
-      description: popup.description || undefined,
+      categoryId: catId,
+      characterId: popup.characterId,
     });
-    if (charId) onCharClick(charId);
+    onTagCreated(popup.sceneId, popup.characterId, catId, popup.text);
+    onCharClick(popup.characterId);
     setPopup(null);
-  }, [popup, tagStore, onCharClick]);
+  }, [popup, tagStore, onCharClick, onTagCreated]);
 
   /* Render a scene's content with inline highlights */
   const renderSceneContent = useCallback((scene: Scene) => {
@@ -820,64 +871,37 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       {/* Tag popup */}
       {popup && (
         <div ref={popupRef} className="sv-tag-popup" style={{ left: popup.x, top: popup.y, transform: 'translate(-50%, -100%)' }}>
+          {popup.step === 'character' && (
+            <>
+              <div className="sv-tag-popup-title">Who is this about?</div>
+              <div className="sv-tag-popup-char-grid">
+                {popupChars.map((ch) => (
+                  <button key={ch.id} className="sv-tag-popup-btn" onClick={() => handleCharacterPick(ch.id)}>
+                    {ch.name}
+                  </button>
+                ))}
+              </div>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup(null)}>
+                Cancel
+              </button>
+            </>
+          )}
           {popup.step === 'category' && (
             <>
-              <div className="sv-tag-popup-title">Tag as:</div>
+              <div className="sv-tag-popup-title">
+                Tag for {characters.find((c) => c.id === popup.characterId)?.name || 'character'} as:
+              </div>
               <div className="sv-tag-popup-grid">
-                {BREAKDOWN_CATEGORIES.map((cat) => (
+                {BREAKDOWN_CATEGORIES.filter((cat) => cat.id !== 'cast').map((cat) => (
                   <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleCategoryPick(cat.id)}>
                     <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
                     {cat.label}
                   </button>
                 ))}
               </div>
-            </>
-          )}
-          {popup.step === 'character' && (
-            <>
-              <div className="sv-tag-popup-title">Assign to character:</div>
-              <select className="sv-tag-popup-select" defaultValue="">
-                <option value="" disabled>Select a character…</option>
-                {popupChars.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.name}</option>
-                ))}
-              </select>
-              <textarea
-                className="sv-tag-popup-desc"
-                placeholder="Add a description (optional)…"
-                rows={2}
-                value={popup.description || ''}
-                onChange={(e) => setPopup({ ...popup, description: e.target.value })}
-              />
-              <div className="sv-tag-popup-actions">
-                <button
-                  className="sv-tag-popup-char-btn sv-tag-popup-char-btn--confirm"
-                  onClick={() => {
-                    const selectEl = popupRef.current?.querySelector('.sv-tag-popup-select') as HTMLSelectElement | null;
-                    const charId = selectEl?.value || null;
-                    handleCharacterPick(charId);
-                  }}
-                >
-                  Confirm
-                </button>
-                <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => handleCharacterPick(null)}>
-                  Skip character
-                </button>
-              </div>
-            </>
-          )}
-          {popup.step === 'highlight-all' && (
-            <>
-              <div className="sv-tag-popup-title">Highlight all occurrences?</div>
-              <div className="sv-tag-popup-hint">Tag every instance of "{popup.matchedName}" across all scenes as Cast</div>
-              <div className="sv-tag-popup-actions">
-                <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--confirm" onClick={handleHighlightAll}>
-                  Highlight all
-                </button>
-                <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => { if (popup.matchedCharId) onCharClick(popup.matchedCharId); setPopup(null); }}>
-                  Just this one
-                </button>
-              </div>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'character' })}>
+                Back
+              </button>
             </>
           )}
         </div>
