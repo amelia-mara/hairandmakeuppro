@@ -245,9 +245,9 @@ export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBill
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #1a1a1a; font-size: 14px; line-height: 1.5; }
-  .hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 3px solid #C9A962; }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 3px solid #E8621A; }
   .hdr h1 { font-size: 20px; font-weight: 700; } .hdr .sub { font-size: 12px; color: #888; }
-  .inv-lbl { font-size: 28px; font-weight: 800; color: #C9A962; letter-spacing: 2px; }
+  .inv-lbl { font-size: 28px; font-weight: 800; color: #E8621A; letter-spacing: 2px; }
   .inv-num { font-size: 13px; color: #666; }
   .cols { display: flex; justify-content: space-between; margin-bottom: 28px; }
   .col h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
@@ -259,8 +259,8 @@ export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBill
   .totals { width: 280px; margin-left: auto; margin-bottom: 32px; }
   .totals .r { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
   .totals .r .l { color: #666; } .totals .r .v { font-weight: 600; }
-  .totals .t { border-top: 2px solid #C9A962; padding-top: 8px; margin-top: 4px; }
-  .totals .t .l { font-weight: 700; font-size: 14px; } .totals .t .v { font-weight: 800; font-size: 18px; color: #C9A962; }
+  .totals .t { border-top: 2px solid #E8621A; padding-top: 8px; margin-top: 4px; }
+  .totals .t .l { font-weight: 700; font-size: 14px; } .totals .t .v { font-weight: 800; font-size: 18px; color: #E8621A; }
   .box { background: #f8f8f8; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; font-size: 12px; color: #666; }
   .box strong { color: #333; }
   .ft { padding-top: 14px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; text-align: center; }
