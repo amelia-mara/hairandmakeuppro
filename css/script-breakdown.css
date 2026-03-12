@@ -15249,6 +15249,94 @@
     gap: 8px;
 }
 
+/* Inline Character Profile (expandable within character card) */
+.inline-profile-section {
+    border-top: 1px solid var(--border-color, rgba(201, 169, 97, 0.15));
+    padding-top: 12px;
+}
+
+.inline-profile-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.inline-profile-toggle:hover .continuity-label {
+    color: var(--accent-gold, #c9a961);
+}
+
+.inline-profile-expand-icon {
+    font-size: 10px;
+    color: var(--text-muted, #71717a);
+    transition: transform 0.2s;
+}
+
+.inline-profile-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-gold, #c9a961);
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.inline-profile-body {
+    padding-top: 10px;
+}
+
+.inline-profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.inline-profile-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.inline-profile-field.full-width {
+    grid-column: 1 / -1;
+}
+
+.inline-profile-field label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted, #71717a);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.inline-profile-field input,
+.inline-profile-field textarea {
+    background: var(--bg-primary, rgba(0, 0, 0, 0.15));
+    border: 1px solid var(--border-color, rgba(201, 169, 97, 0.15));
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: var(--text-primary, #e4e4e7);
+    transition: border-color 0.2s;
+}
+
+.inline-profile-field input:focus,
+.inline-profile-field textarea:focus {
+    outline: none;
+    border-color: var(--accent-gold, #c9a961);
+}
+
+.inline-profile-field input::placeholder,
+.inline-profile-field textarea::placeholder {
+    color: var(--text-muted, #71717a);
+    opacity: 0.6;
+}
+
+.inline-profile-field textarea {
+    min-height: 50px;
+    resize: vertical;
+    font-family: inherit;
+}
+
 /* No Change / Change Buttons */
 .continuity-btn {
     padding: 4px 10px;
