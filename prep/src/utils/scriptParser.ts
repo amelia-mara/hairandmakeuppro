@@ -169,6 +169,33 @@ function normalizeScriptText(text: string): string {
     '$1 $2',
   );
 
+  // Split lines where a scene heading (INT./EXT. + LOCATION – TIME) is followed
+  // by additional action text on the same line. PDF extraction sometimes merges
+  // the heading and the first action line when they're vertically close.
+  // e.g. "1 EXT. FARM LAND – DAY LENNON BOWIE, 28, IS A COWBOY..."
+  //    → "1 EXT. FARM LAND – DAY\nLENNON BOWIE, 28, IS A COWBOY..."
+  normalized = normalized.split('\n').map(line => {
+    // Only process lines that look like scene headings
+    if (!/^(\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(line)) return line;
+
+    // Find "- DAY", "– NIGHT", etc. followed by remaining text
+    const timeSplitRe = /(\s+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b)([\s].+)/i;
+    const m = line.match(timeSplitRe);
+    if (m && m.index != null) {
+      const headingEnd = m.index + m[1].length;
+      const overflow = line.slice(headingEnd);
+      const trimmedOverflow = overflow.trim();
+      // Only split if overflow has substantial content and isn't a heading suffix
+      // like "(FLASHBACK)", "CONT'D", trailing scene numbers, etc.
+      if (trimmedOverflow.length > 3 &&
+          !/^\(?(?:FLASHBACK|PRESENT|CONT'?D?|STOCK|ESTABLISHING)\)?$/i.test(trimmedOverflow) &&
+          !/^\d+[A-Z]?\s*$/.test(trimmedOverflow)) {
+        return line.slice(0, headingEnd) + '\n' + trimmedOverflow;
+      }
+    }
+    return line;
+  }).join('\n');
+
   // Normalize "SCENE WORD:" prefixes to numeric scene numbers
   normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
 
@@ -371,17 +398,7 @@ function extractCharactersFromActionLine(line: string): string[] {
   if (trimmed.length < 5) return characters;
   if (/^(INT\.|EXT\.|INT\/EXT|CUT TO|FADE|DISSOLVE|CONTINUED)/i.test(trimmed)) return characters;
 
-  const personDescriptors = /\b(MAN|WOMAN|MEN|WOMEN|PERSON|PEOPLE|DRIVER|OFFICER|DOCTOR|DR|NURSE|GUARD|SOLDIER|WORKER|GIRL|BOY|LADY|LADIES|GUY|GUYS|KID|KIDS|CHILD|CHILDREN|TEEN|TEENAGER|CLERK|WAITER|WAITRESS|COP|COPS|DETECTIVE|AGENT|STRANGER|FIGURE|BABY|INFANT|TODDLER|MOTHER|FATHER|BROTHER|SISTER|HUSBAND|WIFE|SON|DAUGHTER|UNCLE|AUNT|NEPHEW|NIECE|COUSIN|PRIEST|JUDGE|LAWYER|TEACHER|STUDENT|BARTENDER|BODYGUARD|MAID|BUTLER|PATIENT|VICTIM|SUSPECT|WITNESS|PASSENGER|CAPTAIN|LIEUTENANT|SERGEANT|COLONEL|GENERAL|COMMANDER|CHIEF|KING|QUEEN|PRINCE|PRINCESS|SURGEON|PROFESSOR|RECEPTIONIST|SECRETARY|ASSISTANT|MANAGER|BOSS|OWNER|HOST|HOSTESS|THUG|THIEF|GANGSTER|HITMAN|ASSASSIN|LEADER|ELDER|HOMELESS|ORPHAN|VETERAN|INMATE|PRISONER|JANITOR|SHERIFF|DEPUTY|PARAMEDIC|FIREFIGHTER|MARINE|SAILOR|RANGER|SPY|SNIPER|MEDIC|ATTENDANT|SINGER|DANCER|ACTOR|ACTRESS|MUSICIAN|ARTIST|WRITER|JOURNALIST|REPORTER|PHOTOGRAPHER)\b/i;
-
-  const allCapsPattern = /\b([A-Z][A-Z.'-]+(?:\s+[A-Z][A-Z.'-]+){1,3})\b/g;
   let match;
-
-  while ((match = allCapsPattern.exec(trimmed)) !== null) {
-    const potential = match[1].trim();
-    if (/^(INT|EXT)\s*[.\/]/.test(potential)) continue;
-    if (!personDescriptors.test(potential)) continue;
-    characters.push(potential);
-  }
 
   /* Character introduction pattern: ALL CAPS NAME followed by comma, age, or
      parenthetical — e.g. "LENNON BOWIE, 28" or "DEDRA MONTGOMERY 29, an icy beauty"
@@ -729,7 +746,8 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    // Skip scene headings
+    // For scene headings, skip the heading portion but still scan any overflow
+    // text for character intros (PDF sometimes merges heading + action on one line)
     if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
 
     // Pattern 1: ALL CAPS name + comma/space + age digits (anywhere in line)
@@ -836,7 +854,7 @@ export function parseScriptText(text: string): ParsedScript {
       characterMap.set(resolved, {
         name: resolved,
         normalizedName: resolved,
-        category: isSupportingArtistRole(resolved) ? 'supporting_artist' : 'principal',
+        category: 'principal',
         sceneCount: 0,
         dialogueCount: 0,
         scenes: [],
