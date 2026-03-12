@@ -148,6 +148,8 @@ function normalizeSceneWordPrefix(line: string): string {
 
 function normalizeScriptText(text: string): string {
   let normalized = text
+    // Normalize Unicode whitespace (non-breaking spaces, etc.) from PDF extraction
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ')
     .replace(/\b(INT|EXT)\s*\n\s*\./g, '$1.')
     .replace(/\b(INT|EXT)\s*\n\s*\/\s*(INT|EXT)/g, '$1/$2')
     .replace(/CONTIN\s*\n\s*UED?/gi, 'CONTINUOUS')
@@ -164,8 +166,9 @@ function normalizeScriptText(text: string): string {
   // with ALL CAPS word(s) followed by comma + age or comma + lowercase description,
   // join them into a single line.
   // e.g. "...on foot. JASPER\nMONTGOMERY, 70, he looks..." → single line
+  // e.g. "...on foot. JASPER\nMONTGOMERY 70, he looks..." → single line (space before age)
   normalized = normalized.replace(
-    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*,\s*(?:\d{1,3}\b|[a-z]))/g,
+    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*(?:[,(]\s*(?:\d{1,3}\b|[a-z])|\d{1,3}\s*,))/g,
     '$1 $2',
   );
 
@@ -427,8 +430,9 @@ function extractCharactersFromActionLine(line: string): string[] {
      or mid-sentence, followed by comma + age or comma + lowercase description.
      e.g. "...on foot. JASPER MONTGOMERY, 70, he looks like..."
      e.g. "Her husband, ARCHIBALD CHRISTIE, dashing, holds her hand."
-     e.g. "...the door for NAN WATTS, a prim-looking woman" */
-  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+     e.g. "...the door for NAN WATTS, a prim-looking woman"
+     e.g. "...on foot. JASPER MONTGOMERY 70, he looks like..." (space before age) */
+  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*(?:\d{1,3}\b|[a-z])|\s+\d{1,3}\s*,)/g;
   while ((match = midLineIntroRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
     if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
@@ -756,17 +760,13 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
     }
   }
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    // For scene headings, skip the heading portion but still scan any overflow
-    // text for character intros (PDF sometimes merges heading + action on one line)
-    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+  /** Run all intro patterns on a single line of text */
+  function scanLineForIntros(trimmed: string) {
+    let m;
 
     // Pattern 1: ALL CAPS name + comma/space + age digits (anywhere in line)
-    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" (even mid-sentence)
-    const ageIntroRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(]\s*\d{1,3}\b/g;
-    let m;
+    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" or "DEDRA MONTGOMERY 29," (space before age)
+    const ageIntroRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
     while ((m = ageIntroRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
@@ -793,7 +793,8 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
 
     // Pattern 5: Mid-line character intro after period/sentence break
     // "She sees Lennon on foot. JASPER MONTGOMERY, 70, he looks like..."
-    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+    // "She sees Lennon on foot. JASPER MONTGOMERY 70, he looks like..." (space before age)
+    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*(?:\d{1,3}\b|[a-z])|\s+\d{1,3}\s*,)/g;
     while ((m = midLineRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
@@ -805,6 +806,30 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
       // Only accept if it's 2+ words OR if the single word is not a common word
       if (candidate.split(/\s+/).length >= 2) {
         addName(candidate);
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) continue;
+    // For scene headings, skip the heading portion but still scan any overflow
+    // text for character intros (PDF sometimes merges heading + action on one line)
+    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+
+    // Run all patterns on this line
+    scanLineForIntros(trimmed);
+
+    // Pattern 7: Cross-line character intro — name split across line break (PDF word-wrap).
+    // If this line ends with ALL CAPS word(s), peek at the next non-empty line and
+    // try combining them. This catches "...on foot. JASPER\nMONTGOMERY, 70, ..."
+    // even when the normalizeScriptText join regex didn't merge the lines.
+    const trailingCapsMatch = trimmed.match(/(?:^|[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]{2,}){0,2})\s*$/);
+    if (trailingCapsMatch && i + 1 < lines.length) {
+      const nextTrimmed = lines[i + 1].trim();
+      if (nextTrimmed && !/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(nextTrimmed)) {
+        const combined = trimmed + ' ' + nextTrimmed;
+        scanLineForIntros(combined);
       }
     }
   }
@@ -943,7 +968,26 @@ export function parseScriptText(text: string): ParsedScript {
       lastLineWasCharacter = false;
 
       if (currentScene && trimmed.length > 10) {
-        const actionCharacters = extractCharactersFromActionLine(trimmed);
+        // Try extracting characters from this line alone
+        let actionCharacters = extractCharactersFromActionLine(trimmed);
+
+        // Cross-line detection: if this line ends with ALL CAPS word(s) (potential
+        // split character name), combine with the next line and re-extract.
+        // This catches "...on foot. JASPER\nMONTGOMERY, 70, ..." even when the
+        // normalizeScriptText join regex didn't merge the lines.
+        if (/[A-Z][A-Z'-]{2,}\s*$/.test(trimmed) && i + 1 < lines.length) {
+          const nextTrimmed = lines[i + 1].trim();
+          if (nextTrimmed && nextTrimmed.length > 2) {
+            const combinedCharacters = extractCharactersFromActionLine(trimmed + ' ' + nextTrimmed);
+            // Merge: keep any names from the combined line that weren't in the single line
+            for (const name of combinedCharacters) {
+              if (!actionCharacters.includes(name)) {
+                actionCharacters.push(name);
+              }
+            }
+          }
+        }
+
         for (const charName of actionCharacters) {
           let normalized = normalizeCharacterName(charName);
           // Resolve single-name action references: "Lennon" → "LENNON BOWIE"
