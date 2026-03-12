@@ -3067,6 +3067,12 @@ body {
   border-radius: 2px;
   flex-shrink: 0;
 }
+.sv-tag-popup-char-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
 .sv-tag-popup-chars {
   display: flex;
   flex-direction: column;
