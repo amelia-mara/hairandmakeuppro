@@ -835,9 +835,20 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
     if (!trimmed) continue;
-    // For scene headings, skip the heading portion but still scan any overflow
-    // text for character intros (PDF sometimes merges heading + action on one line)
-    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+    // For scene headings, skip the INT/EXT prefix but still scan the rest of the
+    // line for character intros — PDF sometimes merges heading + action on one line
+    // e.g. "1 EXT. FARM LAND – DAY JASPER MONTGOMERY, 70, he looks like..."
+    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) {
+      // Try to extract overflow text after the time-of-day marker
+      const timeMarker = trimmed.match(/\b(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b/i);
+      if (timeMarker && timeMarker.index != null) {
+        const afterTime = trimmed.slice(timeMarker.index + timeMarker[0].length).trim();
+        if (afterTime.length > 5) {
+          scanLineForIntros(afterTime);
+        }
+      }
+      continue;
+    }
 
     // Run all patterns on this line
     scanLineForIntros(trimmed);
@@ -1045,6 +1056,91 @@ export function parseScriptText(text: string): ParsedScript {
   if (currentScene) {
     currentScene.content = currentSceneContent.trim();
     scenes.push(currentScene);
+  }
+
+  /* ── Post-processing safety net: scan each scene's raw content for character ──
+     introductions that the line-by-line parser may have missed.
+     Standard screenplay character introduction: ALL CAPS FULL NAME, age,
+     e.g. "JASPER MONTGOMERY, 70, he looks like a grandpa"
+     This catches intros that were:
+     - Merged with scene headings (PDF extraction artifact)
+     - Split across lines and not recombined
+     - On lines incorrectly consumed as dialogue cues
+     After finding names, also scan the ENTIRE raw text so that a character
+     introduced in one scene is known globally for first-name resolution. */
+  const introSafetyRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
+  const introExcludeFirstWord = new Set([
+    'INT', 'EXT', 'CUT', 'FADE', 'SCENE', 'THE', 'AND', 'BUT', 'FOR', 'NOR',
+    'YET', 'FARM', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
+    'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'SAME', 'ANGLE', 'CLOSE',
+    'WIDE', 'SHOT', 'FADE', 'TITLE', 'SUPER', 'CHAPTER', 'EPISODE',
+  ]);
+
+  // Helper: scan text for character intros, handling greedy match backtracking.
+  // When a match like "DAY JASPER MONTGOMERY, 70" is excluded (first word "DAY"),
+  // retry from after the excluded word so "JASPER MONTGOMERY, 70" can still match.
+  function scanForIntroductions(source: string, re: RegExp): string[] {
+    const results: string[] = [];
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(source)) !== null) {
+      const name = m[1].trim();
+      const words = name.split(/\s+/);
+      const firstWord = words[0];
+      if (name.length >= 5 && !introExcludeFirstWord.has(firstWord) && !isSupportingArtistRole(name)) {
+        results.push(name);
+      } else if (words.length > 1 && introExcludeFirstWord.has(firstWord)) {
+        // Greedy match consumed a good name after an excluded word — retry
+        // from just after the excluded word so the shorter match can succeed
+        re.lastIndex = m.index + firstWord.length + 1;
+      }
+    }
+    return results;
+  }
+
+  // First pass: collect all full names from the entire raw text
+  const safetyFullNames = scanForIntroductions(text, introSafetyRe);
+
+  // Build a first-name → full-name map from safety-net names
+  // (supplements the prescan resolveMap for first-name mentions later)
+  const safetyResolve = new Map<string, string>();
+  for (const fullName of safetyFullNames) {
+    const parts = fullName.split(/\s+/);
+    for (const part of parts) {
+      if (part.length < 3 || NAME_SCAN_EXCLUSIONS.has(part)) continue;
+      if (!safetyResolve.has(part)) {
+        safetyResolve.set(part, fullName);
+      } else if (safetyResolve.get(part) !== fullName) {
+        safetyResolve.set(part, ''); // ambiguous
+      }
+    }
+  }
+  for (const [k, v] of safetyResolve) {
+    if (v === '') safetyResolve.delete(k);
+  }
+
+  // Second pass: for each scene, find character intros in scene.content
+  for (const scene of scenes) {
+    const sceneNames = scanForIntroductions(scene.content, introSafetyRe);
+    for (const name of sceneNames) {
+      const normalized = normalizeCharacterName(name);
+      registerCharacter(name, normalized, scene);
+    }
+  }
+
+  // Also resolve first-name-only mentions using the safety-net map.
+  // If a character was registered as just "JASPER" but the safety net found
+  // "JASPER MONTGOMERY", merge them.
+  for (const [fragment, fullName] of safetyResolve) {
+    if (characterMap.has(fragment) && !characterMap.has(fullName)) {
+      // The full name wasn't registered yet but a fragment was — register the full name
+      // and transfer the fragment's scenes
+      const fragChar = characterMap.get(fragment)!;
+      for (const sceneNum of fragChar.scenes) {
+        const scene = scenes.find(s => s.sceneNumber === sceneNum);
+        if (scene) registerCharacter(fragment, fullName, scene);
+      }
+    }
   }
 
   /* ── Deduplication safety net: merge any remaining single-name fragments ──
