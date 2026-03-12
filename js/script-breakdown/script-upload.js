@@ -123,10 +123,59 @@ async function extractTextFromPDF(file) {
 }
 
 /**
+ * Map of written-out number words to digits for scene heading normalization.
+ * Handles formats like "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ */
+const WORD_TO_NUMBER = {
+    'ONE': '1', 'TWO': '2', 'THREE': '3', 'FOUR': '4', 'FIVE': '5',
+    'SIX': '6', 'SEVEN': '7', 'EIGHT': '8', 'NINE': '9', 'TEN': '10',
+    'ELEVEN': '11', 'TWELVE': '12', 'THIRTEEN': '13', 'FOURTEEN': '14',
+    'FIFTEEN': '15', 'SIXTEEN': '16', 'SEVENTEEN': '17', 'EIGHTEEN': '18',
+    'NINETEEN': '19', 'TWENTY': '20', 'TWENTY-ONE': '21', 'TWENTY-TWO': '22',
+    'TWENTY-THREE': '23', 'TWENTY-FOUR': '24', 'TWENTY-FIVE': '25',
+    'TWENTY-SIX': '26', 'TWENTY-SEVEN': '27', 'TWENTY-EIGHT': '28',
+    'TWENTY-NINE': '29', 'THIRTY': '30', 'THIRTY-ONE': '31', 'THIRTY-TWO': '32',
+    'THIRTY-THREE': '33', 'THIRTY-FOUR': '34', 'THIRTY-FIVE': '35',
+    'THIRTY-SIX': '36', 'THIRTY-SEVEN': '37', 'THIRTY-EIGHT': '38',
+    'THIRTY-NINE': '39', 'FORTY': '40', 'FORTY-ONE': '41', 'FORTY-TWO': '42',
+    'FORTY-THREE': '43', 'FORTY-FOUR': '44', 'FORTY-FIVE': '45',
+    'FORTY-SIX': '46', 'FORTY-SEVEN': '47', 'FORTY-EIGHT': '48',
+    'FORTY-NINE': '49', 'FIFTY': '50',
+};
+
+// Build regex pattern from word-to-number keys (longest first to match "TWENTY-ONE" before "TWENTY")
+const SCENE_WORD_KEYS = Object.keys(WORD_TO_NUMBER).sort((a, b) => b.length - a.length).join('|');
+const SCENE_WORD_PREFIX_REGEX = new RegExp(
+    `^\\s*SCENE\\s+(${SCENE_WORD_KEYS})\\s*[:\\-–—]?\\s*`,
+    'i'
+);
+
+/**
+ * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
+ * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ */
+function normalizeSceneWordPrefix(line) {
+    const match = line.match(SCENE_WORD_PREFIX_REGEX);
+    if (match) {
+        const word = match[1].toUpperCase();
+        const num = WORD_TO_NUMBER[word];
+        if (num) {
+            return num + ' ' + line.slice(match[0].length);
+        }
+    }
+    // Also handle "SCENE 2:" with a numeric digit
+    const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+    if (numMatch) {
+        return numMatch[1] + ' ' + line.slice(numMatch[0].length);
+    }
+    return line;
+}
+
+/**
  * Normalize script text to fix common PDF extraction issues
  */
 function normalizeScriptText(text) {
-    return text
+    let normalized = text
         .replace(/\b(INT|EXT)\s*\n\s*\./g, '$1.')
         .replace(/\b(INT|EXT)\s*\n\s*\/\s*(INT|EXT)/g, '$1/$2')
         .replace(/CONTIN\s*\n\s*UED?/gi, 'CONTINUOUS')
@@ -137,6 +186,11 @@ function normalizeScriptText(text) {
         .replace(/\n{4,}/g, '\n\n\n')
         .replace(/(\d+[A-Z]?)\s+\./g, '$1.')
         .trim();
+
+    // Normalize "SCENE WORD:" prefixes to numeric scene numbers
+    normalized = normalized.split('\n').map(line => normalizeSceneWordPrefix(line)).join('\n');
+
+    return normalized;
 }
 
 /**
@@ -198,7 +252,8 @@ function parseSceneHeadingLine(line) {
 
     if (!trimmed || trimmed.length < 5) return invalidResult;
 
-    let cleanLine = trimmed.replace(/\s*\*+\s*$/, '').trim();
+    // Normalize "SCENE WORD:" prefix before parsing (safety net if not pre-normalized)
+    let cleanLine = normalizeSceneWordPrefix(trimmed).replace(/\s*\*+\s*$/, '').trim();
 
     const sceneNumPattern = /^(\d+[A-Z]{0,4})\s+/i;
     const trailingSceneNumPattern = /\s+(\d+[A-Z]{0,4})\s*$/i;
