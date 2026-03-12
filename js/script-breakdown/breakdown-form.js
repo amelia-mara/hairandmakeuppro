@@ -1890,6 +1890,16 @@ window.showRemoveCharacterModal = function(sceneIndex, characterName) {
     addRemoveCharacterModalStyles();
 
     const sceneLabel = scene.number || sceneIndex + 1;
+    const escapedName = escapeHtml(characterName).replace(/'/g, "\\'");
+
+    // Build merge target dropdown: all confirmed characters except the one being removed,
+    // sorted by most likely merge candidates (similar names first, then alphabetical)
+    const allCharacters = Array.from(state.confirmedCharacters || [])
+        .filter(c => c !== characterName);
+    const mergeTargets = rankMergeCandidates(characterName, allCharacters);
+    const mergeOptionsHTML = mergeTargets.map(c =>
+        `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
+    ).join('');
 
     const modalHTML = `
         <div class="remove-character-modal-overlay" onclick="closeRemoveCharacterModal()">
@@ -1899,22 +1909,39 @@ window.showRemoveCharacterModal = function(sceneIndex, characterName) {
                     <button class="modal-close-btn" onclick="closeRemoveCharacterModal()">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="remove-modal-question">Is <strong>${escapeHtml(characterName)}</strong> just not in this scene, or not a character at all?</p>
+                    <p class="remove-modal-question">Why are you removing <strong>${escapeHtml(characterName)}</strong>?</p>
                     <div class="remove-modal-options">
-                        <button class="remove-option-btn scene-only" onclick="confirmRemoveFromScene(${sceneIndex}, '${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                        <button class="remove-option-btn scene-only" onclick="confirmRemoveFromScene(${sceneIndex}, '${escapedName}')">
                             <span class="remove-option-icon">🎬</span>
                             <span class="remove-option-text">
                                 <strong>Not in this scene</strong>
                                 <span>Remove from Scene ${sceneLabel} only</span>
                             </span>
                         </button>
-                        <button class="remove-option-btn entire-script" onclick="confirmRemoveFromScript('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                        <button class="remove-option-btn entire-script" onclick="confirmRemoveFromScript('${escapedName}')">
                             <span class="remove-option-icon">🗑</span>
                             <span class="remove-option-text">
                                 <strong>Not a character at all</strong>
-                                <span>Remove from the entire script</span>
+                                <span>Remove all references from the entire script</span>
                             </span>
                         </button>
+                        <div class="remove-option-btn duplicate-option" onclick="toggleMergeDropdown(event)">
+                            <span class="remove-option-icon">🔀</span>
+                            <span class="remove-option-text">
+                                <strong>Duplicate character</strong>
+                                <span>Merge into another character</span>
+                            </span>
+                        </div>
+                        <div class="merge-dropdown-container" id="merge-dropdown-container" style="display: none;">
+                            <label class="merge-dropdown-label">Merge <strong>${escapeHtml(characterName)}</strong> into:</label>
+                            <select id="merge-target-select" class="merge-target-select">
+                                <option value="">Select character...</option>
+                                ${mergeOptionsHTML}
+                            </select>
+                            <button class="merge-confirm-btn" onclick="confirmMergeCharacter('${escapedName}')">
+                                Merge Characters
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2000,6 +2027,169 @@ window.confirmRemoveFromScript = function(characterName) {
     if (typeof window.renderCharacterTabPanels === 'function') window.renderCharacterTabPanels();
 
     showStoryDayToast(`${characterName} removed from project`);
+};
+
+/**
+ * Toggle the merge dropdown visibility in the remove character modal
+ */
+window.toggleMergeDropdown = function(event) {
+    event.stopPropagation();
+    const container = document.getElementById('merge-dropdown-container');
+    if (!container) return;
+    const isVisible = container.style.display !== 'none';
+    container.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) {
+        const select = document.getElementById('merge-target-select');
+        if (select) select.focus();
+    }
+};
+
+/**
+ * Rank merge candidates by likelihood of being a duplicate.
+ * Prioritizes: shared words in name, similar length, then alphabetical.
+ */
+function rankMergeCandidates(sourceName, allCharacters) {
+    const sourceWords = sourceName.toUpperCase().split(/\s+/);
+    const sourceFirst = sourceWords[0] || '';
+    const sourceLast = sourceWords[sourceWords.length - 1] || '';
+
+    return allCharacters.map(candidate => {
+        const candidateWords = candidate.toUpperCase().split(/\s+/);
+        let score = 0;
+
+        // Shared words (first name, last name, etc.)
+        for (const sw of sourceWords) {
+            if (sw.length < 2) continue;
+            for (const cw of candidateWords) {
+                if (cw === sw) score += 10;
+                else if (cw.startsWith(sw) || sw.startsWith(cw)) score += 5;
+            }
+        }
+
+        // First name match is a strong signal
+        if (candidateWords[0] === sourceFirst) score += 15;
+        // Last name match
+        if (candidateWords[candidateWords.length - 1] === sourceLast && sourceLast.length > 1) score += 12;
+
+        // Similar scene presence (characters in similar scenes are more likely duplicates)
+        const sourceScenes = new Set();
+        const candidateScenes = new Set();
+        Object.keys(state.sceneBreakdowns || {}).forEach(idx => {
+            const cast = state.sceneBreakdowns[idx]?.cast || [];
+            if (cast.includes(sourceName)) sourceScenes.add(idx);
+            if (cast.includes(candidate)) candidateScenes.add(idx);
+        });
+        // Overlapping scenes suggest duplicate
+        for (const s of sourceScenes) {
+            if (candidateScenes.has(s)) score += 2;
+        }
+
+        return { name: candidate, score };
+    }).sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+    }).map(c => c.name);
+}
+
+/**
+ * Confirm merging a duplicate character into a target character.
+ * Transfers all scene appearances and data from source to target, then removes source.
+ */
+window.confirmMergeCharacter = function(sourceCharacterName) {
+    const select = document.getElementById('merge-target-select');
+    if (!select) return;
+
+    const targetName = select.value;
+    if (!targetName) {
+        showStoryDayToast('Please select a character to merge into');
+        return;
+    }
+
+    closeRemoveCharacterModal();
+
+    // Transfer all scene appearances from source to target
+    Object.keys(state.sceneBreakdowns || {}).forEach(sceneIdx => {
+        const breakdown = state.sceneBreakdowns[sceneIdx];
+        if (!breakdown?.cast?.includes(sourceCharacterName)) return;
+
+        // Add target to cast if not already present
+        if (!breakdown.cast.includes(targetName)) {
+            breakdown.cast.push(targetName);
+        }
+
+        // Transfer character state data (only if target doesn't already have data for this scene)
+        const sourceState = state.characterStates?.[sceneIdx]?.[sourceCharacterName];
+        if (sourceState) {
+            if (!state.characterStates[sceneIdx]) state.characterStates[sceneIdx] = {};
+            if (!state.characterStates[sceneIdx][targetName]) {
+                state.characterStates[sceneIdx][targetName] = { ...sourceState };
+            } else {
+                // Merge: fill in empty fields on target from source
+                const target = state.characterStates[sceneIdx][targetName];
+                for (const [key, val] of Object.entries(sourceState)) {
+                    if (val && !target[key]) {
+                        target[key] = val;
+                    }
+                }
+            }
+            delete state.characterStates[sceneIdx][sourceCharacterName];
+        }
+
+        // Remove source from cast
+        breakdown.cast = breakdown.cast.filter(c => c !== sourceCharacterName);
+    });
+
+    // Transfer continuity events
+    if (state.continuityEvents?.[sourceCharacterName]) {
+        if (!state.continuityEvents[targetName]) {
+            state.continuityEvents[targetName] = [];
+        }
+        state.continuityEvents[targetName].push(...state.continuityEvents[sourceCharacterName]);
+        delete state.continuityEvents[sourceCharacterName];
+    }
+
+    // Transfer lookbook data
+    if (state.characterLooks?.[sourceCharacterName]) {
+        if (!state.characterLooks[targetName]) {
+            state.characterLooks[targetName] = state.characterLooks[sourceCharacterName];
+        }
+        delete state.characterLooks[sourceCharacterName];
+    }
+
+    // Transfer cast profile data
+    if (state.castProfiles?.[sourceCharacterName]) {
+        if (!state.castProfiles[targetName]) {
+            state.castProfiles[targetName] = state.castProfiles[sourceCharacterName];
+        }
+        delete state.castProfiles[sourceCharacterName];
+    }
+
+    // Remove source from confirmed characters
+    if (state.confirmedCharacters) {
+        state.confirmedCharacters.delete(sourceCharacterName);
+    }
+
+    // Clean up master context
+    if (window.masterContext?.characters?.[sourceCharacterName]) {
+        delete window.masterContext.characters[sourceCharacterName];
+    }
+
+    // Remove from suggested characters
+    Object.keys(state.sceneBreakdowns || {}).forEach(sceneIdx => {
+        const breakdown = state.sceneBreakdowns[sceneIdx];
+        if (breakdown?.suggestedCharacters) {
+            breakdown.suggestedCharacters = breakdown.suggestedCharacters.filter(c => c !== sourceCharacterName);
+        }
+    });
+
+    saveToLocalStorage();
+    renderBreakdownPanel();
+
+    if (typeof renderSceneList === 'function') renderSceneList();
+    if (typeof window.renderCharacterTabs === 'function') window.renderCharacterTabs();
+    if (typeof window.renderCharacterTabPanels === 'function') window.renderCharacterTabPanels();
+
+    showStoryDayToast(`${sourceCharacterName} merged into ${targetName}`);
 };
 
 /**
@@ -2118,6 +2308,67 @@ function addRemoveCharacterModalStyles() {
         .remove-option-text span {
             font-size: 0.78em;
             color: var(--text-muted, #71717a);
+        }
+
+        .remove-option-btn.duplicate-option {
+            cursor: pointer;
+        }
+
+        .remove-option-btn.duplicate-option:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .merge-dropdown-container {
+            padding: 14px 16px;
+            background: var(--bg-primary, #13131a);
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .merge-dropdown-label {
+            font-size: 0.85em;
+            color: var(--text-secondary, #a1a1aa);
+            line-height: 1.4;
+        }
+
+        .merge-dropdown-label strong {
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        .merge-target-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-secondary, #1e1e2e);
+            border: 1px solid var(--border-color, #3d3d5c);
+            border-radius: 6px;
+            color: var(--text-primary, #e4e4e7);
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .merge-target-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .merge-confirm-btn {
+            padding: 10px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .merge-confirm-btn:hover {
+            background: #2563eb;
         }
     `;
     document.head.appendChild(styles);
