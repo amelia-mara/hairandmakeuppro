@@ -737,19 +737,13 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
     setPopup(null);
   }, [popup, tagStore, onCharClick, onTagCreated]);
 
-  /* Build a regex that matches character names (full name or first name only)
-     within action/description lines, so we can highlight them inline.
+  /* Build a regex that matches known character names within action/description
+     lines so we can highlight them inline. Only full names are matched.
      Sorted longest-first so "JASPER MONTGOMERY" matches before "JASPER". */
   const charNamePattern = useMemo(() => {
     const allNames: { name: string; char: Character }[] = [];
     for (const c of characters) {
-      // Full name (e.g. "JASPER MONTGOMERY")
       allNames.push({ name: c.name, char: c });
-      // Also match first name for inline references (e.g. "Jasper")
-      const parts = c.name.split(/\s+/);
-      if (parts.length > 1 && parts[0].length >= 3) {
-        allNames.push({ name: parts[0], char: c });
-      }
     }
     // Sort longest first for greedy matching
     allNames.sort((a, b) => b.name.length - a.name.length);
