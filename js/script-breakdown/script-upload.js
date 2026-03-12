@@ -735,11 +735,12 @@ export async function processUploadedScript() {
 
         if (ext === 'pdf') {
             text = await extractTextFromPDF(file);
+            // PDF path already normalizes via extractTextFromPDF → normalizeScriptText
         } else if (ext === 'fdx') {
             const xmlContent = await file.text();
-            text = extractTextFromFDX(xmlContent);
+            text = normalizeScriptText(extractTextFromFDX(xmlContent));
         } else {
-            text = await file.text();
+            text = normalizeScriptText(await file.text());
         }
 
         if (!text || text.trim().length < 50) {
