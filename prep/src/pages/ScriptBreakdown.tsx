@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
@@ -653,13 +654,10 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
     if (startIdx === -1) return;
 
     const rect = range.getBoundingClientRect();
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    const scrollRect = scrollEl.getBoundingClientRect();
 
     setPopup({
-      x: rect.left - scrollRect.left + rect.width / 2,
-      y: rect.top - scrollRect.top + scrollEl.scrollTop - 10,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10,
       sceneId,
       startOffset: startIdx,
       endOffset: startIdx + text.length,
@@ -867,9 +865,10 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         </div>
       ))}
 
-      {/* Tag popup */}
-      {popup && (
-        <div ref={popupRef} className="sv-tag-popup" style={{ left: popup.x, top: popup.y, transform: 'translate(-50%, -100%)' }}>
+
+      {/* Tag popup — portalled to body so it isn't clipped by scroll overflow */}
+      {popup && createPortal(
+        <div ref={popupRef} className="sv-tag-popup sv-tag-popup--fixed" style={{ left: popup.x, top: popup.y, transform: 'translate(-50%, -100%)' }}>
           {popup.step === 'character' && (
             <>
               <div className="sv-tag-popup-title">Who is this about?</div>
@@ -903,7 +902,8 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
               </button>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
