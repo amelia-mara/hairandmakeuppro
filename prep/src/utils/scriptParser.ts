@@ -125,12 +125,14 @@ const WORD_TO_NUMBER: Record<string, string> = {
 
 const SCENE_WORD_KEYS = Object.keys(WORD_TO_NUMBER).sort((a, b) => b.length - a.length).join('|');
 const SCENE_WORD_PREFIX_RE = new RegExp(
-  `^\\s*SCENE\\s+(${SCENE_WORD_KEYS})\\s*[:\\-–—]?\\s*`, 'i',
+  `^\\s*(?:\\d+[A-Z]{0,4}\\s+)?SCENE\\s+(${SCENE_WORD_KEYS})\\s*[:\\-–—]?\\s*`, 'i',
 );
 
 /**
  * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
  * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ * e.g. "4 SCENE THREE: EXT. STREET - DAY 4" → "3 EXT. STREET - DAY 4"
+ * A leading scene number before "SCENE" is discarded in favour of the word number.
  */
 function normalizeSceneWordPrefix(line: string): string {
   const match = line.match(SCENE_WORD_PREFIX_RE);
@@ -138,8 +140,8 @@ function normalizeSceneWordPrefix(line: string): string {
     const num = WORD_TO_NUMBER[match[1].toUpperCase()];
     if (num) return num + ' ' + line.slice(match[0].length);
   }
-  // Also handle "SCENE 2:" with numeric digit
-  const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+  // Also handle "SCENE 2:" or "4 SCENE 2:" with numeric digit
+  const numMatch = line.match(/^\s*(?:\d+[A-Z]{0,4}\s+)?SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
   if (numMatch) {
     return numMatch[1] + ' ' + line.slice(numMatch[0].length);
   }
@@ -172,6 +174,10 @@ function normalizeScriptText(text: string): string {
     '$1 $2',
   );
 
+  // Normalize "SCENE WORD:" prefixes to numeric scene numbers BEFORE splitting
+  // so that "4 SCENE THREE: EXT. STREET - DAY" becomes "3 EXT. STREET - DAY"
+  normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
+
   // Split lines where a scene heading (INT./EXT. + LOCATION – TIME) is followed
   // by additional action text on the same line. PDF extraction sometimes merges
   // the heading and the first action line when they're vertically close.
@@ -198,9 +204,6 @@ function normalizeScriptText(text: string): string {
     }
     return line;
   }).join('\n');
-
-  // Normalize "SCENE WORD:" prefixes to numeric scene numbers
-  normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
 
   return normalized;
 }
