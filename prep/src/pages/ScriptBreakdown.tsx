@@ -738,12 +738,21 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
   }, [popup, tagStore, onCharClick, onTagCreated]);
 
   /* Build a regex that matches known character names within action/description
-     lines so we can highlight them inline. Only full names are matched.
-     Sorted longest-first so "JASPER MONTGOMERY" matches before "JASPER". */
+     lines so we can highlight them inline. Multi-word names + first-name refs
+     are matched case-insensitively. Single-word names (e.g. COWBOY, MAN) are
+     only matched when ALL CAPS to avoid highlighting common words. */
   const charNamePattern = useMemo(() => {
-    const allNames: { name: string; char: Character }[] = [];
+    const allNames: { name: string; char: Character; singleWord: boolean }[] = [];
     for (const c of characters) {
-      allNames.push({ name: c.name, char: c });
+      const isSingle = !/\s/.test(c.name.trim());
+      allNames.push({ name: c.name, char: c, singleWord: isSingle });
+      // For multi-word names, also match the first name (e.g. "Lennon" from "LENNON BOWIE")
+      if (!isSingle) {
+        const first = c.name.split(/\s+/)[0];
+        if (first.length >= 3) {
+          allNames.push({ name: first, char: c, singleWord: true });
+        }
+      }
     }
     // Sort longest first for greedy matching
     allNames.sort((a, b) => b.name.length - a.name.length);
@@ -768,6 +777,9 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       // Find which character this matches
       const entry = lookup.find(n => n.name.toUpperCase() === upper);
       if (!entry) continue;
+      // Single-word names (e.g. COWBOY, MAN, Lennon) only highlight when ALL CAPS
+      // to avoid highlighting common words in action text
+      if (entry.singleWord && matchText !== matchText.toUpperCase()) continue;
       // Push text before the match
       if (m.index > lastIdx) {
         parts.push(<span key={`${keyPrefix}-t${lastIdx}`}>{text.slice(lastIdx, m.index)}</span>);
