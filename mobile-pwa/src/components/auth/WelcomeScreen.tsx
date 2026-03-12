@@ -20,15 +20,8 @@ export function WelcomeScreen() {
         <div className="absolute inset-[12%] rounded-full border-[24px] border-[#E8621A] opacity-[0.12]" />
       </div>
 
-      {/* Department pill */}
-      <div className="relative z-10 flex items-center justify-center pt-14 px-8">
-        <span className="px-5 py-2 rounded-pill text-sm font-medium text-[#3A9E91] border border-[#3A9E91]/30 bg-[#3A9E91]/5">
-          Hair &amp; Makeup &amp; Costume
-        </span>
-      </div>
-
       {/* Main content area */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 -mt-12">
         {/* Text logo — stacked with heavy overlap and offset */}
         <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
           <span className="absolute left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#2A1A08]">
