@@ -699,6 +699,15 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   }
 
   if (!timeMatch && workingLine.length > 0) {
+    // Scene headings should always end after the time-of-day marker (DAY/NIGHT/etc).
+    // If no time marker was found at the end, this line likely has action text
+    // merged after the heading (PDF extraction artifact).
+    // Only accept as a valid heading if the remaining text is short and looks
+    // like a bare location (e.g. "INT. OFFICE") — reject anything with
+    // character intro patterns (comma + digits) or excessive length.
+    if (workingLine.length > 50 || /,\s*\d/.test(workingLine) || /[a-z]/.test(workingLine)) {
+      return invalidResult;
+    }
     location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
   }
 
