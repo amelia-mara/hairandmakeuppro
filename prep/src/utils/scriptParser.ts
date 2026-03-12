@@ -23,9 +23,12 @@ export interface ParsedScene {
   content: string;
 }
 
+export type CharacterCategory = 'principal' | 'supporting_artist';
+
 export interface ParsedCharacter {
   name: string;
   normalizedName: string;
+  category: CharacterCategory;
   sceneCount: number;
   dialogueCount: number;
   scenes: string[]; // Scene numbers where character appears
@@ -243,6 +246,86 @@ const NAME_SCAN_EXCLUSIONS = new Set([
   'ALL', 'ONE', 'TWO', 'NOW', 'OUT', 'OFF', 'HOW', 'WHY',
   'THE', 'YOU', 'WAY', 'TOO', 'USE', 'YES', 'YET',
 ]);
+
+/* ━━━ Supporting artist role descriptors ━━━ */
+
+/**
+ * Generic role descriptors that indicate a supporting artist (extra/background)
+ * rather than a named principal character. These are roles described by function
+ * rather than a proper character name — e.g. "MAN", "CYCLIST", "WAITRESS".
+ * A character with dialogue whose name matches one of these is still classified
+ * as a supporting artist unless they also have a proper name.
+ */
+const SUPPORTING_ARTIST_ROLES = new Set([
+  // Generic people
+  'MAN', 'WOMAN', 'BOY', 'GIRL', 'CHILD', 'BABY', 'INFANT', 'TODDLER',
+  'TEEN', 'TEENAGER', 'KID', 'LADY', 'GUY', 'PERSON', 'FIGURE',
+  'OLD MAN', 'OLD WOMAN', 'YOUNG MAN', 'YOUNG WOMAN', 'YOUNG BOY', 'YOUNG GIRL',
+  'ELDERLY MAN', 'ELDERLY WOMAN', 'MIDDLE-AGED MAN', 'MIDDLE-AGED WOMAN',
+  'TALL MAN', 'SHORT MAN', 'HEAVY MAN', 'THIN MAN', 'THIN WOMAN',
+  // Numbered generics
+  'MAN #1', 'MAN #2', 'MAN #3', 'WOMAN #1', 'WOMAN #2', 'WOMAN #3',
+  'GUY #1', 'GUY #2', 'GIRL #1', 'GIRL #2', 'BOY #1', 'BOY #2',
+  'PERSON #1', 'PERSON #2', 'KID #1', 'KID #2',
+  // Occupational / functional roles
+  'WAITER', 'WAITRESS', 'BARTENDER', 'BARISTA', 'BARMAN', 'BARMAID',
+  'RECEPTIONIST', 'CLERK', 'CASHIER', 'SHOP ASSISTANT', 'SHOPKEEPER',
+  'DRIVER', 'TAXI DRIVER', 'BUS DRIVER', 'UBER DRIVER', 'CHAUFFEUR',
+  'OFFICER', 'POLICE OFFICER', 'COP', 'POLICEMAN', 'POLICEWOMAN',
+  'GUARD', 'SECURITY GUARD', 'BOUNCER', 'DOORMAN',
+  'NURSE', 'DOCTOR', 'PARAMEDIC', 'EMT', 'SURGEON', 'ORDERLY',
+  'SOLDIER', 'MARINE', 'SAILOR', 'PILOT',
+  'TEACHER', 'PROFESSOR', 'STUDENT', 'PUPIL',
+  'PRIEST', 'MINISTER', 'PASTOR', 'NUN', 'MONK',
+  'JUDGE', 'LAWYER', 'ATTORNEY', 'BAILIFF',
+  'REPORTER', 'JOURNALIST', 'PHOTOGRAPHER', 'CAMERAMAN',
+  'SECRETARY', 'ASSISTANT', 'INTERN',
+  'JANITOR', 'CLEANER', 'MAID', 'BUTLER', 'HOUSEKEEPER',
+  'CHEF', 'COOK',
+  // Performers / activity roles
+  'DANCER', 'SINGER', 'MUSICIAN', 'DRUMMER', 'GUITARIST',
+  'ACTOR', 'ACTRESS', 'PERFORMER', 'ENTERTAINER', 'DJ',
+  'CYCLIST', 'JOGGER', 'RUNNER', 'SWIMMER', 'SKATER',
+  // Street / crowd roles
+  'PASSER BY', 'PASSERBY', 'PASSER-BY', 'PEDESTRIAN', 'BYSTANDER',
+  'STRANGER', 'HOMELESS MAN', 'HOMELESS WOMAN', 'BEGGAR',
+  'VENDOR', 'STREET VENDOR', 'NEWSREADER', 'PRESENTER', 'ANCHOR',
+  'NEIGHBOUR', 'NEIGHBOR',
+  // Vehicle / transport
+  'PASSENGER', 'COMMUTER', 'TRAVELLER', 'TRAVELER',
+  // Criminal / threat roles
+  'THUG', 'THIEF', 'ROBBER', 'MUGGER', 'GANGSTER', 'HITMAN',
+  'ASSASSIN', 'KIDNAPPER', 'SNIPER', 'GUNMAN',
+  // Family generics (without proper names)
+  'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'HUSBAND', 'WIFE',
+  'SON', 'DAUGHTER', 'UNCLE', 'AUNT', 'GRANDMOTHER', 'GRANDFATHER',
+  'GRANDMA', 'GRANDPA',
+  // Group / crowd
+  'CROWD', 'CROWD MEMBER', 'ONLOOKER', 'SPECTATOR', 'AUDIENCE MEMBER',
+  'GUEST', 'CUSTOMER', 'PATIENT', 'CLIENT', 'VICTIM', 'WITNESS',
+  'INMATE', 'PRISONER', 'SUSPECT',
+  // Titled generics
+  'MR SMITH', 'MRS SMITH', 'THE MAN', 'THE WOMAN', 'THE BOY', 'THE GIRL',
+  'A MAN', 'A WOMAN', 'A BOY', 'A GIRL',
+]);
+
+/**
+ * Check if a normalized character name is a supporting artist role descriptor.
+ * Returns true for generic roles like "MAN", "WAITRESS", "CYCLIST #2".
+ */
+function isSupportingArtistRole(normalizedName: string): boolean {
+  if (SUPPORTING_ARTIST_ROLES.has(normalizedName)) return true;
+
+  // Check for numbered variants: "WAITER #4", "COP 2", "MAN 1"
+  const withoutNumber = normalizedName.replace(/\s*#?\d+\s*$/, '').trim();
+  if (withoutNumber !== normalizedName && SUPPORTING_ARTIST_ROLES.has(withoutNumber)) return true;
+
+  // Check for "THE X" or "A X" prefix
+  const withoutArticle = normalizedName.replace(/^(THE|A|AN)\s+/, '').trim();
+  if (withoutArticle !== normalizedName && SUPPORTING_ARTIST_ROLES.has(withoutArticle)) return true;
+
+  return false;
+}
 
 /* ━━━ Character name helpers ━━━ */
 
@@ -593,6 +676,7 @@ export function parseScriptText(text: string): ParsedScript {
           characterMap.set(normalized, {
             name: normalized,
             normalizedName: normalized,
+            category: isSupportingArtistRole(normalized) ? 'supporting_artist' : 'principal',
             sceneCount: 0,
             dialogueCount: 0,
             scenes: [],

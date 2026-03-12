@@ -16,10 +16,13 @@ export interface Scene {
   scriptContent: string;
 }
 
+export type CharacterCategory = 'principal' | 'supporting_artist';
+
 export interface Character {
   id: string;
   name: string;
   billing: number;
+  category: CharacterCategory;
   age: string;
   gender: string;
   hairColour: string;
@@ -139,31 +142,31 @@ export const BREAKDOWN_CATEGORIES = [
 
 export const MOCK_CHARACTERS: Character[] = [
   {
-    id: 'c1', name: 'SARAH CHEN', billing: 1, age: '32', gender: 'Female',
+    id: 'c1', name: 'SARAH CHEN', billing: 1, category: 'principal', age: '32', gender: 'Female',
     hairColour: 'Black', hairType: 'Straight, shoulder-length', eyeColour: 'Dark Brown',
     skinTone: 'Light', build: 'Athletic', distinguishingFeatures: 'Small scar above left eyebrow',
     notes: 'Lead detective. Badge on belt. Left-handed.',
   },
   {
-    id: 'c2', name: 'MARCUS WEBB', billing: 2, age: '42', gender: 'Male',
+    id: 'c2', name: 'MARCUS WEBB', billing: 2, category: 'principal', age: '42', gender: 'Male',
     hairColour: 'Dark Brown with grey temples', hairType: 'Short, cropped', eyeColour: 'Hazel',
     skinTone: 'Medium', build: 'Stocky, broad shoulders', distinguishingFeatures: 'Wedding ring, reading glasses on chain',
     notes: "Sarah's partner. Former military. Calm under pressure.",
   },
   {
-    id: 'c3', name: 'DETECTIVE ROSA', billing: 3, age: '55', gender: 'Female',
+    id: 'c3', name: 'DETECTIVE ROSA', billing: 3, category: 'principal', age: '55', gender: 'Female',
     hairColour: 'Silver-grey', hairType: 'Short bob', eyeColour: 'Green',
     skinTone: 'Olive', build: 'Average', distinguishingFeatures: 'Always wears pearl earrings',
     notes: 'Senior detective. Mentor to Sarah. 30 years on the force.',
   },
   {
-    id: 'c4', name: 'JAMES HOLLOWAY', billing: 4, age: '35', gender: 'Male',
+    id: 'c4', name: 'JAMES HOLLOWAY', billing: 4, category: 'principal', age: '35', gender: 'Male',
     hairColour: 'Sandy blonde', hairType: 'Medium length, styled back', eyeColour: 'Blue',
     skinTone: 'Fair', build: 'Lean, tall', distinguishingFeatures: 'Expensive watch, tailored clothes',
     notes: 'Primary suspect. Tech entrepreneur. Charming exterior.',
   },
   {
-    id: 'c5', name: 'ELENA VASQUEZ', billing: 5, age: '28', gender: 'Female',
+    id: 'c5', name: 'ELENA VASQUEZ', billing: 5, category: 'principal', age: '28', gender: 'Female',
     hairColour: 'Dark brown', hairType: 'Long, wavy', eyeColour: 'Brown',
     skinTone: 'Warm', build: 'Petite', distinguishingFeatures: 'Tattoo on inner wrist (crescent moon)',
     notes: 'Key witness. Works at the coffee shop. Nervous disposition.',
@@ -1100,6 +1103,7 @@ export interface ParsedCharacterData {
   id: string;
   name: string;
   billing: number;
+  category: CharacterCategory;
   age: string;
   gender: string;
   hairColour: string;

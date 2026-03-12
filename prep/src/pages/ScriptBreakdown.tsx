@@ -138,6 +138,8 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   const scene = ALL_SCENES.find((s) => s.id === validSceneId);
   const sceneCharacters = scene ? scene.characterIds.map((id) => ALL_CHARACTERS.find((c) => c.id === id)).filter((c): c is Character => !!c) : [];
+  const scenePrincipals = sceneCharacters.filter((c) => c.category !== 'supporting_artist');
+  const sceneSupportingArtists = sceneCharacters.filter((c) => c.category === 'supporting_artist');
   const breakdown = store.getBreakdown(validSceneId);
 
   useEffect(() => {
@@ -282,17 +284,23 @@ export function ScriptBreakdown({ projectId }: Props) {
                           <span className="sl-expand-value">{synopsisStore.getSynopsis(s.id, s.synopsis)}</span>
                         </div>
                       )}
-                      {s.characterIds.length > 0 && (
-                        <div className="sl-expand-pill">
-                          <span className="sl-expand-label">Characters</span>
-                          <div className="sl-expand-chars">
-                            {s.characterIds.map((cid) => {
-                              const ch = ALL_CHARACTERS.find((c) => c.id === cid);
-                              return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span> : null;
-                            })}
+                      {s.characterIds.length > 0 && (() => {
+                        const principals = s.characterIds.map((cid) => ALL_CHARACTERS.find((c) => c.id === cid)).filter((c): c is Character => !!c && c.category !== 'supporting_artist');
+                        const saCount = s.characterIds.map((cid) => ALL_CHARACTERS.find((c) => c.id === cid)).filter((c): c is Character => !!c && c.category === 'supporting_artist').length;
+                        return (
+                          <div className="sl-expand-pill">
+                            <span className="sl-expand-label">Characters</span>
+                            <div className="sl-expand-chars">
+                              {principals.map((ch) => (
+                                <span key={ch.id} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span>
+                              ))}
+                              {saCount > 0 && (
+                                <span className="sl-card-char-tag" style={{ opacity: 0.6, fontStyle: 'italic' }}>+{saCount} SA</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
                 </button>
@@ -313,10 +321,17 @@ export function ScriptBreakdown({ projectId }: Props) {
             <div className="cp-tabs-row">
               <button className={`cp-divider-tab ${activeTab === 'script' ? 'cp-divider-tab--active' : ''}`}
                 onClick={() => setActiveTab('script')}>Script</button>
-              {sceneCharacters.map((c) => (
+              {scenePrincipals.map((c) => (
                 <button key={c.id} className={`cp-divider-tab ${activeTab === c.id ? 'cp-divider-tab--active' : ''}`}
                   onClick={() => setActiveTab(c.id)}>{c.name}</button>
               ))}
+              {sceneSupportingArtists.length > 0 && (
+                <button className={`cp-divider-tab ${activeTab === 'supporting-artists' ? 'cp-divider-tab--active' : ''}`}
+                  onClick={() => setActiveTab('supporting-artists')}
+                  style={{ fontStyle: 'italic', opacity: 0.85 }}>
+                  Supporting Artists ({sceneSupportingArtists.length})
+                </button>
+              )}
             </div>
           </div>
           {/* Compact toolbar — Tags toggle only */}
@@ -408,6 +423,8 @@ export function ScriptBreakdown({ projectId }: Props) {
                   </button>
                 </div>
               </div>
+            ) : activeTab === 'supporting-artists' ? (
+              <SupportingArtistsPanel artists={sceneSupportingArtists} scene={scene!} allScenes={ALL_SCENES} />
             ) : sceneCharacters.find((c) => c.id === activeTab) ? (
               <CharacterView
                 char={sceneCharacters.find((c) => c.id === activeTab)!}
@@ -999,6 +1016,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           id,
           name: pc.name,
           billing: idx + 1,
+          category: pc.category || 'principal',
           age: '',
           gender: '',
           hairColour: '',
@@ -1248,6 +1266,61 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           style={{ display: 'none' }}
         />
       </div>
+    </div>
+  );
+}
+
+/* ━━━ SUPPORTING ARTISTS PANEL ━━━ */
+
+function SupportingArtistsPanel({ artists, scene, allScenes }: { artists: Character[]; scene: Scene; allScenes: Scene[] }) {
+  return (
+    <div style={{ padding: '20px 24px', overflowY: 'auto', height: '100%' }}>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e8e0d4)' }}>
+          Supporting Artists
+        </h3>
+        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted, #a89b8c)' }}>
+          Background and extras in this scene
+        </p>
+      </div>
+
+      {artists.length === 0 ? (
+        <p style={{ color: 'var(--text-muted, #a89b8c)', fontStyle: 'italic' }}>No supporting artists in this scene.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {artists.map((artist) => {
+            const otherScenes = allScenes.filter((s) => s.id !== scene.id && s.characterIds.includes(artist.id));
+            return (
+              <div key={artist.id} style={{
+                background: 'var(--card-bg, #2a2520)', border: '1px solid var(--border, #3d352d)',
+                borderRadius: 8, padding: '12px 16px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary, #e8e0d4)' }}>
+                    {artist.name}
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem', padding: '2px 8px', borderRadius: 10,
+                    background: 'var(--accent-muted, #78716c)', color: 'var(--text-primary, #e8e0d4)',
+                  }}>
+                    SA
+                  </span>
+                </div>
+                {artist.notes && (
+                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--text-muted, #a89b8c)' }}>
+                    {artist.notes}
+                  </p>
+                )}
+                {otherScenes.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: '0.75rem', color: 'var(--text-muted, #a89b8c)' }}>
+                    Also in: {otherScenes.map((s) => `Sc ${s.number}`).join(', ')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
