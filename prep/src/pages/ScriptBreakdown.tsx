@@ -636,6 +636,22 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
   onTagCreated: (sceneId: string, characterId: string, categoryId: string, text: string) => void;
 }) {
   const charNames = characters.map((c) => c.name);
+  /* Build a set of all name variants that could appear as dialogue cues:
+     full names ("LENNON BOWIE") plus individual parts ("LENNON", "BOWIE")
+     and titled variants ("MRS. BENNET", "MR. DARCY") */
+  const cueNameToChar = useMemo(() => {
+    const map = new Map<string, Character>();
+    for (const c of characters) {
+      map.set(c.name, c);
+      // Add individual name parts as cue variants
+      for (const part of c.name.split(/\s+/)) {
+        if (part.length >= 2 && !map.has(part)) {
+          map.set(part, c);
+        }
+      }
+    }
+    return map;
+  }, [characters]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const isScrollingTo = useRef(false);
@@ -720,16 +736,27 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
     const sceneTags = tagStore.getTagsForScene(scene.id);
     const lines = scene.scriptContent.split('\n');
 
+    /** Strip parentheticals from a line to get the bare cue name */
+    function extractCueName(text: string): string {
+      return text.replace(/\s*\(.*?\)\s*/g, '').trim();
+    }
+    /** Check if a trimmed line is a character cue — must be ALL CAPS and match a known character */
+    function matchCue(trimmed: string): Character | null {
+      if (trimmed !== trimmed.toUpperCase() || trimmed.length > 50) return null;
+      const cueName = extractCueName(trimmed);
+      if (!cueName) return null;
+      return cueNameToChar.get(cueName) || null;
+    }
+
     /* Pre-compute dialogue line indices: lines following a character cue until blank line */
     const dialogueSet = new Set<number>();
+    const cueCharMap = new Map<number, Character>(); // line index → matched character
     let inDialogue = false;
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].trim();
-      const isCue = charNames.some((name) => {
-        const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
-        return cue === name;
-      });
-      if (isCue) {
+      const charMatch = matchCue(trimmed);
+      if (charMatch) {
+        cueCharMap.set(i, charMatch);
         inDialogue = true;
       } else if (inDialogue) {
         if (trimmed === '') {
@@ -744,18 +771,14 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       /* Plain rendering (no tags to show) */
       return lines.map((line, i) => {
         const trimmed = line.trim();
-        const matched = charNames.find((name) => {
-          const cue = trimmed.replace(/\s*\(.*\)$/, '').replace(/\s*\(CONT'D\)$/, '');
-          return cue === name;
-        });
-        if (matched) {
-          const ch = characters.find((c) => c.name === matched)!;
+        const ch = cueCharMap.get(i);
+        if (ch) {
           return <div key={`${scene.id}-${i}`} className="sv-line sv-cue" onClick={() => onCharClick(ch.id)}>{trimmed}</div>;
         }
         if (dialogueSet.has(i)) {
           return <div key={`${scene.id}-${i}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
-        return <div key={`${scene.id}-${i}`} className="sv-line">{line || '\u00A0'}</div>;
+        return <div key={`${scene.id}-${i}`} className="sv-line">{trimmed || '\u00A0'}</div>;
       });
     }
 
