@@ -12,6 +12,34 @@
 import { state as importedState } from './main.js';
 
 /**
+ * Common words that should NEVER be matched as character name fragments.
+ * Prevents pronouns, articles, prepositions, and common script words
+ * from being treated as character references.
+ */
+const COMMON_WORD_EXCLUSIONS = new Set([
+    // Pronouns
+    'he', 'she', 'him', 'her', 'his', 'hers', 'it', 'its',
+    'they', 'them', 'their', 'theirs', 'we', 'us', 'our', 'ours',
+    'you', 'your', 'yours', 'me', 'my', 'mine', 'i',
+    // Articles & determiners
+    'the', 'a', 'an', 'this', 'that', 'these', 'those',
+    // Common prepositions & conjunctions
+    'in', 'on', 'at', 'to', 'for', 'of', 'by', 'with', 'from',
+    'and', 'or', 'but', 'not', 'no', 'so', 'as', 'if',
+    // Common verbs
+    'is', 'are', 'was', 'were', 'be', 'been', 'do', 'did', 'has', 'had', 'have',
+    'get', 'got', 'go', 'went', 'can', 'will', 'may',
+    // Common script/action words
+    'all', 'who', 'what', 'how', 'why', 'when', 'where', 'which',
+    'man', 'woman', 'boy', 'girl', 'one', 'two', 'old', 'new',
+    'up', 'out', 'off', 'over', 'back', 'just', 'now', 'then',
+    // Titles used as prefixes (only exclude standalone, not with last names)
+    'mr', 'mrs', 'ms', 'dr', 'sir',
+    // Common script directions
+    'int', 'ext', 'cut', 'fade', 'day', 'night', 'cont', 'end'
+]);
+
+/**
  * Get the current state - handles circular dependency issues
  * @returns {Object} Application state
  */
@@ -270,6 +298,57 @@ export class CharacterManager {
     }
 
     /**
+     * Scan scene text for all known/confirmed characters using name variations.
+     * Once a character has been identified (e.g. "GWEN LAWSON" from a dialogue header),
+     * this will also find mentions like "Gwen", "Lawson", "Mrs. Lawson" in action lines.
+     *
+     * @param {string} sceneContent - The scene text to search
+     * @returns {string[]} - Array of canonical character names found in the scene
+     */
+    scanForKnownCharacters(sceneContent) {
+        if (!sceneContent) return [];
+
+        const found = new Set();
+
+        for (const [canonicalName] of this.characters.entries()) {
+            // Build all search terms for this character
+            const searchTerms = new Set();
+
+            // Add canonical name
+            searchTerms.add(canonicalName);
+
+            // Add all known aliases
+            for (const [alias, target] of this.aliases.entries()) {
+                if (target === canonicalName && alias.length >= 2) {
+                    searchTerms.add(alias);
+                }
+            }
+
+            // Add first name and last name if multi-word
+            const parts = canonicalName.split(' ');
+            if (parts.length > 1) {
+                searchTerms.add(parts[0]); // First name
+                searchTerms.add(parts[parts.length - 1]); // Last name
+            }
+
+            // Check each search term against scene content
+            for (const term of searchTerms) {
+                // Skip short terms and common words that aren't character names
+                if (term.length < 3 || COMMON_WORD_EXCLUSIONS.has(term.toLowerCase())) continue;
+                // Word boundary check to avoid partial matches
+                const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp('\\b' + escaped + '\\b', 'i');
+                if (regex.test(sceneContent)) {
+                    found.add(canonicalName);
+                    break; // No need to check more terms for this character
+                }
+            }
+        }
+
+        return Array.from(found);
+    }
+
+    /**
      * Clear all data
      */
     clear() {
@@ -281,6 +360,43 @@ export class CharacterManager {
 // Create and expose global instance
 const characterManager = new CharacterManager();
 window.characterManager = characterManager;
+
+/**
+ * Standalone utility: scan scene text for known characters using all name variations.
+ * Works with confirmedCharacters, masterContext, or the characterManager registry.
+ *
+ * @param {string} sceneContent - The scene text to search
+ * @param {Object} options - Optional sources: { confirmedCharacters, masterContextCharacters }
+ * @returns {string[]} - Array of canonical character names found
+ */
+export function scanForKnownCharacters(sceneContent, options = {}) {
+    if (!sceneContent) return [];
+
+    // If characterManager has characters registered, use its variation-aware scan
+    if (characterManager.characters.size > 0) {
+        return characterManager.scanForKnownCharacters(sceneContent);
+    }
+
+    // Fallback: build a temporary manager from available character sources
+    const tempManager = new CharacterManager();
+    const sources = [];
+
+    if (options.confirmedCharacters) {
+        const chars = options.confirmedCharacters instanceof Set
+            ? Array.from(options.confirmedCharacters)
+            : options.confirmedCharacters;
+        sources.push(...chars);
+    }
+
+    if (options.masterContextCharacters) {
+        sources.push(...Object.keys(options.masterContextCharacters));
+    }
+
+    // Register all characters so variations are built
+    sources.forEach(name => tempManager.addCharacter(name));
+
+    return tempManager.scanForKnownCharacters(sceneContent);
+}
 
 export { characterManager };
 export default CharacterManager;

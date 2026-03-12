@@ -420,6 +420,58 @@ export function detectCharacters(scriptText) {
         });
     });
 
+    // SECOND PASS: Now that characters are identified from dialogue headers and intros,
+    // scan ALL action/description lines for name mentions (first name, last name, etc.)
+    // e.g. if "GWEN LAWSON" was found via dialogue, find "Gwen" in action lines of other scenes
+    const knownNames = Array.from(detectedCharacters.keys());
+    if (knownNames.length > 0) {
+        // Build search terms for each known character
+        const searchMap = new Map(); // search term -> canonical name
+        const commonWords = new Set([
+            'he', 'she', 'him', 'her', 'his', 'hers', 'it', 'its', 'they', 'them',
+            'their', 'we', 'us', 'you', 'me', 'my', 'the', 'a', 'an', 'and', 'or',
+            'in', 'on', 'at', 'to', 'for', 'of', 'by', 'with', 'is', 'are', 'was',
+            'man', 'woman', 'boy', 'girl', 'mr', 'mrs', 'ms', 'dr', 'sir',
+            'int', 'ext', 'cut', 'fade', 'day', 'night', 'all', 'one', 'two', 'old', 'new'
+        ]);
+
+        knownNames.forEach(fullName => {
+            const parts = fullName.split(/\s+/);
+            parts.forEach(part => {
+                const lower = part.toLowerCase();
+                if (lower.length >= 3 && !commonWords.has(lower)) {
+                    searchMap.set(lower, fullName);
+                }
+            });
+        });
+
+        // Re-scan action lines for name mentions
+        let scanScene = 0;
+        lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (parseSceneHeading(trimmed)) {
+                scanScene++;
+                return;
+            }
+
+            // Skip dialogue headers (already handled in first pass)
+            if (/^[A-Z][A-Z\s\.'-]{1,35}(?:\s*\([^)]*\))?\s*$/.test(trimmed)) return;
+
+            // Scan this action line for known character name fragments
+            const lowerLine = trimmed.toLowerCase();
+            for (const [term, canonicalName] of searchMap.entries()) {
+                const regex = new RegExp('\\b' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+                if (regex.test(lowerLine)) {
+                    // Add this scene to the character's scene set
+                    if (scanScene > 0 && detectedCharacters.has(canonicalName)) {
+                        detectedCharacters.get(canonicalName).scenes.add(scanScene);
+                        detectedCharacters.get(canonicalName).sources.add('name_mention');
+                    }
+                }
+            }
+        });
+    }
+
     // Convert Map to array and calculate categories
     const characters = Array.from(detectedCharacters.entries()).map(([name, data]) => {
         const sceneCount = data.scenes.size;
