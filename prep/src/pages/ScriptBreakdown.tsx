@@ -479,7 +479,6 @@ export function ScriptBreakdown({ projectId }: Props) {
             allScenes={ALL_SCENES}
             allCharacters={ALL_CHARACTERS}
             allLooks={ALL_LOOKS}
-            projectId={projectId}
             onNavigate={selectScene}
             onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
             onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
@@ -1394,11 +1393,10 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, projectId, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
-  projectId: string;
   onNavigate: (id: string) => void;
   onUpdate: (cid: string, d: Partial<CharacterBreakdown>) => void;
   onUpdateTimeline: (t: SceneBreakdown['timeline']) => void;
