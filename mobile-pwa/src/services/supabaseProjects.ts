@@ -35,7 +35,8 @@ export async function createProject(
   name: string,
   productionType: string,
   _userId: string,
-  ownerRole: ProjectMember['role'] = 'designer'
+  ownerRole: ProjectMember['role'] = 'designer',
+  department: 'hmu' | 'costume' = 'hmu'
 ): Promise<{ project: Project | null; inviteCode: string | null; error: Error | null }> {
   try {
     // Use SECURITY DEFINER RPC to bypass RLS (same pattern as join flow).
@@ -44,6 +45,7 @@ export async function createProject(
       project_name: name,
       production_type_input: productionType,
       owner_role_input: ownerRole,
+      department_input: department,
     });
 
     if (rpcError) throw rpcError;
@@ -53,9 +55,10 @@ export async function createProject(
       id: data.id,
       name: data.name,
       production_type: data.production_type,
+      department: data.department || department,
       invite_code: data.invite_code,
       created_by: data.created_by,
-    } as Project;
+    } as unknown as Project;
 
     return { project, inviteCode: data.invite_code, error: null };
   } catch (error) {
@@ -116,6 +119,7 @@ export async function joinProject(
       id: rpcResult.project_id,
       name: rpcResult.project_name,
       production_type: rpcResult.production_type,
+      department: rpcResult.department || 'hmu',
       invite_code: rpcResult.invite_code,
       created_at: rpcResult.created_at,
     } as Project;

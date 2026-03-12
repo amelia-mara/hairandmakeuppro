@@ -912,7 +912,7 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
                 >
                   <div className="flex items-center gap-2">
                     <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light">
-                      HMU CALLS
+                      {currentProject?.department === 'costume' ? 'COSTUME CALLS' : 'HMU CALLS'}
                     </h2>
                     <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-gold-100 text-gold">
                       {sortedHmuCalls.length}
