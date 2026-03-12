@@ -133,21 +133,27 @@ function renderSceneBreakdown(sceneIndex) {
         scene.castMembers = characters;
     }
 
-    let storyDay = scene.storyDay || extractStoryDay(sceneIndex) || '';
+    let storyDay = scene.storyDay
+        || state.sceneTimeline?.[sceneIndex]?.day
+        || extractStoryDay(sceneIndex)
+        || '';
 
     // Auto-populate from lookbook/narrative analysis/detection if no day is set yet
     if (!storyDay) {
         const autoDay = getStoryDayFromLookbook(sceneIndex);
         if (autoDay) {
             storyDay = autoDay;
-            // Persist the auto-populated day so it shows in the dropdown
-            // and is available to the lookbook system
-            scene.storyDay = autoDay;
-            scene.storyDaySource = scene.storyDaySource || 'lookbook';
-            scene.storyDayConfidence = scene.storyDayConfidence || 'medium';
-            scene.storyDayConfirmed = false;
-            saveToLocalStorage();
         }
+    }
+
+    // Persist the auto-populated day so it shows in the dropdown
+    // and is available to the lookbook/timeline systems
+    if (storyDay && !scene.storyDay) {
+        scene.storyDay = storyDay;
+        scene.storyDaySource = scene.storyDaySource || (state.sceneTimeline?.[sceneIndex]?.day ? 'timeline' : 'lookbook');
+        scene.storyDayConfidence = scene.storyDayConfidence || 'medium';
+        scene.storyDayConfirmed = false;
+        saveToLocalStorage();
     }
 
     const timeOfDay = scene.timeOfDay || extractTimeFromHeading(scene.heading) || '';
@@ -303,6 +309,10 @@ function renderSceneBreakdown(sceneIndex) {
                 ` : scene.storyDaySource === 'lookbook' ? `
                     <div class="detection-hint-compact">
                         Auto: from lookbook (matching look)
+                    </div>
+                ` : scene.storyDaySource === 'timeline' ? `
+                    <div class="detection-hint-compact">
+                        Auto: from story timeline
                     </div>
                 ` : (storyDay && !scene.storyDayConfirmed && scene.storyDaySource !== 'user_assigned') ? `
                     <div class="detection-hint-compact">
@@ -896,6 +906,10 @@ function getStoryDayFromLookbook(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     if (!scene) return '';
 
+    // --- Source 0: sceneTimeline state (populated by narrative analyzer / master context import) ---
+    const timelineDay = state.sceneTimeline?.[sceneIndex]?.day;
+    if (timelineDay) return timelineDay;
+
     // --- Source 1: Master context / narrative analysis timeline ---
     const masterCtx = window.scriptMasterContext || window.masterContext;
     if (masterCtx?.storyTimeline?.days) {
@@ -1084,7 +1098,8 @@ function getSourceIcon(source) {
         'user_assigned': '[U]',
         'copied': '[C]',
         'inferred': '[I]',
-        'lookbook': '[L]'
+        'lookbook': '[L]',
+        'timeline': '[TL]'
     };
     return icons[source] || '[-]';
 }
@@ -1102,7 +1117,8 @@ function formatSource(source) {
         'user_assigned': 'User assigned',
         'copied': 'Copied from another scene',
         'inferred': 'Auto-inferred',
-        'lookbook': 'From lookbook'
+        'lookbook': 'From lookbook',
+        'timeline': 'From story timeline'
     };
     return labels[source] || source;
 }

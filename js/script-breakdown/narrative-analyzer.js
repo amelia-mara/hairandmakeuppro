@@ -1029,6 +1029,13 @@ export function populateFromMasterContext(context) {
                 }
                 state.sceneTimeline[sceneIndex].day = dayData.day;
                 state.sceneTimeline[sceneIndex].time = dayData.timeProgression?.[idx] || '';
+
+                // Also set on scene object so the DAY dropdown picks it up
+                if (state.scenes[sceneIndex] && !state.scenes[sceneIndex].storyDay) {
+                    state.scenes[sceneIndex].storyDay = dayData.day;
+                    state.scenes[sceneIndex].storyDaySource = 'timeline';
+                    state.scenes[sceneIndex].storyDayConfidence = 'medium';
+                }
             });
         });
     }
