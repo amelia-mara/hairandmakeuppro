@@ -1477,7 +1477,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
             return (
               <CharBlock key={ch.id} char={ch} cb={cb}
                 sceneId={scene.id}
-                projectId={projectId}
                 looks={allLooks.filter((l) => l.characterId === ch.id)}
                 highlighted={activeCharacterId === ch.id}
                 onUpdate={(d) => onUpdate(ch.id, d)}
@@ -1552,7 +1551,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, projectId, onRemoveCharacter }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -1562,7 +1561,6 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (eventId: string) => void;
   sceneId: string;
-  projectId: string;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
