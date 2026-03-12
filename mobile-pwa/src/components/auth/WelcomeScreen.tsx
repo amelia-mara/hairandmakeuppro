@@ -18,10 +18,10 @@ export function WelcomeScreen() {
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         {/* Text logo — stacked with heavy overlap and offset */}
         <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
-          <span className="absolute right-0 top-0 text-[50px] leading-none font-serif font-bold text-[#2A1A08]">
+          <span className="absolute right-[10px] top-0 text-[50px] leading-none font-serif font-bold text-[#2A1A08]">
             Checks
           </span>
-          <span className="absolute left-0 top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold">
+          <span className="absolute left-[10px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold">
             Happy.
           </span>
         </div>
