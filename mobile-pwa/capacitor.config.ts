@@ -7,11 +7,11 @@ const config: CapacitorConfig = {
   // iOS-specific settings
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#f5f4f2',
+    backgroundColor: '#F5EFE0',
   },
   // Android-specific settings
   android: {
-    backgroundColor: '#f5f4f2',
+    backgroundColor: '#F5EFE0',
   },
   // Server settings for development
   server: {
@@ -23,13 +23,13 @@ const config: CapacitorConfig = {
     // Splash screen config
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#f5f4f2',
+      backgroundColor: '#F5EFE0',
       showSpinner: false,
     },
     // Status bar config
     StatusBar: {
       style: 'DARK',
-      backgroundColor: '#f5f4f2',
+      backgroundColor: '#F5EFE0',
     },
   },
 };

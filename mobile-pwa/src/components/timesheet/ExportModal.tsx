@@ -196,7 +196,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
 
     .header { margin-bottom: 24px; }
     .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
-    .header .period { font-size: 14px; color: #C9A962; font-weight: 600; }
+    .header .period { font-size: 14px; color: #E8621A; font-weight: 600; }
 
     .rate-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
     .rate-card { background: #f8f8f8; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; text-align: center; }
@@ -208,17 +208,17 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     tbody td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
     tbody tr:last-child td { border-bottom: none; }
     .day-name { font-weight: 600; }
-    .sixth-tag { display: inline-block; font-size: 9px; font-weight: 600; color: #C9A962; background: #faf6ed; border: 1px solid #C9A962; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: middle; }
+    .sixth-tag { display: inline-block; font-size: 9px; font-weight: 600; color: #E8621A; background: #faf6ed; border: 1px solid #E8621A; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: middle; }
     .amt { text-align: right; font-weight: 600; }
     .muted { color: #ccc; }
-    tfoot td { border-top: 2px solid #C9A962; font-weight: 700; padding-top: 12px; }
+    tfoot td { border-top: 2px solid #E8621A; font-weight: 700; padding-top: 12px; }
 
     .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
     .summary-card { border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 12px; text-align: center; }
     .summary-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
     .summary-card .value { font-size: 20px; font-weight: 700; }
-    .summary-card.gold { border-color: #C9A962; background: #faf6ed; }
-    .summary-card.gold .value { color: #C9A962; }
+    .summary-card.gold { border-color: #E8621A; background: #faf6ed; }
+    .summary-card.gold .value { color: #E8621A; }
 
     .sign-off { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
     .sign-line { border-top: 1px solid #ccc; padding-top: 8px; font-size: 11px; color: #888; }
@@ -363,11 +363,11 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #1a1a1a; font-size: 14px; line-height: 1.5; }
 
-    .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; padding-bottom: 20px; border-bottom: 3px solid #C9A962; }
+    .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; padding-bottom: 20px; border-bottom: 3px solid #E8621A; }
     .inv-brand { font-size: 20px; font-weight: 700; color: #1a1a1a; }
     .inv-brand-sub { font-size: 12px; color: #888; margin-top: 2px; }
     .inv-title-block { text-align: right; }
-    .inv-title { font-size: 28px; font-weight: 800; color: #C9A962; letter-spacing: 2px; }
+    .inv-title { font-size: 28px; font-weight: 800; color: #E8621A; letter-spacing: 2px; }
     .inv-number { font-size: 13px; color: #666; margin-top: 2px; }
 
     .inv-details { display: flex; justify-content: space-between; margin-bottom: 32px; }
@@ -387,9 +387,9 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     .inv-totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
     .inv-totals .row .lbl { color: #666; }
     .inv-totals .row .val { font-weight: 600; }
-    .inv-totals .total-row { border-top: 2px solid #C9A962; padding-top: 10px; margin-top: 6px; }
+    .inv-totals .total-row { border-top: 2px solid #E8621A; padding-top: 10px; margin-top: 6px; }
     .inv-totals .total-row .lbl { font-weight: 700; font-size: 14px; color: #1a1a1a; }
-    .inv-totals .total-row .val { font-weight: 800; font-size: 18px; color: #C9A962; }
+    .inv-totals .total-row .val { font-weight: 800; font-size: 18px; color: #E8621A; }
 
     .inv-bank { background: #f8f8f8; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; font-size: 12px; color: #666; }
     .inv-bank strong { color: #333; }

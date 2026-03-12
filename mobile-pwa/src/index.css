@@ -42,11 +42,11 @@
   --color-input-bg: #251A0A;
   --color-border: rgba(255, 255, 255, 0.06);
   --color-border-focus: #E8621A;          /* Orange Primary */
-  --color-text-primary: #F5EFE0;
-  --color-text-secondary: #C4A882;
-  --color-text-muted: #707070;
-  --color-text-light: #505050;
-  --color-text-placeholder: #404040;
+  --color-text-primary: #F5EFE0;            /* Cream Base */
+  --color-text-secondary: #C4A882;           /* Warm tan */
+  --color-text-muted: #9A8068;
+  --color-text-light: #7A5C3A;
+  --color-text-placeholder: #5A3E28;
   --color-shadow: rgba(0, 0, 0, 0.8);
   --color-shadow-hover: rgba(0, 0, 0, 0.9);
   --color-nav-bg: #1A1208;
@@ -278,9 +278,14 @@
     border-color: var(--gold-light);
   }
 
-  /* Orange text (replaces gold gradient text) */
+  /* Orange text — brand primary */
   .gold-text-gradient {
     color: #E8621A;
+  }
+
+  /* Solid orange background — brand primary */
+  .gold-gradient {
+    background: #E8621A;
   }
 
   /* Active pill toggle */
