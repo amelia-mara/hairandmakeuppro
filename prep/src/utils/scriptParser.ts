@@ -720,6 +720,7 @@ export function parseScriptText(text: string): ParsedScript {
               characterMap.set(normalized, {
                 name: normalized,
                 normalizedName: normalized,
+                category: isSupportingArtistRole(normalized) ? 'supporting_artist' : 'principal',
                 sceneCount: 0,
                 dialogueCount: 0,
                 scenes: [],
