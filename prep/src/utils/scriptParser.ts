@@ -247,6 +247,29 @@ function extractCharactersFromActionLine(line: string): string[] {
     characters.push(potential);
   }
 
+  /* Character introduction pattern: ALL CAPS NAME followed by comma, age, or
+     parenthetical — e.g. "LENNON BOWIE, 28" or "DEDRA MONTGOMERY 29, an icy beauty"
+     This is the standard screenplay way to introduce a character in action lines. */
+  const introPattern = /^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(\s]\s*\d{1,3}\b/;
+  const introMatch = trimmed.match(introPattern);
+  if (introMatch) {
+    const name = introMatch[1].trim();
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE)\b/.test(name)) {
+      characters.push(name);
+    }
+  }
+
+  /* Also detect ALL CAPS names (2+ words) at start of line followed by comma —
+     standard character intro even without age: "LENNON BOWIE, is a cowboy..." */
+  const capsCommaPattern = /^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*,/;
+  const capsCommaMatch = trimmed.match(capsCommaPattern);
+  if (capsCommaMatch) {
+    const name = capsCommaMatch[1].trim();
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE)\b/.test(name)) {
+      characters.push(name);
+    }
+  }
+
   const actionVerbs = 'enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates|pulls|pushes|picks|puts|takes|gives|throws|catches|drops|lifts|carries|follows|leads|chases|hugs|kisses|slaps|punches|kicks|shoots|stabs|struggles|fights|ducks|dodges|rolls|slides|stumbles|trips|collapses|faints|wakes|sleeps|eats|drinks|reads|writes|drives|flies|swims|dances|sings|plays|works|tries|helps|saves|kills|dies';
 
   const titleCasePattern = new RegExp(
@@ -613,6 +636,34 @@ export function parseScriptText(text: string): ParsedScript {
   characters.forEach(char => {
     char.dialogueCount = char.variants.length;
   });
+
+  /* Post-processing: scan scene content for mentions of known character names.
+     This catches characters who appear in action/description lines by first name,
+     last name, or possessive (e.g. "Lennon's six pack abs") but weren't detected
+     by the cue or action-line patterns. */
+  for (const scene of scenes) {
+    const contentUpper = scene.content.toUpperCase();
+    for (const char of characters) {
+      if (scene.characters.includes(char.normalizedName)) continue;
+      /* Build search terms: full name, first name (3+ chars), last name (3+ chars) */
+      const nameParts = char.normalizedName.split(/\s+/);
+      const searchTerms: string[] = [char.normalizedName];
+      for (const part of nameParts) {
+        if (part.length >= 3) searchTerms.push(part);
+      }
+      const found = searchTerms.some((term) => {
+        const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:'S)?\\b`, 'i');
+        return re.test(contentUpper);
+      });
+      if (found) {
+        scene.characters.push(char.normalizedName);
+        if (!char.scenes.includes(scene.sceneNumber)) {
+          char.scenes.push(scene.sceneNumber);
+          char.sceneCount++;
+        }
+      }
+    }
+  }
 
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
