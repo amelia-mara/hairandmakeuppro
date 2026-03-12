@@ -423,6 +423,19 @@ function extractCharactersFromActionLine(line: string): string[] {
     }
   }
 
+  /* Mid-line character introduction: ALL CAPS NAME (2+ words) after a sentence break
+     or mid-sentence, followed by comma + age or comma + lowercase description.
+     e.g. "...on foot. JASPER MONTGOMERY, 70, he looks like..."
+     e.g. "Her husband, ARCHIBALD CHRISTIE, dashing, holds her hand."
+     e.g. "...the door for NAN WATTS, a prim-looking woman" */
+  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+  while ((match = midLineIntroRe.exec(trimmed)) !== null) {
+    const name = match[1].trim();
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
+      characters.push(name);
+    }
+  }
+
   const actionVerbs = 'enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates|pulls|pushes|picks|puts|takes|gives|throws|catches|drops|lifts|carries|follows|leads|chases|hugs|kisses|slaps|punches|kicks|shoots|stabs|struggles|fights|ducks|dodges|rolls|slides|stumbles|trips|collapses|faints|wakes|sleeps|eats|drinks|reads|writes|drives|flies|swims|dances|sings|plays|works|tries|helps|saves|kills|dies';
 
   /* Title Case name + action verb: "Lennon rides", "Dedra watches"
