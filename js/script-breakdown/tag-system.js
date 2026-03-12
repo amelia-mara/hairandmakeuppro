@@ -13,6 +13,7 @@
 import { state } from './main.js';
 import { generateId } from './utils.js';
 import { callAI } from './ai-integration.js';
+import { characterManager, scanForKnownCharacters } from './breakdown-character-manager.js';
 
 // Element categories for tagging (NO 'cast' - characters are handled separately)
 const categories = [
@@ -1227,6 +1228,12 @@ function detectCharacter(text, sceneIndex = null) {
         }
     }
 
+    // Try variation-aware scan (matches first name, last name, aliases)
+    if (characterManager.characters.size > 0) {
+        const matches = characterManager.scanForKnownCharacters(text);
+        if (matches.length > 0) return matches[0];
+    }
+
     // Fallback: Look in masterContext for all characters and check if they appear in text
     if (window.masterContext?.characters) {
         const allCharacters = Object.keys(window.masterContext.characters);
@@ -1260,15 +1267,21 @@ export function populateCharactersForAllScenes() {
         const sceneContent = scene.content || scene.text || '';
         if (!sceneContent) return;
 
-        // Find which characters appear in this scene
-        const sceneCharacters = [];
-        allCharacters.forEach(characterName => {
-            // Use word boundary to avoid partial matches
-            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-            if (sceneContent.match(regex)) {
-                sceneCharacters.push(characterName);
-            }
+        // Find which characters appear in this scene using variation-aware scanning
+        // This catches "Gwen" or "Mrs. Lawson" when "GWEN LAWSON" is the known character
+        let sceneCharacters = scanForKnownCharacters(sceneContent, {
+            masterContextCharacters: window.masterContext.characters
         });
+
+        // Fallback to exact name matching if variation scan found nothing
+        if (sceneCharacters.length === 0) {
+            allCharacters.forEach(characterName => {
+                const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+                if (sceneContent.match(regex)) {
+                    sceneCharacters.push(characterName);
+                }
+            });
+        }
 
         // Only populate if characters were found
         if (sceneCharacters.length > 0) {

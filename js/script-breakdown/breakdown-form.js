@@ -9,6 +9,7 @@ import { detectAIElements, generateDescription } from './ai-integration.js';
 import { getAllVersions, getCurrentVersion, getVersionById, copySceneFromVersion } from './version-manager.js';
 import { renderSceneCharacterConfirmation } from './script-upload.js';
 import { detectStoryDay } from './script-analysis.js';
+import { characterManager, scanForKnownCharacters } from './breakdown-character-manager.js';
 
 // ============================================================================
 // ELEMENT CATEGORIES
@@ -54,37 +55,35 @@ export function renderBreakdownPanel() {
 }
 
 /**
- * Detect which characters from masterContext appear in the given scene content
- * This is the SINGLE SOURCE OF TRUTH - uses characters from initial analysis
+ * Detect which characters from masterContext appear in the given scene content.
+ * Uses variation-aware scanning: once a character like "GWEN LAWSON" is known,
+ * mentions of "Gwen", "Lawson", or "Mrs. Lawson" in any scene will match.
  */
 function detectCharactersFromMasterContext(sceneContent) {
+    // Try variation-aware scan first (checks first name, last name, aliases)
+    const variationMatches = scanForKnownCharacters(sceneContent, {
+        confirmedCharacters: state.confirmedCharacters || window.confirmedCharacters,
+        masterContextCharacters: window.masterContext?.characters || window.scriptMasterContext?.characters
+    });
+
+    if (variationMatches.length > 0) {
+        console.log('🔍 Character detection (variation-aware):', {
+            sceneContentLength: sceneContent.length,
+            charactersFound: variationMatches
+        });
+        return variationMatches;
+    }
+
+    // Final fallback: exact name match against masterContext keys
     const charactersInScene = [];
+    const sources = [
+        window.masterContext?.characters,
+        window.scriptMasterContext?.characters
+    ];
 
-    // First try: Check masterContext.characters (primary source)
-    if (window.masterContext?.characters) {
-        Object.keys(window.masterContext.characters).forEach(characterName => {
-            // Check if character name appears in scene content
-            // Use word boundary to avoid partial matches
-            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-            if (sceneContent.match(regex)) {
-                charactersInScene.push(characterName);
-            }
-        });
-    }
-
-    // Fallback: Check confirmedCharacters if masterContext didn't have characters
-    if (charactersInScene.length === 0 && window.confirmedCharacters) {
-        window.confirmedCharacters.forEach(characterName => {
-            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-            if (sceneContent.match(regex)) {
-                charactersInScene.push(characterName);
-            }
-        });
-    }
-
-    // Additional fallback: Check scriptMasterContext.characters
-    if (charactersInScene.length === 0 && window.scriptMasterContext?.characters) {
-        Object.keys(window.scriptMasterContext.characters).forEach(characterName => {
+    for (const source of sources) {
+        if (!source || charactersInScene.length > 0) continue;
+        Object.keys(source).forEach(characterName => {
             const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
             if (sceneContent.match(regex)) {
                 charactersInScene.push(characterName);
