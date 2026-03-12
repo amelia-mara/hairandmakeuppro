@@ -7,17 +7,17 @@ export function WelcomeScreen() {
     <div className="min-h-screen flex flex-col relative overflow-hidden" style={{
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
-      {/* Rainbow arc motif — concentric arcs from right side */}
+      {/* Rainbow arc motif — subtle concentric arcs peeking from right */}
       <div
         className="absolute pointer-events-none z-0"
-        style={{ top: '5%', right: '-60%', width: '120%', height: '90%' }}
+        style={{ top: '0%', right: '-85%', width: '130%', aspectRatio: '1', }}
       >
         {/* Outermost — warm peach */}
-        <div className="absolute inset-0 rounded-full border-[35px] border-[#F0C8A0] opacity-35" />
+        <div className="absolute inset-0 rounded-full border-[20px] border-[#F0C8A0] opacity-20" />
         {/* Middle — soft teal/mint */}
-        <div className="absolute inset-[12%] rounded-full border-[30px] border-[#A8DDD4] opacity-40" />
+        <div className="absolute inset-[10%] rounded-full border-[18px] border-[#A8DDD4] opacity-25" />
         {/* Inner — orange */}
-        <div className="absolute inset-[24%] rounded-full border-[25px] border-[#E8621A] opacity-[0.18]" />
+        <div className="absolute inset-[20%] rounded-full border-[16px] border-[#E8621A] opacity-[0.12]" />
       </div>
 
       {/* Department pill */}
