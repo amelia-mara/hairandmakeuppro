@@ -1,0 +1,201 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DASHBOARD
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.dashboard-header .btn-action-gold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 24px;
+  text-align: center;
+}
+.dashboard-empty .btn-action-gold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-grid-wrapper {
+  padding: 24px 32px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WIDGET CARD
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.widget-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--glass-shadow-stat);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.widget-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 8px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 1;
+}
+
+.widget-icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.widget-icon-btn:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: rgba(var(--a), 0.06);
+}
+.widget-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   QUICK ACTION BUTTONS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+.quick-action-btn:hover {
+  border-color: var(--border-medium);
+  background: var(--bg-card-hover);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ADD WIDGET MODAL — option rows
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.widget-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(10, 9, 8, 0.5);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.widget-option:hover:not(:disabled) {
+  border-color: var(--border-medium);
+  background: rgba(var(--a), 0.04);
+}
+.widget-option.added {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   REACT-GRID-LAYOUT OVERRIDES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.react-grid-layout {
+  position: relative;
+}
+.react-grid-item.react-grid-placeholder {
+  background: rgba(var(--a), 0.08) !important;
+  border: 1px dashed var(--border-medium) !important;
+  border-radius: 14px !important;
+  opacity: 1 !important;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-color: var(--text-muted) !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+.react-grid-item > .react-resizable-handle:hover::after {
+  border-color: var(--accent-gold) !important;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCRIPT BREAKDOWN PAGE — 3D layered panels
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.bd-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px);
+  overflow: hidden;
+}
+
+.bd-panels { display: flex; flex: 1; overflow: hidden; }
+
+/* ━━━ Panel Surfaces — 3 distinct elevation levels ━━━ */
+
+/* Left panel — transparent so page rainbow shows through */
+.bd-left {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: transparent;
+  border-right: 1px solid var(--border-card);
+}
+
+/* Center — workspace surface (transparent so page rainbow shows through) */
+.bd-center {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+/* Right panel — semi-transparent so page rainbow shows through */
+.bd-right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(46, 32, 16, 0.55);
+  border-left: 1px solid var(--border-card);
+  position: relative;
+}
+
+/* Shared panel-surface treatment */
+.bd-panel-surface {
+  position: relative;
+}
+
+/* ━━━ Draggable Divider ━━━ */

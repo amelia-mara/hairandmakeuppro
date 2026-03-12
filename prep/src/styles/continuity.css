@@ -1,0 +1,385 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CONTINUITY TRACKER (ct-)
+   Same visual language as Script page — reuses bd-/sl- layout classes
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Scene header bar inside center panel */
+.ct-scene-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 28px;
+  background: rgba(0,0,0,0.35);
+  border-bottom: 2px solid rgba(var(--a), 0.18);
+  flex-shrink: 0;
+}
+.ct-scene-bar-left {
+  display: flex; align-items: center; gap: 12px;
+}
+.ct-scene-num {
+  font-size: 1rem; font-weight: 800;
+  color: var(--accent); letter-spacing: 0.03em;
+}
+.ct-scene-loc {
+  font-size: 0.8125rem; font-weight: 600;
+  color: var(--text-heading);
+}
+.ct-scene-bar-right {
+  display: flex; align-items: center; gap: 10px;
+}
+
+/* Status button */
+.ct-status-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.6875rem; font-weight: 600; font-family: var(--font-sans);
+  padding: 6px 14px; border-radius: var(--radius-button);
+  border: 1px solid var(--border-card);
+  background: var(--bg-card); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.ct-status-btn:hover { border-color: var(--border-medium); }
+.ct-status-btn--in-progress {
+  background: rgba(var(--a), 0.10); color: var(--accent);
+  border-color: rgba(var(--a), 0.25);
+}
+.ct-status-btn--complete {
+  background: rgba(82, 193, 134, 0.12); color: #4ABFB0;
+  border-color: rgba(82, 193, 134, 0.25);
+}
+
+/* Scrollable center content */
+.ct-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 0;
+}
+.ct-content {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 32px 60px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+
+/* ━━━ Character info card ━━━ */
+.ct-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(var(--a), 0.14);
+  border-radius: var(--radius-card);
+  padding: 20px 24px;
+}
+.ct-card-header {
+  margin-bottom: 12px;
+}
+.ct-card-title {
+  font-family: var(--font-display);
+  font-size: 1rem; font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+.ct-card-subtitle {
+  font-size: 0.75rem; color: var(--text-muted);
+  margin-top: 2px; display: block;
+}
+.ct-look-info {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.ct-look-label {
+  font-size: 0.625rem; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.ct-look-name {
+  font-size: 0.8125rem; font-weight: 600;
+  color: var(--accent);
+}
+
+/* HMW grid */
+.ct-hmw-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ct-hmw-item {
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.20);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+}
+.ct-hmw-label {
+  display: block;
+  font-size: 0.5625rem; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+.ct-hmw-value {
+  font-size: 0.8125rem; font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+/* ━━━ Sections ━━━ */
+.ct-section {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.ct-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ct-section-title {
+  font-size: 0.625rem; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin: 0;
+}
+
+/* ━━━ Quick Flags ━━━ */
+.ct-flags-grid {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.ct-flag-pill {
+  display: inline-flex; align-items: center;
+  padding: 7px 16px;
+  font-size: 0.75rem; font-weight: 600; font-family: var(--font-sans);
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  cursor: pointer; transition: all 0.15s;
+}
+.ct-flag-pill:hover {
+  border-color: rgba(var(--a), 0.25);
+  color: var(--text-primary);
+}
+.ct-flag-pill--active {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.35);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+/* ━━━ Add button ━━━ */
+.ct-add-btn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.6875rem; font-weight: 600; font-family: var(--font-sans);
+  padding: 6px 14px; border-radius: var(--radius-button);
+  background: rgba(var(--a), 0.10); color: var(--accent);
+  border: 1px solid rgba(var(--a), 0.20);
+  cursor: pointer; transition: all 0.15s;
+}
+.ct-add-btn:hover {
+  background: rgba(var(--a), 0.18); border-color: rgba(var(--a), 0.35);
+}
+
+/* ━━━ Empty events ━━━ */
+.ct-empty-events {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 0;
+  background: var(--bg-card);
+  border: 1px dashed rgba(var(--a), 0.14);
+  border-radius: var(--radius-card);
+  cursor: pointer; transition: all 0.15s;
+  width: 100%;
+}
+.ct-empty-events:hover {
+  border-color: rgba(var(--a), 0.30);
+  background: rgba(var(--a), 0.04);
+}
+.ct-empty-text {
+  font-size: 0.8125rem; color: var(--text-muted);
+  margin-top: 8px;
+}
+.ct-empty-hint {
+  font-size: 0.6875rem; color: var(--text-muted);
+  opacity: 0.5; margin-top: 4px;
+}
+
+/* ━━━ Event Cards ━━━ */
+.ct-events-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ct-event-card {
+  position: relative;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid rgba(var(--a), 0.14);
+  border-radius: var(--radius-card);
+}
+.ct-event-remove {
+  position: absolute; top: 14px; right: 14px;
+  padding: 4px; color: var(--text-muted); opacity: 0.4;
+  cursor: pointer; transition: all 0.15s;
+  background: none; border: none;
+}
+.ct-event-remove:hover { opacity: 1; color: #ef4444; }
+
+.ct-event-type {
+  display: inline-block;
+  font-size: 0.5625rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent);
+  background: rgba(var(--a), 0.12);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.ct-event-name {
+  font-family: var(--font-display);
+  font-size: 0.9375rem; font-weight: 700;
+  color: var(--text-heading);
+  margin: 0 0 4px; padding-right: 24px;
+}
+.ct-event-desc {
+  font-size: 0.8125rem; color: var(--text-secondary);
+  line-height: 1.5; margin: 0 0 10px;
+}
+.ct-event-meta {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  font-size: 0.75rem;
+}
+.ct-event-meta-label {
+  color: var(--text-muted);
+}
+.ct-event-meta-value {
+  color: var(--text-primary); font-weight: 500;
+  margin-left: 4px;
+}
+
+/* Scene chips */
+.ct-event-scenes {
+  margin-top: 10px;
+}
+.ct-event-scenes-label {
+  display: block;
+  font-size: 0.5625rem; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.ct-event-scene-chips, .ct-prog-scene-chips {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.ct-scene-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; padding: 3px 8px;
+  font-size: 0.6875rem; font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  cursor: pointer; transition: all 0.15s;
+}
+.ct-scene-chip--staged {
+  background: rgba(var(--a), 0.20);
+  border-color: rgba(var(--a), 0.35);
+  color: var(--accent);
+}
+
+/* ━━━ Progression timeline ━━━ */
+.ct-event-progression {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.ct-prog-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.6875rem; font-weight: 600; font-family: var(--font-sans);
+  color: var(--accent);
+  background: none; border: none; cursor: pointer;
+  padding: 0; margin-bottom: 10px;
+}
+.ct-prog-timeline {
+  position: relative; padding-left: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.ct-prog-line {
+  position: absolute; left: 7px; top: 4px; bottom: 4px;
+  width: 2px;
+  background: rgba(var(--a), 0.25);
+  border-radius: 1px;
+}
+.ct-prog-stage {
+  position: relative; display: flex; gap: 10px;
+}
+.ct-prog-dot {
+  position: absolute; left: -20px; top: 0;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ct-prog-dot span {
+  font-size: 0.5rem; font-weight: 800; color: #fff;
+}
+.ct-prog-content { flex: 1; }
+.ct-prog-stage-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 2px;
+}
+.ct-prog-stage-name {
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--text-primary);
+}
+.ct-prog-scene-badge {
+  font-size: 0.625rem; font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px; border-radius: 4px;
+}
+.ct-prog-notes {
+  font-size: 0.6875rem; color: var(--text-secondary);
+  line-height: 1.5; margin: 2px 0 0;
+}
+
+/* ━━━ Notes textarea ━━━ */
+.ct-notes-input {
+  width: 100%;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid rgba(var(--a), 0.12);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 0.8125rem; font-family: var(--font-sans);
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.ct-notes-input:focus {
+  border-color: rgba(var(--a), 0.30);
+}
+.ct-notes-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+/* ━━━ Bottom actions ━━━ */
+.ct-actions {
+  display: flex; gap: 10px;
+}
+.ct-copy-btn, .ct-complete-btn {
+  display: flex; align-items: center; gap: 6px;
+  flex: 1; justify-content: center;
+  font-size: 0.75rem; font-weight: 600; font-family: var(--font-sans);
+  padding: 10px 16px; border-radius: var(--radius-button);
+  border: 1px solid var(--border-card);
+  background: var(--bg-card); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s;
+}
+.ct-copy-btn:hover { border-color: var(--border-medium); color: var(--text-primary); }
+.ct-complete-btn {
+  background: rgba(82, 193, 134, 0.10); color: #4ABFB0;
+  border-color: rgba(82, 193, 134, 0.20);
+}
+.ct-complete-btn:hover {
+  background: rgba(82, 193, 134, 0.18); border-color: rgba(82, 193, 134, 0.35);
+}
+
+/* ━━━ Empty state ━━━ */
+.ct-empty-state {
+  display: flex; justify-content: center; align-items: center;
+  padding: 80px 0; color: var(--text-muted);
+  font-size: 0.875rem;
+}
+

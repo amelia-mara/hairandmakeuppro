@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PREP HAPPY — Checks Happy Design System
+   Clean, warm, earthy aesthetic
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@theme {
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Consolas', monospace;
+
+  --radius-card: 14px;
+  --radius-input: 10px;
+  --radius-button: 999px;
+}
+
+:root {
+  /*
+    Checks Happy — Brand colour tokens
+    Accent channels (R,G,B triplets) mapped from brand orange system
+  */
+  --a:        232, 98, 26;    /* orange-primary #E8621A */
+  --a-light:  240, 136, 42;   /* orange-warm #F0882A */
+  --a-bright: 245, 166, 35;   /* amber #F5A623 */
+  --a-peak:   242, 196, 160;  /* peach #F2C4A0 */
+  --a-dim:    212, 148, 58;   /* gold #D4943A */
+  --accent:       #E8621A;    /* orange primary */
+  --accent-dark:  #C4522A;    /* terracotta */
+  --accent-cue:   #D4943A;    /* gold */
+  --accent-cue-hover: #F5A623; /* amber */
+
+  /* Brand dark mode — warm brown base */
+  --bg-primary: #1A1208;
+  --bg-surface: #251A0A;
+  --bg-card: #2E2010;
+  --bg-card-hover: #3A2A16;
+  --bg-elevated: #2E2010;
+
+  --text-primary: #F5EFE0;              /* Cream Base */
+  --text-secondary: #C4A882;             /* Warm tan — readable on dark */
+  --text-heading: #F5EFE0;               /* Cream Base */
+  --text-muted: #9A8068;                 /* Muted warm brown — readable on dark */
+  --text-label: #B8A08A;                 /* Label warm tan */
+
+  /* Brand colours */
+  --brand-orange: #E8621A;
+  --brand-orange-warm: #F0882A;
+  --brand-amber: #F5A623;
+  --brand-gold: #D4943A;
+  --brand-terracotta: #C4522A;
+  --brand-teal: #4ABFB0;
+  --brand-brown: #4A3020;
+  --brand-brown-light: #7A5C3A;
+  --brand-peach: #F2C4A0;
+  --brand-cream: #F5EFE0;
+  --brand-cream-dark: #EDE4D0;
+
+  /* Semantic accent aliases */
+  --accent-gold: var(--accent);
+  --accent-gold-dim: rgba(var(--a), 0.5);
+  --accent-gold-soft: rgba(var(--a), 0.08);
+  --accent-gold-glow: rgba(var(--a), 0.04);
+  --gold-primary: var(--accent);
+  --gold-light: rgba(var(--a-bright), 1);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-card: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Scene type color coding: INT/DAY=Cream, EXT/DAY=Amber, INT/NIGHT=Teal, EXT/NIGHT=Forest Green */
+  --int-day:          rgba(245, 239, 224, 0.12);
+  --ext-day:          rgba(245, 166, 35, 0.15);
+  --int-night:        rgba(74, 191, 176, 0.15);
+  --ext-night:        rgba(61, 122, 95, 0.15);
+  --int-day-border:   #EDE4D0;
+  --ext-day-border:   #F5A623;
+  --int-night-border: #4ABFB0;
+  --ext-night-border: #3D7A5F;
+
+  /* Simple flat shadows */
+  --glass-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --glass-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --glass-shadow-stat: 0 2px 6px rgba(0, 0, 0, 0.2);
+
+  /* Status */
+  --status-active: #4ABFB0;
+  --status-pending: #F0882A;
+  --status-error: #C4522A;
+  --status-success: #4ABFB0;
+  --status-info: #F5A623;
+
+  color-scheme: dark;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   THEME VARIANTS — data-theme attribute on <html>
+   Default (no attribute) = Gold
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Theme variants removed — unified Checks Happy brand system */
+
