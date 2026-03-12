@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, emptyHMW,
-  useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore, useScriptUploadStore,
+  MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, emptyHMW,
+  useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
 
@@ -308,7 +308,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
                     // Change info
                     const hasChange = cb?.changeType === 'change';
-                    const hasExit = hasChange && (cb?.exitsWith.hair || cb?.exitsWith.makeup || cb?.exitsWith.wardrobe);
 
                     return (
                       <tr key={cid}
@@ -373,16 +372,3 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   );
 }
 
-/* ━━━ Tag pills for table cells ━━━ */
-
-function TagPills({ tags, catId }: { tags: { id: string; text: string }[]; catId: string }) {
-  if (tags.length === 0) return null;
-  const color = BREAKDOWN_CATEGORIES.find((c) => c.id === catId)?.color || '#999';
-  return (
-    <div className="bs-tag-row">
-      {tags.map((t) => (
-        <span key={t.id} className="bs-tag-pill" style={{ borderColor: color, color }}>{t.text}</span>
-      ))}
-    </div>
-  );
-}
