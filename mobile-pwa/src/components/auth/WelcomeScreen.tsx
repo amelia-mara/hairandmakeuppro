@@ -7,20 +7,17 @@ export function WelcomeScreen() {
     <div className="min-h-screen flex flex-col" style={{
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
-      {/* Department pills at top */}
-      <div className="flex items-center justify-center gap-3 pt-14 px-8">
-        <span className="px-5 py-2 rounded-pill text-sm font-medium text-gold border border-gold/30 bg-gold/5">
-          Hair &amp; Makeup
-        </span>
-        <span className="px-5 py-2 rounded-pill text-sm font-medium text-[#5A3E28] border border-[#5A3E28]/20 bg-[#5A3E28]/5">
-          Costume
+      {/* Department pill */}
+      <div className="flex items-center justify-center pt-14 px-8">
+        <span className="px-5 py-2 rounded-pill text-sm font-medium text-teal border border-teal/30 bg-teal/5">
+          Hair &amp; Makeup &amp; Costume
         </span>
       </div>
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         {/* Text logo — stacked */}
-        <div className="flex flex-col items-center mb-2">
+        <div className="flex flex-col items-center mb-8">
           <span className="text-[42px] leading-tight font-serif font-bold text-[#2A1A08]">
             Checks
           </span>
@@ -29,78 +26,79 @@ export function WelcomeScreen() {
           </span>
         </div>
 
-        {/* Rainbow gradient underline */}
-        <svg
-          width="220"
-          height="4"
-          viewBox="0 0 220 4"
-          className="mb-8"
-        >
-          <defs>
-            <linearGradient id="welcomeRainbow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#4A3020" />
-              <stop offset="14%" stopColor="#7A5C3A" />
-              <stop offset="28%" stopColor="#D4943A" />
-              <stop offset="42%" stopColor="#F5A623" />
-              <stop offset="56%" stopColor="#F0882A" />
-              <stop offset="70%" stopColor="#E8621A" />
-              <stop offset="84%" stopColor="#F2C4A0" />
-              <stop offset="100%" stopColor="#4ABFB0" />
-            </linearGradient>
-          </defs>
-          <rect x="0" y="0" width="220" height="4" rx="2" fill="url(#welcomeRainbow)" />
-        </svg>
-
         {/* Tagline */}
         <p className="text-lg text-[#5A3E28] mb-10">
           Your personal onset assistant
         </p>
 
-        {/* Feature icons */}
+        {/* Feature icons — bold, filled style */}
         <div className="flex items-center justify-center w-full max-w-md mb-12">
-          {/* Capture */}
+          {/* Capture — bold filled camera */}
           <div className="flex flex-col items-center flex-1">
-            <svg className="w-12 h-12 mb-3" viewBox="0 0 48 48" fill="none">
-              <rect x="4" y="12" width="40" height="28" rx="4" stroke="#2A1A08" strokeWidth="2.5" fill="none" />
-              <path d="M16 12L20 6H28L32 12" stroke="#2A1A08" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <circle cx="24" cy="27" r="8" stroke="#2A1A08" strokeWidth="2.5" fill="none" />
-              <circle cx="24" cy="27" r="3" fill="#2A1A08" />
+            <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
+              {/* Camera body */}
+              <path
+                d="M4 18C4 15.79 5.79 14 8 14H14L18 8H38L42 14H48C50.21 14 52 15.79 52 18V44C52 46.21 50.21 48 48 48H8C5.79 48 4 46.21 4 44V18Z"
+                fill="#2A1A08"
+              />
+              {/* Lens outer ring */}
+              <circle cx="28" cy="30" r="11" fill="#fefcfb" />
+              {/* Lens inner */}
+              <circle cx="28" cy="30" r="6" fill="#2A1A08" />
+              {/* Lens highlight */}
+              <circle cx="28" cy="30" r="2.5" fill="#fefcfb" />
             </svg>
             <span className="text-sm font-medium text-[#2A1A08]">Capture</span>
           </div>
 
           {/* Divider */}
-          <div className="w-px h-20 bg-[#c5c0b5]" />
+          <div className="w-px h-24 bg-[#c5c0b5]" />
 
-          {/* Track */}
+          {/* Track — bold filled sync arrows */}
           <div className="flex flex-col items-center flex-1">
-            <svg className="w-12 h-12 mb-3" viewBox="0 0 48 48" fill="none">
+            <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
+              {/* Top arc */}
               <path
-                d="M24 8C14.06 8 6 16.06 6 26c0 3.6 1.1 6.9 2.9 9.7"
-                stroke="#2A1A08" strokeWidth="2.5" strokeLinecap="round" fill="none"
+                d="M28 8C16.954 8 8 16.954 8 28c0 4.5 1.5 8.6 4 12"
+                stroke="#2A1A08"
+                strokeWidth="5"
+                strokeLinecap="round"
+                fill="none"
               />
+              {/* Bottom arc */}
               <path
-                d="M24 44c9.94 0 18-8.06 18-18 0-3.6-1.1-6.9-2.9-9.7"
-                stroke="#2A1A08" strokeWidth="2.5" strokeLinecap="round" fill="none"
+                d="M28 48c11.046 0 20-8.954 20-20 0-4.5-1.5-8.6-4-12"
+                stroke="#2A1A08"
+                strokeWidth="5"
+                strokeLinecap="round"
+                fill="none"
               />
-              <polygon points="4,32 12,38 13,28" fill="#2A1A08" />
-              <polygon points="44,20 36,14 35,24" fill="#2A1A08" />
+              {/* Arrow head bottom-left */}
+              <polygon points="4,36 15,43 16,30" fill="#2A1A08" />
+              {/* Arrow head top-right */}
+              <polygon points="52,20 41,13 40,26" fill="#2A1A08" />
             </svg>
             <span className="text-sm font-medium text-[#2A1A08]">Track</span>
           </div>
 
           {/* Divider */}
-          <div className="w-px h-20 bg-[#c5c0b5]" />
+          <div className="w-px h-24 bg-[#c5c0b5]" />
 
-          {/* Collaborate */}
+          {/* Collaborate — bold filled people */}
           <div className="flex flex-col items-center flex-1">
-            <svg className="w-12 h-12 mb-3" viewBox="0 0 48 48" fill="none">
-              <circle cx="24" cy="14" r="6" stroke="#2A1A08" strokeWidth="2.5" fill="none" />
-              <path d="M14 40v-6a10 10 0 0120 0v6" stroke="#2A1A08" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-              <circle cx="10" cy="20" r="4" stroke="#2A1A08" strokeWidth="2" fill="none" />
-              <path d="M2 40v-4a8 8 0 018-8" stroke="#2A1A08" strokeWidth="2" strokeLinecap="round" fill="none" />
-              <circle cx="38" cy="20" r="4" stroke="#2A1A08" strokeWidth="2" fill="none" />
-              <path d="M46 40v-4a8 8 0 00-8-8" stroke="#2A1A08" strokeWidth="2" strokeLinecap="round" fill="none" />
+            <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
+              {/* Center person head */}
+              <circle cx="28" cy="14" r="7" fill="#2A1A08" />
+              {/* Center person body */}
+              <path d="M16 46v-8c0-6.627 5.373-12 12-12s12 5.373 12 12v8" fill="#2A1A08" />
+              {/* Left person head */}
+              <circle cx="11" cy="20" r="5.5" fill="#2A1A08" />
+              {/* Left person body */}
+              <path d="M0 46v-6c0-5.523 4.477-10 10-10 2.2 0 4.2.7 5.8 1.9" fill="#2A1A08" />
+              {/* Right person head */}
+              <circle cx="45" cy="20" r="5.5" fill="#2A1A08" />
+              {/* Right person body */}
+              <path d="M56 46v-6c0-5.523-4.477-10-10-10-2.2 0-4.2.7-5.8 1.9" fill="#2A1A08" />
             </svg>
             <span className="text-sm font-medium text-[#2A1A08]">Collaborate</span>
           </div>
