@@ -955,6 +955,7 @@ export function parseScriptText(text: string): ParsedScript {
   let currentScene: ParsedScene | null = null;
   let fallbackSceneNumber = 0;
   let currentSceneContent = '';
+  let preambleContent = ''; // Text before the first scene heading
   let lastLineWasCharacter = false;
   let dialogueCount = 0;
 
@@ -965,6 +966,19 @@ export function parseScriptText(text: string): ParsedScript {
     const parsedHeading = parseSceneHeadingLine(trimmed);
 
     if (parsedHeading.isValid) {
+      // If there's preamble text before the first scene, create a preamble scene
+      if (!currentScene && preambleContent.trim()) {
+        scenes.push({
+          sceneNumber: '0',
+          slugline: 'PREAMBLE',
+          intExt: 'EXT',
+          location: 'PREAMBLE',
+          timeOfDay: 'DAY',
+          characters: [],
+          content: preambleContent.trim(),
+        });
+      }
+
       if (currentScene) {
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
@@ -990,6 +1004,9 @@ export function parseScriptText(text: string): ParsedScript {
 
     if (currentScene) {
       currentSceneContent += line + '\n';
+    } else {
+      // Accumulate text before the first scene heading
+      preambleContent += line + '\n';
     }
 
     // Before treating a line as a dialogue cue, check if it's actually the

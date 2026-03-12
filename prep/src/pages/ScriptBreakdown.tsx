@@ -264,12 +264,20 @@ export function ScriptBreakdown({ projectId }: Props) {
                 <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
                   onClick={() => selectScene(s.id)}>
                   <div className="sl-card-top">
-                    <span className="sl-card-num">{s.number}</span>
-                    <span className="sl-card-location">{s.intExt}. {s.location}</span>
+                    {s.location === 'PREAMBLE' ? (
+                      <span className="sl-card-location">PREAMBLE</span>
+                    ) : (
+                      <>
+                        <span className="sl-card-num">{s.number}</span>
+                        <span className="sl-card-location">{s.intExt}. {s.location}</span>
+                      </>
+                    )}
                   </div>
                   <div className="sl-card-meta">
+                    {s.location !== 'PREAMBLE' && <>
                     <span className={`sl-card-pill sl-pill--${s.dayNight.toLowerCase()}`}>{s.dayNight}</span>
                     <span className="sl-card-detail">{s.intExt}</span>
+                    </>}
                     {s.characterIds.length > 0 && (
                       <span className="sl-card-cast">{s.characterIds.length}</span>
                     )}
@@ -1061,7 +1069,9 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
-          <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+          {scene.location !== 'PREAMBLE' && (
+            <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+          )}
           <div className="sv-content">
             {renderSceneContent(scene)}
           </div>
@@ -1269,17 +1279,19 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           : ps.timeOfDay as 'DAY' | 'NIGHT';
 
         const parsedNum = parseInt(sceneNum, 10);
+        const isPreamble = ps.location === 'PREAMBLE';
         return {
           id: `ps-${idx + 1}`,
           number: isNaN(parsedNum) ? idx + 1 : parsedNum,
           intExt: ps.intExt,
           dayNight,
-          location: ps.location,
+          location: isPreamble ? 'PREAMBLE' : ps.location,
           storyDay: '',
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
-          scriptContent: ps.content.replace(/^[^\n]*\n/, '').trim(), // Remove slugline from content
+          // Preamble has no slugline to strip; regular scenes strip the first line (heading)
+          scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
         };
       });
 
@@ -1735,12 +1747,14 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
       {/* Scene info — pinned */}
       <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <span className="fp-scene-num">Scene {scene.number}</span>
+          <span className="fp-scene-num">{scene.location === 'PREAMBLE' ? 'Preamble' : `Scene ${scene.number}`}</span>
           <span className={`fp-save fp-save--${saveStatus}`}>
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
           </span>
         </div>
-        <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+        {scene.location !== 'PREAMBLE' && (
+          <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+        )}
       </div>
 
       <div className="fp-scroll">
