@@ -90,6 +90,7 @@ const RIGHT_MAX = 560;
 
 export function ScriptBreakdown({ projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
+  const [scrollTrigger, setScrollTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(16);
@@ -208,6 +209,7 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   const selectScene = useCallback((id: string) => {
     setSelectedSceneId(id);
+    setScrollTrigger(n => n + 1);
     setActiveTab('script');
   }, []);
 
@@ -379,6 +381,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                   scenes={ALL_SCENES}
                   characters={ALL_CHARACTERS}
                   selectedSceneId={selectedSceneId}
+                  scrollTrigger={scrollTrigger}
                   onSceneVisible={onSceneVisible}
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
@@ -642,10 +645,11 @@ function extractProfileData(text: string): Partial<Record<'age' | 'gender' | 'ha
   return result;
 }
 
-function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
+function ScriptView({ scenes, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
   scenes: Scene[];
   characters: Character[];
   selectedSceneId: string;
+  scrollTrigger: number;
   onSceneVisible: (id: string) => void;
   fontSize: number;
   onCharClick: (id: string) => void;
@@ -1012,16 +1016,29 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
     });
   }, [tagStore, charNames, onCharClick, highlightCharNames]);
 
-  /* Scroll to scene when selected from the scene list */
+  /* Scroll to scene when selected from the scene list.
+     scrollTrigger changes on every explicit scene selection (even re-clicking
+     the same scene), so the effect always fires. */
   useEffect(() => {
     const el = pageRefs.current.get(selectedSceneId);
     if (el && scrollRef.current) {
       isScrollingTo.current = true;
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const timer = setTimeout(() => { isScrollingTo.current = false; }, 600);
-      return () => clearTimeout(timer);
+      // Use scrollend event when available; fall back to a generous timeout
+      // so the IntersectionObserver doesn't override selectedSceneId mid-scroll.
+      const container = scrollRef.current;
+      const unlock = () => { isScrollingTo.current = false; };
+      let timer: ReturnType<typeof setTimeout>;
+      if (container && 'onscrollend' in container) {
+        const handler = () => { unlock(); container.removeEventListener('scrollend', handler); clearTimeout(timer); };
+        container.addEventListener('scrollend', handler, { once: true });
+        timer = setTimeout(handler, 1500); // safety fallback
+      } else {
+        timer = setTimeout(unlock, 1200);
+      }
+      return () => { clearTimeout(timer); unlock(); };
     }
-  }, [selectedSceneId]);
+  }, [selectedSceneId, scrollTrigger]);
 
   /* IntersectionObserver to detect which scene is visible while scrolling */
   useEffect(() => {
