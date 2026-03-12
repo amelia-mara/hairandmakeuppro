@@ -214,6 +214,36 @@ function normalizeTimeOfDay(timeStr: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVE
   return 'DAY';
 }
 
+/* ━━━ Common word exclusions for name-mention scanning ━━━ */
+
+/**
+ * Words that should never be matched as character name fragments.
+ * Prevents pronouns, articles, common verbs, and script terms from
+ * causing false positives when scanning for first/last name mentions.
+ * e.g. A character named "Will Grace" should not match every "will" or "grace" in the script.
+ */
+const NAME_SCAN_EXCLUSIONS = new Set([
+  // Pronouns & determiners
+  'HER', 'HIS', 'HERS', 'ITS', 'THEY', 'THEM', 'THEIR',
+  'THEIRS', 'OUR', 'OURS', 'YOUR', 'YOURS', 'WHO', 'WHOM', 'THIS', 'THAT',
+  'THESE', 'THOSE',
+  // Common verbs (3+ chars only — shorter are already filtered by length)
+  'WAS', 'WERE', 'ARE', 'HAS', 'HAD', 'HAVE', 'DID', 'DOES', 'GOT',
+  'GET', 'LET', 'SET', 'RUN', 'SAY', 'SAID', 'PUT', 'COME', 'CAME',
+  'TAKE', 'TOOK', 'MAKE', 'MADE', 'SEE', 'SAW', 'KNOW', 'KNEW',
+  'WILL', 'CAN', 'SHALL', 'WOULD', 'COULD', 'SHOULD', 'MUST',
+  // Common nouns/adjectives
+  'MAN', 'WOMAN', 'BOY', 'GIRL', 'OLD', 'NEW', 'LONG', 'SHORT',
+  'YOUNG', 'LITTLE', 'BIG', 'SMALL', 'GOOD', 'BAD', 'BEST', 'WORST',
+  // Prepositions & conjunctions (3+ chars)
+  'AND', 'BUT', 'FOR', 'NOT', 'WITH', 'FROM', 'INTO', 'OVER', 'BACK',
+  'DOWN', 'JUST', 'THEN', 'THAN', 'ALSO', 'EVEN', 'STILL', 'WELL',
+  // Script directions (3+ chars)
+  'INT', 'EXT', 'CUT', 'FADE', 'DAY', 'NIGHT', 'CONT', 'END',
+  'ALL', 'ONE', 'TWO', 'NOW', 'OUT', 'OFF', 'HOW', 'WHY',
+  'THE', 'YOU', 'WAY', 'TOO', 'USE', 'YES', 'YET',
+]);
+
 /* ━━━ Character name helpers ━━━ */
 
 function normalizeCharacterName(name: string): string {
@@ -640,20 +670,24 @@ export function parseScriptText(text: string): ParsedScript {
   /* Post-processing: scan scene content for mentions of known character names.
      This catches characters who appear in action/description lines by first name,
      last name, or possessive (e.g. "Lennon's six pack abs") but weren't detected
-     by the cue or action-line patterns. */
+     by the cue or action-line patterns.
+     Once a character is identified (e.g. "GWEN LAWSON" from dialogue), subsequent
+     scenes mentioning just "Gwen" or "Lawson" will correctly associate them. */
   for (const scene of scenes) {
-    const contentUpper = scene.content.toUpperCase();
     for (const char of characters) {
       if (scene.characters.includes(char.normalizedName)) continue;
-      /* Build search terms: full name, first name (3+ chars), last name (3+ chars) */
+      /* Build search terms: full name, first name (3+ chars), last name (3+ chars)
+         Skip common English words to avoid false positives (e.g. "WILL" as a verb) */
       const nameParts = char.normalizedName.split(/\s+/);
       const searchTerms: string[] = [char.normalizedName];
       for (const part of nameParts) {
-        if (part.length >= 3) searchTerms.push(part);
+        if (part.length >= 3 && !NAME_SCAN_EXCLUSIONS.has(part.toUpperCase())) {
+          searchTerms.push(part);
+        }
       }
       const found = searchTerms.some((term) => {
         const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:'S)?\\b`, 'i');
-        return re.test(contentUpper);
+        return re.test(scene.content);
       });
       if (found) {
         scene.characters.push(char.normalizedName);
