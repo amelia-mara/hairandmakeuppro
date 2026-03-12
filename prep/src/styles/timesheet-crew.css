@@ -1,0 +1,446 @@
+/* ── Forms ────────────────────────────────────── */
+
+.ts-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.ts-form-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.ts-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ts-form-field .ts-input,
+.ts-form-field .ts-select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ts-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.ts-input,
+.ts-select {
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: linear-gradient(
+    180deg,
+    rgba(6, 5, 4, 0.8) 0%,
+    rgba(var(--a), 0.08) 100%
+  );
+  border: 1px solid var(--border-medium);
+  border-bottom-color: rgba(var(--a), 0.10);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.25) inset,
+    0 -1px 0 0 rgba(var(--a-light), 0.05) inset,
+    0 1px 0 0 rgba(var(--a), 0.04);
+}
+
+.ts-input:focus,
+.ts-select:focus {
+  border-color: var(--accent);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.25) inset,
+    0 -1px 0 0 rgba(var(--a-light), 0.10) inset,
+    0 0 0 2px rgba(var(--a), 0.10),
+    0 0 20px -4px rgba(var(--a), 0.12);
+}
+
+.ts-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23B8A08A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.ts-select-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  padding-right: 24px;
+}
+
+.ts-help-text {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.ts-section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-heading);
+  margin-bottom: 12px;
+}
+
+.ts-section-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.ts-section-subtitle {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0 0 12px 0;
+}
+
+/* ── Toggle ──────────────────────────────────── */
+
+.ts-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.ts-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ts-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--a), 0.15);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+.ts-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.ts-toggle input:checked + .ts-toggle-slider {
+  background: var(--accent);
+}
+
+.ts-toggle input:checked + .ts-toggle-slider::before {
+  transform: translateX(16px);
+}
+
+/* ── Crew Tab Layout ─────────────────────────── */
+
+.ts-crew-tab {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+
+.ts-crew-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.ts-crew-right {
+  min-height: 300px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Crew List ───────────────────────────────── */
+
+.ts-crew-list-body {
+  padding: 0;
+}
+
+.ts-crew-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ts-crew-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-card);
+  transition: background 0.15s;
+}
+
+.ts-crew-row:last-child {
+  border-bottom: none;
+}
+
+.ts-crew-row:hover {
+  background: rgba(var(--a), 0.03);
+}
+
+.ts-crew-row-active {
+  background: rgba(var(--a), 0.06);
+  border-left: 3px solid var(--accent);
+}
+
+.ts-crew-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ts-crew-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ts-crew-position {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.ts-crew-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ts-crew-dept {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+/* ── Type Badges — 3D glass capsules ────────── */
+
+.ts-type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rim highlight on top edge */
+.ts-type-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-radius: 999px 999px 0 0;
+}
+
+.ts-type-paye {
+  background: var(--bg-card);
+  border-color: rgba(209, 123, 107, 0.30);
+  border-top-color: rgba(209, 123, 107, 0.38);
+  color: #e08d79;
+  box-shadow:
+    1px 0 0 0 rgba(209, 123, 107, 0.10) inset,
+    0 1px 0 0 rgba(209, 123, 107, 0.12) inset,
+    -1px -1px 2px 0 rgba(0, 0, 0, 0.35) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.25) inset,
+    2px 2px 6px -1px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ts-type-paye::after {
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(209, 123, 107, 0.12) 30%,
+    rgba(230, 160, 145, 0.30) 55%,
+    rgba(240, 180, 165, 0.40) 70%,
+    rgba(230, 160, 145, 0.25) 85%,
+    transparent 100%
+  );
+}
+
+.ts-type-ltd {
+  background: var(--bg-card);
+  border-color: rgba(107, 155, 209, 0.30);
+  border-top-color: rgba(107, 155, 209, 0.38);
+  color: #82aed8;
+  box-shadow:
+    1px 0 0 0 rgba(107, 155, 209, 0.10) inset,
+    0 1px 0 0 rgba(107, 155, 209, 0.12) inset,
+    -1px -1px 2px 0 rgba(0, 0, 0, 0.35) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.25) inset,
+    2px 2px 6px -1px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ts-type-ltd::after {
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(107, 155, 209, 0.12) 30%,
+    rgba(140, 180, 225, 0.30) 55%,
+    rgba(160, 195, 235, 0.40) 70%,
+    rgba(140, 180, 225, 0.25) 85%,
+    transparent 100%
+  );
+}
+
+.ts-type-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ts-type-dot-paye {
+  background: #d17b6b;
+}
+
+.ts-type-dot-ltd {
+  background: #6b9bd1;
+}
+
+/* ── Buttons ─────────────────────────────────── */
+
+.ts-btn-sm {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  gap: 4px;
+  border-radius: 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--a-bright), 0.9) 0%,
+    rgba(var(--a), 0.85) 40%,
+    rgba(var(--a-dim), 0.85) 100%
+  );
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 1px 0 0 rgba(var(--a-peak), 0.45) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.12) inset;
+}
+
+.ts-btn-sm:hover {
+  box-shadow:
+    0 4px 16px rgba(var(--a), 0.35),
+    0 1px 0 0 rgba(var(--a-peak), 0.5) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.12) inset;
+}
+
+.ts-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.ts-delete-btn:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+/* ── Empty State ─────────────────────────────── */
+
+.ts-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.ts-empty-hint {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* ── Modal ───────────────────────────────────── */
+
+.ts-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.ts-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.ts-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.ts-modal-header h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.ts-modal-body {
+  padding: 24px;
+}
+
+.ts-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-card);
+}
+

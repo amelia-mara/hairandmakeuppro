@@ -1,0 +1,338 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LIGHT MODE
+   Warm cream/ivory with gold accents — mirrors Checks Happy mobile
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+[data-theme="light"] {
+  --a:        232, 98, 26;    /* orange-primary */
+  --a-light:  240, 136, 42;   /* orange-warm */
+  --a-bright: 245, 166, 35;   /* amber */
+  --a-peak:   242, 196, 160;  /* peach */
+  --a-dim:    212, 148, 58;   /* gold */
+  --accent:       #E8621A;
+  --accent-dark:  #C4522A;
+  --accent-cue:   #D4943A;
+  --accent-cue-hover: #F5A623;
+
+  /* Brand light mode — warm cream base */
+  --bg-primary: #F5EFE0;                 /* Cream Base — page background */
+  --bg-surface: #EDE4D0;                 /* Cream Dark — section backgrounds */
+  --bg-card: #FAF7F0;
+  --bg-card-hover: #F5F0E5;
+  --bg-elevated: #FAF7F0;
+
+  --text-primary: #2A1A08;                /* Text Dark */
+  --text-secondary: #5A3E28;              /* Text Mid */
+  --text-heading: #2A1A08;                /* Text Dark */
+  --text-muted: #5A3E28;                  /* Text Mid */
+  --text-label: #5A3E28;                  /* Text Mid */
+
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-card: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.14);
+
+  --int-day:          rgba(245, 239, 224, 0.3);
+  --ext-day:          rgba(245, 166, 35, 0.08);
+  --int-night:        rgba(74, 191, 176, 0.06);
+  --ext-night:        rgba(61, 122, 95, 0.06);
+  --int-day-border:   #EDE4D0;
+  --ext-day-border:   #F5A623;
+  --int-night-border: #4ABFB0;
+  --ext-night-border: #3D7A5F;
+
+  --glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --glass-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --glass-shadow-stat: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  --status-active: #4ABFB0;
+  --status-pending: #F0882A;
+
+  color-scheme: light;
+}
+
+/* Light mode — component overrides for hardcoded dark values */
+
+/* Cards & surfaces */
+[data-theme="light"] .glass,
+[data-theme="light"] .stat-card,
+[data-theme="light"] .project-card,
+[data-theme="light"] .widget-card,
+[data-theme="light"] .fp-event,
+[data-theme="light"] .cb-event,
+[data-theme="light"] .cb-block,
+[data-theme="light"] .cv-look-card,
+[data-theme="light"] .cv-look-sub-card {
+  background: var(--bg-card) !important;
+}
+[data-theme="light"] .cv-wrap {
+  background: rgba(250, 247, 240, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-color: rgba(0,0,0,0.10) !important;
+}
+
+/* Header pseudo-elements for light mode */
+[data-theme="light"] .app-header::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--a), 0.08) 15%,
+    rgba(var(--a), 0.20) 40%,
+    rgba(var(--a), 0.40) 72%,
+    rgba(var(--a), 0.50) 82%,
+    rgba(var(--a), 0.40) 90%,
+    rgba(var(--a), 0.15) 97%,
+    transparent 100%
+  ) !important;
+}
+[data-theme="light"] .app-header::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--a), 0.02) 30%,
+    rgba(var(--a), 0.05) 65%,
+    rgba(var(--a), 0.06) 80%,
+    rgba(var(--a), 0.02) 95%,
+    transparent 100%
+  ) !important;
+}
+
+/* Nav items */
+[data-theme="light"] .topbar-nav-item:hover,
+[data-theme="light"] .tools-dropdown-item:hover {
+  background: rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .topbar-nav-item.active {
+  background: rgba(var(--a), 0.08) !important;
+}
+
+/* Breakdown panels — transparent so page rainbow shows through */
+[data-theme="light"] .bd-center {
+  background: transparent !important;
+}
+[data-theme="light"] .sl-expand-pill {
+  background: rgba(0,0,0,0.04) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .sl-card-char-tag {
+  background: rgba(0,0,0,0.05) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+[data-theme="light"] .fi-input:focus,
+[data-theme="light"] .fi-select:focus,
+[data-theme="light"] .cb-textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Buttons — text on gold background stays dark */
+[data-theme="light"] .btn-gold,
+[data-theme="light"] .avatar-btn,
+[data-theme="light"] .account-avatar {
+  color: #ffffff !important;
+}
+[data-theme="light"] .btn-ghost {
+  background: transparent !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+[data-theme="light"] .btn-ghost:hover {
+  border-color: var(--accent) !important;
+}
+
+/* Character tabs */
+[data-theme="light"] .cp-section-bar {
+  background: #EDE4D0 !important;
+}
+[data-theme="light"] .cp-tab--active {
+  color: #ffffff !important;
+}
+
+/* Script view */
+[data-theme="light"] .sv-scene-badge {
+  background: rgba(var(--a), 0.08) !important;
+}
+
+/* Dashboard */
+[data-theme="light"] .dashboard-header {
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* TopBar back arrow — light mode */
+[data-theme="light"] .topbar-back-arrow {
+  border-color: rgba(0,0,0,0.10) !important;
+}
+[data-theme="light"] .topbar-back-arrow:hover {
+  background: rgba(0,0,0,0.04) !important;
+  border-color: rgba(0,0,0,0.16) !important;
+}
+
+/* Project card footer */
+[data-theme="light"] .project-card-footer {
+  background: rgba(0,0,0,0.02) !important;
+}
+
+/* Account panel cards */
+[data-theme="light"] .account-card {
+  background: var(--bg-card) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .account-row-icon {
+  background: rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .account-row-icon--accent {
+  background: rgba(var(--a), 0.08) !important;
+}
+[data-theme="light"] .account-theme-opt {
+  background: var(--bg-card) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .account-theme-opt--active {
+  border-color: var(--accent) !important;
+  background: rgba(var(--a), 0.05) !important;
+}
+[data-theme="light"] .account-signout {
+  border-color: rgba(200, 60, 60, 0.15) !important;
+  color: rgba(200, 60, 60, 0.65) !important;
+}
+
+/* Modals */
+[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+[data-theme="light"] .modal-glass {
+  background: var(--bg-card) !important;
+  border-color: rgba(0,0,0,0.10) !important;
+  border-top-color: rgba(0,0,0,0.10) !important;
+  border-right-color: rgba(0,0,0,0.10) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+}
+[data-theme="light"] .modal-glass::after {
+  background: linear-gradient(90deg, transparent 10%, rgba(var(--a), 0.15) 40%, rgba(var(--a), 0.30) 60%, rgba(var(--a), 0.15) 90%, transparent 100%) !important;
+}
+
+/* Dividers */
+[data-theme="light"] .bd-divider {
+  background: rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .bd-divider:hover {
+  background: rgba(var(--a), 0.15) !important;
+}
+
+/* New project card */
+[data-theme="light"] .new-project-card {
+  background: transparent !important;
+  border: 1.5px dashed #E8621A !important;
+  box-shadow: none !important;
+}
+[data-theme="light"] .new-project-card:hover {
+  background: var(--bg-card) !important;
+  border: 1.5px solid #E8621A !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+  transform: translateY(-2px);
+}
+[data-theme="light"] .new-project-card .icon-circle {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+[data-theme="light"] .new-project-card:hover .icon-circle {
+  background: var(--accent-cue-hover, #F5A623) !important;
+  border-color: var(--accent-cue-hover, #F5A623) !important;
+}
+[data-theme="light"] .new-project-card span {
+  color: var(--text-primary) !important;
+}
+
+/* Sticky headers */
+[data-theme="light"] .fp-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(0,0,0,0.10) !important;
+}
+[data-theme="light"] .sl-header {
+  background: transparent !important;
+}
+
+/* Quick action buttons */
+[data-theme="light"] .quick-action-btn {
+  background: #EDE4D0 !important;
+  border-color: rgba(0,0,0,0.10) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+[data-theme="light"] .quick-action-btn:hover {
+  background: rgba(var(--a), 0.06) !important;
+  border-color: rgba(var(--a), 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+/* Filter pills (project list) */
+[data-theme="light"] .filter-pill {
+  background: var(--bg-card) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+  color: var(--text-secondary) !important;
+}
+[data-theme="light"] .filter-pill::after {
+  display: none !important;
+}
+[data-theme="light"] .filter-pill:hover {
+  background: #FAF7F0 !important;
+  border-color: rgba(var(--a), 0.25) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="light"] .filter-pill.active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(var(--a), 0.20) !important;
+}
+
+/* Input & select fields */
+[data-theme="light"] .input-field,
+[data-theme="light"] .select-field {
+  background: #FAF7F0 !important;
+  border-color: rgba(0,0,0,0.10) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+[data-theme="light"] .input-field:focus,
+[data-theme="light"] .select-field:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Sort dropdown */
+[data-theme="light"] .sort-select {
+  background: var(--bg-card) !important;
+  border-color: rgba(0,0,0,0.10) !important;
+}
+
+/* Tab strip background — transparent so page rainbow shows through */
+[data-theme="light"] .cp-tabstrip {
+  background: transparent !important;
+}
+
+/* Character tabs */
+[data-theme="light"] .cp-divider-tab {
+  background: var(--bg-card) !important;
+  border-color: rgba(0,0,0,0.10) !important;
+  color: var(--text-secondary) !important;
+  text-shadow: none !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+}
+[data-theme="light"] .cp-divider-tab::before {
+  display: none !important;
+}
+[data-theme="light"] .cp-divider-tab:hover {
+  background: #faf8f5 !important;
+  border-color: rgba(var(--a), 0.25) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+[data-theme="light"] .cp-divider-tab--active {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
+  border-color: var(--accent-dark) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(var(--a), 0.20) !important;
+}
+[data-theme="light"] .cp-divider-tab--active::before {
+  display: none !important;
+}
