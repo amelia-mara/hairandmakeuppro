@@ -295,6 +295,18 @@
 }
 .sv-cue:hover { color: var(--accent-cue-hover); text-decoration-color: rgba(139, 105, 20, 0.6); }
 
+/* Inline character names within action/description lines */
+.sv-cue-inline {
+  color: var(--accent-cue);
+  cursor: pointer;
+  font-weight: 700;
+  transition: color 0.12s ease;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(139, 105, 20, 0.3);
+}
+.sv-cue-inline:hover { color: var(--accent-cue-hover); text-decoration-color: rgba(139, 105, 20, 0.6); }
+
 .sv-content { position: relative; }
 
 /* ━━━ Tag popup ━━━ */
