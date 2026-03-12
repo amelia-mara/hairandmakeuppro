@@ -4,9 +4,25 @@ export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
 
   return (
-    <div className="min-h-screen flex flex-col" style={{
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
+      {/* Rainbow arc motif — concentric arcs from right side */}
+      <svg
+        className="absolute pointer-events-none"
+        style={{ top: '10%', right: '-40%', width: '90%', height: '80%' }}
+        viewBox="0 0 400 400"
+        fill="none"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        {/* Outermost — warm peach */}
+        <circle cx="200" cy="200" r="200" stroke="#F0C8A0" strokeWidth="40" opacity="0.35" />
+        {/* Middle — soft teal/mint */}
+        <circle cx="200" cy="200" r="155" stroke="#A8DDD4" strokeWidth="35" opacity="0.4" />
+        {/* Inner — orange */}
+        <circle cx="200" cy="200" r="115" stroke="#E8621A" strokeWidth="30" opacity="0.18" />
+      </svg>
+
       {/* Department pill */}
       <div className="flex items-center justify-center pt-14 px-8">
         <span className="px-5 py-2 rounded-pill text-sm font-medium text-[#3A9E91] border border-[#3A9E91]/30 bg-[#3A9E91]/5">
