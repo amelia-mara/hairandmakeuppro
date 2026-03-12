@@ -16,12 +16,12 @@ export function WelcomeScreen() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Text logo — stacked */}
+        {/* Text logo — stacked with overlap */}
         <div className="flex flex-col items-center mb-8">
-          <span className="text-[42px] leading-tight font-serif font-bold text-[#2A1A08]">
+          <span className="text-[46px] leading-none font-serif font-bold text-[#2A1A08]">
             Checks
           </span>
-          <span className="text-[42px] leading-tight font-serif font-bold italic text-gold">
+          <span className="text-[46px] leading-none font-serif font-bold italic text-gold -mt-3">
             Happy.
           </span>
         </div>
