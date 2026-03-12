@@ -17,6 +17,43 @@ import { detectTimeOfDay, detectIntExt, extractLocation } from '../utils.js';
 import { showTopLoadingBar, updateTopLoadingBar, closeTopLoadingBar, showToast } from './export-core.js';
 import { saveProject } from './export-project.js';
 
+// Map of written-out number words to digits for scene heading normalization
+const WORD_TO_NUM = {
+    'ONE': '1', 'TWO': '2', 'THREE': '3', 'FOUR': '4', 'FIVE': '5',
+    'SIX': '6', 'SEVEN': '7', 'EIGHT': '8', 'NINE': '9', 'TEN': '10',
+    'ELEVEN': '11', 'TWELVE': '12', 'THIRTEEN': '13', 'FOURTEEN': '14',
+    'FIFTEEN': '15', 'SIXTEEN': '16', 'SEVENTEEN': '17', 'EIGHTEEN': '18',
+    'NINETEEN': '19', 'TWENTY': '20', 'TWENTY-ONE': '21', 'TWENTY-TWO': '22',
+    'TWENTY-THREE': '23', 'TWENTY-FOUR': '24', 'TWENTY-FIVE': '25',
+    'TWENTY-SIX': '26', 'TWENTY-SEVEN': '27', 'TWENTY-EIGHT': '28',
+    'TWENTY-NINE': '29', 'THIRTY': '30', 'THIRTY-ONE': '31', 'THIRTY-TWO': '32',
+    'THIRTY-THREE': '33', 'THIRTY-FOUR': '34', 'THIRTY-FIVE': '35',
+    'THIRTY-SIX': '36', 'THIRTY-SEVEN': '37', 'THIRTY-EIGHT': '38',
+    'THIRTY-NINE': '39', 'FORTY': '40', 'FORTY-ONE': '41', 'FORTY-TWO': '42',
+    'FORTY-THREE': '43', 'FORTY-FOUR': '44', 'FORTY-FIVE': '45',
+    'FORTY-SIX': '46', 'FORTY-SEVEN': '47', 'FORTY-EIGHT': '48',
+    'FORTY-NINE': '49', 'FIFTY': '50',
+};
+const SCENE_WORD_KEYS_IMPORT = Object.keys(WORD_TO_NUM).sort((a, b) => b.length - a.length).join('|');
+const SCENE_WORD_RE_IMPORT = new RegExp(`^\\s*SCENE\\s+(${SCENE_WORD_KEYS_IMPORT})\\s*[:\\-–—]?\\s*`, 'i');
+
+/**
+ * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
+ * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ */
+function normalizeScenePrefix(line) {
+    const match = line.match(SCENE_WORD_RE_IMPORT);
+    if (match) {
+        const num = WORD_TO_NUM[match[1].toUpperCase()];
+        if (num) return num + ' ' + line.slice(match[0].length);
+    }
+    const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+    if (numMatch) {
+        return numMatch[1] + ' ' + line.slice(numMatch[0].length);
+    }
+    return line;
+}
+
 // Dynamic import for script-analysis module (loaded when needed to avoid circular deps)
 let scriptAnalysisModule = null;
 
@@ -124,18 +161,20 @@ export function detectScenes(text) {
 
     lines.forEach((line, index) => {
         const trimmed = line.trim();
+        // Normalize "SCENE TWO:" style prefixes before matching
+        const normalized = normalizeScenePrefix(trimmed);
         for (let pattern of patterns) {
-            if (pattern.test(trimmed)) {
+            if (pattern.test(normalized)) {
                 const sceneIndex = detected.length;
                 detected.push({
                     number: sceneIndex + 1,
-                    heading: trimmed,
+                    heading: normalized,
                     lineNumber: index,
                     synopsis: null,
                     storyDay: '',
-                    timeOfDay: detectTimeOfDay(trimmed, sceneIndex),
-                    intExt: detectIntExt(trimmed),
-                    location: extractLocation(trimmed, sceneIndex),
+                    timeOfDay: detectTimeOfDay(normalized, sceneIndex),
+                    intExt: detectIntExt(normalized),
+                    location: extractLocation(normalized, sceneIndex),
                     content: '',
                     characters: {}
                 });
@@ -252,10 +291,12 @@ export async function processScript() {
         };
     }
 
-    state.currentProject.scriptContent = text;
+    // Normalize text to handle "SCENE TWO:" style prefixes before detection
+    const normalizedText = text.split('\n').map(line => normalizeScenePrefix(line)).join('\n');
+    state.currentProject.scriptContent = normalizedText;
 
     // Detect scenes
-    state.scenes = detectScenes(text);
+    state.scenes = detectScenes(normalizedText);
     console.log(`Found ${state.scenes.length} scenes`);
 
     // AUTO-FILL: Apply story day detection and scene type detection immediately
