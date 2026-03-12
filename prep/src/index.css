@@ -4086,6 +4086,92 @@ body {
   font-size: 0.75rem; color: var(--text-secondary); margin-top: 3px; line-height: 1.4;
 }
 
+/* ━━━ Character removal button & modal ━━━ */
+
+.cb-remove-char-btn {
+  background: none; border: none; color: var(--text-secondary);
+  font-size: 1rem; line-height: 1; cursor: pointer; padding: 0 2px;
+  opacity: 0.4; transition: opacity 0.15s, color 0.15s;
+}
+.cb-remove-char-btn:hover { opacity: 1; color: #ef4444; }
+
+.cb-remove-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center;
+}
+.cb-remove-modal {
+  background: var(--bg-card); border: 1px solid var(--border-card);
+  border-radius: 12px; padding: 20px; width: 340px; max-width: 90vw;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.cb-remove-modal-title {
+  font-size: 0.875rem; font-weight: 700; color: var(--text-heading);
+  margin-bottom: 4px;
+}
+.cb-remove-option {
+  background: var(--bg-surface); border: 1px solid var(--border-card);
+  border-radius: 8px; padding: 10px 12px; cursor: pointer;
+  text-align: left; color: var(--text-primary); font-family: var(--font-sans);
+  transition: border-color 0.15s, background 0.15s;
+}
+.cb-remove-option:hover { border-color: var(--accent-gold-dim); background: rgba(var(--a), 0.06); }
+.cb-remove-option--danger:hover { border-color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+.cb-remove-option strong { display: block; font-size: 0.8125rem; margin-bottom: 2px; }
+.cb-remove-option-desc { font-size: 0.6875rem; color: var(--text-secondary); display: block; }
+.cb-remove-option-group {
+  background: var(--bg-surface); border: 1px solid var(--border-card);
+  border-radius: 8px; padding: 10px 12px;
+}
+.cb-remove-option-group .cb-remove-option-desc { margin-bottom: 8px; }
+.cb-remove-option-label strong { font-size: 0.8125rem; color: var(--text-primary); }
+.cb-merge-select {
+  width: 100%; padding: 7px 10px; margin-bottom: 8px;
+  background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 6px;
+  color: var(--text-primary); font-size: 0.75rem; font-family: var(--font-sans);
+}
+.cb-merge-btn {
+  padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 0.75rem; font-weight: 600; font-family: var(--font-sans);
+  background: var(--accent-gold); color: #1a1a2e;
+  transition: opacity 0.15s;
+}
+.cb-merge-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cb-remove-cancel {
+  background: none; border: 1px solid var(--border-card); border-radius: 8px;
+  padding: 8px; cursor: pointer; color: var(--text-secondary);
+  font-size: 0.75rem; font-family: var(--font-sans); transition: color 0.15s;
+}
+.cb-remove-cancel:hover { color: var(--text-primary); }
+
+/* ━━━ Expandable character profile in CharBlock ━━━ */
+
+.cb-profile-section { margin-top: 12px; margin-bottom: 12px; }
+.cb-profile-toggle {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-size: 0.6875rem; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  font-family: var(--font-sans); transition: color 0.15s;
+}
+.cb-profile-toggle:hover { color: var(--text-heading); }
+.cb-profile-chevron { transition: transform 0.2s; }
+.cb-profile-chevron--open { transform: rotate(90deg); }
+.cb-profile-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-top: 10px; padding: 10px 12px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+.cb-profile-field { display: flex; flex-direction: column; gap: 3px; }
+.cb-profile-field--wide { grid-column: 1 / -1; }
+.cb-profile-label {
+  font-size: 0.5625rem; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.cb-profile-input { font-size: 0.75rem; padding: 6px 8px; }
+.cb-profile-textarea { font-size: 0.75rem; padding: 6px 8px; resize: vertical; }
+
 /* ━━━ Shared form inputs ━━━ */
 
 .fi-wrap { display: flex; flex-direction: column; gap: 5px; }

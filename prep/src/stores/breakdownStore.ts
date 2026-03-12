@@ -695,6 +695,9 @@ interface BreakdownState {
   addContinuityEvent: (sceneId: string, event: ContinuityEvent) => void;
   updateContinuityEvent: (sceneId: string, eventId: string, data: Partial<ContinuityEvent>) => void;
   removeContinuityEvent: (sceneId: string, eventId: string) => void;
+  removeCharacterBreakdown: (sceneId: string, characterId: string) => void;
+  removeCharacterFromAllBreakdowns: (characterId: string) => void;
+  mergeCharacterBreakdowns: (sourceCharacterId: string, targetCharacterId: string) => void;
   getCompletionStatus: (sceneId: string, scene: Scene) => 'empty' | 'partial' | 'complete';
 }
 
@@ -767,6 +770,53 @@ export const useBreakdownStore = create<BreakdownState>()(
               },
             },
           };
+        }),
+
+      removeCharacterBreakdown: (sceneId, characterId) =>
+        set((s) => {
+          const existing = s.breakdowns[sceneId];
+          if (!existing) return s;
+          return {
+            breakdowns: {
+              ...s.breakdowns,
+              [sceneId]: {
+                ...existing,
+                characters: existing.characters.filter((c) => c.characterId !== characterId),
+                continuityEvents: existing.continuityEvents.filter((e) => e.characterId !== characterId),
+              },
+            },
+          };
+        }),
+
+      removeCharacterFromAllBreakdowns: (characterId) =>
+        set((s) => {
+          const updated: Record<string, SceneBreakdown> = {};
+          for (const [key, bd] of Object.entries(s.breakdowns)) {
+            updated[key] = {
+              ...bd,
+              characters: bd.characters.filter((c) => c.characterId !== characterId),
+              continuityEvents: bd.continuityEvents.filter((e) => e.characterId !== characterId),
+            };
+          }
+          return { breakdowns: updated };
+        }),
+
+      mergeCharacterBreakdowns: (sourceCharacterId, targetCharacterId) =>
+        set((s) => {
+          const updated: Record<string, SceneBreakdown> = {};
+          for (const [key, bd] of Object.entries(s.breakdowns)) {
+            const hasTarget = bd.characters.some((c) => c.characterId === targetCharacterId);
+            updated[key] = {
+              ...bd,
+              characters: hasTarget
+                ? bd.characters.filter((c) => c.characterId !== sourceCharacterId)
+                : bd.characters.map((c) => c.characterId === sourceCharacterId ? { ...c, characterId: targetCharacterId } : c),
+              continuityEvents: bd.continuityEvents.map((e) =>
+                e.characterId === sourceCharacterId ? { ...e, characterId: targetCharacterId } : e
+              ),
+            };
+          }
+          return { breakdowns: updated };
         }),
 
       getCompletionStatus: (sceneId, scene) => {
@@ -1075,6 +1125,9 @@ interface ParsedScriptState {
   setParsedData: (projectId: string, data: ProjectParsedData) => void;
   clearParsedData: (projectId: string) => void;
   updateCharacter: (projectId: string, characterId: string, data: Partial<ParsedCharacterData>) => void;
+  removeCharacterFromScene: (projectId: string, sceneId: string, characterId: string) => void;
+  removeCharacterEntirely: (projectId: string, characterId: string) => void;
+  mergeCharacters: (projectId: string, sourceCharacterId: string, targetCharacterId: string) => void;
 }
 
 export const useParsedScriptStore = create<ParsedScriptState>()(
@@ -1101,6 +1154,44 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
             c.id === characterId ? { ...c, ...data } : c
           );
           return { projects: { ...s.projects, [projectId]: { ...project, characters } } };
+        }),
+
+      removeCharacterFromScene: (projectId, sceneId, characterId) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const scenes = project.scenes.map((sc) =>
+            sc.id === sceneId ? { ...sc, characterIds: sc.characterIds.filter((id) => id !== characterId) } : sc
+          );
+          return { projects: { ...s.projects, [projectId]: { ...project, scenes } } };
+        }),
+
+      removeCharacterEntirely: (projectId, characterId) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const scenes = project.scenes.map((sc) => ({
+            ...sc, characterIds: sc.characterIds.filter((id) => id !== characterId),
+          }));
+          const characters = project.characters.filter((c) => c.id !== characterId);
+          const looks = project.looks.filter((l) => l.characterId !== characterId);
+          return { projects: { ...s.projects, [projectId]: { ...project, scenes, characters, looks } } };
+        }),
+
+      mergeCharacters: (projectId, sourceCharacterId, targetCharacterId) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const scenes = project.scenes.map((sc) => {
+            const hasTarget = sc.characterIds.includes(targetCharacterId);
+            const hasSource = sc.characterIds.includes(sourceCharacterId);
+            if (!hasSource) return sc;
+            if (hasTarget) return { ...sc, characterIds: sc.characterIds.filter((id) => id !== sourceCharacterId) };
+            return { ...sc, characterIds: sc.characterIds.map((id) => id === sourceCharacterId ? targetCharacterId : id) };
+          });
+          const characters = project.characters.filter((c) => c.id !== sourceCharacterId);
+          const looks = project.looks.filter((l) => l.characterId !== sourceCharacterId);
+          return { projects: { ...s.projects, [projectId]: { ...project, scenes, characters, looks } } };
         }),
     }),
     {
