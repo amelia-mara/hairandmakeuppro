@@ -383,10 +383,10 @@ export function ScriptBreakdown({ projectId }: Props) {
                       const char = ALL_CHARACTERS.find((c) => c.id === characterId);
                       if (char) {
                         const resolved = charOverrides.getCharacter(char);
-                        const updates: Partial<Character> = {};
+                        const updates: Record<string, string> = {};
                         for (const [key, value] of Object.entries(extracted)) {
                           if (!resolved[key as keyof Character]) {
-                            updates[key as keyof Character] = value;
+                            updates[key] = value;
                           }
                         }
                         if (Object.keys(updates).length > 0) {
