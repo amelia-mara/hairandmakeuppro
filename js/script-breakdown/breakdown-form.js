@@ -588,11 +588,84 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 </div>
             </div>
 
+            <!-- EXPANDABLE CHARACTER PROFILE -->
+            ${renderInlineCharacterProfile(character)}
+
             <!-- ACTIVE CONTINUITY EVENTS -->
             ${renderActiveEvents(character, sceneIndex)}
         </div>
     `;
 }
+
+/**
+ * Render an expandable inline character profile section within the character card.
+ * Mirrors the fields from the character Profile tab for quick access.
+ */
+function renderInlineCharacterProfile(character) {
+    const profile = state.castProfiles?.[character]?.physicalProfile || {};
+    const escapedName = escapeHtml(character).replace(/'/g, "\\'");
+    const charId = sanitizeCharacterId(character);
+
+    // Check if any profile fields have data
+    const hasData = profile.age || profile.gender || profile.hairColour || profile.hairType ||
+                    profile.eyeColour || profile.skinTone || profile.build ||
+                    profile.distinguishing || profile.notes;
+
+    const renderProfileField = (field, label, placeholder, isTextarea = false) => {
+        const value = escapeHtml(profile[field] || '');
+        if (isTextarea) {
+            return `
+                <div class="inline-profile-field full-width">
+                    <label>${label}</label>
+                    <textarea placeholder="${placeholder}"
+                              onchange="updatePhysicalProfile('${escapedName}', '${field}', this.value)">${value}</textarea>
+                </div>
+            `;
+        }
+        return `
+            <div class="inline-profile-field">
+                <label>${label}</label>
+                <input type="text" value="${value}" placeholder="${placeholder}"
+                       onchange="updatePhysicalProfile('${escapedName}', '${field}', this.value)">
+            </div>
+        `;
+    };
+
+    return `
+        <div class="continuity-section inline-profile-section">
+            <div class="continuity-section-header inline-profile-toggle" onclick="toggleInlineProfile('${charId}')">
+                <div class="continuity-label">CHARACTER PROFILE ${hasData ? '<span class="inline-profile-dot"></span>' : ''}</div>
+                <span class="inline-profile-expand-icon" id="profile-icon-${charId}">▶</span>
+            </div>
+            <div class="inline-profile-body" id="inline-profile-${charId}" style="display: none;">
+                <div class="inline-profile-grid">
+                    ${renderProfileField('age', 'Age', 'e.g., 40s, late 20s')}
+                    ${renderProfileField('gender', 'Gender', 'e.g., Female, Male')}
+                    ${renderProfileField('hairColour', 'Hair Colour', 'e.g., Dark brown, Blonde')}
+                    ${renderProfileField('hairType', 'Hair Type', 'e.g., Straight, shoulder length')}
+                    ${renderProfileField('eyeColour', 'Eye Colour', 'e.g., Brown, Blue')}
+                    ${renderProfileField('skinTone', 'Skin Tone', 'e.g., Fair, Medium, Dark')}
+                    ${renderProfileField('build', 'Build', 'e.g., Slim, Athletic')}
+                    ${renderProfileField('distinguishing', 'Features', 'e.g., Scar on left cheek, tattoo')}
+                    ${renderProfileField('notes', 'Notes', 'Additional notes...', true)}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Toggle inline character profile expansion
+ */
+window.toggleInlineProfile = function(charId) {
+    const body = document.getElementById(`inline-profile-${charId}`);
+    const icon = document.getElementById(`profile-icon-${charId}`);
+    if (!body) return;
+
+    const isHidden = body.style.display === 'none';
+    body.style.display = isHidden ? 'block' : 'none';
+    if (icon) icon.textContent = isHidden ? '▼' : '▶';
+};
 
 /**
  * Render active continuity events for a character in current scene
