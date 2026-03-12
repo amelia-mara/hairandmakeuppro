@@ -131,6 +131,54 @@ export const STORY_DAY_CUES = {
 };
 
 // ============================================================================
+// SCENE WORD PREFIX NORMALIZATION
+// ============================================================================
+
+/**
+ * Map of written-out number words to digits for scene heading normalization.
+ */
+const SCENE_WORD_TO_NUMBER = {
+    'ONE': '1', 'TWO': '2', 'THREE': '3', 'FOUR': '4', 'FIVE': '5',
+    'SIX': '6', 'SEVEN': '7', 'EIGHT': '8', 'NINE': '9', 'TEN': '10',
+    'ELEVEN': '11', 'TWELVE': '12', 'THIRTEEN': '13', 'FOURTEEN': '14',
+    'FIFTEEN': '15', 'SIXTEEN': '16', 'SEVENTEEN': '17', 'EIGHTEEN': '18',
+    'NINETEEN': '19', 'TWENTY': '20', 'TWENTY-ONE': '21', 'TWENTY-TWO': '22',
+    'TWENTY-THREE': '23', 'TWENTY-FOUR': '24', 'TWENTY-FIVE': '25',
+    'TWENTY-SIX': '26', 'TWENTY-SEVEN': '27', 'TWENTY-EIGHT': '28',
+    'TWENTY-NINE': '29', 'THIRTY': '30', 'THIRTY-ONE': '31', 'THIRTY-TWO': '32',
+    'THIRTY-THREE': '33', 'THIRTY-FOUR': '34', 'THIRTY-FIVE': '35',
+    'THIRTY-SIX': '36', 'THIRTY-SEVEN': '37', 'THIRTY-EIGHT': '38',
+    'THIRTY-NINE': '39', 'FORTY': '40', 'FORTY-ONE': '41', 'FORTY-TWO': '42',
+    'FORTY-THREE': '43', 'FORTY-FOUR': '44', 'FORTY-FIVE': '45',
+    'FORTY-SIX': '46', 'FORTY-SEVEN': '47', 'FORTY-EIGHT': '48',
+    'FORTY-NINE': '49', 'FIFTY': '50',
+};
+
+const SCENE_WORD_KEYS_ANALYSIS = Object.keys(SCENE_WORD_TO_NUMBER).sort((a, b) => b.length - a.length).join('|');
+const SCENE_WORD_REGEX_ANALYSIS = new RegExp(
+    `^\\s*SCENE\\s+(${SCENE_WORD_KEYS_ANALYSIS})\\s*[:\\-–—]?\\s*`,
+    'i'
+);
+
+/**
+ * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
+ * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ */
+function normalizeSceneWordPrefixInline(line) {
+    const match = line.match(SCENE_WORD_REGEX_ANALYSIS);
+    if (match) {
+        const num = SCENE_WORD_TO_NUMBER[match[1].toUpperCase()];
+        if (num) return num + ' ' + line.slice(match[0].length);
+    }
+    // Also handle "SCENE 2:" with numeric digit
+    const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+    if (numMatch) {
+        return numMatch[1] + ' ' + line.slice(numMatch[0].length);
+    }
+    return line;
+}
+
+// ============================================================================
 // SCENE HEADING PARSER - Handles A/B scene numbers properly
 // ============================================================================
 
@@ -143,7 +191,10 @@ export const STORY_DAY_CUES = {
 export function parseSceneHeading(line) {
     if (!line || typeof line !== 'string') return null;
 
-    const trimmedLine = line.trim();
+    let trimmedLine = line.trim();
+
+    // Normalize "SCENE WORD:" prefix (e.g. "SCENE TWO: EXT." → "2 EXT.")
+    trimmedLine = normalizeSceneWordPrefixInline(trimmedLine);
 
     // Check for OMITTED scenes first (e.g., "36A OMITTED")
     const omittedRegex = /^(\d+[A-Z]?)\s*OMITTED\s*$/i;

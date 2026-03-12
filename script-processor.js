@@ -99,19 +99,19 @@ class ScriptProcessor {
     // Improved text normalization
     normalizeScriptText(text) {
         console.log('🔧 Normalizing script text...');
-        
+
         let normalized = text;
-        
+
         // Fix split INT/EXT
         normalized = normalized.replace(/I\s+NT\s*\./gi, 'INT.');
         normalized = normalized.replace(/E\s+XT\s*\./gi, 'EXT.');
         normalized = normalized.replace(/I\s+N\s+T\s*\./gi, 'INT.');
         normalized = normalized.replace(/E\s+X\s+T\s*\./gi, 'EXT.');
-        
+
         // Fix CONTINUOUS split
         normalized = normalized.replace(/C\s+O\s+N\s+T\s+I\s+N\s+U\s+O\s+U\s+S/gi, 'CONTINUOUS');
         normalized = normalized.replace(/CONTIN\s+UOUS/gi, 'CONTINUOUS');
-        
+
         // Fix character names that might be split
         const lines = normalized.split('\n');
         normalized = lines.map(line => {
@@ -123,12 +123,53 @@ class ScriptProcessor {
             }
             return line;
         }).join('\n');
-        
+
+        // Normalize "SCENE WORD:" prefixes (e.g. "SCENE TWO: EXT." → "2 EXT.")
+        normalized = normalized.split('\n').map(line => {
+            return this.normalizeSceneWordPrefix(line);
+        }).join('\n');
+
         // Clean up excessive line breaks
         normalized = normalized.replace(/\n{4,}/g, '\n\n\n');
-        
+
         console.log('✅ Normalization complete');
         return normalized;
+    }
+
+    /**
+     * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
+     * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+     */
+    normalizeSceneWordPrefix(line) {
+        const wordToNumber = {
+            'ONE': '1', 'TWO': '2', 'THREE': '3', 'FOUR': '4', 'FIVE': '5',
+            'SIX': '6', 'SEVEN': '7', 'EIGHT': '8', 'NINE': '9', 'TEN': '10',
+            'ELEVEN': '11', 'TWELVE': '12', 'THIRTEEN': '13', 'FOURTEEN': '14',
+            'FIFTEEN': '15', 'SIXTEEN': '16', 'SEVENTEEN': '17', 'EIGHTEEN': '18',
+            'NINETEEN': '19', 'TWENTY': '20', 'TWENTY-ONE': '21', 'TWENTY-TWO': '22',
+            'TWENTY-THREE': '23', 'TWENTY-FOUR': '24', 'TWENTY-FIVE': '25',
+            'TWENTY-SIX': '26', 'TWENTY-SEVEN': '27', 'TWENTY-EIGHT': '28',
+            'TWENTY-NINE': '29', 'THIRTY': '30', 'THIRTY-ONE': '31', 'THIRTY-TWO': '32',
+            'THIRTY-THREE': '33', 'THIRTY-FOUR': '34', 'THIRTY-FIVE': '35',
+            'THIRTY-SIX': '36', 'THIRTY-SEVEN': '37', 'THIRTY-EIGHT': '38',
+            'THIRTY-NINE': '39', 'FORTY': '40', 'FORTY-ONE': '41', 'FORTY-TWO': '42',
+            'FORTY-THREE': '43', 'FORTY-FOUR': '44', 'FORTY-FIVE': '45',
+            'FORTY-SIX': '46', 'FORTY-SEVEN': '47', 'FORTY-EIGHT': '48',
+            'FORTY-NINE': '49', 'FIFTY': '50',
+        };
+        const keys = Object.keys(wordToNumber).sort((a, b) => b.length - a.length).join('|');
+        const regex = new RegExp(`^\\s*SCENE\\s+(${keys})\\s*[:\\-–—]?\\s*`, 'i');
+        const match = line.match(regex);
+        if (match) {
+            const num = wordToNumber[match[1].toUpperCase()];
+            if (num) return num + ' ' + line.slice(match[0].length);
+        }
+        // Also handle "SCENE 2:" with numeric digit
+        const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+        if (numMatch) {
+            return numMatch[1] + ' ' + line.slice(numMatch[0].length);
+        }
+        return line;
     }
 
     // Enhanced screenplay parser with better scene detection
