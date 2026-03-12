@@ -116,7 +116,14 @@ export function ScriptBreakdown({ projectId }: Props) {
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
   const ALL_SCENES: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
-  const ALL_CHARACTERS: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
+  const ALL_CHARACTERS: Character[] = useMemo(() => {
+    if (!parsedData) return MOCK_CHARACTERS;
+    // Backfill category for data saved before the supporting_artist feature
+    return parsedData.characters.map((c) => ({
+      ...c,
+      category: c.category || 'principal',
+    }));
+  }, [parsedData]);
   const ALL_LOOKS: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 
   /* Auto-show upload modal when no script is uploaded */
