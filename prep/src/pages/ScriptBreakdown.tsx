@@ -809,18 +809,28 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
-     first-name references are matched. Single-word character names like COWBOY
-     or MAN are excluded — they only appear on dialogue cue lines. */
+     first-name references are matched. Single-word character names and generic
+     words (man, cowboy, etc.) are excluded — they only appear on dialogue cues. */
   const charNamePattern = useMemo(() => {
+    // Common words that should never be highlighted as first-name fragments
+    const GENERIC_WORDS = new Set([
+      'MAN', 'WOMAN', 'BOY', 'GIRL', 'OLD', 'YOUNG', 'CHILD', 'BABY',
+      'COWBOY', 'COWGIRL', 'DOCTOR', 'NURSE', 'OFFICER', 'CAPTAIN',
+      'SERGEANT', 'DETECTIVE', 'AGENT', 'JUDGE', 'PRIEST', 'PASTOR',
+      'DRIVER', 'WAITER', 'WAITRESS', 'BARTENDER', 'BARMAN', 'GUARD',
+      'SOLDIER', 'GENERAL', 'KING', 'QUEEN', 'PRINCE', 'PRINCESS',
+      'MRS', 'MR', 'MISS', 'TALL', 'SHORT', 'BIG', 'FAT', 'THIN',
+      'ELDERLY', 'MIDDLE', 'LITTLE', 'BEAUTIFUL', 'PRETTY', 'HANDSOME',
+    ]);
     const allNames: { name: string; char: Character }[] = [];
     for (const c of characters) {
       // Skip single-word character names (COWBOY, MAN, etc.)
       if (!/\s/.test(c.name.trim())) continue;
-      // Full name (e.g. "LENNON BOWIE")
+      // Full name always included (e.g. "LENNON BOWIE", "OLD MAN")
       allNames.push({ name: c.name, char: c });
-      // First name for inline references (e.g. "Lennon")
+      // First name for inline references — but skip generic words
       const first = c.name.split(/\s+/)[0];
-      if (first.length >= 3) {
+      if (first.length >= 3 && !GENERIC_WORDS.has(first.toUpperCase())) {
         allNames.push({ name: first, char: c });
       }
     }
