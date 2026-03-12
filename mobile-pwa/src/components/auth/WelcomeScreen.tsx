@@ -8,30 +8,27 @@ export function WelcomeScreen() {
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
       {/* Rainbow arc motif — concentric arcs from right side */}
-      <svg
-        className="absolute pointer-events-none"
-        style={{ top: '10%', right: '-40%', width: '90%', height: '80%' }}
-        viewBox="0 0 400 400"
-        fill="none"
-        preserveAspectRatio="xMidYMid slice"
+      <div
+        className="absolute pointer-events-none z-0"
+        style={{ top: '5%', right: '-60%', width: '120%', height: '90%' }}
       >
         {/* Outermost — warm peach */}
-        <circle cx="200" cy="200" r="200" stroke="#F0C8A0" strokeWidth="40" opacity="0.35" />
+        <div className="absolute inset-0 rounded-full border-[35px] border-[#F0C8A0] opacity-35" />
         {/* Middle — soft teal/mint */}
-        <circle cx="200" cy="200" r="155" stroke="#A8DDD4" strokeWidth="35" opacity="0.4" />
+        <div className="absolute inset-[12%] rounded-full border-[30px] border-[#A8DDD4] opacity-40" />
         {/* Inner — orange */}
-        <circle cx="200" cy="200" r="115" stroke="#E8621A" strokeWidth="30" opacity="0.18" />
-      </svg>
+        <div className="absolute inset-[24%] rounded-full border-[25px] border-[#E8621A] opacity-[0.18]" />
+      </div>
 
       {/* Department pill */}
-      <div className="flex items-center justify-center pt-14 px-8">
+      <div className="relative z-10 flex items-center justify-center pt-14 px-8">
         <span className="px-5 py-2 rounded-pill text-sm font-medium text-[#3A9E91] border border-[#3A9E91]/30 bg-[#3A9E91]/5">
           Hair &amp; Makeup &amp; Costume
         </span>
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
         {/* Text logo — stacked with heavy overlap and offset */}
         <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
           <span className="absolute left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#2A1A08]">
@@ -122,7 +119,7 @@ export function WelcomeScreen() {
       </div>
 
       {/* Bottom action buttons */}
-      <div className="px-8 pb-10 space-y-4">
+      <div className="relative z-10 px-8 pb-10 space-y-4">
         {/* Sign In — solid orange, pill-shaped */}
         <button
           onClick={() => setScreen('signin')}
