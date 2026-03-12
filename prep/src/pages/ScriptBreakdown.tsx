@@ -1310,12 +1310,12 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
           <div className="cv-timeline">
             {scenes.map((s) => {
               const bd = bdStore.getBreakdown(s.id);
-              const storyDay = bd?.timeline?.day || '';
+              const storyDay = bd?.timeline?.day || s.storyDay || '';
               return (
                 <div key={s.id} className="cv-tl-item">
                   <span className="cv-tl-num">Sc {s.number}</span>
-                  <span className="cv-tl-loc">{s.intExt}. {s.location} — {s.dayNight}</span>
                   {storyDay && <span className="cv-tl-day">{storyDay}</span>}
+                  <span className="cv-tl-loc">{s.intExt}. {s.location} — {s.dayNight}</span>
                 </div>
               );
             })}
