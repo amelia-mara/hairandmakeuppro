@@ -565,10 +565,12 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick character, Step 2: pick category */
-  step: 'character' | 'category';
+  /** Step 1: pick category (tag type), Step 2: pick character (dropdown) */
+  step: 'category' | 'character';
   categoryId?: string;
   characterId?: string;
+  /** When true, popup appears below the selection instead of above */
+  popBelow?: boolean;
 }
 
 /** Extract profile-relevant data from a description string */
@@ -695,39 +697,43 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
 
     const rect = range.getBoundingClientRect();
 
+    // Detect if selection is near the top of the viewport — pop below instead
+    const popBelow = rect.top < 200;
+
     setPopup({
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10,
+      x: Math.min(Math.max(rect.left + rect.width / 2, 170), window.innerWidth - 170),
+      y: popBelow ? rect.bottom + 10 : rect.top - 10,
       sceneId,
       startOffset: startIdx,
       endOffset: startIdx + text.length,
       text,
-      step: 'character',
+      step: 'category',
+      popBelow,
     });
 
     sel.removeAllRanges();
   }, [scenes]);
 
-  /* Step 1: User picks which character this text describes */
-  const handleCharacterPick = useCallback((charId: string) => {
+  /* Step 1: User picks category (tag type) */
+  const handleCategoryPick = useCallback((catId: string) => {
     if (!popup) return;
-    setPopup({ ...popup, step: 'category', characterId: charId });
+    setPopup({ ...popup, step: 'character', categoryId: catId });
   }, [popup]);
 
-  /* Step 2: User picks category → tag is created and auto-fill fires */
-  const handleCategoryPick = useCallback((catId: string) => {
-    if (!popup || !popup.characterId) return;
+  /* Step 2: User picks character from dropdown → tag is created */
+  const handleCharacterPick = useCallback((charId: string) => {
+    if (!popup || !popup.categoryId) return;
     tagStore.addTag({
       id: `tag-${Date.now()}`,
       sceneId: popup.sceneId,
       startOffset: popup.startOffset,
       endOffset: popup.endOffset,
       text: popup.text,
-      categoryId: catId,
-      characterId: popup.characterId,
+      categoryId: popup.categoryId,
+      characterId: charId,
     });
-    onTagCreated(popup.sceneId, popup.characterId, catId, popup.text);
-    onCharClick(popup.characterId);
+    onTagCreated(popup.sceneId, charId, popup.categoryId, popup.text);
+    onCharClick(charId);
     setPopup(null);
   }, [popup, tagStore, onCharClick, onTagCreated]);
 
@@ -915,27 +921,14 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
 
       {/* Tag popup — portalled to body so it isn't clipped by scroll overflow */}
       {popup && createPortal(
-        <div ref={popupRef} className="sv-tag-popup sv-tag-popup--fixed" style={{ left: popup.x, top: popup.y, transform: 'translate(-50%, -100%)' }}>
-          {popup.step === 'character' && (
-            <>
-              <div className="sv-tag-popup-title">Who is this about?</div>
-              <div className="sv-tag-popup-char-grid">
-                {popupChars.map((ch) => (
-                  <button key={ch.id} className="sv-tag-popup-btn" onClick={() => handleCharacterPick(ch.id)}>
-                    {ch.name}
-                  </button>
-                ))}
-              </div>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup(null)}>
-                Cancel
-              </button>
-            </>
-          )}
+        <div ref={popupRef} className="sv-tag-popup sv-tag-popup--fixed" style={{
+          left: popup.x,
+          top: popup.y,
+          transform: popup.popBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+        }}>
           {popup.step === 'category' && (
             <>
-              <div className="sv-tag-popup-title">
-                Tag for {characters.find((c) => c.id === popup.characterId)?.name || 'character'} as:
-              </div>
+              <div className="sv-tag-popup-title">Tag type</div>
               <div className="sv-tag-popup-grid">
                 {BREAKDOWN_CATEGORIES.filter((cat) => cat.id !== 'cast').map((cat) => (
                   <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleCategoryPick(cat.id)}>
@@ -944,7 +937,28 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
                   </button>
                 ))}
               </div>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'character' })}>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup(null)}>
+                Cancel
+              </button>
+            </>
+          )}
+          {popup.step === 'character' && (
+            <>
+              <div className="sv-tag-popup-title">
+                <span className="sv-tag-popup-swatch" style={{ background: BREAKDOWN_CATEGORIES.find((c) => c.id === popup.categoryId)?.color }} />
+                {' '}{BREAKDOWN_CATEGORIES.find((c) => c.id === popup.categoryId)?.label} — Assign to:
+              </div>
+              <select
+                className="sv-tag-popup-select"
+                defaultValue=""
+                onChange={(e) => { if (e.target.value) handleCharacterPick(e.target.value); }}
+              >
+                <option value="" disabled>Select character…</option>
+                {popupChars.map((ch) => (
+                  <option key={ch.id} value={ch.id}>{ch.name}</option>
+                ))}
+              </select>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
                 Back
               </button>
             </>
