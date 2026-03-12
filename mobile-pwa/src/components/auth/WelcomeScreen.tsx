@@ -21,7 +21,7 @@ export function WelcomeScreen() {
           <span className="absolute left-[5px] top-0 text-[50px] leading-none font-serif font-bold text-[#2A1A08]">
             Checks
           </span>
-          <span className="absolute right-[5px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
+          <span className="absolute left-[30px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
             Happy.
           </span>
         </div>
