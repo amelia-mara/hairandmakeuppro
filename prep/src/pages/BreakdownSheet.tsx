@@ -21,17 +21,6 @@ function findPrevScene(charId: string, currentIdx: number, scenes: Scene[]): num
   return null;
 }
 
-/** Calculate first appearances for each character */
-function calcFirstAppearances(scenes: Scene[]): Record<string, string> {
-  const firsts: Record<string, string> = {};
-  for (const s of scenes) {
-    for (const cid of s.characterIds) {
-      if (!firsts[cid]) firsts[cid] = s.id;
-    }
-  }
-  return firsts;
-}
-
 /** Build continuity notes string */
 function buildContinuityNotes(
   cb: CharacterBreakdown | undefined,
@@ -113,17 +102,30 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
-  const firstAppearances = calcFirstAppearances(scenes);
+  /* Detect time jumps: scenes where the story day differs from the previous scene */
+  const timeJumpSceneIds = useMemo(() => {
+    const jumpIds = new Set<string>();
+    let prevDay = '';
+    for (const s of scenes) {
+      const day = s.storyDay || '';
+      if (prevDay && day && day !== prevDay) {
+        jumpIds.add(s.id);
+      }
+      if (day) prevDay = day;
+    }
+    return jumpIds;
+  }, [scenes]);
 
   /* Ensure every scene has a breakdown — initialise any that are missing
      so data entered on the Script page is always visible here. */
   useEffect(() => {
     for (const s of scenes) {
-      if (!store.getBreakdown(s.id)) {
+      const existing = store.getBreakdown(s.id);
+      if (!existing) {
         store.setBreakdown(s.id, {
           sceneId: s.id,
           timeline: {
-            day: '',
+            day: s.storyDay || '',
             time: s.dayNight === 'DAY' ? 'Day' : s.dayNight === 'NIGHT' ? 'Night' : s.dayNight === 'DAWN' ? 'Dawn' : s.dayNight === 'DUSK' ? 'Dusk' : '',
             type: '', note: '',
           },
@@ -135,6 +137,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           })),
           continuityEvents: [],
         });
+      } else if (!existing.timeline.day && s.storyDay) {
+        store.updateTimeline(s.id, { ...existing.timeline, day: s.storyDay });
       }
     }
   }, [scenes, store]);
@@ -148,7 +152,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /** Build an export row for a character in a scene (shared between copy & CSV) */
   const buildExportRows = useCallback(() => {
-    const headers = ['Scene', 'Day', 'Character', '1st', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Continuity Notes'];
+    const headers = ['Scene', 'Day', 'Character', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < scenes.length; idx++) {
       const s = scenes[idx];
@@ -159,7 +163,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
         const ch = characters.find((c) => c.id === cid);
         if (!ch) continue;
         const cb = bd?.characters.find((c) => c.characterId === cid);
-        const isFirst = firstAppearances[cid] === s.id;
         const tags = tagStore.getTagsForScene(s.id).filter((t) => t.characterId === cid);
         const notes = buildContinuityNotes(cb, cid, idx, scenes, bd, tags);
 
@@ -176,7 +179,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           String(s.number),
           storyDay,
           ch.name,
-          isFirst ? '*' : '',
           resolve(cb?.entersWith.hair, hairTags, charLook?.hair),
           resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup),
           resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
@@ -186,7 +188,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
       }
     }
     return rows;
-  }, [store, tagStore, scenes, characters, looks, firstAppearances, filterChar]);
+  }, [store, tagStore, scenes, characters, looks, filterChar]);
 
   /* Copy to clipboard as TSV */
   const handleCopy = useCallback(() => {
@@ -243,9 +245,18 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
           /* Resolve story day: breakdown timeline → scene-level storyDay */
           const storyDay = bd?.timeline.day || scene.storyDay || '';
+          const isTimeJump = timeJumpSceneIds.has(scene.id);
 
           return (
-            <div key={scene.id} className="bs-scene-block">
+            <div key={scene.id} className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''}`}>
+              {/* Time jump banner */}
+              {isTimeJump && (
+                <div className="bs-time-jump-banner">
+                  <span className="bs-time-jump-icon">&#9203;</span>
+                  TIME JUMP — {storyDay}
+                  {bd?.timeline.note && <span className="bs-time-jump-detail"> · {bd.timeline.note}</span>}
+                </div>
+              )}
               {/* Scene header */}
               <div className="bs-scene-header">
                 <div className="bs-scene-header-main">
@@ -266,7 +277,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                 <thead>
                   <tr>
                     <th className="bs-col-char">Character</th>
-                    <th className="bs-col-first">1st</th>
                     <th className="bs-col-hair">Hair</th>
                     <th className="bs-col-makeup">Makeup</th>
                     <th className="bs-col-wardrobe">Wardrobe</th>
@@ -279,7 +289,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const ch = characters.find((c) => c.id === cid);
                     if (!ch) return null;
                     const cb = bd?.characters.find((c) => c.characterId === cid);
-                    const isFirst = firstAppearances[cid] === scene.id;
                     const tags = tagStore.getTagsForScene(scene.id).filter((t) => t.characterId === cid);
 
                     // Gather category tags
@@ -311,16 +320,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
                     return (
                       <tr key={cid}
-                        className={`bs-row ${isFirst ? 'bs-row--first' : ''} ${hasEvents ? 'bs-row--continuity' : ''}`}>
+                        className={`bs-row ${hasEvents ? 'bs-row--continuity' : ''}`}>
                         <td className="bs-col-char">
                           <div className="bs-char-stack">
                             <span className="bs-char-name">{ch.name}</span>
                             <span className="bs-char-billing">{ordinal(ch.billing)}</span>
                             {charLook && <span className="bs-char-look">{charLook.name}</span>}
                           </div>
-                        </td>
-                        <td className="bs-col-first">
-                          {isFirst && <span className="bs-first-mark">*</span>}
                         </td>
                         <td className="bs-col-hair">
                           {hair || <span className="bs-empty">—</span>}
