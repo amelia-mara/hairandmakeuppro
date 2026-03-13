@@ -4,7 +4,7 @@ export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{
+    <div className="min-h-screen flex flex-col relative overflow-hidden font-sans" style={{
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
       {/* Rainbow arc motif — subtle concentric arcs peeking from right */}
