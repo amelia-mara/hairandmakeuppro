@@ -13,7 +13,7 @@ const getSystemTheme = (): 'light' | 'dark' => {
   if (typeof window !== 'undefined' && window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  return 'dark';
+  return 'light';
 };
 
 const resolveTheme = (theme: Theme): 'light' | 'dark' => {
@@ -38,8 +38,8 @@ const applyTheme = (resolved: 'light' | 'dark') => {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'dark',
-      resolvedTheme: 'dark',
+      theme: 'light',
+      resolvedTheme: 'light',
       setTheme: (theme) => {
         const resolved = resolveTheme(theme);
         applyTheme(resolved);
