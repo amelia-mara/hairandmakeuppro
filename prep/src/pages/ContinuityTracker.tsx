@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, CONTINUITY_EVENT_TYPES, STAGE_SUGGESTIONS,
   useBreakdownStore, useContinuityTrackerStore, useContinuityPhotosStore,
+  useParsedScriptStore, useCharacterOverridesStore,
+  type Scene, type Character, type Look,
   type ContinuityEvent, type ProgressionStage, type ContinuityFlags,
   type PhotoAngle, type ContinuityPhoto,
   emptyHMW,
@@ -40,7 +42,7 @@ const LEFT_WIDTH = 280;
 
 interface Props { projectId: string }
 
-export function ContinuityTracker({ projectId: _projectId }: Props) {
+export function ContinuityTracker({ projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
   const [activeCharId, setActiveCharId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,15 +56,45 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
   const breakdownStore = useBreakdownStore();
   const continuityStore = useContinuityTrackerStore();
   const photosStore = useContinuityPhotosStore();
+  const parsedScriptStore = useParsedScriptStore();
+  const overridesStore = useCharacterOverridesStore();
 
-  const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
-  const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!).filter(Boolean);
+  /* Resolve data source: parsed script → mock data fallback */
+  const parsedData = parsedScriptStore.getParsedData(projectId);
+
+  const scenes: Scene[] = useMemo(
+    () => parsedData ? parsedData.scenes : MOCK_SCENES,
+    [parsedData],
+  );
+
+  const characters: Character[] = useMemo(() => {
+    const raw = parsedData
+      ? parsedData.characters.map((c) => ({ ...c, category: c.category || 'principal' as const }))
+      : MOCK_CHARACTERS;
+    return raw.map((c) => overridesStore.getCharacter(c));
+  }, [parsedData, overridesStore]);
+
+  const looks: Look[] = useMemo(
+    () => parsedData ? parsedData.looks : MOCK_LOOKS,
+    [parsedData],
+  );
+
+  /* Default to first scene if current selection is invalid */
+  const validSceneId = scenes.find((s) => s.id === selectedSceneId) ? selectedSceneId : scenes[0]?.id ?? '';
+  if (validSceneId !== selectedSceneId && validSceneId) {
+    setSelectedSceneId(validSceneId);
+  }
+
+  const scene = scenes.find((s) => s.id === selectedSceneId) ?? scenes[0];
+  const sceneCharacters = scene
+    ? scene.characterIds.map((id) => characters.find((c) => c.id === id)!).filter(Boolean)
+    : [];
   const breakdown = breakdownStore.getBreakdown(selectedSceneId);
 
   // Ensure breakdown exists for selected scene
   useEffect(() => {
     if (!breakdownStore.getBreakdown(selectedSceneId)) {
-      const sc = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
+      const sc = scenes.find((s) => s.id === selectedSceneId)!;
       breakdownStore.setBreakdown(selectedSceneId, {
         sceneId: selectedSceneId,
         timeline: {
@@ -78,7 +110,7 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
         continuityEvents: [],
       });
     }
-  }, [selectedSceneId, breakdownStore]);
+  }, [selectedSceneId, breakdownStore, scenes]);
 
   // Default to first character
   useEffect(() => {
@@ -88,14 +120,14 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
   }, [selectedSceneId, sceneCharacters, activeCharId, scene.characterIds]);
 
   // Search filter
-  const filteredScenes = MOCK_SCENES.filter((s) => {
+  const filteredScenes = scenes.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       s.location.toLowerCase().includes(q) ||
       String(s.number).includes(q) ||
       s.characterIds.some((cid) => {
-        const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
+        const ch = characters.find((c) => c.id === cid);
         return ch?.name.toLowerCase().includes(q);
       })
     );
@@ -110,25 +142,25 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
-      const currentIdx = MOCK_SCENES.findIndex((s) => s.id === selectedSceneId);
+      const currentIdx = scenes.findIndex((s) => s.id === selectedSceneId);
       if (e.key === 'ArrowUp' && currentIdx > 0) {
         e.preventDefault();
-        selectScene(MOCK_SCENES[currentIdx - 1].id);
+        selectScene(scenes[currentIdx - 1].id);
       }
-      if (e.key === 'ArrowDown' && currentIdx < MOCK_SCENES.length - 1) {
+      if (e.key === 'ArrowDown' && currentIdx < scenes.length - 1) {
         e.preventDefault();
-        selectScene(MOCK_SCENES[currentIdx + 1].id);
+        selectScene(scenes[currentIdx + 1].id);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedSceneId, selectScene]);
+  }, [selectedSceneId, selectScene, scenes]);
 
   // Current character entry
-  const activeChar = MOCK_CHARACTERS.find((c) => c.id === activeCharId);
+  const activeChar = characters.find((c) => c.id === activeCharId);
   const charEntry = continuityStore.getEntry(selectedSceneId, activeCharId);
   const charBreakdown = breakdown?.characters.find((c) => c.characterId === activeCharId);
-  const charLook = charBreakdown?.lookId ? MOCK_LOOKS.find((l) => l.id === charBreakdown.lookId) : null;
+  const charLook = charBreakdown?.lookId ? looks.find((l) => l.id === charBreakdown.lookId) : null;
 
   // Events for this scene + character
   const sceneEvents = breakdown?.continuityEvents.filter((e) => e.characterId === activeCharId) || [];
@@ -189,9 +221,9 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
 
   /* Copy tracking to next scene */
   const handleCopyToNext = () => {
-    const currentIdx = MOCK_SCENES.findIndex((s) => s.id === selectedSceneId);
-    if (currentIdx < MOCK_SCENES.length - 1) {
-      const nextScene = MOCK_SCENES[currentIdx + 1];
+    const currentIdx = scenes.findIndex((s) => s.id === selectedSceneId);
+    if (currentIdx < scenes.length - 1) {
+      const nextScene = scenes[currentIdx + 1];
       if (nextScene.characterIds.includes(activeCharId)) {
         continuityStore.setEntry(nextScene.id, activeCharId, {
           flags: { ...charEntry.flags },
@@ -209,7 +241,7 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
-            <span className="sl-header-count">{MOCK_SCENES.length}</span>
+            <span className="sl-header-count">{scenes.length}</span>
           </div>
           <div className="sl-search">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
@@ -253,7 +285,7 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
                           <span className="sl-expand-label">Characters</span>
                           <div className="sl-expand-chars">
                             {s.characterIds.map((cid) => {
-                              const ch = MOCK_CHARACTERS.find((c) => c.id === cid);
+                              const ch = characters.find((c) => c.id === cid);
                               return ch ? <span key={cid} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span> : null;
                             })}
                           </div>
