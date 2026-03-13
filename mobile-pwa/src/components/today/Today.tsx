@@ -1272,8 +1272,8 @@ const TodaySceneCard = memo(function TodaySceneCard({
                     : filmingStatus === 'partial'
                       ? 'linear-gradient(180deg, #F0882A 0%, #E8621A 100%)' // Warm gold gradient
                       : filmingStatus === 'not-filmed'
-                        ? 'linear-gradient(180deg, #f87171 0%, #ef4444 100%)' // Soft red gradient
-                        : 'linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%)' // Gray gradient
+                        ? 'linear-gradient(180deg, #C4522A 0%, #A04020 100%)' // Warm brown gradient
+                        : 'linear-gradient(180deg, #BDA88E 0%, #A89279 100%)' // Warm taupe gradient
                   : 'transparent' // No bar for upcoming
             }}
           />

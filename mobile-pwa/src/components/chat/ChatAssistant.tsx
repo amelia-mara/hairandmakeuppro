@@ -135,7 +135,7 @@ export function ChatAssistant() {
         onClick={toggleChat}
         className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 gold-gradient"
         style={{
-          boxShadow: '0 4px 20px rgba(201, 169, 97, 0.4)',
+          boxShadow: '0 4px 20px rgba(232, 98, 26, 0.4)',
         }}
         aria-label="Open project chat"
       >
@@ -210,8 +210,8 @@ export function ChatAssistant() {
               onClick={() => switchMode('team')}
               className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
               style={{
-                backgroundColor: activeMode === 'team' ? 'rgba(201, 169, 97, 0.15)' : 'transparent',
-                border: `1px solid ${activeMode === 'team' ? 'rgba(201, 169, 97, 0.4)' : 'var(--color-border)'}`,
+                backgroundColor: activeMode === 'team' ? 'rgba(232, 98, 26, 0.15)' : 'transparent',
+                border: `1px solid ${activeMode === 'team' ? 'rgba(232, 98, 26, 0.4)' : 'var(--color-border)'}`,
                 color: activeMode === 'team' ? 'var(--color-gold)' : 'var(--color-text-muted)',
               }}
             >
@@ -221,8 +221,8 @@ export function ChatAssistant() {
               onClick={() => switchMode('scriptie')}
               className="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all"
               style={{
-                backgroundColor: activeMode === 'scriptie' ? 'rgba(201, 169, 97, 0.15)' : 'transparent',
-                border: `1px solid ${activeMode === 'scriptie' ? 'rgba(201, 169, 97, 0.4)' : 'var(--color-border)'}`,
+                backgroundColor: activeMode === 'scriptie' ? 'rgba(232, 98, 26, 0.15)' : 'transparent',
+                border: `1px solid ${activeMode === 'scriptie' ? 'rgba(232, 98, 26, 0.4)' : 'var(--color-border)'}`,
                 color: activeMode === 'scriptie' ? 'var(--color-gold)' : 'var(--color-text-muted)',
               }}
             >
@@ -351,7 +351,7 @@ export function ChatAssistant() {
                       <div
                         className="relative w-10 h-6 rounded-full transition-colors"
                         style={{
-                          backgroundColor: 'rgba(201, 169, 97, 0.4)',
+                          backgroundColor: 'rgba(232, 98, 26, 0.4)',
                         }}
                       >
                         <div

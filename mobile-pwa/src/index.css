@@ -4,23 +4,23 @@
 
 /* CSS Custom Properties for theming */
 :root {
-  /* Light mode — Brand palette (Cream Base) */
-  --color-background: #F5EFE0;         /* Cream Base — page background */
-  --color-card: #FFFFFF;
-  --color-card-hover: #FAF8F5;
-  --color-input-bg: #EDE4D0;           /* Cream Dark — section backgrounds */
-  --color-border: rgba(0, 0, 0, 0.08);
+  /* Light mode — Warm cream aesthetic matching welcome screen */
+  --color-background: #f5efe5;         /* Warm cream — matches welcome gradient end */
+  --color-card: #fefcfb;               /* Warm off-white — not cold white */
+  --color-card-hover: #faf6f0;         /* Slightly deeper warm cream on hover */
+  --color-input-bg: #f0e8da;           /* Warm sand — input backgrounds */
+  --color-border: rgba(61, 43, 26, 0.10);  /* Warm brown-tinted border */
   --color-border-focus: #E8621A;        /* Orange Primary */
-  --color-text-primary: #2A1A08;        /* Text Dark — primary body text */
-  --color-text-secondary: #5A3E28;      /* Text Mid — secondary text */
-  --color-text-muted: #7a7a7a;
-  --color-text-light: #999999;
-  --color-text-placeholder: #aaaaaa;
-  --color-shadow: rgba(0, 0, 0, 0.04);
-  --color-shadow-hover: rgba(0, 0, 0, 0.08);
-  --color-nav-bg: #ffffff;
-  --color-nav-shadow: rgba(0, 0, 0, 0.05);
-  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-text-primary: #3D2B1A;        /* Bark — warm dark brown */
+  --color-text-secondary: #5A3E28;      /* Earth — warm mid brown */
+  --color-text-muted: #8B7355;          /* Warm taupe — not cool gray */
+  --color-text-light: #A89279;          /* Warm light brown */
+  --color-text-placeholder: #BDA88E;    /* Warm sandy placeholder */
+  --color-shadow: rgba(61, 43, 26, 0.06);  /* Warm brown shadow */
+  --color-shadow-hover: rgba(61, 43, 26, 0.12);
+  --color-nav-bg: #faf6f0;             /* Warm cream nav — not cold white */
+  --color-nav-shadow: rgba(61, 43, 26, 0.06);
+  --color-overlay: rgba(61, 43, 26, 0.5);  /* Warm brown overlay */
   --color-gold-soft: rgba(232, 98, 26, 0.08);
 
   /* Brand palette tokens */
@@ -40,9 +40,9 @@
   --color-card: #2E2010;
   --color-card-hover: #3A2A16;
   --color-input-bg: #251A0A;
-  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border: rgba(212, 148, 58, 0.08);  /* Warm gold-tinted border */
   --color-border-focus: #E8621A;          /* Orange Primary */
-  --color-text-primary: #F5EFE0;            /* Cream Base */
+  --color-text-primary: #f5efe5;            /* Warm cream */
   --color-text-secondary: #C4A882;           /* Warm tan */
   --color-text-muted: #9A8068;
   --color-text-light: #7A5C3A;
@@ -51,7 +51,7 @@
   --color-shadow-hover: rgba(0, 0, 0, 0.9);
   --color-nav-bg: #1A1208;
   --color-nav-shadow: rgba(0, 0, 0, 0.9);
-  --color-overlay: rgba(0, 0, 0, 0.9);
+  --color-overlay: rgba(26, 18, 8, 0.9);     /* Warm brown overlay */
   --color-gold-soft: rgba(232, 98, 26, 0.12);
 
   /* Brand palette tokens */
@@ -143,12 +143,12 @@
 
   /* Dark mode card styling */
   .dark .card {
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(212, 148, 58, 0.08);
   }
 
   .dark .card:hover {
     border-color: rgba(232, 98, 26, 0.2);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 16px rgba(26, 18, 8, 0.4);
   }
 
   /* Dark mode badge overrides */
@@ -161,44 +161,44 @@
   }
 
   .dark .bg-slate-100 {
-    background-color: #1e293b;
+    background-color: #251A0A;
   }
 
   .dark .bg-stone-100 {
-    background-color: #292524;
+    background-color: #251A0A;
   }
 
   .dark .bg-green-100 {
-    background-color: rgba(34, 197, 94, 0.15);
+    background-color: rgba(74, 191, 176, 0.15);  /* Teal */
   }
 
   .dark .bg-amber-100 {
-    background-color: rgba(245, 158, 11, 0.15);
+    background-color: rgba(245, 166, 35, 0.15);  /* Amber */
   }
 
   .dark .bg-red-100 {
-    background-color: rgba(239, 68, 68, 0.15);
+    background-color: rgba(232, 98, 26, 0.15);   /* Orange Primary */
   }
 
   .dark .bg-blue-100 {
-    background-color: rgba(59, 130, 246, 0.15);
+    background-color: rgba(74, 191, 176, 0.15);  /* Teal */
   }
 
   .dark .bg-amber-50 {
-    background-color: rgba(245, 158, 11, 0.1);
+    background-color: rgba(245, 166, 35, 0.1);   /* Amber */
   }
 
   .dark .bg-red-50 {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: rgba(232, 98, 26, 0.1);    /* Orange Primary */
   }
 
   /* Dark mode text color adjustments for colored badges */
   .dark .text-slate-600 {
-    color: #94a3b8;
+    color: #9A8068;  /* Warm muted */
   }
 
   .dark .text-stone-600 {
-    color: #a8a29e;
+    color: #9A8068;  /* Warm muted */
   }
 
   .dark .text-text-muted {
@@ -207,19 +207,19 @@
 
   /* Dark mode border adjustments */
   .dark .border-gray-100 {
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(212, 148, 58, 0.08);
   }
 
   .dark .border-amber-200 {
-    border-color: rgba(245, 158, 11, 0.3);
+    border-color: rgba(245, 166, 35, 0.3);   /* Amber */
   }
 
   .dark .border-red-200 {
-    border-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(232, 98, 26, 0.3);    /* Orange Primary */
   }
 
   .dark .border {
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(212, 148, 58, 0.08);
   }
 
   /* Dark mode white backgrounds in nested elements */
@@ -256,7 +256,7 @@
   }
 
   .btn-gold:hover {
-    background: #D4580F;
+    background: #C4522A;
     box-shadow: 0 4px 12px rgba(232, 98, 26, 0.35);
     transform: translateY(-1px);
   }
@@ -355,13 +355,13 @@
   /* Solid glass replacement for dark mode */
   .dark .glass {
     background: #2E2010;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(212, 148, 58, 0.08);
   }
 
   /* Dark mode bottom nav */
   .dark .bottom-nav {
     background-color: #1A1208;
-    border-top-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(212, 148, 58, 0.08);
   }
 
   /* Orange accent on active nav items in dark mode (no glow) */
@@ -385,9 +385,9 @@
     background: rgba(245, 166, 35, 0.10);
   }
 
-  /* Incomplete - Subtle red tint */
+  /* Incomplete - Subtle orange tint (brand Orange Primary) */
   .scene-glass-incomplete {
-    background: rgba(239, 68, 68, 0.08);
+    background: rgba(232, 98, 26, 0.08);
   }
 
   /* Left accent bar colors - refined palette */
@@ -398,10 +398,10 @@
     background: linear-gradient(180deg, #E8621A 0%, #F0882A 100%);
   }
   .accent-bar-incomplete {
-    background: linear-gradient(180deg, #f87171 0%, #ef4444 100%);
+    background: linear-gradient(180deg, #C4522A 0%, #A04020 100%);  /* Gold Dark */
   }
   .accent-bar-neutral {
-    background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
+    background: linear-gradient(180deg, #BDA88E 0%, #A89279 100%);  /* Warm taupe */
   }
 
   /* Dark mode overlays - slightly more visible tints */
@@ -414,7 +414,7 @@
   }
 
   .dark .scene-glass-incomplete {
-    background: rgba(239, 68, 68, 0.12);
+    background: rgba(232, 98, 26, 0.12);
   }
 
   /* Status dropdown button styling */
