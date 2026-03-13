@@ -308,6 +308,7 @@
 .sv-cue-inline:hover { color: var(--accent-cue-hover); text-decoration-color: rgba(139, 105, 20, 0.6); }
 
 .sv-content { position: relative; }
+.sv-preamble-content { margin-bottom: 1.5em; padding-bottom: 1.5em; border-bottom: 1px solid var(--border-light, #e0d6cc); opacity: 0.8; }
 
 /* ━━━ Tag popup ━━━ */
 .sv-tag-popup {
