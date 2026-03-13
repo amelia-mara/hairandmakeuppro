@@ -64,6 +64,8 @@
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-card);
   flex-shrink: 0;
+  min-height: 120px;
+  box-sizing: border-box;
 }
 
 .lb-char-top {
