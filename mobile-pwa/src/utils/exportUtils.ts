@@ -132,7 +132,7 @@ export function generateContinuityBiblePDF(
         /* ── Character Section ── */
         .character-section { padding: 0 40px; margin-bottom: 20px; page-break-inside: avoid; }
         .character-header {
-          background: linear-gradient(135deg, #E8621A, #D4580F);
+          background: linear-gradient(135deg, #E8621A, #C4522A);
           color: white;
           padding: 16px 20px;
           border-radius: 8px 8px 0 0;
