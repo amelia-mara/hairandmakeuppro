@@ -127,6 +127,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [parsedData]);
   const ALL_LOOKS: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 
+  /* Hide preamble from scene list — its content is merged into the first real scene */
+  const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
+  const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
+
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
     if (!hasScript && !parsedData) {
@@ -204,10 +208,6 @@ export function ScriptBreakdown({ projectId }: Props) {
       active.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [selectedSceneId]);
-
-  /* Hide preamble from scene list — its content is merged into the first real scene */
-  const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
-  const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
 
   const filteredScenes = nonPreambleScenes.filter((s) => {
     if (!searchQuery) return true;
