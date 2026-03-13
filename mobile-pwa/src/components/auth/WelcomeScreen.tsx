@@ -21,7 +21,7 @@ export function WelcomeScreen() {
       </div>
 
       {/* Main content area */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 -mt-12">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-end px-8 pb-10">
         {/* Text logo — stacked with heavy overlap and offset */}
         <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
           <span className="absolute left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#2A1A08]">
@@ -38,7 +38,7 @@ export function WelcomeScreen() {
         </p>
 
         {/* Feature icons — bold, filled style */}
-        <div className="flex items-center justify-center w-full max-w-md mb-12 mt-4">
+        <div className="flex items-center justify-center w-full max-w-md mt-4">
           {/* Capture — bold filled camera */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
@@ -112,7 +112,7 @@ export function WelcomeScreen() {
       </div>
 
       {/* Bottom action buttons */}
-      <div className="relative z-10 px-8 pb-10 space-y-4">
+      <div className="relative z-10 px-8 pb-10 pt-8 space-y-4">
         {/* Sign In — solid orange, pill-shaped */}
         <button
           onClick={() => setScreen('signin')}
