@@ -80,7 +80,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const totalLabour = getTotalLabourCost(selectedWeekStart);
   const totalHours = crewSummaries.reduce((s, c) => s + c.summary.totalHours, 0);
   const totalOtHours = crewSummaries.reduce((s, c) => s + c.summary.otHours, 0);
-  const totalBaseHours = totalHours - totalOtHours;
+  const _totalBaseHours = totalHours - totalOtHours;
   const totalBasePay = crewSummaries.reduce((s, c) => s + c.summary.basePay, 0);
   const totalOtPay = crewSummaries.reduce((s, c) => s + c.summary.overtimePay, 0);
   const totalDays = crewSummaries.reduce((s, c) => s + c.summary.entries.filter(e => e.unitCall).length, 0);
@@ -366,7 +366,7 @@ function OverviewPanel({
    PANEL: My Timesheets
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function MyTimesheetsPanel({
-  crew, crewSummaries, currency, totalHours, totalOtHours, totalDays, totalLabour,
+  crew, crewSummaries, currency, totalHours: _totalHours, totalOtHours: _totalOtHours, totalDays: _totalDays, totalLabour: _totalLabour,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -542,7 +542,7 @@ function TeamTimesheetsPanel({
   expandedTeam: Record<string, boolean>;
   toggleTeamExpand: (id: string) => void;
 }) {
-  const totalOtHours = crewSummaries.reduce((s, c) => s + c.summary.otHours, 0);
+  const _totalOtHours = crewSummaries.reduce((s, c) => s + c.summary.otHours, 0);
   const pendingCount = 0; // future: count entries with status !== 'approved'
 
   return (
