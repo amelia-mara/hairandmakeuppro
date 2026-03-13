@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
-  MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS,
+  MOCK_SCENES, MOCK_CHARACTERS,
   useParsedScriptStore,
   useCharacterOverridesStore,
-  type Character, type Scene, type Look,
+  type Character, type Scene,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 
@@ -27,7 +27,7 @@ interface CharacterDesignData {
 type ViewMode = 'gallery' | 'detail';
 type FilterMode = 'all' | 'lead' | 'supporting' | 'complete';
 
-const IMAGE_ZONES = [
+const IMAGE_ZONES: readonly { key: string; label: string; sublabel?: string; className: string }[] = [
   { key: 'face', label: 'Face Reference', sublabel: 'Actor / character ref', className: 'cd-iz-face' },
   { key: 'hair1', label: 'Hair Ref 1', className: 'cd-iz-small' },
   { key: 'hair2', label: 'Hair Ref 2', className: 'cd-iz-small' },
@@ -35,7 +35,7 @@ const IMAGE_ZONES = [
   { key: 'mua1', label: 'MUA Ref 1', className: 'cd-iz-small' },
   { key: 'mua2', label: 'MUA Ref 2', className: 'cd-iz-small' },
   { key: 'mua3', label: 'MUA Ref 3', className: 'cd-iz-small' },
-] as const;
+];
 
 const LOOK_COLORS: Record<string, string> = {
   A: '#D4691E', B: '#3A9E8A', C: '#B8922A', D: '#8B5A8B', E: '#5A8B7A', F: '#8B7A5A',
@@ -136,7 +136,6 @@ export function CharacterDesign({ projectId }: Props) {
   }, [parsedData]);
 
   const allScenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
-  const allLooks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 
   // Map characters with their design data
   const charactersWithDesign = useMemo(() => {
