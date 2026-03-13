@@ -4,6 +4,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
+import { LookbookTab, useLookbookMeta } from './LookbookTab';
 
 /* ━━━ Helpers ━━━ */
 
@@ -97,6 +98,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'breakdown' | 'lookbook' | 'bible'>('breakdown');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lookbookMeta = useLookbookMeta(projectId);
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -216,34 +218,39 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
             <button className={`bs-tab ${activeTab === 'lookbook' ? 'bs-tab--active' : ''}`} onClick={() => setActiveTab('lookbook')}>Lookbook</button>
             <button className={`bs-tab ${activeTab === 'bible' ? 'bs-tab--active' : ''}`} onClick={() => setActiveTab('bible')}>Bible</button>
           </div>
+        </div>
+        <div className="bs-header-right">
           {activeTab === 'breakdown' && (
-            <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
+            <>
+              <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
+              <div className="bs-filter">
+                <FilterIcon />
+                <select className="bs-filter-select" value={filterChar} onChange={(e) => setFilterChar(e.target.value)}>
+                  <option value="">All Characters</option>
+                  {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <button className="bs-action-btn" onClick={handleCopy}>
+                <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleExport}>
+                <ExportIcon /> Export CSV
+              </button>
+            </>
+          )}
+          {activeTab === 'lookbook' && (
+            <>
+              <span className="bs-subtitle">{lookbookMeta.characterCount} characters · {lookbookMeta.lookCount} looks</span>
+              <button className="bs-action-btn bs-action-btn--primary" onClick={() => { /* future PDF export */ }}>
+                <ExportIcon /> Export PDF
+              </button>
+            </>
           )}
         </div>
-        {activeTab === 'breakdown' && (
-          <div className="bs-header-right">
-            {/* Character filter */}
-            <div className="bs-filter">
-              <FilterIcon />
-              <select className="bs-filter-select" value={filterChar} onChange={(e) => setFilterChar(e.target.value)}>
-                <option value="">All Characters</option>
-                {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <button className="bs-action-btn" onClick={handleCopy}>
-              <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
-            </button>
-            <button className="bs-action-btn bs-action-btn--primary" onClick={handleExport}>
-              <ExportIcon /> Export CSV
-            </button>
-          </div>
-        )}
       </div>
 
       {activeTab === 'lookbook' && (
-        <div className="bs-tab-placeholder">
-          <p>Lookbook coming soon.</p>
-        </div>
+        <LookbookTab projectId={projectId} />
       )}
 
       {activeTab === 'bible' && (
