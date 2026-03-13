@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, CONTINUITY_EVENT_TYPES, STAGE_SUGGESTIONS,
-  useBreakdownStore, useContinuityTrackerStore,
+  useBreakdownStore, useContinuityTrackerStore, useContinuityPhotosStore,
   type ContinuityEvent, type ProgressionStage, type ContinuityFlags,
+  type PhotoAngle, type ContinuityPhoto,
   emptyHMW,
 } from '@/stores/breakdownStore';
 
@@ -46,8 +47,13 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
   const [addEventOpen, setAddEventOpen] = useState(false);
 
   const sceneListRef = useRef<HTMLDivElement>(null);
+  const angleInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const masterRefInputRef = useRef<HTMLInputElement | null>(null);
+  const additionalInputRef = useRef<HTMLInputElement | null>(null);
+
   const breakdownStore = useBreakdownStore();
   const continuityStore = useContinuityTrackerStore();
+  const photosStore = useContinuityPhotosStore();
 
   const scene = MOCK_SCENES.find((s) => s.id === selectedSceneId)!;
   const sceneCharacters = scene.characterIds.map((id) => MOCK_CHARACTERS.find((c) => c.id === id)!).filter(Boolean);
@@ -126,6 +132,46 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
 
   // Events for this scene + character
   const sceneEvents = breakdown?.continuityEvents.filter((e) => e.characterId === activeCharId) || [];
+
+  // Photos for this scene + character
+  const scenePhotos = photosStore.getPhotos(selectedSceneId, activeCharId);
+
+  const ANGLE_SLOTS: { angle: PhotoAngle; label: string }[] = [
+    { angle: 'front', label: 'Front' },
+    { angle: 'left', label: 'Left' },
+    { angle: 'right', label: 'Right' },
+    { angle: 'back', label: 'Back' },
+  ];
+
+  const fileToPhoto = (file: File): ContinuityPhoto => ({
+    id: `photo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    url: URL.createObjectURL(file),
+    filename: file.name,
+    addedAt: new Date().toISOString(),
+  });
+
+  const handleAnglePhoto = (angle: PhotoAngle, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    photosStore.setAnglePhoto(selectedSceneId, activeCharId, angle, fileToPhoto(file));
+    e.target.value = '';
+  };
+
+  const handleMasterRef = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    photosStore.setMasterRef(selectedSceneId, activeCharId, fileToPhoto(file));
+    e.target.value = '';
+  };
+
+  const handleAdditionalPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (let i = 0; i < files.length; i++) {
+      photosStore.addAdditionalPhoto(selectedSceneId, activeCharId, fileToPhoto(files[i]));
+    }
+    e.target.value = '';
+  };
 
   /* Add continuity event */
   const handleAddEvent = (data: Omit<ContinuityEvent, 'id'>) => {
@@ -309,6 +355,124 @@ export function ContinuityTracker({ projectId: _projectId }: Props) {
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* Scene Photos — angle slots */}
+                <div className="ct-section">
+                  <h4 className="ct-section-title">SCENE PHOTOS</h4>
+                  <div className="ct-photo-grid">
+                    {ANGLE_SLOTS.map(({ angle, label }) => {
+                      const photo = scenePhotos.anglePhotos[angle];
+                      return (
+                        <button
+                          key={angle}
+                          className={`ct-photo-slot ${photo ? 'ct-photo-slot--filled' : ''} ${!photo && angle === 'front' ? 'ct-photo-slot--primary' : ''}`}
+                          onClick={() => angleInputRefs.current[angle]?.click()}
+                        >
+                          <input
+                            ref={(el) => { angleInputRefs.current[angle] = el; }}
+                            type="file"
+                            accept="image/*"
+                            className="ct-photo-input"
+                            onChange={(e) => handleAnglePhoto(angle, e)}
+                          />
+                          {photo ? (
+                            <img src={photo.url} alt={label} className="ct-photo-img" />
+                          ) : (
+                            <>
+                              <CameraIcon />
+                              <span className="ct-photo-slot-label">{label.toUpperCase()}</span>
+                            </>
+                          )}
+                          {photo && (
+                            <button
+                              className="ct-photo-remove"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                photosStore.setAnglePhoto(selectedSceneId, activeCharId, angle, null);
+                              }}
+                              aria-label={`Remove ${label} photo`}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            </button>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Master Reference */}
+                <div className="ct-section">
+                  <h4 className="ct-section-title">MASTER REFERENCE</h4>
+                  <button
+                    className={`ct-master-ref ${scenePhotos.masterRef ? 'ct-master-ref--filled' : ''}`}
+                    onClick={() => masterRefInputRef.current?.click()}
+                  >
+                    <input
+                      ref={masterRefInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="ct-photo-input"
+                      onChange={handleMasterRef}
+                    />
+                    {scenePhotos.masterRef ? (
+                      <>
+                        <img src={scenePhotos.masterRef.url} alt="Master reference" className="ct-master-ref-img" />
+                        <button
+                          className="ct-photo-remove ct-photo-remove--lg"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            photosStore.setMasterRef(selectedSceneId, activeCharId, null);
+                          }}
+                          aria-label="Remove master reference"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </>
+                    ) : (
+                      <div className="ct-master-ref-empty">
+                        <CameraIcon size={24} />
+                        <span>Click to set master reference</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
+
+                {/* Additional Photos */}
+                <div className="ct-section">
+                  <div className="ct-section-header">
+                    <h4 className="ct-section-title">ADDITIONAL PHOTOS</h4>
+                    <span className="ct-photo-count">{scenePhotos.additional.length} photo{scenePhotos.additional.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="ct-additional-photos">
+                    {scenePhotos.additional.map((photo) => (
+                      <div key={photo.id} className="ct-additional-thumb">
+                        <img src={photo.url} alt={photo.filename} className="ct-additional-img" />
+                        <button
+                          className="ct-photo-remove"
+                          onClick={() => photosStore.removeAdditionalPhoto(selectedSceneId, activeCharId, photo.id)}
+                          aria-label="Remove photo"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      className="ct-photo-slot ct-photo-slot--primary ct-photo-slot--add"
+                      onClick={() => additionalInputRef.current?.click()}
+                    >
+                      <input
+                        ref={additionalInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="ct-photo-input"
+                        onChange={handleAdditionalPhotos}
+                      />
+                      <PlusIcon />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Quick Flags */}
@@ -693,4 +857,13 @@ function HalfCircleIcon() {
 
 function CopyNextIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
+}
+
+function CameraIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  );
 }
