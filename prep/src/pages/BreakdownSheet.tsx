@@ -273,6 +273,9 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                   {showBadge && (
                     <span className="bs-scene-badge">{timelineType?.toUpperCase()}</span>
                   )}
+                  {bd?.timeline.note && (
+                    <span className="bs-scene-timeline-note">{bd.timeline.note}</span>
+                  )}
                 </div>
                 {synopsis && <div className="bs-scene-synopsis">{synopsis}</div>}
               </div>
