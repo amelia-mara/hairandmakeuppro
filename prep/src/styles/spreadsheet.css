@@ -299,52 +299,107 @@
   border-bottom-color: rgba(245, 158, 11, 0.2);
 }
 
-/* Light theme overrides */
-[data-theme="light"] .bs-time-jump-banner {
-  color: #92400e;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.06) 100%);
-  border-bottom-color: rgba(245, 158, 11, 0.25);
+/* ━━━ Light theme overrides ━━━ */
+
+/* Page & header — deeper warm tan so cards pop as the lightest element */
+[data-theme="light"] .bs-page {
+  background: #E8DEC8;
 }
-[data-theme="light"] .bs-scene-block--time-jump {
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow:
-    0 0 0 2px rgba(245, 158, 11, 0.12),
-    0 1px 4px rgba(140, 120, 80, 0.08),
-    0 4px 20px rgba(140, 120, 80, 0.05);
+[data-theme="light"] .bs-header {
+  background: #E8DEC8;
+  border-bottom-color: rgba(160, 140, 100, 0.25);
+}
+[data-theme="light"] .bs-scroll {
+  background: #E8DEC8;
 }
 
+/* Filter & action buttons */
+[data-theme="light"] .bs-filter-select {
+  background: #FEFCF8;
+  border-color: rgba(160, 140, 100, 0.3);
+}
+[data-theme="light"] .bs-action-btn {
+  background: #FEFCF8;
+  border-color: rgba(160, 140, 100, 0.3);
+  color: #5A3E28;
+}
+[data-theme="light"] .bs-action-btn:hover {
+  background: #fff;
+  border-color: rgba(160, 140, 100, 0.5);
+}
+[data-theme="light"] .bs-action-btn--primary {
+  background: rgba(var(--a), 0.10);
+  border-color: rgba(var(--a), 0.25);
+}
+
+/* Scene block cards — lightest element on page */
 [data-theme="light"] .bs-scene-block {
-  border-color: rgba(180, 160, 120, 0.25);
-  background: #FAF7F0;
+  border-color: rgba(180, 160, 120, 0.3);
+  background: #FEFCF8;
   box-shadow:
-    0 1px 4px rgba(140, 120, 80, 0.08),
-    0 4px 20px rgba(140, 120, 80, 0.05);
+    0 1px 3px rgba(120, 100, 60, 0.08),
+    0 4px 16px rgba(120, 100, 60, 0.04);
 }
 [data-theme="light"] .bs-scene-header {
   background: transparent;
   border-bottom: none;
 }
+
+/* Scene day badge — warm green to match reference */
+[data-theme="light"] .bs-scene-day {
+  background: #8B9A2F;
+  color: #fff;
+}
+
+/* Table header row — warm tan band */
 [data-theme="light"] .bs-table thead {
-  background: transparent;
+  background: rgba(210, 195, 165, 0.35);
 }
 [data-theme="light"] .bs-table th {
-  border-top-color: rgba(180, 160, 120, 0.25);
-  border-bottom-color: rgba(180, 160, 120, 0.25);
-  color: rgba(80, 60, 30, 0.55);
+  border-top: 1px solid rgba(180, 160, 120, 0.35);
+  border-bottom: 1px solid rgba(180, 160, 120, 0.35);
+  color: rgba(80, 60, 30, 0.6);
 }
+
+/* Table cells */
 [data-theme="light"] .bs-table td {
-  border-bottom-color: rgba(180, 160, 120, 0.15);
+  border-bottom-color: rgba(180, 160, 120, 0.18);
+  color: #3A2A14;
 }
 [data-theme="light"] .bs-table tbody tr:hover {
-  background: rgba(var(--a), 0.03);
+  background: rgba(210, 195, 165, 0.18);
+}
+
+/* Character names — warm brown-orange */
+[data-theme="light"] .bs-char-name {
+  color: #A0522D;
+}
+[data-theme="light"] .bs-char-billing {
+  color: rgba(80, 60, 30, 0.5);
+}
+
+/* Synopsis & empty states */
+[data-theme="light"] .bs-scene-synopsis {
+  color: rgba(80, 60, 30, 0.6);
+}
+[data-theme="light"] .bs-empty {
+  color: rgba(80, 60, 30, 0.3);
 }
 [data-theme="light"] .bs-tag-pill {
   background: rgba(0,0,0,0.03);
 }
-[data-theme="light"] .bs-scene-synopsis {
-  color: rgba(80, 60, 30, 0.55);
+
+/* Time jump — amber highlight on light cards */
+[data-theme="light"] .bs-time-jump-banner {
+  color: #92400e;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%);
+  border-bottom-color: rgba(245, 158, 11, 0.3);
 }
-[data-theme="light"] .bs-empty {
-  color: rgba(80, 60, 30, 0.3);
+[data-theme="light"] .bs-scene-block--time-jump {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow:
+    0 0 0 2px rgba(245, 158, 11, 0.15),
+    0 1px 3px rgba(120, 100, 60, 0.08),
+    0 4px 16px rgba(120, 100, 60, 0.04);
 }
 
