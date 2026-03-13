@@ -17,6 +17,7 @@ import './styles/lookbook.css';
 import './styles/bible.css';
 import './styles/continuity.css';
 import './styles/continuity-forms.css';
+import './styles/character-design.css';
 import './styles/budget.css';
 import './styles/budget-forms.css';
 import './styles/budget-tables.css';
