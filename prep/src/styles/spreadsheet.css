@@ -101,7 +101,7 @@
   font-size: 0.6875rem; font-weight: 700;
   color: #fff;
   padding: 3px 12px;
-  background: var(--accent);
+  background: var(--brand-teal);
   border: none;
   border-radius: 999px;
   letter-spacing: 0.02em;
@@ -345,9 +345,9 @@
   border-bottom: none;
 }
 
-/* Scene day badge — warm green to match reference */
+/* Scene day badge — brand teal */
 [data-theme="light"] .bs-scene-day {
-  background: #8B9A2F;
+  background: var(--brand-teal);
   color: #fff;
 }
 
