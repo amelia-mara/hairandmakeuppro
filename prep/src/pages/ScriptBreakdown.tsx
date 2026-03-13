@@ -152,10 +152,11 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   useEffect(() => {
     if (!scene) return;
-    if (!store.getBreakdown(validSceneId)) {
+    const existing = store.getBreakdown(validSceneId);
+    if (!existing) {
       store.setBreakdown(validSceneId, {
         sceneId: validSceneId,
-        timeline: { day: '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
+        timeline: { day: scene.storyDay || '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
         characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },
@@ -165,6 +166,9 @@ export function ScriptBreakdown({ projectId }: Props) {
         })),
         continuityEvents: [],
       });
+    } else if (!existing.timeline.day && scene.storyDay) {
+      // Backfill story day for breakdowns created before auto-population
+      store.updateTimeline(validSceneId, { ...existing.timeline, day: scene.storyDay });
     }
   }, [validSceneId, store, scene]);
 
