@@ -23,6 +23,7 @@ import './styles/budget-tables.css';
 import './styles/timesheet-layout.css';
 import './styles/timesheet-crew.css';
 import './styles/timesheet-weekly.css';
+import './styles/timesheet-redesign.css';
 import App from './App';
 
 // Initialize theme before render
