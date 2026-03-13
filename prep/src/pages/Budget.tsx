@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS,
-  useBreakdownStore, useTagStore, useParsedScriptStore, useCharacterOverridesStore,
+  useBreakdownStore, useParsedScriptStore, useCharacterOverridesStore,
   type Scene, type Character,
 } from '@/stores/breakdownStore';
 import { useBudgetStore, CURRENCY_SYMBOLS, type BudgetLineItem } from '@/stores/budgetStore';
@@ -33,7 +33,6 @@ interface BudgetProps {
 
 export function Budget({ projectId }: BudgetProps) {
   const [activePanel, setActivePanel] = useState('overview');
-  const [wagesOpen, setWagesOpen] = useState(false);
   const [expensePanelOpen, setExpensePanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -45,8 +44,6 @@ export function Budget({ projectId }: BudgetProps) {
   const currency = store(s => s.currency);
   const setIsLTD = store(s => s.setIsLTD);
   const addLineItem = store(s => s.addLineItem);
-  const updateLineItem = store(s => s.updateLineItem);
-  const removeLineItem = store(s => s.removeLineItem);
   const addExpense = store(s => s.addExpense);
   const getTotalBudget = store(s => s.getTotalBudget);
   const getTotalSpent = store(s => s.getTotalSpent);
@@ -64,7 +61,6 @@ export function Budget({ projectId }: BudgetProps) {
   const totalCrewCost = hasTimesheetData ? getTotalLabourCost(selectedWeekStart) : 0;
 
   const breakdownStore = useBreakdownStore();
-  const tagStore = useTagStore();
   const parsedScriptStore = useParsedScriptStore();
   const overridesStore = useCharacterOverridesStore();
 
@@ -418,16 +414,13 @@ export function Budget({ projectId }: BudgetProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {crew.map(member => {
-                      const memberCost = member.dayRate * (member.prepDays + member.shootDays + member.wrapDays);
-                      return (
-                        <tr key={member.id}>
-                          <td>{member.name} — {member.role}</td>
-                          <td className="bg-td-muted">{fmt(member.dayRate)}</td>
-                          <td className="bg-td-amount">{fmt(memberCost)}</td>
-                        </tr>
-                      );
-                    })}
+                    {crew.map(member => (
+                      <tr key={member.id}>
+                        <td>{member.name} — {member.position}</td>
+                        <td className="bg-td-muted">{fmt(member.rateCard.dailyRate)}</td>
+                        <td className="bg-td-amount">{fmt(member.rateCard.dailyRate)}/day</td>
+                      </tr>
+                    ))}
                   </tbody>
                   <tfoot>
                     <tr className="bg-tr-total">
