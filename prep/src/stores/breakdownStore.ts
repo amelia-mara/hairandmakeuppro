@@ -1044,6 +1044,104 @@ export const useContinuityTrackerStore = create<ContinuityTrackerState>()(
   )
 );
 
+/* ━━━ Continuity Photos Store ━━━ */
+
+export type PhotoAngle = 'front' | 'left' | 'right' | 'back';
+
+export interface ContinuityPhoto {
+  id: string;
+  /** object URL or data URL */
+  url: string;
+  filename: string;
+  addedAt: string;
+}
+
+export interface SceneContinuityPhotos {
+  /** Angle shots keyed by angle — one per slot */
+  anglePhotos: Partial<Record<PhotoAngle, ContinuityPhoto>>;
+  /** Master reference image */
+  masterRef: ContinuityPhoto | null;
+  /** Free-form additional photos */
+  additional: ContinuityPhoto[];
+}
+
+const emptyScenePhotos = (): SceneContinuityPhotos => ({
+  anglePhotos: {},
+  masterRef: null,
+  additional: [],
+});
+
+interface ContinuityPhotosState {
+  /** key: `${sceneId}-${characterId}` */
+  photos: Record<string, SceneContinuityPhotos>;
+  getPhotos: (sceneId: string, characterId: string) => SceneContinuityPhotos;
+  setAnglePhoto: (sceneId: string, characterId: string, angle: PhotoAngle, photo: ContinuityPhoto | null) => void;
+  setMasterRef: (sceneId: string, characterId: string, photo: ContinuityPhoto | null) => void;
+  addAdditionalPhoto: (sceneId: string, characterId: string, photo: ContinuityPhoto) => void;
+  removeAdditionalPhoto: (sceneId: string, characterId: string, photoId: string) => void;
+}
+
+export const useContinuityPhotosStore = create<ContinuityPhotosState>()(
+  persist(
+    (set, get) => ({
+      photos: {},
+
+      getPhotos: (sceneId, characterId) => {
+        const key = `${sceneId}-${characterId}`;
+        return get().photos[key] || emptyScenePhotos();
+      },
+
+      setAnglePhoto: (sceneId, characterId, angle, photo) => {
+        const key = `${sceneId}-${characterId}`;
+        const existing = get().photos[key] || emptyScenePhotos();
+        set((s) => ({
+          photos: {
+            ...s.photos,
+            [key]: {
+              ...existing,
+              anglePhotos: { ...existing.anglePhotos, [angle]: photo ?? undefined },
+            },
+          },
+        }));
+      },
+
+      setMasterRef: (sceneId, characterId, photo) => {
+        const key = `${sceneId}-${characterId}`;
+        const existing = get().photos[key] || emptyScenePhotos();
+        set((s) => ({
+          photos: { ...s.photos, [key]: { ...existing, masterRef: photo } },
+        }));
+      },
+
+      addAdditionalPhoto: (sceneId, characterId, photo) => {
+        const key = `${sceneId}-${characterId}`;
+        const existing = get().photos[key] || emptyScenePhotos();
+        set((s) => ({
+          photos: {
+            ...s.photos,
+            [key]: { ...existing, additional: [...existing.additional, photo] },
+          },
+        }));
+      },
+
+      removeAdditionalPhoto: (sceneId, characterId, photoId) => {
+        const key = `${sceneId}-${characterId}`;
+        const existing = get().photos[key] || emptyScenePhotos();
+        set((s) => ({
+          photos: {
+            ...s.photos,
+            [key]: { ...existing, additional: existing.additional.filter((p) => p.id !== photoId) },
+          },
+        }));
+      },
+    }),
+    {
+      name: 'prep-happy-continuity-photos',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
 /* ━━━ Script Upload Store — tracks uploaded script file per project ━━━ */
 
 export interface UploadedScript {
