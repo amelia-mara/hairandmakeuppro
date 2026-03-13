@@ -67,11 +67,7 @@ export function LookbookTab({ projectId }: { projectId: string }) {
     return counts;
   }, [scenes]);
 
-  /* Total look count */
-  const totalLooks = useMemo(() => {
-    if (filterChar) return looks.filter((l) => l.characterId === filterChar).length;
-    return looks.length;
-  }, [looks, filterChar]);
+
 
   const billingLabel = (n: number) => {
     if (n === 1) return '1st Billing';
