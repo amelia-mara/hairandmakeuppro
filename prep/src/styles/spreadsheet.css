@@ -24,6 +24,33 @@
   letter-spacing: 0.1em;
 }
 
+.bs-tabs {
+  display: flex; align-items: baseline; gap: 4px;
+}
+
+.bs-tab {
+  font-size: 0.875rem; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: none; border: none; cursor: pointer;
+  padding: 4px 10px; border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.bs-tab:hover {
+  color: var(--text-heading);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.bs-tab--active {
+  color: var(--text-heading);
+}
+
+.bs-tab-placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); font-size: 0.875rem;
+}
+
 .bs-subtitle {
   font-size: 0.75rem; color: var(--text-muted);
 }
