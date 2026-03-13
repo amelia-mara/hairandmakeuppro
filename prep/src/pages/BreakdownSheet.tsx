@@ -95,6 +95,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'lookbook' | 'bible'>('breakdown');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   /* Resolve data source: parsed script → mock data fallback */
@@ -210,29 +211,49 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
       {/* Header */}
       <div className="bs-header">
         <div className="bs-header-left">
-          <h1 className="bs-title">Breakdown</h1>
-          <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
-        </div>
-        <div className="bs-header-right">
-          {/* Character filter */}
-          <div className="bs-filter">
-            <FilterIcon />
-            <select className="bs-filter-select" value={filterChar} onChange={(e) => setFilterChar(e.target.value)}>
-              <option value="">All Characters</option>
-              {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+          <div className="bs-tabs">
+            <button className={`bs-tab ${activeTab === 'breakdown' ? 'bs-tab--active' : ''}`} onClick={() => setActiveTab('breakdown')}>Breakdown</button>
+            <button className={`bs-tab ${activeTab === 'lookbook' ? 'bs-tab--active' : ''}`} onClick={() => setActiveTab('lookbook')}>Lookbook</button>
+            <button className={`bs-tab ${activeTab === 'bible' ? 'bs-tab--active' : ''}`} onClick={() => setActiveTab('bible')}>Bible</button>
           </div>
-          <button className="bs-action-btn" onClick={handleCopy}>
-            <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
-          </button>
-          <button className="bs-action-btn bs-action-btn--primary" onClick={handleExport}>
-            <ExportIcon /> Export CSV
-          </button>
+          {activeTab === 'breakdown' && (
+            <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
+          )}
         </div>
+        {activeTab === 'breakdown' && (
+          <div className="bs-header-right">
+            {/* Character filter */}
+            <div className="bs-filter">
+              <FilterIcon />
+              <select className="bs-filter-select" value={filterChar} onChange={(e) => setFilterChar(e.target.value)}>
+                <option value="">All Characters</option>
+                {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <button className="bs-action-btn" onClick={handleCopy}>
+              <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button className="bs-action-btn bs-action-btn--primary" onClick={handleExport}>
+              <ExportIcon /> Export CSV
+            </button>
+          </div>
+        )}
       </div>
 
+      {activeTab === 'lookbook' && (
+        <div className="bs-tab-placeholder">
+          <p>Lookbook coming soon.</p>
+        </div>
+      )}
+
+      {activeTab === 'bible' && (
+        <div className="bs-tab-placeholder">
+          <p>Bible coming soon.</p>
+        </div>
+      )}
+
       {/* Spreadsheet */}
-      <div className="bs-scroll" ref={scrollRef}>
+      {activeTab === 'breakdown' && <div className="bs-scroll" ref={scrollRef}>
         {scenesWithCast.map((scene) => {
           const globalIdx = scenes.indexOf(scene);
           const bd = store.getBreakdown(scene.id);
@@ -381,7 +402,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
             <p>No scenes with characters found{filterChar ? ' for this character' : ''}.</p>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
