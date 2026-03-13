@@ -179,7 +179,7 @@ export function generateAvatarColor(): string {
     '#F5A623', // Amber (brand)
     '#F2C4A0', // Peach (brand)
     '#5A3E28', // Text Mid (brand)
-    '#2A1A08', // Text Dark (brand)
+    '#3D2B1A', // Text Dark (brand)
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
