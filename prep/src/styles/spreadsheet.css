@@ -34,17 +34,18 @@
   color: var(--text-muted); text-transform: uppercase;
   letter-spacing: 0.1em;
   background: none; border: none; cursor: pointer;
-  padding: 4px 10px; border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  padding: 4px 10px 8px; border-radius: 4px 4px 0 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 .bs-tab:hover {
   color: var(--text-heading);
-  background: rgba(0, 0, 0, 0.05);
 }
 
 .bs-tab--active {
-  color: var(--text-heading);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .bs-tab-placeholder {

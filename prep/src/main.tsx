@@ -13,6 +13,7 @@ import './styles/breakdown-characters.css';
 import './styles/form-panels.css';
 import './styles/character-forms.css';
 import './styles/spreadsheet.css';
+import './styles/lookbook.css';
 import './styles/continuity.css';
 import './styles/continuity-forms.css';
 import './styles/budget-layout.css';
