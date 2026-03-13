@@ -136,7 +136,7 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   /* Reset selected scene when data source changes — synchronous derivation
      avoids a render frame where scene is undefined */
-  const validSceneId = ALL_SCENES.find(s => s.id === selectedSceneId) ? selectedSceneId : ALL_SCENES[0]?.id ?? '';
+  const validSceneId = nonPreambleScenes.find(s => s.id === selectedSceneId) ? selectedSceneId : nonPreambleScenes[0]?.id ?? '';
   useEffect(() => {
     if (validSceneId !== selectedSceneId) {
       setSelectedSceneId(validSceneId);
@@ -205,7 +205,11 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [selectedSceneId]);
 
-  const filteredScenes = ALL_SCENES.filter((s) => {
+  /* Hide preamble from scene list — its content is merged into the first real scene */
+  const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
+  const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
+
+  const filteredScenes = nonPreambleScenes.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return s.location.toLowerCase().includes(q) || String(s.number).includes(q);
@@ -251,7 +255,7 @@ export function ScriptBreakdown({ projectId }: Props) {
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
-            <span className="sl-header-count">{ALL_SCENES.length}</span>
+            <span className="sl-header-count">{nonPreambleScenes.length}</span>
           </div>
           <div className="sl-search">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
@@ -270,20 +274,12 @@ export function ScriptBreakdown({ projectId }: Props) {
                 <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
                   onClick={() => selectScene(s.id)}>
                   <div className="sl-card-top">
-                    {s.location === 'PREAMBLE' ? (
-                      <span className="sl-card-location">PREAMBLE</span>
-                    ) : (
-                      <>
-                        <span className="sl-card-num">{s.number}</span>
-                        <span className="sl-card-location">{s.intExt}. {s.location}</span>
-                      </>
-                    )}
+                    <span className="sl-card-num">{s.number}</span>
+                    <span className="sl-card-location">{s.intExt}. {s.location}</span>
                   </div>
                   <div className="sl-card-meta">
-                    {s.location !== 'PREAMBLE' && <>
                     <span className={`sl-card-pill sl-pill--${s.dayNight.toLowerCase()}`}>{s.dayNight}</span>
                     <span className="sl-card-detail">{s.intExt}</span>
-                    </>}
                     {s.characterIds.length > 0 && (
                       <span className="sl-card-cast">{s.characterIds.length}</span>
                     )}
@@ -382,7 +378,8 @@ export function ScriptBreakdown({ projectId }: Props) {
             {activeTab === 'script' ? (
               <div className="sv-wrapper">
                 <ScriptView
-                  scenes={ALL_SCENES}
+                  scenes={nonPreambleScenes}
+                  preambleScene={preambleScene}
                   characters={ALL_CHARACTERS}
                   selectedSceneId={selectedSceneId}
                   scrollTrigger={scrollTrigger}
@@ -649,8 +646,9 @@ function extractProfileData(text: string): Partial<Record<'age' | 'gender' | 'ha
   return result;
 }
 
-function ScriptView({ scenes, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
+function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
   scenes: Scene[];
+  preambleScene?: Scene;
   characters: Character[];
   selectedSceneId: string;
   scrollTrigger: number;
@@ -1095,7 +1093,7 @@ function ScriptView({ scenes, characters, selectedSceneId, scrollTrigger, onScen
 
   return (
     <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
-      {scenes.map((scene) => (
+      {scenes.map((scene, idx) => (
         <div
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
@@ -1104,9 +1102,13 @@ function ScriptView({ scenes, characters, selectedSceneId, scrollTrigger, onScen
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
-          {scene.location !== 'PREAMBLE' && (
-            <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+          {/* Merge preamble content into the first scene */}
+          {idx === 0 && preambleScene && (
+            <div className="sv-content sv-preamble-content">
+              {renderSceneContent(preambleScene)}
+            </div>
           )}
+          <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
           <div className="sv-content">
             {renderSceneContent(scene)}
           </div>
@@ -1782,14 +1784,12 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
       {/* Scene info — pinned */}
       <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <span className="fp-scene-num">{scene.location === 'PREAMBLE' ? 'Preamble' : `Scene ${scene.number}`}</span>
+          <span className="fp-scene-num">{`Scene ${scene.number}`}</span>
           <span className={`fp-save fp-save--${saveStatus}`}>
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
           </span>
         </div>
-        {scene.location !== 'PREAMBLE' && (
-          <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
-        )}
+        <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
       </div>
 
       <div className="fp-scroll">
