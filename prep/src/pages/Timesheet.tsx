@@ -80,7 +80,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const totalLabour = getTotalLabourCost(selectedWeekStart);
   const totalHours = crewSummaries.reduce((s, c) => s + c.summary.totalHours, 0);
   const totalOtHours = crewSummaries.reduce((s, c) => s + c.summary.otHours, 0);
-  const _totalBaseHours = totalHours - totalOtHours;
   const totalBasePay = crewSummaries.reduce((s, c) => s + c.summary.basePay, 0);
   const totalOtPay = crewSummaries.reduce((s, c) => s + c.summary.overtimePay, 0);
   const totalDays = crewSummaries.reduce((s, c) => s + c.summary.entries.filter(e => e.unitCall).length, 0);
@@ -542,7 +541,6 @@ function TeamTimesheetsPanel({
   expandedTeam: Record<string, boolean>;
   toggleTeamExpand: (id: string) => void;
 }) {
-  const _totalOtHours = crewSummaries.reduce((s, c) => s + c.summary.otHours, 0);
   const pendingCount = 0; // future: count entries with status !== 'approved'
 
   return (
