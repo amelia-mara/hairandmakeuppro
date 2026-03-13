@@ -48,7 +48,15 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'prep-happy-theme',
+      version: 1,
       storage: createJSONStorage(() => localStorage),
+      migrate: (_persisted, version) => {
+        // v0 → v1: switch default from dark to light
+        if (version === 0) {
+          return { theme: 'light' as Theme, resolvedTheme: 'light' as const };
+        }
+        return _persisted as ThemeState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           const resolved = resolveTheme(state.theme);
