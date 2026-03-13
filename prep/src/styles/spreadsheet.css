@@ -124,45 +124,42 @@
 }
 
 /* ━━━ Scene-type colour coding (brand palette) ━━━ */
+/* Colour tint applies to character rows only, not the whole card */
 
 /* Flashback — Orange Primary #E8621A */
-.bs-scene-block--flashback {
-  background: rgba(232, 98, 26, 0.08);
-  border-color: rgba(232, 98, 26, 0.22);
-}
 .bs-scene-block--flashback .bs-scene-badge {
   background: rgba(232, 98, 26, 0.15); color: #C8520E;
   border-color: rgba(232, 98, 26, 0.30);
 }
+.bs-scene-block--flashback .bs-table tbody tr {
+  background: rgba(232, 98, 26, 0.08);
+}
 
 /* Flash Forward — Teal #4ABFB0 */
-.bs-scene-block--flash-fwd {
-  background: rgba(74, 191, 176, 0.08);
-  border-color: rgba(74, 191, 176, 0.22);
-}
 .bs-scene-block--flash-fwd .bs-scene-badge {
   background: rgba(74, 191, 176, 0.15); color: #2A8A7E;
   border-color: rgba(74, 191, 176, 0.30);
 }
+.bs-scene-block--flash-fwd .bs-table tbody tr {
+  background: rgba(74, 191, 176, 0.08);
+}
 
 /* Dream — Gold #D4943A */
-.bs-scene-block--dream {
-  background: rgba(212, 148, 58, 0.08);
-  border-color: rgba(212, 148, 58, 0.22);
-}
 .bs-scene-block--dream .bs-scene-badge {
   background: rgba(212, 148, 58, 0.15); color: #A87428;
   border-color: rgba(212, 148, 58, 0.30);
 }
+.bs-scene-block--dream .bs-table tbody tr {
+  background: rgba(212, 148, 58, 0.08);
+}
 
 /* Montage — Amber #F5A623 */
-.bs-scene-block--montage {
-  background: rgba(245, 166, 35, 0.08);
-  border-color: rgba(245, 166, 35, 0.22);
-}
 .bs-scene-block--montage .bs-scene-badge {
   background: rgba(245, 166, 35, 0.15); color: #B57A10;
   border-color: rgba(245, 166, 35, 0.30);
+}
+.bs-scene-block--montage .bs-table tbody tr {
+  background: rgba(245, 166, 35, 0.08);
 }
 
 /* Time Jump — Orange Warm #F0882A */
@@ -171,23 +168,19 @@
   border-color: rgba(240, 136, 42, 0.30);
 }
 
-/* ━━━ Light-mode scene-type overrides (stronger tint on cream cards) ━━━ */
+/* ━━━ Light-mode scene-type row tints (slightly stronger on cream) ━━━ */
 
-[data-theme="light"] .bs-scene-block--flashback {
-  background: rgba(232, 98, 26, 0.10);
-  border-color: rgba(232, 98, 26, 0.25);
+[data-theme="light"] .bs-scene-block--flashback .bs-table tbody tr {
+  background: rgba(232, 98, 26, 0.07);
 }
-[data-theme="light"] .bs-scene-block--flash-fwd {
-  background: rgba(74, 191, 176, 0.10);
-  border-color: rgba(74, 191, 176, 0.25);
+[data-theme="light"] .bs-scene-block--flash-fwd .bs-table tbody tr {
+  background: rgba(74, 191, 176, 0.07);
 }
-[data-theme="light"] .bs-scene-block--dream {
-  background: rgba(212, 148, 58, 0.10);
-  border-color: rgba(212, 148, 58, 0.25);
+[data-theme="light"] .bs-scene-block--dream .bs-table tbody tr {
+  background: rgba(212, 148, 58, 0.07);
 }
-[data-theme="light"] .bs-scene-block--montage {
-  background: rgba(245, 166, 35, 0.10);
-  border-color: rgba(245, 166, 35, 0.25);
+[data-theme="light"] .bs-scene-block--montage .bs-table tbody tr {
+  background: rgba(245, 166, 35, 0.07);
 }
 
 .bs-scene-synopsis {
