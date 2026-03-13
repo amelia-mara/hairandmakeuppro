@@ -13,11 +13,11 @@ export function WelcomeScreen() {
         style={{ top: '-15%', right: '-85%', width: '130%', aspectRatio: '1', }}
       >
         {/* Outermost — warm peach */}
-        <div className="absolute inset-0 rounded-full border-[28px] border-[#F0C8A0] opacity-20" />
+        <div className="absolute inset-0 rounded-full border-[26px] border-[#F0C8A0] opacity-20" />
         {/* Middle — soft teal/mint */}
         <div className="absolute inset-[6%] rounded-full border-[26px] border-[#A8DDD4] opacity-25" />
         {/* Inner — orange */}
-        <div className="absolute inset-[12%] rounded-full border-[24px] border-[#E8621A] opacity-[0.12]" />
+        <div className="absolute inset-[12%] rounded-full border-[26px] border-[#E8621A] opacity-[0.12]" />
       </div>
 
       {/* Main content area */}
