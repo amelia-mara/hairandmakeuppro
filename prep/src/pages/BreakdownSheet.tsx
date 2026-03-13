@@ -202,7 +202,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   /* Export CSV */
   const handleExport = useCallback(() => {
     const rows = buildExportRows();
-    exportCSV(rows, 'master-breakdown.csv');
+    exportCSV(rows, 'breakdown.csv');
   }, [buildExportRows]);
 
   return (
@@ -210,7 +210,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
       {/* Header */}
       <div className="bs-header">
         <div className="bs-header-left">
-          <h1 className="bs-title"><span className="heading-italic">Master</span> Breakdown</h1>
+          <h1 className="bs-title">Breakdown</h1>
           <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
         </div>
         <div className="bs-header-right">
