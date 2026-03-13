@@ -138,7 +138,7 @@
   border-color: rgba(232, 98, 26, 0.30);
 }
 .bs-scene-block--flashback .bs-table tbody tr {
-  background: rgba(232, 98, 26, 0.08);
+  background: rgba(232, 98, 26, 0.14);
 }
 
 /* Flash Forward — Teal #4ABFB0 */
@@ -147,7 +147,7 @@
   border-color: rgba(74, 191, 176, 0.30);
 }
 .bs-scene-block--flash-fwd .bs-table tbody tr {
-  background: rgba(74, 191, 176, 0.08);
+  background: rgba(74, 191, 176, 0.14);
 }
 
 /* Dream — Gold #D4943A */
@@ -156,7 +156,7 @@
   border-color: rgba(212, 148, 58, 0.30);
 }
 .bs-scene-block--dream .bs-table tbody tr {
-  background: rgba(212, 148, 58, 0.08);
+  background: rgba(212, 148, 58, 0.14);
 }
 
 /* Montage — Amber #F5A623 */
@@ -165,7 +165,7 @@
   border-color: rgba(245, 166, 35, 0.30);
 }
 .bs-scene-block--montage .bs-table tbody tr {
-  background: rgba(245, 166, 35, 0.08);
+  background: rgba(245, 166, 35, 0.14);
 }
 
 /* Time Jump — Orange Warm #F0882A */
@@ -177,16 +177,16 @@
 /* ━━━ Light-mode scene-type row tints (slightly stronger on cream) ━━━ */
 
 [data-theme="light"] .bs-scene-block--flashback .bs-table tbody tr {
-  background: rgba(232, 98, 26, 0.07);
+  background: rgba(232, 98, 26, 0.12);
 }
 [data-theme="light"] .bs-scene-block--flash-fwd .bs-table tbody tr {
-  background: rgba(74, 191, 176, 0.07);
+  background: rgba(74, 191, 176, 0.12);
 }
 [data-theme="light"] .bs-scene-block--dream .bs-table tbody tr {
-  background: rgba(212, 148, 58, 0.07);
+  background: rgba(212, 148, 58, 0.12);
 }
 [data-theme="light"] .bs-scene-block--montage .bs-table tbody tr {
-  background: rgba(245, 166, 35, 0.07);
+  background: rgba(245, 166, 35, 0.12);
 }
 
 .bs-scene-synopsis {
