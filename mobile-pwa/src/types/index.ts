@@ -329,7 +329,7 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
     textClass: 'text-red-600',
     borderClass: 'border-red-400',
     color: '#E8621A',
-    glassOverlay: 'rgba(239, 68, 68, 0.15)',
+    glassOverlay: 'rgba(232, 98, 26, 0.15)',
   },
   'partial': {
     label: 'Part Complete',
