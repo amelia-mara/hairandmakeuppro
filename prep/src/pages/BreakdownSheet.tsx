@@ -247,8 +247,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           const storyDay = bd?.timeline.day || scene.storyDay || '';
           const isTimeJump = timeJumpSceneIds.has(scene.id);
 
+          /* Scene-type class for colour coding */
+          const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== ''
+            ? `bs-scene-block--${timelineType.toLowerCase().replace(/\s+/g, '-')}`
+            : '';
+
           return (
-            <div key={scene.id} className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''}`}>
+            <div key={scene.id} className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass}`}>
               {/* Time jump banner */}
               {isTimeJump && (
                 <div className="bs-time-jump-banner">
