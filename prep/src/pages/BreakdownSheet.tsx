@@ -5,6 +5,7 @@ import {
   type Scene, type Character, type Look, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
 import { LookbookTab, useLookbookMeta } from './LookbookTab';
+import { BibleTab } from './BibleTab';
 
 /* ━━━ Helpers ━━━ */
 
@@ -80,6 +81,10 @@ function ExportIcon() {
 
 function FilterIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+}
+
+function ShareIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
 }
 
 function CopyIcon() {
@@ -246,6 +251,16 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               </button>
             </>
           )}
+          {activeTab === 'bible' && (
+            <>
+              <button className="bs-action-btn" onClick={() => { /* future share */ }}>
+                <ShareIcon /> Share
+              </button>
+              <button className="bs-action-btn bs-action-btn--primary" onClick={() => { /* future PDF export */ }}>
+                <ExportIcon /> Export PDF
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -254,9 +269,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
       )}
 
       {activeTab === 'bible' && (
-        <div className="bs-tab-placeholder">
-          <p>Bible coming soon.</p>
-        </div>
+        <BibleTab projectId={projectId} />
       )}
 
       {/* Spreadsheet */}
