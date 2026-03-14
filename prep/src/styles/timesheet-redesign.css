@@ -14,7 +14,7 @@
   width: 210px;
   flex-shrink: 0;
   border-right: 1px solid var(--border-medium);
-  background: var(--bg-surface);
+  background: rgba(37, 26, 10, 0.55);
   padding: 22px 0 40px;
   display: flex;
   flex-direction: column;
@@ -868,4 +868,34 @@
 /* ── Highlighted pending row ─────────────────────── */
 .tsr-tte.pending {
   background: rgba(245, 166, 35, 0.06);
+}
+
+/* ━━━ Light Theme Overrides ━━━ */
+
+[data-theme="light"] .tsr-sidebar {
+  background: rgba(232, 222, 200, 0.45);
+  border-right-color: rgba(180, 160, 120, 0.25);
+}
+
+[data-theme="light"] .tsr-main {
+  background: rgba(250, 248, 244, 0.55);
+}
+
+[data-theme="light"] .tsr-sb-item.active {
+  background: rgba(254, 252, 248, 0.8);
+}
+
+[data-theme="light"] .tsr-stat-card {
+  background: rgba(254, 252, 248, 0.85);
+  border-color: rgba(180, 160, 120, 0.25);
+}
+
+[data-theme="light"] .tsr-card {
+  background: rgba(254, 252, 248, 0.85);
+  border-color: rgba(180, 160, 120, 0.25);
+}
+
+[data-theme="light"] .tsr-earnings-band {
+  background: rgba(254, 252, 248, 0.85);
+  border-color: rgba(180, 160, 120, 0.25);
 }
