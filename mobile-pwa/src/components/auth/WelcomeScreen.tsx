@@ -17,11 +17,11 @@ export function WelcomeScreen() {
           <span className="absolute left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
             Happy
           </span>
-          {/* Rainbow stripes — straight lines beneath the logo text, full width */}
-          <div className="absolute pointer-events-none -z-10" style={{ top: '88px', left: '-50vw', right: '-50vw' }}>
-            <div className="w-full h-[5px] bg-[#F0C8A0] opacity-40 mb-[5px]" />
-            <div className="w-full h-[5px] bg-[#A8DDD4] opacity-45 mb-[5px]" />
-            <div className="w-full h-[5px] bg-[#E8621A] opacity-25" />
+          {/* Rainbow stripes — straight lines through the middle of the logo text, full width */}
+          <div className="absolute pointer-events-none" style={{ top: '38px', left: '-50vw', right: '-50vw' }}>
+            <div className="w-full h-[7px] bg-[#F0C8A0] opacity-40 mb-[4px]" />
+            <div className="w-full h-[7px] bg-[#A8DDD4] opacity-45 mb-[4px]" />
+            <div className="w-full h-[7px] bg-[#E8621A] opacity-25" />
           </div>
         </div>
 
