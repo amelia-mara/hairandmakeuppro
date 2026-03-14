@@ -71,7 +71,7 @@
   margin-bottom: 12px;
 }
 .ct-card-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1rem; font-weight: 800;
   color: var(--accent);
   text-transform: uppercase;
@@ -226,7 +226,7 @@
   margin-bottom: 8px;
 }
 .ct-event-name {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.9375rem; font-weight: 700;
   color: var(--text-heading);
   margin: 0 0 4px; padding-right: 24px;

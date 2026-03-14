@@ -95,7 +95,7 @@
 }
 
 .ts-section-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -103,7 +103,7 @@
 }
 
 .ts-section-subtitle {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text-heading);

@@ -144,7 +144,7 @@
 }
 
 .tsr-ph-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 21px;
   font-weight: 700;
   color: var(--text-heading);
