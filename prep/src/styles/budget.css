@@ -228,7 +228,7 @@
 }
 
 .bg-stat-value {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.625rem;
   font-weight: 400;
   color: var(--text-heading);
@@ -684,7 +684,7 @@
 }
 
 .bg-td-amount {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   text-align: right;
 }
@@ -697,7 +697,7 @@
   font-size: 0.8125rem;
 }
 .bg-tr-total td:last-child {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   text-align: right;
 }
@@ -811,7 +811,7 @@
 }
 
 .bg-receipt-amount {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   min-width: 62px;
   text-align: right;
@@ -853,14 +853,14 @@
   width: 90px;
   text-align: right;
   color: var(--text-secondary);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
 }
 
 .bg-recon-actual {
   width: 90px;
   text-align: right;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   color: var(--text-primary);
 }
