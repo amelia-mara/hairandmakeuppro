@@ -14,7 +14,7 @@ export function WelcomeScreen() {
           <span className="absolute z-10 left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#3D2B1A]">
             Checks
           </span>
-          <span className="absolute z-10 left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
+          <span className="absolute z-10 left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-5deg)' }}>
             Happy
           </span>
           {/* Rainbow stripes — straight lines through the middle of the logo text, behind text */}
