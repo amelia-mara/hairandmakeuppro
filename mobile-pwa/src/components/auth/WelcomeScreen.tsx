@@ -19,9 +19,9 @@ export function WelcomeScreen() {
           </span>
           {/* Rainbow stripes — straight lines through the middle of the logo text, behind text */}
           <div className="absolute pointer-events-none -z-10" style={{ top: '38px', left: '-50vw', right: '-50vw' }}>
-            <div className="w-full h-[7px] bg-[#F0C8A0] opacity-40 mb-[4px]" />
-            <div className="w-full h-[7px] bg-[#A8DDD4] opacity-45 mb-[4px]" />
-            <div className="w-full h-[7px] bg-[#E8621A] opacity-25" />
+            <div className="w-full h-[9px] bg-[#F0C8A0] opacity-40 mb-[4px]" />
+            <div className="w-full h-[9px] bg-[#A8DDD4] opacity-45 mb-[4px]" />
+            <div className="w-full h-[9px] bg-[#E8621A] opacity-25" />
           </div>
         </div>
 
