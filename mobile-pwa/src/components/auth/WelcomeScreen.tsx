@@ -7,19 +7,6 @@ export function WelcomeScreen() {
     <div className="min-h-screen flex flex-col relative overflow-hidden font-sans" style={{
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
-      {/* Rainbow arc motif — subtle concentric arcs peeking from right */}
-      <div
-        className="absolute pointer-events-none z-0"
-        style={{ top: '-15%', right: '-85%', width: '130%', aspectRatio: '1', }}
-      >
-        {/* Outermost — warm peach */}
-        <div className="absolute inset-0 rounded-full border-[26px] border-[#F0C8A0] opacity-20" />
-        {/* Middle — soft teal/mint */}
-        <div className="absolute inset-[6%] rounded-full border-[26px] border-[#A8DDD4] opacity-25" />
-        {/* Inner — orange */}
-        <div className="absolute inset-[12%] rounded-full border-[26px] border-[#E8621A] opacity-[0.12]" />
-      </div>
-
       {/* Main content area */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-end px-8 pb-10">
         {/* Text logo — stacked with heavy overlap and offset */}
@@ -28,8 +15,14 @@ export function WelcomeScreen() {
             Checks
           </span>
           <span className="absolute left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
-            Happy.
+            Happy
           </span>
+          {/* Rainbow stripes — straight lines running through the middle of the logo, full width */}
+          <div className="absolute pointer-events-none" style={{ top: '42px', left: '-50vw', right: '-50vw' }}>
+            <div className="w-full h-[3px] bg-[#F0C8A0] opacity-40 mb-[5px]" />
+            <div className="w-full h-[3px] bg-[#A8DDD4] opacity-45 mb-[5px]" />
+            <div className="w-full h-[3px] bg-[#E8621A] opacity-25" />
+          </div>
         </div>
 
         {/* Tagline */}
