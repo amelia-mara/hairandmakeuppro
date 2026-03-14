@@ -11,14 +11,14 @@ export function WelcomeScreen() {
       <div className="relative z-10 flex-1 flex flex-col items-center justify-end px-8 pb-10">
         {/* Text logo — stacked with heavy overlap and offset */}
         <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
-          <span className="absolute left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#3D2B1A]">
+          <span className="absolute z-10 left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#3D2B1A]">
             Checks
           </span>
-          <span className="absolute left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
+          <span className="absolute z-10 left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-3deg)' }}>
             Happy
           </span>
-          {/* Rainbow stripes — straight lines through the middle of the logo text, full width */}
-          <div className="absolute pointer-events-none" style={{ top: '38px', left: '-50vw', right: '-50vw' }}>
+          {/* Rainbow stripes — straight lines through the middle of the logo text, behind text */}
+          <div className="absolute pointer-events-none -z-10" style={{ top: '38px', left: '-50vw', right: '-50vw' }}>
             <div className="w-full h-[7px] bg-[#F0C8A0] opacity-40 mb-[4px]" />
             <div className="w-full h-[7px] bg-[#A8DDD4] opacity-45 mb-[4px]" />
             <div className="w-full h-[7px] bg-[#E8621A] opacity-25" />
