@@ -16,7 +16,7 @@
   width: 210px;
   min-width: 210px;
   border-right: 1px solid var(--border-card);
-  background: var(--bg-surface);
+  background: rgba(37, 26, 10, 0.55);
   padding: 22px 0 40px;
   display: flex;
   flex-direction: column;
@@ -950,7 +950,7 @@
 }
 
 [data-theme="light"] .bg-main {
-  background: #FAF8F4;
+  background: rgba(250, 248, 244, 0.55);
 }
 
 [data-theme="light"] .bg-stat-card {
