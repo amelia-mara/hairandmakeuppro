@@ -26,23 +26,23 @@ body {
 
 /* Artistic italic accent — used for the first word in split headings */
 .heading-italic {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-style: italic;
   font-weight: 600;
 }
 
 /* The non-italic portion of a split heading */
 .heading-regular {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-style: normal;
   font-weight: 700;
 }
+
+/* Headings & subheadings — DM Sans */
 .topbar-title,
-.stat-card .stat-value,
 .dashboard-header h1,
 .dashboard-header h2,
 .project-card-name,
-.budget-stat-value,
 .cv-name,
 .cv-look-name,
 .ct-card-title,
@@ -53,6 +53,12 @@ body {
 .ts-card-title,
 .ts-section-title,
 .ts-section-subtitle {
+  font-family: var(--font-sans);
+}
+
+/* Numeric stat values — keep display font */
+.stat-card .stat-value,
+.budget-stat-value {
   font-family: var(--font-display);
 }
 
@@ -171,7 +177,7 @@ body {
   margin-bottom: 28px;
 }
 .hub-hero-heading {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 3rem;
   font-weight: 700;
   line-height: 1.15;

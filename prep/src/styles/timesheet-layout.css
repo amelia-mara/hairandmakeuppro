@@ -222,7 +222,7 @@
 }
 
 .ts-top-bar-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -274,7 +274,7 @@
 }
 
 .ts-tabs-overview-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -368,7 +368,7 @@
 }
 
 .ts-card-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text-heading);
