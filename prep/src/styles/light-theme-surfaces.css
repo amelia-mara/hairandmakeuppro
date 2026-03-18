@@ -65,10 +65,7 @@
   background: var(--bg-card) !important;
 }
 [data-theme="light"] .cv-wrap {
-  background: rgba(250, 247, 240, 0.7) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border-color: rgba(0,0,0,0.10) !important;
+  background: transparent !important;
 }
 
 /* Header pseudo-elements for light mode */
