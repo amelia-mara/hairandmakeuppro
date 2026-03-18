@@ -5,7 +5,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
   useCharacterOverridesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag,
+  type ScriptTag, type ParsedCharacterData,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
@@ -90,6 +90,7 @@ const RIGHT_MAX = 560;
 
 export function ScriptBreakdown({ projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
+  const [scrollTrigger, setScrollTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('script');
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(16);
@@ -126,6 +127,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [parsedData]);
   const ALL_LOOKS: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 
+  /* Hide preamble from scene list — its content is merged into the first real scene */
+  const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
+  const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
+
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
     if (!hasScript && !parsedData) {
@@ -135,7 +140,7 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   /* Reset selected scene when data source changes — synchronous derivation
      avoids a render frame where scene is undefined */
-  const validSceneId = ALL_SCENES.find(s => s.id === selectedSceneId) ? selectedSceneId : ALL_SCENES[0]?.id ?? '';
+  const validSceneId = nonPreambleScenes.find(s => s.id === selectedSceneId) ? selectedSceneId : nonPreambleScenes[0]?.id ?? '';
   useEffect(() => {
     if (validSceneId !== selectedSceneId) {
       setSelectedSceneId(validSceneId);
@@ -151,10 +156,11 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   useEffect(() => {
     if (!scene) return;
-    if (!store.getBreakdown(validSceneId)) {
+    const existing = store.getBreakdown(validSceneId);
+    if (!existing) {
       store.setBreakdown(validSceneId, {
         sceneId: validSceneId,
-        timeline: { day: '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
+        timeline: { day: scene.storyDay || '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
         characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },
@@ -164,6 +170,9 @@ export function ScriptBreakdown({ projectId }: Props) {
         })),
         continuityEvents: [],
       });
+    } else if (!existing.timeline.day && scene.storyDay) {
+      // Backfill story day for breakdowns created before auto-population
+      store.updateTimeline(validSceneId, { ...existing.timeline, day: scene.storyDay });
     }
   }, [validSceneId, store, scene]);
 
@@ -200,7 +209,7 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [selectedSceneId]);
 
-  const filteredScenes = ALL_SCENES.filter((s) => {
+  const filteredScenes = nonPreambleScenes.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return s.location.toLowerCase().includes(q) || String(s.number).includes(q);
@@ -208,6 +217,7 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   const selectScene = useCallback((id: string) => {
     setSelectedSceneId(id);
+    setScrollTrigger(n => n + 1);
     setActiveTab('script');
   }, []);
 
@@ -245,7 +255,7 @@ export function ScriptBreakdown({ projectId }: Props) {
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
-            <span className="sl-header-count">{ALL_SCENES.length}</span>
+            <span className="sl-header-count">{nonPreambleScenes.length}</span>
           </div>
           <div className="sl-search">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
@@ -316,11 +326,6 @@ export function ScriptBreakdown({ projectId }: Props) {
           </div>
         </div>
 
-        {/* Left divider (visual only) */}
-        <div className="bd-divider bd-divider--static">
-          <div className="bd-divider-grip" />
-        </div>
-
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
           {/* File divider tabs */}
@@ -332,6 +337,11 @@ export function ScriptBreakdown({ projectId }: Props) {
                 <button key={c.id} className={`cp-divider-tab ${activeTab === c.id ? 'cp-divider-tab--active' : ''}`}
                   onClick={() => setActiveTab(c.id)}>{c.name}</button>
               ))}
+              {/* Show tab for active character even if not in this scene */}
+              {activeTab !== 'script' && activeTab !== 'supporting-artists' && !scenePrincipals.find(c => c.id === activeTab) && ALL_CHARACTERS.find(c => c.id === activeTab) && (
+                <button className="cp-divider-tab cp-divider-tab--active"
+                  onClick={() => setActiveTab(activeTab)}>{ALL_CHARACTERS.find(c => c.id === activeTab)!.name}</button>
+              )}
               {sceneSupportingArtists.length > 0 && (
                 <button className={`cp-divider-tab ${activeTab === 'supporting-artists' ? 'cp-divider-tab--active' : ''}`}
                   onClick={() => setActiveTab('supporting-artists')}
@@ -363,12 +373,15 @@ export function ScriptBreakdown({ projectId }: Props) {
             {activeTab === 'script' ? (
               <div className="sv-wrapper">
                 <ScriptView
-                  scenes={ALL_SCENES}
+                  scenes={nonPreambleScenes}
+                  preambleScene={preambleScene}
                   characters={ALL_CHARACTERS}
                   selectedSceneId={selectedSceneId}
+                  scrollTrigger={scrollTrigger}
                   onSceneVisible={onSceneVisible}
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
+                  projectId={projectId}
                   onTagCreated={(sceneId, characterId, categoryId, text) => {
                     const charOverrides = useCharacterOverridesStore.getState();
                     /* Auto-fill breakdown fields based on category */
@@ -432,9 +445,9 @@ export function ScriptBreakdown({ projectId }: Props) {
               </div>
             ) : activeTab === 'supporting-artists' ? (
               <SupportingArtistsPanel artists={sceneSupportingArtists} scene={scene!} allScenes={ALL_SCENES} />
-            ) : sceneCharacters.find((c) => c.id === activeTab) ? (
+            ) : ALL_CHARACTERS.find((c) => c.id === activeTab) ? (
               <CharacterView
-                char={sceneCharacters.find((c) => c.id === activeTab)!}
+                char={ALL_CHARACTERS.find((c) => c.id === activeTab)!}
                 subTab="profile"
                 allScenes={ALL_SCENES}
                 allLooks={ALL_LOOKS}
@@ -565,8 +578,8 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick category (tag type), Step 2: pick character (dropdown) */
-  step: 'category' | 'character';
+  /** Step 1: pick category, Step 2: pick character, Step 3 (cast): pick existing or create new */
+  step: 'category' | 'character' | 'cast';
   categoryId?: string;
   characterId?: string;
   /** When true, popup appears below the selection instead of above */
@@ -628,14 +641,17 @@ function extractProfileData(text: string): Partial<Record<'age' | 'gender' | 'ha
   return result;
 }
 
-function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontSize, onCharClick, onTagCreated }: {
+function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
   scenes: Scene[];
+  preambleScene?: Scene;
   characters: Character[];
   selectedSceneId: string;
+  scrollTrigger: number;
   onSceneVisible: (id: string) => void;
   fontSize: number;
   onCharClick: (id: string) => void;
   onTagCreated: (sceneId: string, characterId: string, categoryId: string, text: string) => void;
+  projectId: string;
 }) {
   const charNames = characters.map((c) => c.name);
   /* Build a set of all name variants that could appear as dialogue cues:
@@ -717,7 +733,11 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
   /* Step 1: User picks category (tag type) */
   const handleCategoryPick = useCallback((catId: string) => {
     if (!popup) return;
-    setPopup({ ...popup, step: 'character', categoryId: catId });
+    if (catId === 'cast') {
+      setPopup({ ...popup, step: 'cast', categoryId: catId });
+    } else {
+      setPopup({ ...popup, step: 'character', categoryId: catId });
+    }
   }, [popup]);
 
   /* Step 2: User picks character from dropdown → tag is created */
@@ -733,9 +753,138 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
       characterId: charId,
     });
     onTagCreated(popup.sceneId, charId, popup.categoryId, popup.text);
-    onCharClick(charId);
     setPopup(null);
-  }, [popup, tagStore, onCharClick, onTagCreated]);
+  }, [popup, tagStore, onTagCreated]);
+
+  const parsedScriptStore = useParsedScriptStore();
+
+  /* Cast: user picks an existing character to link the highlighted text to */
+  const handleCastMerge = useCallback((charId: string) => {
+    if (!popup) return;
+    // Add character to scene if not already present
+    const pd = parsedScriptStore.getParsedData(projectId);
+    if (pd) {
+      const sceneData = pd.scenes.find(s => s.id === popup.sceneId);
+      if (sceneData && !sceneData.characterIds.includes(charId)) {
+        const updated = pd.scenes.map(s =>
+          s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, charId] } : s
+        );
+        parsedScriptStore.setParsedData(projectId, { ...pd, scenes: updated });
+      }
+    }
+    // Create a cast tag linking highlighted text to the character
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: 'cast',
+      characterId: charId,
+    });
+    setPopup(null);
+  }, [popup, tagStore, parsedScriptStore, projectId]);
+
+  /* Cast: user creates a brand new character from the highlighted text */
+  const handleCastCreateNew = useCallback(() => {
+    if (!popup) return;
+    const pd = parsedScriptStore.getParsedData(projectId);
+    if (!pd) return;
+    const newId = `char-${Date.now()}`;
+    const newChar: ParsedCharacterData = {
+      id: newId,
+      name: popup.text.trim().toUpperCase(),
+      billing: pd.characters.length + 1,
+      category: 'principal',
+      age: '', gender: '', hairColour: '', hairType: '',
+      eyeColour: '', skinTone: '', build: '', distinguishingFeatures: '', notes: '',
+    };
+    // Add character to the project and to this scene
+    const updatedChars = [...pd.characters, newChar];
+    const updatedScenes = pd.scenes.map(s =>
+      s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, newId] } : s
+    );
+    parsedScriptStore.setParsedData(projectId, { ...pd, characters: updatedChars, scenes: updatedScenes });
+    // Create a cast tag
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: 'cast',
+      characterId: newId,
+    });
+    setPopup(null);
+  }, [popup, tagStore, parsedScriptStore, projectId]);
+
+  /* Build a regex that matches known character names within action/description
+     lines so we can highlight them inline. Only multi-word full names and their
+     first-name references are matched. Single-word character names and generic
+     words (man, cowboy, etc.) are excluded — they only appear on dialogue cues. */
+  const charNamePattern = useMemo(() => {
+    // Common words that should never be highlighted as first-name fragments
+    const GENERIC_WORDS = new Set([
+      'MAN', 'WOMAN', 'BOY', 'GIRL', 'OLD', 'YOUNG', 'CHILD', 'BABY',
+      'COWBOY', 'COWGIRL', 'DOCTOR', 'NURSE', 'OFFICER', 'CAPTAIN',
+      'SERGEANT', 'DETECTIVE', 'AGENT', 'JUDGE', 'PRIEST', 'PASTOR',
+      'DRIVER', 'WAITER', 'WAITRESS', 'BARTENDER', 'BARMAN', 'GUARD',
+      'SOLDIER', 'GENERAL', 'KING', 'QUEEN', 'PRINCE', 'PRINCESS',
+      'MRS', 'MR', 'MISS', 'TALL', 'SHORT', 'BIG', 'FAT', 'THIN',
+      'ELDERLY', 'MIDDLE', 'LITTLE', 'BEAUTIFUL', 'PRETTY', 'HANDSOME',
+    ]);
+    const allNames: { name: string; char: Character }[] = [];
+    for (const c of characters) {
+      // Skip single-word character names (COWBOY, MAN, etc.)
+      if (!/\s/.test(c.name.trim())) continue;
+      // Full name always included (e.g. "LENNON BOWIE", "OLD MAN")
+      allNames.push({ name: c.name, char: c });
+      // First name for inline references — but skip generic words
+      const first = c.name.split(/\s+/)[0];
+      if (first.length >= 3 && !GENERIC_WORDS.has(first.toUpperCase())) {
+        allNames.push({ name: first, char: c });
+      }
+    }
+    // Sort longest first for greedy matching
+    allNames.sort((a, b) => b.name.length - a.name.length);
+    if (allNames.length === 0) return null;
+    const escaped = allNames.map(n => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const re = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+    return { re, lookup: allNames };
+  }, [characters]);
+
+  /** Render a text string with inline character name highlights.
+      Character names get the sv-cue-inline class and are clickable. */
+  const highlightCharNames = useCallback((text: string, keyPrefix: string): React.ReactNode => {
+    if (!charNamePattern || !text) return text;
+    const { re, lookup } = charNamePattern;
+    re.lastIndex = 0;
+    const parts: React.ReactNode[] = [];
+    let lastIdx = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const matchText = m[0];
+      const upper = matchText.toUpperCase();
+      // Find which character this matches
+      const entry = lookup.find(n => n.name.toUpperCase() === upper);
+      if (!entry) continue;
+      // Push text before the match
+      if (m.index > lastIdx) {
+        parts.push(<span key={`${keyPrefix}-t${lastIdx}`}>{text.slice(lastIdx, m.index)}</span>);
+      }
+      parts.push(
+        <span key={`${keyPrefix}-c${m.index}`} className="sv-cue-inline" onClick={(e) => { e.stopPropagation(); onCharClick(entry.char.id); }}>
+          {matchText}
+        </span>
+      );
+      lastIdx = m.index + matchText.length;
+    }
+    if (lastIdx === 0) return text; // no matches
+    if (lastIdx < text.length) {
+      parts.push(<span key={`${keyPrefix}-t${lastIdx}`}>{text.slice(lastIdx)}</span>);
+    }
+    return <>{parts}</>;
+  }, [charNamePattern, onCharClick]);
 
   /* Render a scene's content with inline highlights */
   const renderSceneContent = useCallback((scene: Scene) => {
@@ -784,7 +933,8 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         if (dialogueSet.has(i)) {
           return <div key={`${scene.id}-${i}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
-        return <div key={`${scene.id}-${i}`} className="sv-line">{trimmed || '\u00A0'}</div>;
+        // Action/description lines: highlight character names inline
+        return <div key={`${scene.id}-${i}`} className="sv-line">{trimmed ? highlightCharNames(trimmed, `${scene.id}-${i}`) : '\u00A0'}</div>;
       });
     }
 
@@ -820,7 +970,7 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         if (isDialogueLine) {
           return <div key={`${scene.id}-${lineIdx}`} className="sv-line sv-dialogue">{trimmed || '\u00A0'}</div>;
         }
-        return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line || '\u00A0'}</div>;
+        return <div key={`${scene.id}-${lineIdx}`} className="sv-line">{lo.line ? highlightCharNames(lo.line, `${scene.id}-${lineIdx}`) : '\u00A0'}</div>;
       }
 
       /* Render with highlighted spans */
@@ -830,13 +980,24 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         const segEnd = Math.min(seg.end, lo.end) - lo.start;
         const segText = lo.line.slice(segStart, segEnd);
         if (seg.tag) {
-          const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === seg.tag!.categoryId);
-          parts.push(
-            <span key={`${seg.start}-${seg.end}`} className="sv-highlight"
-              style={{ backgroundColor: `${cat?.color || '#888'}33`, borderBottom: `2px solid ${cat?.color || '#888'}` }}
-              title={`${cat?.label || 'Tag'}${seg.tag.characterId ? ` → ${characters.find(c => c.id === seg.tag!.characterId)?.name || ''}` : ''}`}
-            >{segText}</span>
-          );
+          if (seg.tag.categoryId === 'cast' && seg.tag.characterId) {
+            // Cast tags use amber character-name styling and link to profile
+            const charId = seg.tag.characterId;
+            parts.push(
+              <span key={`${seg.start}-${seg.end}`} className="sv-cue-inline"
+                onClick={(e) => { e.stopPropagation(); onCharClick(charId); }}
+                title={characters.find(c => c.id === charId)?.name || ''}
+              >{segText}</span>
+            );
+          } else {
+            const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === seg.tag!.categoryId);
+            parts.push(
+              <span key={`${seg.start}-${seg.end}`} className="sv-highlight"
+                style={{ backgroundColor: `${cat?.color || '#888'}33`, borderBottom: `2px solid ${cat?.color || '#888'}` }}
+                title={`${cat?.label || 'Tag'}${seg.tag.characterId ? ` → ${characters.find(c => c.id === seg.tag!.characterId)?.name || ''}` : ''}`}
+              >{segText}</span>
+            );
+          }
         } else {
           parts.push(<span key={`${seg.start}-${seg.end}`}>{segText}</span>);
         }
@@ -850,46 +1011,71 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
         </div>
       );
     });
-  }, [tagStore, charNames, onCharClick]);
+  }, [tagStore, charNames, onCharClick, highlightCharNames]);
 
-  /* Scroll to scene when selected from the scene list */
+  /* Scroll to scene when selected from the scene list.
+     scrollTrigger changes on every explicit scene selection (even re-clicking
+     the same scene), so the effect always fires. */
   useEffect(() => {
     const el = pageRefs.current.get(selectedSceneId);
     if (el && scrollRef.current) {
       isScrollingTo.current = true;
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const timer = setTimeout(() => { isScrollingTo.current = false; }, 600);
-      return () => clearTimeout(timer);
+      // Use scrollend event when available; fall back to a generous timeout
+      // so the IntersectionObserver doesn't override selectedSceneId mid-scroll.
+      const container = scrollRef.current;
+      const unlock = () => { isScrollingTo.current = false; };
+      let timer: ReturnType<typeof setTimeout>;
+      if (container && 'onscrollend' in container) {
+        const handler = () => { unlock(); container.removeEventListener('scrollend', handler); clearTimeout(timer); };
+        container.addEventListener('scrollend', handler, { once: true });
+        timer = setTimeout(handler, 1500); // safety fallback
+      } else {
+        timer = setTimeout(unlock, 1200);
+      }
+      return () => { clearTimeout(timer); unlock(); };
     }
-  }, [selectedSceneId]);
+  }, [selectedSceneId, scrollTrigger]);
 
-  /* IntersectionObserver to detect which scene is visible while scrolling */
+  /* Detect which scene is most visible while scrolling.
+     Uses a scroll listener instead of IntersectionObserver so we always
+     evaluate ALL scene elements on every scroll frame, not just the ones
+     that happen to cross a threshold boundary. */
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
+    let rafId = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
         if (isScrollingTo.current) return;
-        let best: IntersectionObserverEntry | null = null;
-        for (const entry of entries) {
-          if (entry.isIntersecting && (!best || entry.intersectionRatio > best.intersectionRatio)) {
-            best = entry;
+        const containerRect = container.getBoundingClientRect();
+        // Target zone: top 40% of the container — the area the user is reading
+        const zoneTop = containerRect.top;
+        const zoneBottom = containerRect.top + containerRect.height * 0.4;
+
+        let bestId: string | null = null;
+        let bestOverlap = 0;
+
+        for (const [id, el] of pageRefs.current.entries()) {
+          const r = el.getBoundingClientRect();
+          const overlapTop = Math.max(r.top, zoneTop);
+          const overlapBottom = Math.min(r.bottom, zoneBottom);
+          const overlap = Math.max(0, overlapBottom - overlapTop);
+          if (overlap > bestOverlap) {
+            bestOverlap = overlap;
+            bestId = id;
           }
         }
-        if (best) {
-          const id = (best.target as HTMLElement).dataset.sceneId;
-          if (id) onSceneVisible(id);
-        }
-      },
-      { root: container, threshold: [0.1, 0.3, 0.5, 0.7], rootMargin: '-10% 0px -60% 0px' }
-    );
+        if (bestId) onSceneVisible(bestId);
+      });
+    };
 
-    for (const el of pageRefs.current.values()) {
-      observer.observe(el);
-    }
-
-    return () => observer.disconnect();
+    container.addEventListener('scroll', onScroll, { passive: true });
+    // Run once on mount to sync initial state
+    onScroll();
+    return () => { container.removeEventListener('scroll', onScroll); cancelAnimationFrame(rafId); };
   }, [scenes, onSceneVisible]);
 
   const setPageRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -902,7 +1088,7 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
 
   return (
     <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
-      {scenes.map((scene) => (
+      {scenes.map((scene, idx) => (
         <div
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
@@ -911,6 +1097,12 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
+          {/* Merge preamble content into the first scene */}
+          {idx === 0 && preambleScene && (
+            <div className="sv-content sv-preamble-content">
+              {renderSceneContent(preambleScene)}
+            </div>
+          )}
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
           <div className="sv-content">
             {renderSceneContent(scene)}
@@ -930,7 +1122,7 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
             <>
               <div className="sv-tag-popup-title">Tag type</div>
               <div className="sv-tag-popup-grid">
-                {BREAKDOWN_CATEGORIES.filter((cat) => cat.id !== 'cast').map((cat) => (
+                {BREAKDOWN_CATEGORIES.map((cat) => (
                   <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleCategoryPick(cat.id)}>
                     <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
                     {cat.label}
@@ -957,6 +1149,31 @@ function ScriptView({ scenes, characters, selectedSceneId, onSceneVisible, fontS
                 {popupChars.map((ch) => (
                   <option key={ch.id} value={ch.id}>{ch.name}</option>
                 ))}
+              </select>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
+                Back
+              </button>
+            </>
+          )}
+          {popup.step === 'cast' && (
+            <>
+              <div className="sv-tag-popup-title">
+                <span className="sv-tag-popup-swatch" style={{ background: BREAKDOWN_CATEGORIES.find((c) => c.id === 'cast')?.color }} />
+                {' '}Cast — "{popup.text}"
+              </div>
+              <select
+                className="sv-tag-popup-select"
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value === '__create_new__') handleCastCreateNew();
+                  else if (e.target.value) handleCastMerge(e.target.value);
+                }}
+              >
+                <option value="" disabled>Select existing character or create new…</option>
+                {popupChars.map((ch) => (
+                  <option key={ch.id} value={ch.id}>{ch.name}</option>
+                ))}
+                <option value="__create_new__">+ Create new character "{popup.text.trim().toUpperCase()}"</option>
               </select>
               <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
                 Back
@@ -1093,17 +1310,20 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           : ps.timeOfDay === 'CONTINUOUS' ? 'DAY' as const
           : ps.timeOfDay as 'DAY' | 'NIGHT';
 
+        const parsedNum = parseInt(sceneNum, 10);
+        const isPreamble = ps.location === 'PREAMBLE';
         return {
           id: `ps-${idx + 1}`,
-          number: idx + 1,
+          number: isNaN(parsedNum) ? idx + 1 : parsedNum,
           intExt: ps.intExt,
           dayNight,
-          location: ps.location,
+          location: isPreamble ? 'PREAMBLE' : ps.location,
           storyDay: '',
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
-          scriptContent: ps.content.replace(/^[^\n]*\n/, '').trim(), // Remove slugline from content
+          // Preamble has no slugline to strip; regular scenes strip the first line (heading)
+          scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
         };
       });
 
@@ -1559,7 +1779,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
       {/* Scene info — pinned */}
       <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <span className="fp-scene-num">Scene {scene.number}</span>
+          <span className="fp-scene-num">{`Scene ${scene.number}`}</span>
           <span className={`fp-save fp-save--${saveStatus}`}>
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
           </span>

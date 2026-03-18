@@ -27,11 +27,6 @@
   background: var(--accent);
 }
 
-.bd-divider--static { cursor: default; }
-.bd-divider--static:hover,
-.bd-divider--static:active { background: rgba(var(--a), 0.06); }
-.bd-divider--static:hover .bd-divider-grip,
-.bd-divider--static:active .bd-divider-grip { opacity: 0.25; background: var(--text-muted); box-shadow: none; }
 
 .bd-divider-grip {
   width: 3px;

@@ -29,7 +29,7 @@
 }
 
 .budget-top-bar-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -315,7 +315,7 @@
 }
 
 .budget-card-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);

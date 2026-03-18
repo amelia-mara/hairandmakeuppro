@@ -7,6 +7,8 @@ import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
 import { LookOverview } from './LookOverview';
+import { clsx } from 'clsx';
+
 export function Lookbooks() {
   const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
   const { schedule } = useScheduleStore();
@@ -144,11 +146,6 @@ export function Lookbooks() {
     return { captured, total };
   }, [currentProject, sceneCaptures]);
 
-  // Get character by ID (checks both project characters and schedule-sourced)
-  const getCharacter = (charId: string): Character | undefined => {
-    return allCharacters.find(c => c.id === charId);
-  };
-
   // Handle add look for character
   const handleAddLook = (characterId?: string) => {
     setSelectedCharacterId(characterId || null);
@@ -228,7 +225,60 @@ export function Lookbooks() {
 
   const grouped = looksByCharacter();
   const hasCharacters = allCharacters.length > 0;
-  const characterCount = allCharacters.length;
+
+  // Group characters by role: Leads, Supporting Artists, Background, Unassigned
+  const roleGroups = (() => {
+    const leads: Character[] = [];
+    const supporting: Character[] = [];
+    const background: Character[] = [];
+    const unassigned: Character[] = [];
+
+    allCharacters.forEach(char => {
+      switch (char.role) {
+        case 'lead': leads.push(char); break;
+        case 'supporting': supporting.push(char); break;
+        case 'background': background.push(char); break;
+        default: unassigned.push(char); break;
+      }
+    });
+
+    return [
+      { key: 'lead', label: 'LEADS', colour: 'text-amber-700 bg-amber-50 border-amber-200', characters: leads },
+      { key: 'supporting', label: 'SUPPORTING ARTISTS', colour: 'text-blue-700 bg-blue-50 border-blue-200', characters: supporting },
+      { key: 'background', label: 'BACKGROUND', colour: 'text-gray-600 bg-gray-50 border-gray-200', characters: background },
+      { key: 'unassigned', label: 'UNASSIGNED', colour: 'text-text-muted bg-gray-50 border-gray-200', characters: unassigned },
+    ].filter(g => g.characters.length > 0);
+  })();
+
+  const renderCharacterEntry = (character: Character) => {
+    const charLooks = grouped.get(character.id) || [];
+
+    let totalCaptured = 0;
+    let looksSceneCount = 0;
+    charLooks.forEach(look => {
+      const progress = getCaptureProgress(look);
+      totalCaptured += progress.captured;
+      looksSceneCount += progress.total;
+    });
+
+    const callSheetScenes = character.actorNumber
+      ? castSceneMap.get(character.actorNumber)
+      : undefined;
+    const callSheetSceneCount = callSheetScenes?.size || 0;
+    const totalScenes = Math.max(looksSceneCount, callSheetSceneCount);
+
+    return (
+      <CharacterSection
+        key={character.id}
+        character={character}
+        looks={charLooks}
+        capturedScenes={totalCaptured}
+        totalScenes={totalScenes}
+        getCaptureProgress={getCaptureProgress}
+        onAddLook={() => handleAddLook(character.id)}
+      />
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
@@ -239,50 +289,27 @@ export function Lookbooks() {
 
           {hasCharacters ? (
             <>
-              {/* Characters count header */}
-              <div className="section-header mb-3">
-                CAST & LOOKBOOKS ({characterCount})
-              </div>
+              {roleGroups.map(group => (
+                <div key={group.key} className="mb-6">
+                  {/* Role group header */}
+                  <div className={clsx(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg border mb-3',
+                    group.colour,
+                  )}>
+                    <span className="text-[10px] font-bold tracking-wider uppercase">
+                      {group.label}
+                    </span>
+                    <span className="text-[10px] font-medium opacity-70">
+                      ({group.characters.length})
+                    </span>
+                  </div>
 
-              {/* Unified Character view - cast profiles + lookbooks together */}
-              <div className="space-y-5">
-                {Array.from(grouped.entries()).map(([charId, looks]) => {
-                  const character = getCharacter(charId);
-                  if (!character) return null;
-
-                  // Calculate total capture progress for character
-                  let totalCaptured = 0;
-                  let looksSceneCount = 0;
-                  looks.forEach(look => {
-                    const progress = getCaptureProgress(look);
-                    totalCaptured += progress.captured;
-                    looksSceneCount += progress.total;
-                  });
-
-                  // Get scenes from call sheet data using cast number
-                  // This shows total scenes the cast member appears in across all call sheets
-                  const callSheetScenes = character.actorNumber
-                    ? castSceneMap.get(character.actorNumber)
-                    : undefined;
-                  const callSheetSceneCount = callSheetScenes?.size || 0;
-
-                  // Use the larger of looks-based scene count or call sheet scene count
-                  // This ensures we show accurate counts even if looks aren't fully set up
-                  const totalScenes = Math.max(looksSceneCount, callSheetSceneCount);
-
-                  return (
-                    <CharacterSection
-                      key={charId}
-                      character={character}
-                      looks={looks}
-                      capturedScenes={totalCaptured}
-                      totalScenes={totalScenes}
-                      getCaptureProgress={getCaptureProgress}
-                      onAddLook={() => handleAddLook(charId)}
-                    />
-                  );
-                })}
-              </div>
+                  {/* Characters in this role group */}
+                  <div className="space-y-5">
+                    {group.characters.map(renderCharacterEntry)}
+                  </div>
+                </div>
+              ))}
             </>
           ) : (
             <EmptyState onAddLook={() => handleAddLook()} />
@@ -374,4 +401,3 @@ function EmptyState({ onAddLook }: { onAddLook: () => void }) {
     </div>
   );
 }
-
