@@ -19,13 +19,14 @@ export function WelcomeScreen() {
               color: '#4A3020',
               lineHeight: 1,
               margin: '0 0 -2px 0',
-              textAlign: 'left',
+              textAlign: 'center',
+              paddingLeft: '40px',
             }}>
               Checks
             </h1>
 
             {/* Colored stripes - orange, amber, blue (top to bottom) */}
-            <div style={{ width: '100vw', position: 'relative', left: '50%', transform: 'translateX(-50%)', margin: '2px 0' }}>
+            <div style={{ width: '100vw', position: 'relative', left: '50%', transform: 'translateX(-50%)', margin: '2px 0 0 0' }}>
               <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8621A, transparent)', marginBottom: '3px' }} />
               <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #D4A843, transparent)', marginBottom: '3px' }} />
               <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #5B9BD5, transparent)' }} />
@@ -38,7 +39,7 @@ export function WelcomeScreen() {
               fontSize: '48px',
               color: '#E8621A',
               lineHeight: 1,
-              margin: '-2px 0 0 0',
+              margin: '-6px 0 0 0',
               textAlign: 'center',
               transform: 'rotate(-2deg)',
             }}>
