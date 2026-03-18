@@ -29,6 +29,7 @@ import {
   JoinProjectScreen,
   ProjectHubScreen,
   CreateProjectScreen,
+  VerifyEmailScreen,
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
@@ -345,6 +346,8 @@ function AppContent() {
         return <SignInScreen />;
       case 'signup':
         return <SignUpScreen />;
+      case 'verify-email':
+        return <VerifyEmailScreen />;
       case 'hub':
         return <ProjectHubScreen />;
       case 'join':
