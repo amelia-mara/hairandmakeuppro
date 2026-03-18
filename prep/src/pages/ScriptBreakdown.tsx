@@ -886,6 +886,22 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     return <>{parts}</>;
   }, [charNamePattern, onCharClick]);
 
+  /* Render preamble (title page) — centred text with bold title */
+  const renderPreambleContent = useCallback((scene: Scene) => {
+    const lines = scene.scriptContent.split('\n');
+    let titleFound = false;
+    return lines.map((line, i) => {
+      const trimmed = line.trim();
+      const isTitle = !titleFound && trimmed !== '';
+      if (isTitle) titleFound = true;
+      return (
+        <div key={`pre-${i}`} className={`sv-line${isTitle ? ' sv-preamble-title' : ''}`}>
+          {trimmed || '\u00A0'}
+        </div>
+      );
+    });
+  }, []);
+
   /* Render a scene's content with inline highlights */
   const renderSceneContent = useCallback((scene: Scene) => {
     const sceneTags = tagStore.getTagsForScene(scene.id);
@@ -1100,7 +1116,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           {/* Merge preamble content into the first scene */}
           {idx === 0 && preambleScene && (
             <div className="sv-content sv-preamble-content">
-              {renderSceneContent(preambleScene)}
+              {renderPreambleContent(preambleScene)}
             </div>
           )}
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
