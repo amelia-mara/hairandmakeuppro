@@ -2,105 +2,69 @@
  * Look Generator
  *
  * Auto-generates looks per character from parsed script data by detecting
- * story day transitions from scene time-of-day values.
+ * story day transitions using v2 detection (action lines, flashback tracking,
+ * CONTINUOUS handling, calendar dates).
  *
- * Mirrors the approach used in the mobile app's castSyncService:
- * 1. Build a story day map from time-of-day transitions between scenes
- * 2. For each character, group their scenes by story day
- * 3. Create one Look per story day ("Day 1", "Day 2", etc.)
+ * 1. Convert scenes to ParsedScene format for the v2 detector
+ * 2. Build a story day map with present/non-present timeline support
+ * 3. For each character, group their scenes by story day
+ * 4. Create one Look per story day ("Day 1", "Day 2", etc.)
  *
  * No schedule upload required — works purely from parsed script scenes.
  */
 
 import type { Scene, Character, Look } from '@/stores/breakdownStore';
+import {
+  buildStoryDayMap,
+  classifyTOD,
+  extractTOD,
+  isNonPresent,
+  type ParsedScene,
+  type StoryDayResult,
+} from './storyDayDetection';
 
-/* ━━━ Time-of-day ordering ━━━ */
-
-/**
- * Map a time-of-day string to a numeric order for day progression detection.
- * MORNING/DAWN = 0, DAY = 1, EVENING/DUSK = 2, NIGHT = 3
- * Unknown/CONTINUOUS returns -1 (inherits previous).
- */
-function getTimeOrder(dayNight: string): number {
-  const t = dayNight.toUpperCase().trim();
-  if (t === 'DAWN' || t === 'MORNING' || t.includes('MORN') || t === 'SUNRISE') return 0;
-  if (t === 'DAY' || t === 'D' || t.includes('AFTERNOON')) return 1;
-  if (t === 'DUSK' || t === 'EVENING' || t.includes('EVEN') || t === 'SUNSET') return 2;
-  if (t === 'NIGHT' || t === 'N') return 3;
-  return -1; // CONTINUOUS or unknown — inherits previous
-}
+/* ━━━ Scene conversion ━━━ */
 
 /**
- * Check if a raw time-of-day or location string explicitly indicates a new day.
- * Handles: "NEXT MORNING", "NEXT DAY", "THE FOLLOWING DAY", etc.
+ * Convert a prep Scene to a ParsedScene for the v2 story day detector.
+ * Extracts action lines from scriptContent (first 3 non-empty lines after
+ * stripping the slugline).
  */
-function isExplicitNewDay(rawText: string): boolean {
-  const t = rawText.toUpperCase().trim();
-  if (/\bNEXT\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)) return true;
-  if (/\bFOLLOWING\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)) return true;
-  if (/\bNEW\s+DAY\b/.test(t)) return true;
-  if (/\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)) return true;
-  if (/\b(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|SEVERAL|FEW|SOME)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)) return true;
-  return false;
-}
+function sceneToParsedScene(scene: Scene): ParsedScene {
+  // Build a slugline-like string from scene fields for TOD extraction
+  const sluglike = `${scene.intExt}. ${scene.location} - ${scene.dayNight}${scene.timeInfo ? ' ' + scene.timeInfo : ''}`;
 
-/**
- * Detect if transitioning between two time-of-day values signals a new story day.
- *
- * New day triggers:
- *   NIGHT/EVENING → MORNING/DAY  (classic overnight transition)
- *   DAY → MORNING               (morning is earlier, so this is next day)
- *   Any explicit "NEXT X" or "FOLLOWING X" in the raw string
- */
-function isNewStoryDay(
-  prevTimeOrder: number,
-  currentTimeOrder: number,
-  rawTimeInfo: string,
-): boolean {
-  // Explicit markers always trigger a new day
-  if (isExplicitNewDay(rawTimeInfo)) return true;
+  // Extract raw TOD — use timeInfo if available (may contain "NEXT MORNING" etc.)
+  // otherwise fall back to the dayNight field
+  const rawTOD = scene.timeInfo
+    ? scene.timeInfo.trim()
+    : extractTOD(sluglike) || scene.dayNight;
 
-  // Both must be known time values for transition detection
-  if (prevTimeOrder < 0 || currentTimeOrder < 0) return false;
+  const tod = classifyTOD(rawTOD);
+  const nonPresent = isNonPresent(sluglike, rawTOD);
 
-  // NIGHT or EVENING → MORNING or DAY (overnight)
-  if (prevTimeOrder >= 2 && currentTimeOrder <= 1) return true;
-
-  // DAY → MORNING (morning is earlier, so next day)
-  if (prevTimeOrder === 1 && currentTimeOrder === 0) return true;
-
-  return false;
-}
-
-/* ━━━ Story day detection ━━━ */
-
-/**
- * Build a map of scene id → story day number by analyzing time-of-day
- * transitions in scene order. Also assigns storyDay labels to scenes.
- */
-export function buildStoryDayMap(scenes: Scene[]): Map<string, number> {
-  const storyDayMap = new Map<string, number>();
-
-  let currentDay = 1;
-  let prevTimeOrder = -1;
-
-  for (const scene of scenes) {
-    const timeOrder = getTimeOrder(scene.dayNight);
-    // Also check timeInfo and location for explicit new day markers
-    const rawInfo = `${scene.dayNight} ${scene.timeInfo} ${scene.location}`;
-
-    if (isNewStoryDay(prevTimeOrder, timeOrder, rawInfo)) {
-      currentDay++;
-    }
-
-    storyDayMap.set(scene.id, currentDay);
-
-    if (timeOrder >= 0) {
-      prevTimeOrder = timeOrder;
+  // Extract first 3 action lines from scriptContent
+  const actionLines: string[] = [];
+  if (scene.scriptContent) {
+    const lines = scene.scriptContent.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && actionLines.length < 3) {
+        // Skip the scene heading line itself
+        if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+        actionLines.push(trimmed);
+      }
     }
   }
 
-  return storyDayMap;
+  return {
+    sceneNumber: String(scene.number),
+    slugline: sluglike,
+    rawTOD,
+    tod,
+    isNonPresent: nonPresent,
+    actionLines,
+  };
 }
 
 /* ━━━ Look generation ━━━ */
@@ -127,13 +91,26 @@ export function generateLooksFromScript(
   scenes: Scene[],
   characters: Character[],
 ): { looks: Look[]; scenes: Scene[] } {
-  // Step 1: Detect story days from time-of-day transitions
-  const storyDayMap = buildStoryDayMap(scenes);
+  // Step 1: Convert scenes to ParsedScene format and run v2 detection
+  const parsedScenes = scenes.map(sceneToParsedScene);
+  const storyDayResults = buildStoryDayMap(parsedScenes);
 
-  // Step 2: Assign storyDay to each scene
-  const updatedScenes = scenes.map((scene) => {
-    const dayNum = storyDayMap.get(scene.id) || 1;
-    return { ...scene, storyDay: `Day ${dayNum}` };
+  // Build lookup maps: scene number -> StoryDayResult
+  const resultBySceneNum = new Map<string, StoryDayResult>();
+  for (const r of storyDayResults) {
+    resultBySceneNum.set(r.sceneNumber, r);
+  }
+
+  // Also build scene id -> StoryDayResult (using index correspondence)
+  const resultBySceneId = new Map<string, StoryDayResult>();
+  for (let i = 0; i < scenes.length; i++) {
+    resultBySceneId.set(scenes[i].id, storyDayResults[i]);
+  }
+
+  // Step 2: Assign storyDay label to each scene
+  const updatedScenes = scenes.map((scene, i) => {
+    const result = storyDayResults[i];
+    return { ...scene, storyDay: result.label };
   });
 
   // Step 3: For each character, group scenes by story day and create looks
@@ -159,28 +136,35 @@ export function generateLooksFromScript(
       continue;
     }
 
-    // Group scenes by story day
-    const dayGroups = new Map<number, Scene[]>();
+    // Group scenes by story day label (preserves flashback separation)
+    const dayGroups = new Map<string, Scene[]>();
     for (const scene of characterScenes) {
-      const dayNum = storyDayMap.get(scene.id) || 1;
-      if (!dayGroups.has(dayNum)) {
-        dayGroups.set(dayNum, []);
+      const result = resultBySceneId.get(scene.id);
+      const label = result?.label || 'Day 1';
+      if (!dayGroups.has(label)) {
+        dayGroups.set(label, []);
       }
-      dayGroups.get(dayNum)!.push(scene);
+      dayGroups.get(label)!.push(scene);
     }
 
-    // Create one look per story day, sorted
-    const sortedDays = Array.from(dayGroups.keys()).sort((a, b) => a - b);
+    // Create one look per story day, sorted by day number
+    const sortedLabels = Array.from(dayGroups.keys()).sort((a, b) => {
+      const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+      const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+      if (numA !== numB) return numA - numB;
+      // Flashbacks sort after present
+      return a.includes('Flashback') ? 1 : -1;
+    });
 
-    for (const dayNum of sortedDays) {
-      const dayScenes = dayGroups.get(dayNum)!;
+    for (const label of sortedLabels) {
+      const dayScenes = dayGroups.get(label)!;
       const sceneNumbers = dayScenes.map((s) => s.number).sort((a, b) => a - b);
       const sceneRangeStr = compressSceneRanges(sceneNumbers);
 
       looks.push({
         id: generateLookId(),
         characterId: character.id,
-        name: `Day ${dayNum}`,
+        name: label,
         description: `Scenes: ${sceneRangeStr}`,
         hair: '',
         makeup: '',
@@ -191,6 +175,9 @@ export function generateLooksFromScript(
 
   return { looks, scenes: updatedScenes };
 }
+
+/** Re-export buildStoryDayMap for direct use */
+export { buildStoryDayMap } from './storyDayDetection';
 
 /**
  * Compress an array of scene numbers into ranges.
