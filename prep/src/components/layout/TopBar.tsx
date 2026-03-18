@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
+import { useAuthStore } from '@/stores/authStore';
 
 interface TopBarProps {
   title?: string;
@@ -7,6 +8,7 @@ interface TopBarProps {
   onNavigate?: (page: string) => void;
   projectType?: string;
   onBackToHub?: () => void;
+  onNavigateToAuth?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -23,12 +25,13 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function TopBar({ title = 'Projects', activePage, onNavigate, projectType: _projectType, onBackToHub }: TopBarProps) {
+export function TopBar({ title = 'Projects', activePage, onNavigate, projectType: _projectType, onBackToHub, onNavigateToAuth }: TopBarProps) {
   const [navOpen, setNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useThemeStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   // Close nav on outside click
   useEffect(() => {
@@ -117,92 +120,103 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         </div>
 
         <div ref={accountRef} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Avatar — THE SUN */}
-          <div className="avatar-wrap">
-            <div className="avatar-halo avatar-halo--outer" />
-            <div className="avatar-halo avatar-halo--mid" />
-            <div className="avatar-halo avatar-halo--inner" />
-            <button className="avatar-btn" onClick={() => setAccountOpen(!accountOpen)}>AK</button>
-          </div>
-
-          {accountOpen && (
-            <div className="account-panel">
-              <div className="account-panel-scroll">
-                {/* Profile card */}
-                <div className="account-card">
-                  <div className="account-profile">
-                    <div className="account-avatar">AK</div>
-                    <div className="account-info">
-                      <div className="account-name">Amelia Kildear</div>
-                      <div className="account-email">amelia-mara@outlook.com</div>
-                      <span className="account-badge">Beta Tester</span>
-                    </div>
-                  </div>
-                  <div className="account-divider" />
-                  <button className="account-edit-btn" onClick={() => console.log('Edit profile')}>Edit Profile</button>
-                </div>
-
-                {/* Account Settings */}
-                <div className="account-section-label">Account Settings</div>
-                <div className="account-card">
-                  <button className="account-row" onClick={() => console.log('Reset password')}>
-                    <div className="account-row-icon"><LockIcon /></div>
-                    <div className="account-row-text">
-                      <span className="account-row-title">Reset Password</span>
-                      <span className="account-row-desc">Send password reset email</span>
-                    </div>
-                    <ChevronRight />
-                  </button>
-                  <div className="account-divider" />
-                  <button className="account-row" onClick={() => console.log('Billing')}>
-                    <div className="account-row-icon"><BillingIcon /></div>
-                    <div className="account-row-text">
-                      <span className="account-row-title">Billing & Bank Details</span>
-                      <span className="account-row-desc">For timesheets and invoices</span>
-                    </div>
-                    <ChevronRight />
-                  </button>
-                </div>
-
-                {/* Beta Access */}
-                <div className="account-section-label">Beta Access</div>
-                <div className="account-card">
-                  <div className="account-row account-row--static">
-                    <div className="account-row-icon account-row-icon--accent"><BetaIcon /></div>
-                    <div className="account-row-text">
-                      <span className="account-row-title">Full Access Enabled</span>
-                      <span className="account-row-desc">Thank you for beta testing!</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Appearance */}
-                <div className="account-section-label">Appearance</div>
-                <div className="account-card">
-                  <div className="account-theme-header">
-                    <span className="account-row-title">Theme</span>
-                    <span className="account-theme-current">{theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
-                  </div>
-                  <div className="account-theme-grid">
-                    {THEMES.map((t) => (
-                      <button
-                        key={t.id}
-                        className={`account-theme-opt ${theme === t.id ? 'account-theme-opt--active' : ''}`}
-                        onClick={() => setTheme(t.id)}
-                      >
-                        <t.icon />
-                        <span>{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Sign out */}
-                <button className="account-signout" onClick={() => console.log('Sign out')}>
-                  Sign Out
+          {isAuthenticated ? (
+            <>
+              {/* Avatar — THE SUN */}
+              <div className="avatar-wrap">
+                <div className="avatar-halo avatar-halo--outer" />
+                <div className="avatar-halo avatar-halo--mid" />
+                <div className="avatar-halo avatar-halo--inner" />
+                <button className="avatar-btn" onClick={() => setAccountOpen(!accountOpen)}>
+                  {user?.initials || 'U'}
                 </button>
               </div>
-            </div>
+
+              {accountOpen && (
+                <div className="account-panel">
+                  <div className="account-panel-scroll">
+                    {/* Profile card */}
+                    <div className="account-card">
+                      <div className="account-profile">
+                        <div className="account-avatar">{user?.initials || 'U'}</div>
+                        <div className="account-info">
+                          <div className="account-name">{user?.name || 'User'}</div>
+                          <div className="account-email">{user?.email || ''}</div>
+                          <span className="account-badge">Beta Tester</span>
+                        </div>
+                      </div>
+                      <div className="account-divider" />
+                      <button className="account-edit-btn" onClick={() => console.log('Edit profile')}>Edit Profile</button>
+                    </div>
+
+                    {/* Account Settings */}
+                    <div className="account-section-label">Account Settings</div>
+                    <div className="account-card">
+                      <button className="account-row" onClick={() => console.log('Reset password')}>
+                        <div className="account-row-icon"><LockIcon /></div>
+                        <div className="account-row-text">
+                          <span className="account-row-title">Reset Password</span>
+                          <span className="account-row-desc">Send password reset email</span>
+                        </div>
+                        <ChevronRight />
+                      </button>
+                      <div className="account-divider" />
+                      <button className="account-row" onClick={() => console.log('Billing')}>
+                        <div className="account-row-icon"><BillingIcon /></div>
+                        <div className="account-row-text">
+                          <span className="account-row-title">Billing & Bank Details</span>
+                          <span className="account-row-desc">For timesheets and invoices</span>
+                        </div>
+                        <ChevronRight />
+                      </button>
+                    </div>
+
+                    {/* Beta Access */}
+                    <div className="account-section-label">Beta Access</div>
+                    <div className="account-card">
+                      <div className="account-row account-row--static">
+                        <div className="account-row-icon account-row-icon--accent"><BetaIcon /></div>
+                        <div className="account-row-text">
+                          <span className="account-row-title">Full Access Enabled</span>
+                          <span className="account-row-desc">Thank you for beta testing!</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Appearance */}
+                    <div className="account-section-label">Appearance</div>
+                    <div className="account-card">
+                      <div className="account-theme-header">
+                        <span className="account-row-title">Theme</span>
+                        <span className="account-theme-current">{theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
+                      </div>
+                      <div className="account-theme-grid">
+                        {THEMES.map((t) => (
+                          <button
+                            key={t.id}
+                            className={`account-theme-opt ${theme === t.id ? 'account-theme-opt--active' : ''}`}
+                            onClick={() => setTheme(t.id)}
+                          >
+                            <t.icon />
+                            <span>{t.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sign out */}
+                    <button className="account-signout" onClick={() => logout()}>
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <button className="topbar-login-btn" onClick={onNavigateToAuth}>
+              <LoginIcon />
+              Log In
+            </button>
           )}
         </div>
       </div>
@@ -350,6 +364,16 @@ function SettingsIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  );
+}
+
+function LoginIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+      <polyline points="10 17 15 12 10 7"/>
+      <line x1="15" y1="12" x2="3" y2="12"/>
     </svg>
   );
 }

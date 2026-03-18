@@ -1,4 +1,5 @@
 import { useProjectStore } from '@/stores/projectStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Film, Tv, Clapperboard, Music, Video, Plus, FileText, DollarSign, Eye } from 'lucide-react';
 import type { ProjectType } from '@/types';
 
@@ -13,10 +14,12 @@ const TYPE_ICONS: Record<ProjectType, typeof Film> = {
 interface ProjectHubProps {
   onCreateProject: () => void;
   onSelectProject: (id: string) => void;
+  onNavigateToAuth?: () => void;
 }
 
-export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps) {
+export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth }: ProjectHubProps) {
   const projects = useProjectStore((s) => s.projects);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // If projects exist, show project cards instead of hero
   if (projects.length > 0) {
@@ -136,8 +139,11 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
             Continuity tracking, script breakdowns, budgets, and timesheets.
             Everything your department needs, beautifully organised.
           </p>
-          <button className="hub-hero-cta" onClick={onCreateProject}>
-            Get Started Free
+          <button
+            className="hub-hero-cta"
+            onClick={isAuthenticated ? onCreateProject : onNavigateToAuth}
+          >
+            Get Started
           </button>
         </div>
       </div>
