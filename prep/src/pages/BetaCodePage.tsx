@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface BetaCodePageProps {
   onValidated: () => void;
@@ -8,8 +8,6 @@ interface BetaCodePageProps {
 }
 
 const validateBetaCode = async (enteredCode: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
-
   const { data, error } = await supabase
     .from('app_config')
     .select('value')
