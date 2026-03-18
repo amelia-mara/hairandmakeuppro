@@ -125,12 +125,14 @@ const WORD_TO_NUMBER: Record<string, string> = {
 
 const SCENE_WORD_KEYS = Object.keys(WORD_TO_NUMBER).sort((a, b) => b.length - a.length).join('|');
 const SCENE_WORD_PREFIX_RE = new RegExp(
-  `^\\s*SCENE\\s+(${SCENE_WORD_KEYS})\\s*[:\\-–—]?\\s*`, 'i',
+  `^\\s*(?:\\d+[A-Z]{0,4}\\s+)?SCENE\\s+(${SCENE_WORD_KEYS})\\s*[:\\-–—]?\\s*`, 'i',
 );
 
 /**
  * Normalize "SCENE WORD:" prefixes to numeric scene numbers.
  * e.g. "SCENE TWO: EXT. FARM LAND - DAY" → "2 EXT. FARM LAND - DAY"
+ * e.g. "4 SCENE THREE: EXT. STREET - DAY 4" → "3 EXT. STREET - DAY 4"
+ * A leading scene number before "SCENE" is discarded in favour of the word number.
  */
 function normalizeSceneWordPrefix(line: string): string {
   const match = line.match(SCENE_WORD_PREFIX_RE);
@@ -138,8 +140,8 @@ function normalizeSceneWordPrefix(line: string): string {
     const num = WORD_TO_NUMBER[match[1].toUpperCase()];
     if (num) return num + ' ' + line.slice(match[0].length);
   }
-  // Also handle "SCENE 2:" with numeric digit
-  const numMatch = line.match(/^\s*SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
+  // Also handle "SCENE 2:" or "4 SCENE 2:" with numeric digit
+  const numMatch = line.match(/^\s*(?:\d+[A-Z]{0,4}\s+)?SCENE\s+(\d+[A-Z]?)\s*[:\-–—]?\s*/i);
   if (numMatch) {
     return numMatch[1] + ' ' + line.slice(numMatch[0].length);
   }
@@ -148,6 +150,8 @@ function normalizeSceneWordPrefix(line: string): string {
 
 function normalizeScriptText(text: string): string {
   let normalized = text
+    // Normalize Unicode whitespace (non-breaking spaces, etc.) from PDF extraction
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ')
     .replace(/\b(INT|EXT)\s*\n\s*\./g, '$1.')
     .replace(/\b(INT|EXT)\s*\n\s*\/\s*(INT|EXT)/g, '$1/$2')
     .replace(/CONTIN\s*\n\s*UED?/gi, 'CONTINUOUS')
@@ -164,10 +168,15 @@ function normalizeScriptText(text: string): string {
   // with ALL CAPS word(s) followed by comma + age or comma + lowercase description,
   // join them into a single line.
   // e.g. "...on foot. JASPER\nMONTGOMERY, 70, he looks..." → single line
+  // e.g. "...on foot. JASPER\nMONTGOMERY 70, he looks..." → single line (space before age)
   normalized = normalized.replace(
-    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*,\s*(?:\d{1,3}\b|[a-z]))/g,
+    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*(?:[,(]\s*(?:\d{1,3}\b|[a-z])|\d{1,3}\s*,))/g,
     '$1 $2',
   );
+
+  // Normalize "SCENE WORD:" prefixes to numeric scene numbers BEFORE splitting
+  // so that "4 SCENE THREE: EXT. STREET - DAY" becomes "3 EXT. STREET - DAY"
+  normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
 
   // Split lines where a scene heading (INT./EXT. + LOCATION – TIME) is followed
   // by additional action text on the same line. PDF extraction sometimes merges
@@ -195,9 +204,6 @@ function normalizeScriptText(text: string): string {
     }
     return line;
   }).join('\n');
-
-  // Normalize "SCENE WORD:" prefixes to numeric scene numbers
-  normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
 
   return normalized;
 }
@@ -427,8 +433,9 @@ function extractCharactersFromActionLine(line: string): string[] {
      or mid-sentence, followed by comma + age or comma + lowercase description.
      e.g. "...on foot. JASPER MONTGOMERY, 70, he looks like..."
      e.g. "Her husband, ARCHIBALD CHRISTIE, dashing, holds her hand."
-     e.g. "...the door for NAN WATTS, a prim-looking woman" */
-  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+     e.g. "...the door for NAN WATTS, a prim-looking woman"
+     e.g. "...on foot. JASPER MONTGOMERY 70, he looks like..." (space before age) */
+  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*(?:\d{1,3}\b|[a-z])|\s+\d{1,3}\s*,)/g;
   while ((match = midLineIntroRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
     if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
@@ -472,6 +479,18 @@ function extractCharactersFromActionLine(line: string): string[] {
       if (upperName.length >= 3 && upperName.length <= 20 && !nonNameWords.has(upperName)) {
         characters.push(upperName);
       }
+    }
+  }
+
+  /* Catch-all: ANY ALL CAPS multi-word (2+) name followed by age digits anywhere in the
+     line. This is the broadest pattern and handles cases where the text before the name
+     has unexpected formatting from PDF extraction (e.g., missing space after period).
+     Requires 2+ ALL CAPS words to minimise false positives. */
+  const catchAllIntroRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
+  while ((match = catchAllIntroRe.exec(trimmed)) !== null) {
+    const name = match[1].trim();
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET|FARM|SCENE)\b/.test(name)) {
+      characters.push(name);
     }
   }
 
@@ -683,6 +702,15 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   }
 
   if (!timeMatch && workingLine.length > 0) {
+    // Scene headings should always end after the time-of-day marker (DAY/NIGHT/etc).
+    // If no time marker was found at the end, this line likely has action text
+    // merged after the heading (PDF extraction artifact).
+    // Only accept as a valid heading if the remaining text is short and looks
+    // like a bare location (e.g. "INT. OFFICE") — reject anything with
+    // character intro patterns (comma + digits) or excessive length.
+    if (workingLine.length > 50 || /,\s*\d/.test(workingLine) || /[a-z]/.test(workingLine)) {
+      return invalidResult;
+    }
     location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
   }
 
@@ -756,17 +784,13 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
     }
   }
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    // For scene headings, skip the heading portion but still scan any overflow
-    // text for character intros (PDF sometimes merges heading + action on one line)
-    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+  /** Run all intro patterns on a single line of text */
+  function scanLineForIntros(trimmed: string) {
+    let m;
 
     // Pattern 1: ALL CAPS name + comma/space + age digits (anywhere in line)
-    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" (even mid-sentence)
-    const ageIntroRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(]\s*\d{1,3}\b/g;
-    let m;
+    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" or "DEDRA MONTGOMERY 29," (space before age)
+    const ageIntroRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
     while ((m = ageIntroRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
@@ -793,7 +817,8 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
 
     // Pattern 5: Mid-line character intro after period/sentence break
     // "She sees Lennon on foot. JASPER MONTGOMERY, 70, he looks like..."
-    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+    // "She sees Lennon on foot. JASPER MONTGOMERY 70, he looks like..." (space before age)
+    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*(?:\d{1,3}\b|[a-z])|\s+\d{1,3}\s*,)/g;
     while ((m = midLineRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
@@ -805,6 +830,51 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
       // Only accept if it's 2+ words OR if the single word is not a common word
       if (candidate.split(/\s+/).length >= 2) {
         addName(candidate);
+      }
+    }
+
+    // Pattern 8: Catch-all — ANY ALL CAPS multi-word (2+) name followed by age digits,
+    // regardless of what precedes it. This is the broadest pattern and handles cases
+    // where the text before the name has unexpected formatting (e.g., "foot.JASPER
+    // MONTGOMERY, 70" with no space after period, or other PDF extraction quirks).
+    // Requires 2+ ALL CAPS words to avoid false positives on single uppercase words.
+    const catchAllAgeRegex = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
+    while ((m = catchAllAgeRegex.exec(trimmed)) !== null) {
+      addName(m[1].trim());
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) continue;
+    // For scene headings, skip the INT/EXT prefix but still scan the rest of the
+    // line for character intros — PDF sometimes merges heading + action on one line
+    // e.g. "1 EXT. FARM LAND – DAY JASPER MONTGOMERY, 70, he looks like..."
+    if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) {
+      // Try to extract overflow text after the time-of-day marker
+      const timeMarker = trimmed.match(/\b(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b/i);
+      if (timeMarker && timeMarker.index != null) {
+        const afterTime = trimmed.slice(timeMarker.index + timeMarker[0].length).trim();
+        if (afterTime.length > 5) {
+          scanLineForIntros(afterTime);
+        }
+      }
+      continue;
+    }
+
+    // Run all patterns on this line
+    scanLineForIntros(trimmed);
+
+    // Pattern 7: Cross-line character intro — name split across line break (PDF word-wrap).
+    // If this line ends with ALL CAPS word(s), peek at the next non-empty line and
+    // try combining them. This catches "...on foot. JASPER\nMONTGOMERY, 70, ..."
+    // even when the normalizeScriptText join regex didn't merge the lines.
+    const trailingCapsMatch = trimmed.match(/(?:^|[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]{2,}){0,2})\s*$/);
+    if (trailingCapsMatch && i + 1 < lines.length) {
+      const nextTrimmed = lines[i + 1].trim();
+      if (nextTrimmed && !/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(nextTrimmed)) {
+        const combined = trimmed + ' ' + nextTrimmed;
+        scanLineForIntros(combined);
       }
     }
   }
@@ -888,6 +958,7 @@ export function parseScriptText(text: string): ParsedScript {
   let currentScene: ParsedScene | null = null;
   let fallbackSceneNumber = 0;
   let currentSceneContent = '';
+  let preambleContent = ''; // Text before the first scene heading
   let lastLineWasCharacter = false;
   let dialogueCount = 0;
 
@@ -898,6 +969,19 @@ export function parseScriptText(text: string): ParsedScript {
     const parsedHeading = parseSceneHeadingLine(trimmed);
 
     if (parsedHeading.isValid) {
+      // If there's preamble text before the first scene, create a preamble scene
+      if (!currentScene && preambleContent.trim()) {
+        scenes.push({
+          sceneNumber: '0',
+          slugline: 'PREAMBLE',
+          intExt: 'EXT',
+          location: 'PREAMBLE',
+          timeOfDay: 'DAY',
+          characters: [],
+          content: preambleContent.trim(),
+        });
+      }
+
       if (currentScene) {
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
@@ -923,9 +1007,31 @@ export function parseScriptText(text: string): ParsedScript {
 
     if (currentScene) {
       currentSceneContent += line + '\n';
+    } else {
+      // Accumulate text before the first scene heading
+      preambleContent += line + '\n';
     }
 
-    if (isCharacterCue(trimmed)) {
+    // Before treating a line as a dialogue cue, check if it's actually the
+    // first half of a character introduction split across two lines by PDF
+    // word-wrap.  e.g. "JASPER\nMONTGOMERY, 70, he looks like..."
+    // Without this check, "JASPER" is consumed as a dialogue cue and the
+    // next line ("MONTGOMERY, 70, ...") is treated as dialogue — so the
+    // character introduction is completely missed.
+    let isSplitCharacterIntro = false;
+    if (
+      isCharacterCue(trimmed) &&
+      /^[A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,2}$/.test(trimmed) &&
+      i + 1 < lines.length
+    ) {
+      const nextTrimmed = lines[i + 1].trim();
+      // Next line starts with ALL CAPS word(s) followed by age/comma → split intro
+      if (/^[A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,2}\s*(?:[,(]\s*\d{1,3}\b|\d{1,3}\s*[,)])/.test(nextTrimmed)) {
+        isSplitCharacterIntro = true;
+      }
+    }
+
+    if (!isSplitCharacterIntro && isCharacterCue(trimmed)) {
       const charName = trimmed;
       let normalized = normalizeCharacterName(charName);
       // Resolve single-name cues: "LENNON" → "LENNON BOWIE"
@@ -934,7 +1040,7 @@ export function parseScriptText(text: string): ParsedScript {
       registerCharacter(charName, normalized, currentScene);
       lastLineWasCharacter = true;
       dialogueCount = 0;
-    } else if (lastLineWasCharacter && trimmed.length > 0) {
+    } else if (!isSplitCharacterIntro && lastLineWasCharacter && trimmed.length > 0) {
       dialogueCount++;
       if (dialogueCount > 3 || trimmed.length === 0) {
         lastLineWasCharacter = false;
@@ -942,8 +1048,30 @@ export function parseScriptText(text: string): ParsedScript {
     } else {
       lastLineWasCharacter = false;
 
-      if (currentScene && trimmed.length > 10) {
-        const actionCharacters = extractCharactersFromActionLine(trimmed);
+      if (currentScene && trimmed.length > 3) {
+        // Try extracting characters from this line alone (only if long enough for patterns)
+        let actionCharacters = trimmed.length > 10
+          ? extractCharactersFromActionLine(trimmed)
+          : [];
+
+        // Cross-line detection: if this line ends with ALL CAPS word(s) (potential
+        // split character name), combine with the next line and re-extract.
+        // This catches "...on foot. JASPER\nMONTGOMERY, 70, ..." even when the
+        // normalizeScriptText join regex didn't merge the lines.
+        // Also handles short lines like just "JASPER" on its own line.
+        if (/[A-Z][A-Z'-]{2,}\s*$/.test(trimmed) && i + 1 < lines.length) {
+          const nextTrimmed = lines[i + 1].trim();
+          if (nextTrimmed && nextTrimmed.length > 2) {
+            const combinedCharacters = extractCharactersFromActionLine(trimmed + ' ' + nextTrimmed);
+            // Merge: keep any names from the combined line that weren't in the single line
+            for (const name of combinedCharacters) {
+              if (!actionCharacters.includes(name)) {
+                actionCharacters.push(name);
+              }
+            }
+          }
+        }
+
         for (const charName of actionCharacters) {
           let normalized = normalizeCharacterName(charName);
           // Resolve single-name action references: "Lennon" → "LENNON BOWIE"
@@ -957,6 +1085,91 @@ export function parseScriptText(text: string): ParsedScript {
   if (currentScene) {
     currentScene.content = currentSceneContent.trim();
     scenes.push(currentScene);
+  }
+
+  /* ── Post-processing safety net: scan each scene's raw content for character ──
+     introductions that the line-by-line parser may have missed.
+     Standard screenplay character introduction: ALL CAPS FULL NAME, age,
+     e.g. "JASPER MONTGOMERY, 70, he looks like a grandpa"
+     This catches intros that were:
+     - Merged with scene headings (PDF extraction artifact)
+     - Split across lines and not recombined
+     - On lines incorrectly consumed as dialogue cues
+     After finding names, also scan the ENTIRE raw text so that a character
+     introduced in one scene is known globally for first-name resolution. */
+  const introSafetyRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
+  const introExcludeFirstWord = new Set([
+    'INT', 'EXT', 'CUT', 'FADE', 'SCENE', 'THE', 'AND', 'BUT', 'FOR', 'NOR',
+    'YET', 'FARM', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
+    'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'SAME', 'ANGLE', 'CLOSE',
+    'WIDE', 'SHOT', 'FADE', 'TITLE', 'SUPER', 'CHAPTER', 'EPISODE',
+  ]);
+
+  // Helper: scan text for character intros, handling greedy match backtracking.
+  // When a match like "DAY JASPER MONTGOMERY, 70" is excluded (first word "DAY"),
+  // retry from after the excluded word so "JASPER MONTGOMERY, 70" can still match.
+  function scanForIntroductions(source: string, re: RegExp): string[] {
+    const results: string[] = [];
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(source)) !== null) {
+      const name = m[1].trim();
+      const words = name.split(/\s+/);
+      const firstWord = words[0];
+      if (name.length >= 5 && !introExcludeFirstWord.has(firstWord) && !isSupportingArtistRole(name)) {
+        results.push(name);
+      } else if (words.length > 1 && introExcludeFirstWord.has(firstWord)) {
+        // Greedy match consumed a good name after an excluded word — retry
+        // from just after the excluded word so the shorter match can succeed
+        re.lastIndex = m.index + firstWord.length + 1;
+      }
+    }
+    return results;
+  }
+
+  // First pass: collect all full names from the entire raw text
+  const safetyFullNames = scanForIntroductions(text, introSafetyRe);
+
+  // Build a first-name → full-name map from safety-net names
+  // (supplements the prescan resolveMap for first-name mentions later)
+  const safetyResolve = new Map<string, string>();
+  for (const fullName of safetyFullNames) {
+    const parts = fullName.split(/\s+/);
+    for (const part of parts) {
+      if (part.length < 3 || NAME_SCAN_EXCLUSIONS.has(part)) continue;
+      if (!safetyResolve.has(part)) {
+        safetyResolve.set(part, fullName);
+      } else if (safetyResolve.get(part) !== fullName) {
+        safetyResolve.set(part, ''); // ambiguous
+      }
+    }
+  }
+  for (const [k, v] of safetyResolve) {
+    if (v === '') safetyResolve.delete(k);
+  }
+
+  // Second pass: for each scene, find character intros in scene.content
+  for (const scene of scenes) {
+    const sceneNames = scanForIntroductions(scene.content, introSafetyRe);
+    for (const name of sceneNames) {
+      const normalized = normalizeCharacterName(name);
+      registerCharacter(name, normalized, scene);
+    }
+  }
+
+  // Also resolve first-name-only mentions using the safety-net map.
+  // If a character was registered as just "JASPER" but the safety net found
+  // "JASPER MONTGOMERY", merge them.
+  for (const [fragment, fullName] of safetyResolve) {
+    if (characterMap.has(fragment) && !characterMap.has(fullName)) {
+      // The full name wasn't registered yet but a fragment was — register the full name
+      // and transfer the fragment's scenes
+      const fragChar = characterMap.get(fragment)!;
+      for (const sceneNum of fragChar.scenes) {
+        const scene = scenes.find(s => s.sceneNumber === sceneNum);
+        if (scene) registerCharacter(fragment, fullName, scene);
+      }
+    }
   }
 
   /* ── Deduplication safety net: merge any remaining single-name fragments ──

@@ -51,7 +51,7 @@
 }
 
 .topbar-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -163,7 +163,7 @@
 
 .topbar-nav-dropdown {
   position: fixed;
-  top: 73px;
+  top: 80px;
   left: 0;
   width: 280px;
   bottom: 0;
@@ -211,7 +211,7 @@
 
 /* ━━━ Permanent dashboard sidebar ━━━ */
 .dashboard-sidebar {
-  width: 240px;
+  width: 280px;
   flex-shrink: 0;
   padding: 20px 14px;
   display: flex;
@@ -287,7 +287,7 @@
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .account-panel {
   position: fixed;
-  top: 73px;
+  top: 80px;
   right: 0;
   width: 320px;
   bottom: 0;

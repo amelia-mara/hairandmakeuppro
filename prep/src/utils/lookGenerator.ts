@@ -78,7 +78,7 @@ function isNewStoryDay(
  * Build a map of scene id → story day number by analyzing time-of-day
  * transitions in scene order. Also assigns storyDay labels to scenes.
  */
-function buildStoryDayMap(scenes: Scene[]): Map<string, number> {
+export function buildStoryDayMap(scenes: Scene[]): Map<string, number> {
   const storyDayMap = new Map<string, number>();
 
   let currentDay = 1;

@@ -3,14 +3,16 @@
 
 .bs-page {
   display: flex; flex-direction: column; height: 100%;
-  background: var(--bg-primary);
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .bs-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 22px 32px;
   border-bottom: 1px solid var(--border-card);
-  background: var(--bg-surface);
+  background: transparent;
   flex-shrink: 0;
 }
 
@@ -20,6 +22,35 @@
   font-size: 0.875rem; font-weight: 700;
   color: var(--text-heading); text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+.bs-tabs {
+  display: flex; align-items: baseline; gap: 4px;
+}
+
+.bs-tab {
+  font-family: inherit;
+  font-size: 0.875rem; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: none; border: none; cursor: pointer;
+  padding: 4px 10px 8px; border-radius: 4px 4px 0 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.bs-tab:hover {
+  color: var(--text-heading);
+}
+
+.bs-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.bs-tab-placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); font-size: 0.875rem;
 }
 
 .bs-subtitle {
@@ -101,7 +132,7 @@
   font-size: 0.6875rem; font-weight: 700;
   color: #fff;
   padding: 3px 12px;
-  background: var(--accent);
+  background: var(--brand-teal);
   border: none;
   border-radius: 999px;
   letter-spacing: 0.02em;
@@ -119,6 +150,72 @@
   padding: 3px 10px; border-radius: 999px;
   background: rgba(168, 85, 247, 0.15); color: #a855f7;
   border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.bs-scene-timeline-note {
+  font-size: 0.8125rem; font-weight: 500;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ━━━ Scene-type colour coding (brand palette) ━━━ */
+/* Colour tint applies to character rows only, not the whole card */
+
+/* Flashback — Orange Primary #E8621A */
+.bs-scene-block--flashback .bs-scene-badge {
+  background: rgba(232, 98, 26, 0.15); color: #C8520E;
+  border-color: rgba(232, 98, 26, 0.30);
+}
+.bs-scene-block--flashback .bs-table tbody tr {
+  background: rgba(232, 98, 26, 0.14);
+}
+
+/* Flash Forward — Teal #4ABFB0 */
+.bs-scene-block--flash-fwd .bs-scene-badge {
+  background: rgba(74, 191, 176, 0.15); color: #2A8A7E;
+  border-color: rgba(74, 191, 176, 0.30);
+}
+.bs-scene-block--flash-fwd .bs-table tbody tr {
+  background: rgba(74, 191, 176, 0.14);
+}
+
+/* Dream — Gold #D4943A */
+.bs-scene-block--dream .bs-scene-badge {
+  background: rgba(212, 148, 58, 0.15); color: #A87428;
+  border-color: rgba(212, 148, 58, 0.30);
+}
+.bs-scene-block--dream .bs-table tbody tr {
+  background: rgba(212, 148, 58, 0.14);
+}
+
+/* Montage — Amber #F5A623 */
+.bs-scene-block--montage .bs-scene-badge {
+  background: rgba(245, 166, 35, 0.15); color: #B57A10;
+  border-color: rgba(245, 166, 35, 0.30);
+}
+.bs-scene-block--montage .bs-table tbody tr {
+  background: rgba(245, 166, 35, 0.14);
+}
+
+/* Time Jump — Orange Warm #F0882A */
+.bs-scene-block--time-jump .bs-scene-badge {
+  background: rgba(240, 136, 42, 0.15); color: #C06A10;
+  border-color: rgba(240, 136, 42, 0.30);
+}
+
+/* ━━━ Light-mode scene-type row tints (slightly stronger on cream) ━━━ */
+
+[data-theme="light"] .bs-scene-block--flashback .bs-table tbody tr {
+  background: rgba(232, 98, 26, 0.12);
+}
+[data-theme="light"] .bs-scene-block--flash-fwd .bs-table tbody tr {
+  background: rgba(74, 191, 176, 0.12);
+}
+[data-theme="light"] .bs-scene-block--dream .bs-table tbody tr {
+  background: rgba(212, 148, 58, 0.12);
+}
+[data-theme="light"] .bs-scene-block--montage .bs-table tbody tr {
+  background: rgba(245, 166, 35, 0.12);
 }
 
 .bs-scene-synopsis {
@@ -170,7 +267,6 @@
 
 /* Column widths */
 .bs-col-char { width: 150px; }
-.bs-col-first { width: 44px; text-align: center; }
 .bs-col-hair { width: 170px; }
 .bs-col-makeup { width: 170px; }
 .bs-col-wardrobe { width: 170px; }
@@ -224,22 +320,6 @@
   border-left: 3px solid var(--accent-cue);
 }
 
-/* First appearance row — left accent bar */
-.bs-row--first td:first-child {
-  box-shadow: inset 4px 0 0 var(--accent);
-}
-.bs-row--first {
-  background: rgba(var(--a), 0.04);
-}
-.bs-row--first:hover {
-  background: rgba(var(--a), 0.07);
-}
-.bs-row--first .bs-char-name {
-  color: var(--accent);
-}
-.bs-first-mark {
-  color: var(--accent); font-weight: 800; font-size: 0.9375rem;
-}
 
 /* Continuity events row indicator */
 .bs-row--continuity td:first-child {
@@ -271,6 +351,37 @@
   line-height: 1.3;
 }
 
+/* Time jump scene highlight */
+.bs-scene-block--time-jump {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow:
+    0 0 0 2px rgba(245, 158, 11, 0.15),
+    0 1px 4px rgba(0,0,0,0.06),
+    0 4px 16px rgba(0,0,0,0.03);
+}
+
+.bs-time-jump-banner {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 28px;
+  font-size: 0.6875rem; font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #92400e;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.06) 100%);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.bs-time-jump-icon {
+  font-size: 0.75rem;
+}
+
+.bs-time-jump-detail {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  opacity: 0.8;
+}
+
 /* Empty state */
 .bs-empty-state {
   display: flex; justify-content: center; align-items: center;
@@ -278,42 +389,116 @@
   font-size: 0.875rem;
 }
 
-/* Light theme overrides */
+/* Dark theme: time jump banner */
+.bs-time-jump-banner {
+  color: #fbbf24;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.04) 100%);
+  border-bottom-color: rgba(245, 158, 11, 0.2);
+}
+
+/* ━━━ Light theme overrides ━━━ */
+
+/* Page & header — transparent so the page-rainbow decoration shows through */
+[data-theme="light"] .bs-page {
+  background: transparent;
+}
+[data-theme="light"] .bs-header {
+  background: rgba(232, 222, 200, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom-color: rgba(160, 140, 100, 0.25);
+}
+[data-theme="light"] .bs-scroll {
+  background: transparent;
+}
+
+/* Filter & action buttons */
+[data-theme="light"] .bs-filter-select {
+  background: #FEFCF8;
+  border-color: rgba(160, 140, 100, 0.3);
+}
+[data-theme="light"] .bs-action-btn {
+  background: #FEFCF8;
+  border-color: rgba(160, 140, 100, 0.3);
+  color: #5A3E28;
+}
+[data-theme="light"] .bs-action-btn:hover {
+  background: #fff;
+  border-color: rgba(160, 140, 100, 0.5);
+}
+[data-theme="light"] .bs-action-btn--primary {
+  background: rgba(var(--a), 0.10);
+  border-color: rgba(var(--a), 0.25);
+}
+
+/* Scene block cards — lightest element on page */
 [data-theme="light"] .bs-scene-block {
-  border-color: rgba(180, 160, 120, 0.25);
-  background: #FAF7F0;
+  border-color: rgba(180, 160, 120, 0.3);
+  background: #FEFCF8;
   box-shadow:
-    0 1px 4px rgba(140, 120, 80, 0.08),
-    0 4px 20px rgba(140, 120, 80, 0.05);
+    0 1px 3px rgba(120, 100, 60, 0.08),
+    0 4px 16px rgba(120, 100, 60, 0.04);
 }
 [data-theme="light"] .bs-scene-header {
   background: transparent;
   border-bottom: none;
 }
+
+/* Scene day badge — brand teal */
+[data-theme="light"] .bs-scene-day {
+  background: var(--brand-teal);
+  color: #fff;
+}
+
+/* Table header row — warm tan band */
 [data-theme="light"] .bs-table thead {
-  background: transparent;
+  background: rgba(210, 195, 165, 0.35);
 }
 [data-theme="light"] .bs-table th {
-  border-top-color: rgba(180, 160, 120, 0.25);
-  border-bottom-color: rgba(180, 160, 120, 0.25);
-  color: rgba(80, 60, 30, 0.55);
+  border-top: 1px solid rgba(180, 160, 120, 0.35);
+  border-bottom: 1px solid rgba(180, 160, 120, 0.35);
+  color: rgba(80, 60, 30, 0.6);
 }
+
+/* Table cells */
 [data-theme="light"] .bs-table td {
-  border-bottom-color: rgba(180, 160, 120, 0.15);
+  border-bottom-color: rgba(180, 160, 120, 0.18);
+  color: #3A2A14;
 }
 [data-theme="light"] .bs-table tbody tr:hover {
-  background: rgba(var(--a), 0.03);
+  background: rgba(210, 195, 165, 0.18);
 }
-[data-theme="light"] .bs-row--first {
-  background: rgba(var(--a), 0.05);
+
+/* Character names — warm brown-orange */
+[data-theme="light"] .bs-char-name {
+  color: #A0522D;
+}
+[data-theme="light"] .bs-char-billing {
+  color: rgba(80, 60, 30, 0.5);
+}
+
+/* Synopsis & empty states */
+[data-theme="light"] .bs-scene-synopsis {
+  color: rgba(80, 60, 30, 0.6);
+}
+[data-theme="light"] .bs-empty {
+  color: rgba(80, 60, 30, 0.3);
 }
 [data-theme="light"] .bs-tag-pill {
   background: rgba(0,0,0,0.03);
 }
-[data-theme="light"] .bs-scene-synopsis {
-  color: rgba(80, 60, 30, 0.55);
+
+/* Time jump — amber highlight on light cards */
+[data-theme="light"] .bs-time-jump-banner {
+  color: #92400e;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%);
+  border-bottom-color: rgba(245, 158, 11, 0.3);
 }
-[data-theme="light"] .bs-empty {
-  color: rgba(80, 60, 30, 0.3);
+[data-theme="light"] .bs-scene-block--time-jump {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow:
+    0 0 0 2px rgba(245, 158, 11, 0.15),
+    0 1px 3px rgba(120, 100, 60, 0.08),
+    0 4px 16px rgba(120, 100, 60, 0.04);
 }
 

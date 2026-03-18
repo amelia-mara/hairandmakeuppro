@@ -30,8 +30,7 @@
   flex-direction: column;
   gap: 0;
   background: var(--bg-surface);
-  border-right: 1px solid rgba(var(--a), 0.15);
-  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.4);
+  border-right: 1px solid var(--border-card);
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -222,7 +221,7 @@
 }
 
 .ts-top-bar-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -274,7 +273,7 @@
 }
 
 .ts-tabs-overview-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -368,7 +367,7 @@
 }
 
 .ts-card-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text-heading);

@@ -9,6 +9,7 @@ import { BreakdownSheet } from '@/pages/BreakdownSheet';
 import { ContinuityTracker } from '@/pages/ContinuityTracker';
 import { Budget } from '@/pages/Budget';
 import { Timesheet } from '@/pages/Timesheet';
+import { CharacterDesign } from '@/pages/CharacterDesign';
 import { useProjectStore } from '@/stores/projectStore';
 
 function App() {
@@ -66,6 +67,9 @@ function App() {
           )}
           {activePage === 'breakdown' && (
             <BreakdownSheet projectId={selectedProjectId} />
+          )}
+          {activePage === 'character-design' && (
+            <CharacterDesign projectId={selectedProjectId} />
           )}
           {activePage === 'continuity' && (
             <ContinuityTracker projectId={selectedProjectId} />

@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
+  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon },
   { id: 'continuity', label: 'Continuity', icon: ContinuityIcon },
   { id: 'budget', label: 'Budget', icon: BudgetIcon },
   { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon },
@@ -327,6 +328,15 @@ function BreakdownIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2"/>
       <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
+    </svg>
+  );
+}
+
+function CharacterDesignIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
     </svg>
   );
 }

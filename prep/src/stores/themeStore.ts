@@ -13,7 +13,7 @@ const getSystemTheme = (): 'light' | 'dark' => {
   if (typeof window !== 'undefined' && window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  return 'dark';
+  return 'light';
 };
 
 const resolveTheme = (theme: Theme): 'light' | 'dark' => {
@@ -38,8 +38,8 @@ const applyTheme = (resolved: 'light' | 'dark') => {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'dark',
-      resolvedTheme: 'dark',
+      theme: 'light',
+      resolvedTheme: 'light',
       setTheme: (theme) => {
         const resolved = resolveTheme(theme);
         applyTheme(resolved);
@@ -48,7 +48,15 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'prep-happy-theme',
+      version: 1,
       storage: createJSONStorage(() => localStorage),
+      migrate: (_persisted, version) => {
+        // v0 → v1: switch default from dark to light
+        if (version === 0) {
+          return { theme: 'light' as Theme, resolvedTheme: 'light' as const };
+        }
+        return _persisted as ThemeState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           const resolved = resolveTheme(state.theme);

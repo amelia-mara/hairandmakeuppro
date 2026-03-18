@@ -39,7 +39,7 @@
   z-index: 2;
 }
 .hub-projects-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.5rem;
   color: var(--text-heading);
   margin: 0;

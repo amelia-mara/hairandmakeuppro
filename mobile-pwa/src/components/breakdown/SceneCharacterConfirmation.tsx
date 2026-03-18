@@ -640,7 +640,20 @@ export function SceneCharacterStatus({
   const confirmedCharacters = characters.filter(c => scene.characters?.includes(c.id));
 
   if (status === 'confirmed') {
-    // Show confirmed characters with option to add more
+    // Group confirmed characters by role
+    const leads = confirmedCharacters.filter(c => c.role === 'lead');
+    const supportingChars = confirmedCharacters.filter(c => c.role === 'supporting');
+    const backgroundChars = confirmedCharacters.filter(c => c.role === 'background');
+    const unassigned = confirmedCharacters.filter(c => !c.role);
+
+    const roleGroups = [
+      { key: 'lead', label: 'L', colour: 'bg-amber-100 text-amber-700', chars: leads },
+      { key: 'supporting', label: 'SA', colour: 'bg-blue-100 text-blue-700', chars: supportingChars },
+      { key: 'background', label: 'BG', colour: 'bg-gray-100 text-gray-500', chars: backgroundChars },
+      { key: 'unassigned', label: '', colour: '', chars: unassigned },
+    ].filter(g => g.chars.length > 0);
+
+    // Show confirmed characters grouped by role
     return (
       <div className="w-full">
         <button
@@ -653,26 +666,21 @@ export function SceneCharacterStatus({
             </svg>
             <span className="font-medium">Characters confirmed</span>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {confirmedCharacters.slice(0, 4).map(char => (
-              <span key={char.id} className="text-[11px] text-text-secondary flex items-center gap-0.5">
-                {char.name}
-                {char.role && (
-                  <span className={clsx(
-                    'text-[9px] font-bold px-1 rounded',
-                    char.role === 'lead' && 'bg-amber-100 text-amber-700',
-                    char.role === 'supporting' && 'bg-blue-100 text-blue-700',
-                    char.role === 'background' && 'bg-gray-100 text-gray-500',
-                  )}>
-                    {char.role === 'lead' ? 'L' : char.role === 'supporting' ? 'SA' : 'BG'}
+          <div className="space-y-0.5">
+            {roleGroups.map(group => (
+              <div key={group.key} className="flex flex-wrap items-center gap-1">
+                {group.label && (
+                  <span className={clsx('text-[9px] font-bold px-1 rounded', group.colour)}>
+                    {group.label}
                   </span>
                 )}
-                {confirmedCharacters.indexOf(char) < confirmedCharacters.length - 1 && confirmedCharacters.indexOf(char) < 3 ? ',' : ''}
-              </span>
+                {group.chars.map((char, i) => (
+                  <span key={char.id} className="text-[11px] text-text-secondary">
+                    {char.name}{i < group.chars.length - 1 ? ',' : ''}
+                  </span>
+                ))}
+              </div>
             ))}
-            {confirmedCharacters.length > 4 && (
-              <span className="text-[11px] text-text-muted">+{confirmedCharacters.length - 4} more</span>
-            )}
           </div>
         </button>
         {/* Add character button - always visible */}
