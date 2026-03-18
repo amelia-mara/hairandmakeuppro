@@ -23,7 +23,7 @@
 /* ── Timesheet Sidebar ───────────────────────── */
 
 .ts-sidebar {
-  width: 280px;
+  width: 240px;
   flex-shrink: 0;
   padding: 20px 14px;
   display: flex;
