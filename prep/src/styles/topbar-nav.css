@@ -163,9 +163,9 @@
 
 .topbar-nav-dropdown {
   position: fixed;
-  top: 73px;
+  top: 80px;
   left: 0;
-  width: 280px;
+  width: 240px;
   bottom: 0;
   z-index: 200;
   padding: 20px 14px;
@@ -287,7 +287,7 @@
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .account-panel {
   position: fixed;
-  top: 73px;
+  top: 80px;
   right: 0;
   width: 320px;
   bottom: 0;
