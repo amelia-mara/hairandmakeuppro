@@ -1332,7 +1332,7 @@ export interface ProjectMembership {
 }
 
 // Auth screen types for navigation
-export type AuthScreen = 'welcome' | 'signin' | 'signup' | 'join' | 'hub' | 'create-project' | 'select-plan' | 'profile' | 'project-settings';
+export type AuthScreen = 'welcome' | 'signin' | 'signup' | 'join' | 'hub' | 'create-project' | 'select-plan' | 'profile' | 'project-settings' | 'verify-email';
 
 // Auth state
 export interface AuthState {

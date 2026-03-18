@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
 import type { CallSheet, CallSheetScene, ShootingSceneStatus, SceneFilmingStatus } from '@/types';
+import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 import { parseCallSheetPDF } from '@/utils/callSheetParser';
 import { useTimesheetStore } from './timesheetStore';
 import { useProjectStore } from './projectStore';
+import { v4 as uuidv4 } from 'uuid';
 
 // Current version of the store schema - increment when making breaking changes
 const STORE_VERSION = 3;
@@ -67,6 +69,43 @@ function validateCallSheet(cs: CallSheet): boolean {
   return true;
 }
 
+/**
+ * Normalize scene numbers from various call sheet formats into a consistent format.
+ * Handles split scenes like "2B", "2 Part 1", "2 Pt 1", "2 pt. 2", "Scene 2B", etc.
+ * Outputs: "2", "2A", "2B", "2 PT1", "2 PT2", etc.
+ */
+function normalizeSceneNumber(raw: string): string {
+  let s = raw.trim();
+
+  // Strip leading "Scene" / "Sc" / "Sc." prefix (case-insensitive)
+  s = s.replace(/^(?:scene|sc\.?)\s*/i, '');
+
+  // Normalize "Part X" / "Pt X" / "Pt. X" → " PTX"
+  s = s.replace(/\s*(?:part|pt\.?)\s*/gi, ' PT');
+
+  // Collapse whitespace and uppercase
+  s = s.replace(/\s+/g, ' ').trim().toUpperCase();
+
+  return s;
+}
+
+/** Extract INT/EXT from a slugline like "EXT. FARMHOUSE - DRIVEWAY" */
+function parseIntExt(setDescription: string): 'INT' | 'EXT' {
+  const desc = (setDescription || '').toUpperCase();
+  if (desc.startsWith('EXT')) return 'EXT';
+  return 'INT';
+}
+
+/** Map call sheet day/night codes to breakdown time-of-day */
+function parseTimeOfDay(dayNight: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
+  const dn = (dayNight || '').toUpperCase().trim();
+  if (dn.startsWith('N')) return 'NIGHT';
+  if (dn === 'DAWN' || dn === 'MORNING') return 'MORNING';
+  if (dn === 'DUSK' || dn === 'EVENING') return 'EVENING';
+  if (dn === 'CONTINUOUS' || dn === 'D/N') return 'CONTINUOUS';
+  return 'DAY';
+}
+
 export const useCallSheetStore = create<CallSheetState>()(
   persist(
     (set, get) => ({
@@ -109,23 +148,152 @@ export const useCallSheetStore = create<CallSheetState>()(
 
           // Sync scene log lines to breakdown synopsis
           const syncSceneSynopsesToBreakdown = (cs: CallSheet) => {
-            const projectStore = useProjectStore.getState();
-            const project = projectStore.currentProject;
+            // Re-fetch project state to pick up any scenes just added by syncNewScenesToBreakdown
+            const latestProjectState = useProjectStore.getState();
+            const project = latestProjectState.currentProject;
             if (!project?.scenes) return;
 
             // For each scene in the call sheet that has an action/log line
             cs.scenes.forEach(callSheetScene => {
               if (!callSheetScene.action) return;
 
-              // Find matching scene in the breakdown by scene number
+              const normalizedCallSheet = normalizeSceneNumber(callSheetScene.sceneNumber);
+
+              // Find matching scene in the breakdown by normalized scene number
               const breakdownScene = project.scenes.find(
-                s => s.sceneNumber === callSheetScene.sceneNumber
+                s => normalizeSceneNumber(s.sceneNumber) === normalizedCallSheet
               );
 
               // If found and doesn't already have a synopsis, update it
               if (breakdownScene && !breakdownScene.synopsis) {
-                projectStore.updateSceneSynopsis(breakdownScene.id, callSheetScene.action);
+                latestProjectState.updateSceneSynopsis(breakdownScene.id, callSheetScene.action);
               }
+            });
+          };
+
+          // Auto-add scenes from call sheet that don't exist in the breakdown
+          // Handles split scenes like "2B", "2 Part 1", "2 Pt 1", etc.
+          const syncNewScenesToBreakdown = (cs: CallSheet) => {
+            const projectStore = useProjectStore.getState();
+            const project = projectStore.currentProject;
+            if (!project) return;
+
+            const existingSceneNumbers = new Set(
+              project.scenes.map(s => normalizeSceneNumber(s.sceneNumber))
+            );
+
+            cs.scenes.forEach(callSheetScene => {
+              const normalized = normalizeSceneNumber(callSheetScene.sceneNumber);
+              if (existingSceneNumbers.has(normalized)) return;
+
+              // Parse INT/EXT and time of day from the set description
+              const intExt = parseIntExt(callSheetScene.setDescription);
+              const timeOfDay = parseTimeOfDay(callSheetScene.dayNight);
+
+              projectStore.addScene({
+                sceneNumber: normalizeSceneNumber(callSheetScene.sceneNumber),
+                slugline: callSheetScene.setDescription || `Scene ${callSheetScene.sceneNumber}`,
+                intExt,
+                timeOfDay,
+                synopsis: callSheetScene.action,
+                shootingDay: cs.productionDay,
+              });
+
+              // Track that we've added this scene so we don't double-add
+              existingSceneNumbers.add(normalized);
+            });
+          };
+
+          // Auto-add characters from call sheet cast that don't exist in the breakdown
+          const syncNewCharactersToBreakdown = (cs: CallSheet) => {
+            const projectStore = useProjectStore.getState();
+            const project = projectStore.currentProject;
+            if (!project || !cs.castCalls?.length) return;
+
+            // Build a lookup of existing characters by normalized name
+            const existingNames = new Set(
+              project.characters.map(c => c.name.trim().toUpperCase())
+            );
+
+            const colors = ['#D4943A', '#E8621A', '#F0882A', '#4ABFB0', '#F5A623', '#5A3E28', '#F2C4A0', '#C4522A'];
+
+            cs.castCalls.forEach(castCall => {
+              const characterName = castCall.character.trim();
+              if (!characterName) return;
+
+              const normalizedName = characterName.toUpperCase();
+              if (existingNames.has(normalizedName)) return;
+
+              // Create the character
+              const characterId = uuidv4();
+              const initials = characterName
+                .split(' ')
+                .map(w => w[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+
+              const currentProject = useProjectStore.getState().currentProject;
+              const charCount = currentProject?.characters.length || 0;
+              const avatarColour = colors[charCount % colors.length];
+
+              const castNumber = parseInt(castCall.id, 10);
+
+              const newCharacter = {
+                id: characterId,
+                name: characterName,
+                initials,
+                avatarColour,
+                actorNumber: isNaN(castNumber) ? undefined : castNumber,
+                role: undefined as 'lead' | 'supporting' | 'background' | undefined,
+              };
+
+              // Create a default look for the character
+              const newLook = {
+                id: uuidv4(),
+                characterId,
+                name: 'Day 1',
+                scenes: [] as string[],
+                estimatedTime: 30,
+                makeup: createEmptyMakeupDetails(),
+                hair: createEmptyHairDetails(),
+              };
+
+              // Find which scenes this character appears in from the call sheet
+              const scenesForCharacter: string[] = [];
+              cs.scenes.forEach(scene => {
+                if (scene.cast?.includes(castCall.id)) {
+                  scenesForCharacter.push(normalizeSceneNumber(scene.sceneNumber));
+                }
+              });
+              newLook.scenes = scenesForCharacter.sort((a, b) =>
+                a.localeCompare(b, undefined, { numeric: true })
+              );
+
+              // Add character and look to the project directly via the store
+              const latestProject = useProjectStore.getState().currentProject;
+              if (latestProject) {
+                useProjectStore.setState({
+                  currentProject: {
+                    ...latestProject,
+                    characters: [...latestProject.characters, newCharacter],
+                    looks: [...latestProject.looks, newLook],
+                    scenes: latestProject.scenes.map(s => {
+                      if (scenesForCharacter.includes(s.sceneNumber)) {
+                        return {
+                          ...s,
+                          characters: s.characters.includes(characterId)
+                            ? s.characters
+                            : [...s.characters, characterId],
+                        };
+                      }
+                      return s;
+                    }),
+                  },
+                });
+              }
+
+              existingNames.add(normalizedName);
             });
           };
 
@@ -147,6 +315,10 @@ export const useCallSheetStore = create<CallSheetState>()(
             // Auto-fill timesheet with call times
             autoFillTimesheet(replacementSheet);
 
+            // Auto-add new scenes and characters from call sheet to breakdown
+            syncNewScenesToBreakdown(replacementSheet);
+            syncNewCharactersToBreakdown(replacementSheet);
+
             // Sync scene log lines to breakdown
             syncSceneSynopsesToBreakdown(replacementSheet);
 
@@ -164,6 +336,10 @@ export const useCallSheetStore = create<CallSheetState>()(
 
           // Auto-fill timesheet with call times
           autoFillTimesheet(cleanCallSheet);
+
+          // Auto-add new scenes and characters from call sheet to breakdown
+          syncNewScenesToBreakdown(cleanCallSheet);
+          syncNewCharactersToBreakdown(cleanCallSheet);
 
           // Sync scene log lines to breakdown
           syncSceneSynopsesToBreakdown(cleanCallSheet);

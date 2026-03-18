@@ -417,15 +417,16 @@ export const useAuthStore = create<AuthState>()(
             createdAt: new Date(),
           };
 
+          // Show verify-email screen so user knows to check their inbox.
+          // Don't set isAuthenticated yet — they need to confirm first.
           set({
-            isAuthenticated: true,
+            isAuthenticated: false,
             user: appUser,
             isLoading: false,
             error: null,
-            // Skip plan selection in beta mode, go directly to hub
-            currentScreen: BETA_MODE ? 'hub' : 'select-plan',
-            hasCompletedOnboarding: BETA_MODE,
-            hasSelectedPlan: BETA_MODE,
+            currentScreen: 'verify-email',
+            hasCompletedOnboarding: false,
+            hasSelectedPlan: false,
             subscription: createDefaultSubscription(),
             projectMemberships: [],
           });
@@ -749,8 +750,11 @@ export const useAuthStore = create<AuthState>()(
           return { success: true, code: inviteCode };
         } catch (error) {
           console.error('Create project error:', error);
-          set({ isLoading: false, error: 'Failed to create project. Please try again.' });
-          return { success: false, error: 'Failed to create project' };
+          const message = error instanceof TypeError && error.message === 'Load failed'
+            ? 'Unable to connect. Please check your email is verified and try signing in again.'
+            : 'Failed to create project. Please try again.';
+          set({ isLoading: false, error: message });
+          return { success: false, error: message };
         }
       },
 
