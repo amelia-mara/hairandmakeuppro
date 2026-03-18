@@ -139,6 +139,12 @@
 .topbar-project-name:hover {
   color: var(--text-secondary);
 }
+.topbar-project-name--static {
+  cursor: default;
+}
+.topbar-project-name--static:hover {
+  color: var(--text-muted);
+}
 
 .topbar-nav-arrow {
   display: inline-flex;
