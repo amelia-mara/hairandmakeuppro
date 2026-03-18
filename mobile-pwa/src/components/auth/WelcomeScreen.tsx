@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/stores/authStore';
-import logoTick from '/logo-tick.png';
 
 export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
@@ -10,51 +9,41 @@ export function WelcomeScreen() {
     }}>
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Logo Icon - Using uploaded image with edge fade */}
-        <img
-          src={logoTick}
-          alt="Checks Happy Logo"
-          className="w-32 h-32 mb-3 object-contain"
-          style={{
-            maskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
-          }}
-        />
+        {/* Wordmark - stacked with colored stripes */}
+        <div className="flex flex-col items-center mb-2">
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 800,
+            fontSize: '48px',
+            color: '#4A3020',
+            lineHeight: 1.1,
+            marginBottom: '0',
+          }}>
+            Checks
+          </h1>
 
-        {/* CHECKS HAPPY text */}
-        <h1 className="text-[34px] font-serif font-medium tracking-wide text-[#1a1a1a]">
-          CHECKS HAPPY
-        </h1>
+          {/* Colored stripes */}
+          <div style={{ width: '100vw', margin: '6px 0' }}>
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #7FC8BC, transparent)', marginBottom: '3px' }} />
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8A88C, transparent)', marginBottom: '3px' }} />
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #F0C4B0, transparent)' }} />
+          </div>
 
-        {/* Gold underline - tapered ends, thicker in middle */}
-        <svg width="280" height="10" viewBox="0 0 280 10" className="mt-3 mb-8">
-          <defs>
-            <linearGradient id="underlineGold" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#C9A962" stopOpacity="0.3" />
-              <stop offset="10%" stopColor="#C9A962" />
-              <stop offset="50%" stopColor="#D4B86A" />
-              <stop offset="90%" stopColor="#C9A962" />
-              <stop offset="100%" stopColor="#C9A962" stopOpacity="0.3" />
-            </linearGradient>
-          </defs>
-          {/* Tapered shape - pointed at ends, moderate thickness in middle */}
-          <path
-            d="M 0 5
-               Q 40 5, 70 4.25
-               Q 100 3.5, 140 3
-               Q 180 3.5, 210 4.25
-               Q 240 5, 280 5
-               Q 240 5, 210 5.75
-               Q 180 6.5, 140 7
-               Q 100 6.5, 70 5.75
-               Q 40 5, 0 5
-               Z"
-            fill="url(#underlineGold)"
-          />
-        </svg>
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 800,
+            fontStyle: 'italic',
+            fontSize: '48px',
+            color: '#E8621A',
+            lineHeight: 1.1,
+            marginTop: '0',
+          }}>
+            Happy
+          </h1>
+        </div>
 
         {/* Tagline */}
-        <p className="text-lg text-[#4a4a4a] mb-10">
+        <p className="text-lg mb-10" style={{ color: '#6a6a6a' }}>
           Your personal onset assistant
         </p>
 
@@ -129,30 +118,31 @@ export function WelcomeScreen() {
 
       {/* Bottom action buttons */}
       <div className="px-8 pb-10 space-y-4">
-        {/* Sign In - Shiny gold gradient background */}
+        {/* Sign In - Orange gradient background */}
         <button
           onClick={() => setScreen('signin')}
-          className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
-            bg-gradient-to-b from-[#E2C87D] via-[#C9A962] to-[#A8893D] text-white active:scale-[0.98] shadow-md"
+          className="w-full h-14 rounded-full font-semibold text-lg transition-all duration-200
+            text-white active:scale-[0.98] shadow-md"
+          style={{ background: 'linear-gradient(180deg, #E8621A 0%, #D4570F 100%)' }}
         >
           Sign In
         </button>
 
-        {/* Create Account - Cream with black border */}
+        {/* Create Account - Dark border outlined */}
         <button
-          onClick={() => setScreen('signup')}
-          className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
-            border border-[#1a1a1a] text-[#1a1a1a] bg-[#fefcfb] active:scale-[0.98]"
+          onClick={() => setScreen('beta-code')}
+          className="w-full h-14 rounded-full font-semibold text-lg transition-all duration-200
+            border-2 border-[#3a2a1a] text-[#3a2a1a] bg-transparent active:scale-[0.98]"
         >
           Create Account
         </button>
 
-        {/* Join a Team - directs to signup since account is required */}
-        <div className="pt-8 flex items-center justify-center gap-4">
+        {/* Join a Team */}
+        <div className="pt-4 flex items-center justify-center gap-4">
           <div className="flex-1 h-px bg-[#c5c0b5]" />
           <button
             className="text-sm text-[#7a7a7a] hover:text-[#4a4a4a] transition-colors whitespace-nowrap"
-            onClick={() => setScreen('signup')}
+            onClick={() => setScreen('beta-code')}
           >
             Join a Team
           </button>

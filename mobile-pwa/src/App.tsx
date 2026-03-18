@@ -341,7 +341,7 @@ function AppContent() {
   if (!hasCompletedOnboarding) {
     switch (currentScreen) {
       case 'welcome':
-        return <BetaLandingScreen />;
+        return <WelcomeScreen />;
       case 'beta-code':
         return <BetaCodeScreen />;
       case 'signin':
