@@ -24,6 +24,12 @@ function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const getProject = useProjectStore((s) => s.getProject);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  // Restore session on mount
+  useEffect(() => {
+    useAuthStore.getState().getSession();
+  }, []);
 
   const handleNavigateToAuth = (mode: 'login' | 'signup' = 'signup') => {
     if (mode === 'signup') {
@@ -64,6 +70,29 @@ function App() {
     }
   }, [showAuth, showBetaCode, isAuthenticated]);
 
+  // Show loading screen while restoring session
+  if (isLoading) {
+    return (
+      <div
+        className="ambient-light min-h-screen"
+        style={{
+          backgroundColor: 'var(--bg-primary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div className="brand-logo" style={{ fontSize: '1.75rem', marginBottom: '16px' }}>
+            <span className="brand-logo-checks">Checks</span>{' '}
+            <span className="brand-logo-happy">Happy.</span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Beta code entry page (before signup)
   if (showBetaCode && !isAuthenticated) {
     return (
@@ -85,7 +114,7 @@ function App() {
     );
   }
 
-  // Auth page
+  // Auth page (login or signup after beta code)
   if (showAuth && !isAuthenticated) {
     return (
       <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>

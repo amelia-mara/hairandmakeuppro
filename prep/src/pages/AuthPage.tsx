@@ -12,24 +12,40 @@ export function AuthPage({ initialMode = 'signup', onRequestSignup }: AuthPagePr
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, signup } = useAuthStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
-    if (mode === 'signup') {
-      if (!name.trim() || !email.trim() || !password.trim()) {
-        setError('Please fill in all fields.');
-        return;
+    try {
+      if (mode === 'signup') {
+        if (!name.trim() || !email.trim() || !password.trim()) {
+          setError('Please fill in all fields.');
+          setIsSubmitting(false);
+          return;
+        }
+        const success = await signup(name.trim(), email.trim(), password);
+        if (!success) {
+          setError(useAuthStore.getState().error || 'Sign up failed. Please try again.');
+        }
+      } else {
+        if (!email.trim() || !password.trim()) {
+          setError('Please fill in all fields.');
+          setIsSubmitting(false);
+          return;
+        }
+        const success = await login(email.trim(), password);
+        if (!success) {
+          setError(useAuthStore.getState().error || 'Invalid email or password.');
+        }
       }
-      signup(name.trim(), email.trim(), password);
-    } else {
-      if (!email.trim() || !password.trim()) {
-        setError('Please fill in all fields.');
-        return;
-      }
-      login(email.trim(), password);
+    } catch {
+      setError(useAuthStore.getState().error || 'An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -108,8 +124,15 @@ export function AuthPage({ initialMode = 'signup', onRequestSignup }: AuthPagePr
 
             {error && <p className="auth-error">{error}</p>}
 
-            <button type="submit" className="auth-submit">
-              {mode === 'signup' ? 'Create Account' : 'Sign In'}
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={isSubmitting}
+              style={{ opacity: isSubmitting ? 0.7 : 1 }}
+            >
+              {isSubmitting
+                ? (mode === 'signup' ? 'Creating account...' : 'Signing in...')
+                : (mode === 'signup' ? 'Create Account' : 'Sign In')}
             </button>
           </form>
 
