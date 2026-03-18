@@ -64,22 +64,10 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
               <span className="brand-logo-checks">Checks</span>{' '}
               <span className="brand-logo-happy">Happy.</span>
             </div>
-            {onBackToHub && (
-              <>
-                <div className="topbar-divider" />
-                <span className="topbar-prep-label">PREP</span>
-              </>
-            )}
-            {!onBackToHub && (
-              <>
-                <div className="topbar-divider" />
-                <h1 className="topbar-title" title={title}>
-                  {title}
-                </h1>
-              </>
-            )}
+            <div className="topbar-divider" />
+            <span className="topbar-prep-label">PREP</span>
           </div>
-          {onBackToHub && (
+          {onBackToHub ? (
             <div className="topbar-project-row">
               <button
                 className="topbar-project-name"
@@ -98,6 +86,10 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                   <path d="m6 9 6 6 6-6"/>
                 </svg>
               </button>
+            </div>
+          ) : (
+            <div className="topbar-project-row">
+              <span className="topbar-project-name topbar-project-name--static">{title}</span>
             </div>
           )}
 
