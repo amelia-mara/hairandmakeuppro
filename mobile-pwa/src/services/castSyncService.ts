@@ -12,6 +12,14 @@ import type {
 } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  buildStoryDayMap as buildStoryDayMapV2,
+  extractTOD,
+  classifyTOD,
+  isNonPresent,
+  type ParsedScene,
+  type StoryDayResult,
+} from '@/utils/storyDayDetection';
 
 // Result of syncing cast data
 export interface CastSyncResult {
@@ -120,74 +128,12 @@ function createCharacterFromName(
 }
 
 /**
- * Get a time-of-day ordering for story day detection
- * MORNING=0, DAY=1, EVENING=2, NIGHT=3, unknown/CONTINUOUS=-1
- */
-function getTimeOrder(timeOfDay: string): number {
-  const t = timeOfDay.toUpperCase().trim();
-  if (t.includes('MORN') || t === 'DAWN' || t === 'SUNRISE') return 0;
-  if (t.includes('DAY') || t === 'D' || t.includes('AFTERNOON')) return 1;
-  if (t.includes('EVEN') || t === 'DUSK' || t === 'SUNSET') return 2;
-  if (t.includes('NIGHT') || t === 'N') return 3;
-  return -1; // CONTINUOUS or unknown — inherits previous
-}
-
-/**
- * Check if a raw time-of-day string explicitly indicates a new day
- * Handles: "NEXT MORNING", "NEXT DAY", "THE NEXT DAY", "FOLLOWING DAY",
- * "FOLLOWING MORNING", "A NEW DAY", "LATER THAT NIGHT" (NOT a new day),
- * "THE FOLLOWING EVENING", etc.
- */
-function isExplicitNewDay(rawTimeOfDay: string): boolean {
-  const t = rawTimeOfDay.toUpperCase().trim();
-  // "NEXT" followed by a time period = new day
-  if (/\bNEXT\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)) return true;
-  // "FOLLOWING" followed by a time period = new day
-  if (/\bFOLLOWING\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)) return true;
-  // "NEW DAY", "A NEW DAY"
-  if (/\bNEW\s+DAY\b/.test(t)) return true;
-  // "DAYS LATER", "HOURS LATER" (ambiguous but likely new day for looks)
-  if (/\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)) return true;
-  // "ONE WEEK LATER", "TWO DAYS LATER" etc.
-  if (/\b(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|SEVERAL|FEW|SOME)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)) return true;
-  return false;
-}
-
-/**
- * Detect if transitioning between two time-of-day values signals a new story day.
+ * Build a map of scene number -> story day number using v2 detection.
  *
- * New day triggers:
- *   NIGHT/EVENING → MORNING/DAY  (classic overnight transition)
- *   DAY → MORNING               (morning is earlier in the day, so this is next day)
- *   Any explicit "NEXT X" or "FOLLOWING X" in the raw string
- *
- * NOT a new day (same time repeating is just another scene at that time):
- *   MORNING → MORNING, DAY → DAY, NIGHT → NIGHT  (unless explicit "NEXT" keyword)
- */
-function isNewStoryDay(
-  prevTimeOrder: number,
-  currentTimeOrder: number,
-  rawTimeOfDay: string
-): boolean {
-  // Explicit markers always trigger a new day regardless of time order
-  if (isExplicitNewDay(rawTimeOfDay)) return true;
-
-  // Both must be known time values for transition detection
-  if (prevTimeOrder < 0 || currentTimeOrder < 0) return false;
-
-  // NIGHT or EVENING → MORNING or DAY (went through overnight)
-  if (prevTimeOrder >= 2 && currentTimeOrder <= 1) return true;
-
-  // DAY → MORNING (morning is earlier in the day, so this must be next day)
-  if (prevTimeOrder === 1 && currentTimeOrder === 0) return true;
-
-  return false;
-}
-
-/**
- * Build a map of scene number -> story day number
- * Uses schedule dayNight values (D1/D2/N1 notation) if available,
- * otherwise infers from time-of-day transitions in story order
+ * Strategy:
+ *  1. Check for explicit D1/D2/N1 notation in schedule — use directly if found.
+ *  2. Otherwise, convert scenes to ParsedScene format and run v2 detection
+ *     which handles action lines, flashbacks, CONTINUOUS, calendar dates, etc.
  */
 function buildStoryDayMap(
   schedule: ProductionSchedule,
@@ -195,36 +141,12 @@ function buildStoryDayMap(
 ): Map<string, number> {
   const storyDayMap = new Map<string, number>();
 
-  // Build sceneNumber -> raw time of day string from schedule entries and project scenes
-  const sceneTimeMap = new Map<string, string>();
-
-  // From schedule entries first (may have D1/D2 notation or "NEXT MORNING" etc.)
+  // Build sceneNumber -> raw time of day from schedule entries
+  const scheduleTimeMap = new Map<string, string>();
   for (const day of schedule.days) {
     for (const entry of day.scenes) {
       const normalized = entry.sceneNumber.replace(/\s+/g, '').toUpperCase();
-      sceneTimeMap.set(normalized, entry.dayNight);
-    }
-  }
-
-  // From project scenes as fallback
-  for (const scene of scenes) {
-    const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
-    if (!sceneTimeMap.has(normalized)) {
-      sceneTimeMap.set(normalized, scene.timeOfDay);
-    }
-  }
-
-  // Also build a map from scene sluglines for richer time-of-day info
-  // (sluglines may contain "NEXT MORNING" even when timeOfDay is normalized to "MORNING")
-  const sceneSluglineTimeMap = new Map<string, string>();
-  for (const scene of scenes) {
-    const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
-    if (scene.slugline) {
-      // Extract time portion from slugline: "INT. HOUSE - NEXT MORNING" → "NEXT MORNING"
-      const timeMatch = scene.slugline.match(/[-–—]\s*([^-–—]+)$/);
-      if (timeMatch) {
-        sceneSluglineTimeMap.set(normalized, timeMatch[1].trim());
-      }
+      scheduleTimeMap.set(normalized, entry.dayNight);
     }
   }
 
@@ -232,7 +154,7 @@ function buildStoryDayMap(
   const dayNightPattern = /^[DN](\d+)/i;
   let hasExplicitDays = false;
 
-  for (const [sceneNum, timeOfDay] of sceneTimeMap) {
+  for (const [sceneNum, timeOfDay] of scheduleTimeMap) {
     const match = timeOfDay.match(dayNightPattern);
     if (match) {
       hasExplicitDays = true;
@@ -244,31 +166,61 @@ function buildStoryDayMap(
     return storyDayMap;
   }
 
-  // Strategy 2: Infer story days from time-of-day transitions in scene order
-  const allSceneNums = Array.from(sceneTimeMap.keys()).sort((a, b) =>
+  // Strategy 2: Convert to ParsedScene format and use v2 detection
+  // Build scene list in story order (by scene number)
+  const scenesByNum = new Map<string, Scene>();
+  for (const scene of scenes) {
+    const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
+    scenesByNum.set(normalized, scene);
+  }
+
+  // Merge schedule entries with project scenes, sorted by scene number
+  const allSceneNums = new Set<string>();
+  for (const key of scheduleTimeMap.keys()) allSceneNums.add(key);
+  for (const scene of scenes) {
+    allSceneNums.add(scene.sceneNumber.replace(/\s+/g, '').toUpperCase());
+  }
+  const sortedNums = Array.from(allSceneNums).sort((a, b) =>
     a.localeCompare(b, undefined, { numeric: true })
   );
 
-  let currentDay = 1;
-  let prevTimeOrder = -1;
+  // Convert to ParsedScene[]
+  const parsedScenes: ParsedScene[] = sortedNums.map((sceneNum) => {
+    const scene = scenesByNum.get(sceneNum);
+    const scheduleTime = scheduleTimeMap.get(sceneNum) || '';
+    const slugline = scene?.slugline || '';
+    const rawTOD = slugline
+      ? extractTOD(slugline) || scheduleTime || (scene?.timeOfDay ?? '')
+      : scheduleTime || '';
 
-  for (const sceneNum of allSceneNums) {
-    const rawTimeOfDay = sceneTimeMap.get(sceneNum) || '';
-    const sluglineTime = sceneSluglineTimeMap.get(sceneNum) || '';
-    // Use slugline time if it's richer (contains "NEXT", "FOLLOWING", etc.)
-    const bestRawTime = sluglineTime.length > rawTimeOfDay.length ? sluglineTime : rawTimeOfDay;
-    const timeOrder = getTimeOrder(rawTimeOfDay);
-
-    // Detect new story day using both transition logic and explicit markers
-    if (isNewStoryDay(prevTimeOrder, timeOrder, bestRawTime)) {
-      currentDay++;
+    // Extract action lines from scriptContent
+    const actionLines: string[] = [];
+    if (scene?.scriptContent) {
+      const lines = scene.scriptContent.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && actionLines.length < 3) {
+          if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
+          actionLines.push(trimmed);
+        }
+      }
     }
 
-    storyDayMap.set(sceneNum, currentDay);
+    return {
+      sceneNumber: sceneNum,
+      slugline,
+      rawTOD,
+      tod: classifyTOD(rawTOD),
+      isNonPresent: isNonPresent(slugline, rawTOD),
+      actionLines,
+    };
+  });
 
-    if (timeOrder >= 0) {
-      prevTimeOrder = timeOrder;
-    }
+  // Run v2 detection
+  const results: StoryDayResult[] = buildStoryDayMapV2(parsedScenes);
+
+  for (const r of results) {
+    storyDayMap.set(r.sceneNumber, r.storyDay);
   }
 
   return storyDayMap;

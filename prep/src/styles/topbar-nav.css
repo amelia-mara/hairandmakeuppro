@@ -105,9 +105,9 @@
 /* PREP label — section identifier */
 .topbar-prep-label {
   font-family: var(--font-sans);
-  font-size: 1.375rem;
+  font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
   flex-shrink: 0;
@@ -138,6 +138,12 @@
 }
 .topbar-project-name:hover {
   color: var(--text-secondary);
+}
+.topbar-project-name--static {
+  cursor: default;
+}
+.topbar-project-name--static:hover {
+  color: var(--text-muted);
 }
 
 .topbar-nav-arrow {
@@ -334,7 +340,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2A1A08;
+  color: #3D2B1A;
   font-weight: 700;
   font-size: 0.875rem;
   flex-shrink: 0;
