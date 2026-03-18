@@ -23,6 +23,8 @@ import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   WelcomeScreen,
+  BetaLandingScreen,
+  BetaCodeScreen,
   SignInScreen,
   SignUpScreen,
   JoinProjectScreen,
@@ -339,7 +341,9 @@ function AppContent() {
   if (!hasCompletedOnboarding) {
     switch (currentScreen) {
       case 'welcome':
-        return <WelcomeScreen />;
+        return <BetaLandingScreen />;
+      case 'beta-code':
+        return <BetaCodeScreen />;
       case 'signin':
         return <SignInScreen />;
       case 'signup':

@@ -417,6 +417,24 @@ export const useAuthStore = create<AuthState>()(
             createdAt: new Date(),
           };
 
+          // If beta validated (via beta code gate), grant beta access
+          if ((window as any).__betaValidated) {
+            try {
+              await supabase
+                .from('users')
+                .update({
+                  beta_access: true,
+                  beta_granted_at: new Date().toISOString(),
+                  tier: 'designer',
+                })
+                .eq('id', authUser.id);
+            } catch (betaErr) {
+              console.error('Failed to write beta_access — will fix manually:', betaErr);
+            }
+            // Clear the transient flag
+            delete (window as any).__betaValidated;
+          }
+
           set({
             isAuthenticated: true,
             user: appUser,
