@@ -19,30 +19,19 @@
  *                         "Valentine's Day", "12th March 2020", "Christmas").
  *                         CONTINUOUS and LATER used heavily within a story day.
  *
- * KEY FINDINGS vs. current parser:
+ * DETECTION PRIORITY ORDER:
  *
- *  1. ACTION LINE TRANSITIONS are the primary signal in many scripts,
- *     not TOD regressions. "The next day," in the first action line after
- *     a slugline is the most reliable indicator. Current parser misses these.
+ *  1. Action line transitions ("The next day,", "12 years later") — most reliable
+ *  2. Explicit TOD phrases in slugline ("NEXT MORNING", "THE NEXT DAY")
+ *  3. NIGHT → DAY regression — reliable overnight indicator
+ *  4. Calendar/named date title cards in action lines
+ *  5. General TOD time regression — last resort, lower confidence
  *
- *  2. CONTINUOUS / MOMENTS LATER / A LITTLE LATER must NOT trigger a new day
- *     and must NOT update the prev_time_order baseline.
- *
- *  3. MEMORY / FLASHBACK / DREAM scenes should be excluded from the day
- *     counter or tracked as a parallel timeline. Merging them into the main
- *     story day sequence breaks continuity tracking for HMU.
- *
- *  4. CALENDAR DATE title cards ("FRIDAY, DECEMBER 3, 1926", "12th March 2020",
- *     "Valentine's Day", "Christmas") are strong explicit new-day signals.
- *
- *  5. TIME JUMP phrases in action lines ("12 years later", "6 months later",
- *     "Later that night") also trigger new days.
- *
- *  6. TOD field can contain junk room names (EMD uses "INT. STYLES - KITCHEN"
- *     split incorrectly). Parser must handle multi-segment sluglines gracefully.
- *
- *  7. NIGHT -> morning/day regression is reliable. DAY -> NIGHT within same
- *     run is NOT a new day. DAY -> NIGHT -> DAY IS a new day.
+ * ADDITIONAL RULES:
+ *  - CONTINUOUS / MOMENTS LATER / A LITTLE LATER never trigger a new day
+ *    and never update the prev_time_order baseline.
+ *  - MEMORY / FLASHBACK / DREAM scenes tracked on parallel timeline.
+ *  - Multi-segment sluglines handled gracefully (junk room names in TOD).
  */
 
 // ─── Time ordering ───────────────────────────────────────────────────────────
@@ -135,10 +124,27 @@ export function isNonPresent(slugline: string, tod: string): boolean {
       || /\[FLASHBACK\]|\[MEMORY\]|\[DREAM\]/.test(combined);
 }
 
-// ─── Transition detection ────────────────────────────────────────────────────
+// ─── Transition detection (split by priority) ───────────────────────────────
 
 /**
- * Detects explicit new-day phrases IN THE TOD FIELD of the slugline.
+ * PRIORITY 1: Explicit time-jump phrases in ACTION LINES.
+ * "The next day,", "12 years later", "6 months later".
+ * This is the most reliable new-day signal in many scripts.
+ */
+export function actionLinesIndicateTimeJump(lines: string[]): boolean {
+  const text = lines.slice(0, 2).join(' ');
+  const t = text.toUpperCase();
+  return /\bNEXT\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)
+      || /\bTHE\s+NEXT\s+(DAY|MORNING|NIGHT)\b/.test(t)
+      || /\bFOLLOWING\s+(DAY|MORNING|NIGHT)\b/.test(t)
+      || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
+      || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
+      || /\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)
+      || /\b\d{1,2}\s+(YEARS?|MONTHS?|WEEKS?|HOURS?)\s+LATER\b/.test(t);
+}
+
+/**
+ * PRIORITY 2: Explicit new-day phrases IN THE TOD FIELD of the slugline.
  * e.g. "THE NEXT DAY", "NEXT MORNING", "3 DAYS LATER"
  */
 export function todIsExplicitNewDay(tod: string): boolean {
@@ -151,33 +157,24 @@ export function todIsExplicitNewDay(tod: string): boolean {
 }
 
 /**
- * Detects explicit new-day / time-jump phrases in ACTION LINES.
- *
- * This is the primary new-day signal in many scripts (Cowboys, Killa Bee).
- * Writers commonly open a scene action with "The next day," or "12 years later."
+ * PRIORITY 4: Calendar date title cards and named dates in ACTION LINES.
+ * "FRIDAY, DECEMBER 3, 1926", "12TH MARCH 2020", "Valentine's Day", "Christmas"
  */
-export function actionLinesIndicateNewDay(lines: string[]): boolean {
-  // Only check the first 2 action lines - transitions appear immediately
+export function actionLinesIndicateCalendarDate(lines: string[]): boolean {
   const text = lines.slice(0, 2).join(' ');
   const t = text.toUpperCase();
-  return /\bNEXT\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)
-      || /\bTHE\s+NEXT\s+(DAY|MORNING|NIGHT)\b/.test(t)
-      || /\bFOLLOWING\s+(DAY|MORNING|NIGHT)\b/.test(t)
-      || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
-      || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
-      || /\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)
-      || /\b\d{1,2}\s+(YEARS?|MONTHS?|WEEKS?|HOURS?)\s+LATER\b/.test(t)
-      // Calendar date title cards: "FRIDAY, DECEMBER 3, 1926" / "12TH MARCH 2020"
-      || /\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(t)
+  return /\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(t)
       || /\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d/.test(t)
       || /\b\d{1,2}(ST|ND|RD|TH)\s+(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)/.test(t)
-      // Named dates
       || /\bCHRISTMAS\s+(DAY|MORNING|NIGHT|EVE)\b/.test(t)
       || /\bNEW\s+YEAR(S?\s+DAY|S?\s+EVE)?\b/.test(t)
       || /\bVALENTINE.S\s+DAY\b/.test(t);
 }
 
 // ─── Core story day builder ───────────────────────────────────────────────────
+
+/** How the story day was determined. */
+export type StoryDayConfidence = 'explicit' | 'inferred' | 'inherited';
 
 export interface StoryDayResult {
   sceneNumber: string;
@@ -186,22 +183,29 @@ export interface StoryDayResult {
   timeline: 'present' | 'non-present';
   /** Human label, e.g. "Day 1", "Day 3 (Flashback)" */
   label: string;
+  /**
+   * How this story day was determined:
+   *  - 'explicit': action line transition, TOD phrase, or calendar date (high confidence)
+   *  - 'inferred': NIGHT→DAY regression or general time regression (medium-low confidence)
+   *  - 'inherited': no signal — carrying forward previous day (may need manual review)
+   */
+  confidence: StoryDayConfidence;
 }
 
 /**
  * Build a story day map from a list of parsed scenes.
  *
- * Rules (in priority order):
- *  1. Non-present scenes (MEMORY/FLASHBACK) get their own parallel counter
- *     and are labelled separately. They do NOT affect the present-timeline counter.
- *  2. CONTINUOUS / MOMENTS LATER / A LITTLE LATER never trigger a new day
- *     and never update the previous TOD baseline.
- *  3. Explicit new-day phrase in TOD field increments present counter.
- *  4. Explicit new-day phrase in first 2 action lines increments present counter.
- *  5. NIGHT/MIDNIGHT/EVENING -> MORNING/DAWN/DAY/AFTERNOON regression
- *     increments present counter (overnight transition).
- *  6. DAY/MORNING/AFTERNOON -> earlier bucket without CONTINUOUS also
- *     increments (e.g. DAY -> MORNING implies a new morning).
+ * Detection priority order:
+ *  1. Action line transitions ("The next day,") — most reliable
+ *  2. Explicit TOD phrases in slugline ("NEXT MORNING")
+ *  3. NIGHT → DAY regression — reliable overnight indicator
+ *  4. Calendar/named date title cards in action lines
+ *  5. General TOD time regression — last resort
+ *
+ * Additional rules:
+ *  - Non-present scenes (MEMORY/FLASHBACK) get their own parallel counter.
+ *  - CONTINUOUS / MOMENTS LATER / A LITTLE LATER never trigger a new day
+ *    and never update the previous TOD baseline.
  */
 export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
   const results: StoryDayResult[] = [];
@@ -219,19 +223,42 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     const timeOrder = TIME_ORDER[tod];
     const isContinuous = tod === 'CONTINUOUS' || tod === 'LATER';
 
-    if (nonPresent) {
-      // Non-present timeline (memory/flashback)
-      let newDay = false;
-      if (i > 0) {
-        if (todIsExplicitNewDay(rawTOD)) {
-          newDay = true;
-        } else if (actionLinesIndicateNewDay(scene.actionLines)) {
-          newDay = true;
-        } else if (!isContinuous && timeOrder !== -1 && prevNonPresentOrder !== -1) {
-          if (timeOrder < prevNonPresentOrder) newDay = true; // regression
-          if (prevNonPresentOrder >= TIME_ORDER.NIGHT && timeOrder <= TIME_ORDER.DAY) newDay = true;
-        }
+    // Determine: is this a new day? And how confident are we?
+    let newDay = false;
+    let confidence: StoryDayConfidence = 'inherited';
+    const prevOrder = nonPresent ? prevNonPresentOrder : prevPresentOrder;
+
+    if (i > 0) {
+      // Priority 1: Action line time-jump phrases (highest confidence)
+      if (actionLinesIndicateTimeJump(scene.actionLines)) {
+        newDay = true;
+        confidence = 'explicit';
       }
+      // Priority 2: Explicit TOD phrases in slugline
+      else if (todIsExplicitNewDay(rawTOD)) {
+        newDay = true;
+        confidence = 'explicit';
+      }
+      // Priority 3: NIGHT/MIDNIGHT/EVENING → MORNING/DAWN/PRE_DAWN/DAY regression (overnight)
+      else if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
+            && prevOrder >= TIME_ORDER.NIGHT && timeOrder <= TIME_ORDER.DAY) {
+        newDay = true;
+        confidence = 'inferred';
+      }
+      // Priority 4: Calendar/named date title cards in action lines
+      else if (actionLinesIndicateCalendarDate(scene.actionLines)) {
+        newDay = true;
+        confidence = 'explicit';
+      }
+      // Priority 5: General TOD regression (time went backwards without CONTINUOUS)
+      else if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
+            && timeOrder < prevOrder) {
+        newDay = true;
+        confidence = 'inferred';
+      }
+    }
+
+    if (nonPresent) {
       if (newDay) nonPresentDay++;
       if (!isContinuous && timeOrder !== -1) prevNonPresentOrder = timeOrder;
 
@@ -240,20 +267,9 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         storyDay: nonPresentDay,
         timeline: 'non-present',
         label: `Day ${nonPresentDay} (Flashback)`,
+        confidence,
       });
     } else {
-      // Present timeline
-      let newDay = false;
-      if (i > 0) {
-        if (todIsExplicitNewDay(rawTOD)) {
-          newDay = true;
-        } else if (actionLinesIndicateNewDay(scene.actionLines)) {
-          newDay = true;
-        } else if (!isContinuous && timeOrder !== -1 && prevPresentOrder !== -1) {
-          if (timeOrder < prevPresentOrder) newDay = true; // time went backwards
-          if (prevPresentOrder >= TIME_ORDER.NIGHT && timeOrder <= TIME_ORDER.DAY) newDay = true;
-        }
-      }
       if (newDay) presentDay++;
       if (!isContinuous && timeOrder !== -1) prevPresentOrder = timeOrder;
 
@@ -262,6 +278,7 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         storyDay: presentDay,
         timeline: 'present',
         label: `Day ${presentDay}`,
+        confidence,
       });
     }
   }

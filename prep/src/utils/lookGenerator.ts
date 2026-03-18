@@ -21,6 +21,7 @@ import {
   isNonPresent,
   type ParsedScene,
   type StoryDayResult,
+  type StoryDayConfidence,
 } from './storyDayDetection';
 
 /* ━━━ Scene conversion ━━━ */
@@ -107,10 +108,16 @@ export function generateLooksFromScript(
     resultBySceneId.set(scenes[i].id, storyDayResults[i]);
   }
 
-  // Step 2: Assign storyDay label to each scene
+  // Step 2: Assign storyDay label to each scene.
+  // Append " (?)" to the label when the day was inferred or inherited,
+  // so the user can see at a glance which story days may need manual review.
   const updatedScenes = scenes.map((scene, i) => {
     const result = storyDayResults[i];
-    return { ...scene, storyDay: result.label };
+    const needsReview = result.confidence === 'inferred' || result.confidence === 'inherited';
+    return {
+      ...scene,
+      storyDay: needsReview ? `${result.label} (?)` : result.label,
+    };
   });
 
   // Step 3: For each character, group scenes by story day and create looks
