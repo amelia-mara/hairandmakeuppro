@@ -326,11 +326,6 @@ export function ScriptBreakdown({ projectId }: Props) {
           </div>
         </div>
 
-        {/* Left divider (visual only) */}
-        <div className="bd-divider bd-divider--static">
-          <div className="bd-divider-grip" />
-        </div>
-
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
           {/* File divider tabs */}

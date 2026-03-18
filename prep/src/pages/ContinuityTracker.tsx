@@ -299,11 +299,6 @@ export function ContinuityTracker({ projectId }: Props) {
           </div>
         </div>
 
-        {/* Left divider */}
-        <div className="bd-divider bd-divider--static">
-          <div className="bd-divider-grip" />
-        </div>
-
         {/* ━━━ CENTER — Continuity Tracking ━━━ */}
         <div className="bd-center">
           {/* Character tabs */}
