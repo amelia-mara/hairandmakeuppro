@@ -212,7 +212,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   const filteredScenes = nonPreambleScenes.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return s.location.toLowerCase().includes(q) || String(s.number).includes(q);
+    if (s.location.toLowerCase().includes(q) || String(s.number).includes(q)) return true;
+    if (s.scriptContent.toLowerCase().includes(q)) return true;
+    const charNames = s.characterIds.map((cid) => ALL_CHARACTERS.find((c) => c.id === cid)?.name ?? '').join(' ').toLowerCase();
+    return charNames.includes(q);
   });
 
   const selectScene = useCallback((id: string) => {
@@ -220,6 +223,13 @@ export function ScriptBreakdown({ projectId }: Props) {
     setScrollTrigger(n => n + 1);
     setActiveTab('script');
   }, []);
+
+  /* Auto-select first matching scene when search query changes */
+  useEffect(() => {
+    if (searchQuery && filteredScenes.length > 0 && !filteredScenes.some((s) => s.id === selectedSceneId)) {
+      selectScene(filteredScenes[0].id);
+    }
+  }, [searchQuery, filteredScenes, selectedSceneId, selectScene]);
 
   /* Called by IntersectionObserver as user scrolls through script */
   const onSceneVisible = useCallback((id: string) => {
@@ -261,7 +271,7 @@ export function ScriptBreakdown({ projectId }: Props) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
             </svg>
-            <input className="sl-search-input" placeholder="Search scenes..."
+            <input className="sl-search-input" placeholder="Search scenes, script, characters..."
               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
           <div className="sl-list" ref={sceneListRef}>
