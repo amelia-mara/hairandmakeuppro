@@ -9,8 +9,8 @@ export function WelcomeScreen() {
     }}>
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Wordmark - stacked with colored stripes */}
-        <div className="flex flex-col items-center mb-2">
+        {/* Wordmark - stacked with colored stripes, offset text */}
+        <div className="flex flex-col mb-2" style={{ width: '100%', maxWidth: '340px' }}>
           <h1 style={{
             fontFamily: "'Playfair Display', serif",
             fontWeight: 800,
@@ -18,15 +18,17 @@ export function WelcomeScreen() {
             color: '#4A3020',
             lineHeight: 1.1,
             marginBottom: '0',
+            textAlign: 'left',
+            paddingLeft: '20px',
           }}>
             Checks
           </h1>
 
-          {/* Colored stripes */}
-          <div style={{ width: '100vw', margin: '6px 0' }}>
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #7FC8BC, transparent)', marginBottom: '3px' }} />
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8A88C, transparent)', marginBottom: '3px' }} />
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #F0C4B0, transparent)' }} />
+          {/* Colored stripes - blue, amber, orange */}
+          <div style={{ width: '100vw', margin: '6px 0', marginLeft: '-20px' }}>
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #5B9BD5, transparent)', marginBottom: '3px' }} />
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #D4A843, transparent)', marginBottom: '3px' }} />
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8621A, transparent)' }} />
           </div>
 
           <h1 style={{
@@ -37,6 +39,10 @@ export function WelcomeScreen() {
             color: '#E8621A',
             lineHeight: 1.1,
             marginTop: '0',
+            textAlign: 'right',
+            paddingRight: '20px',
+            transform: 'rotate(-3deg)',
+            transformOrigin: 'center',
           }}>
             Happy
           </h1>
