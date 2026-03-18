@@ -39,7 +39,8 @@ export function WelcomeScreen() {
               color: '#E8621A',
               lineHeight: 1,
               margin: '-2px 0 0 0',
-              textAlign: 'right',
+              textAlign: 'left',
+              paddingLeft: '95px',
               transform: 'rotate(-2deg)',
             }}>
               Happy
