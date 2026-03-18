@@ -1804,7 +1804,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>
           <div className="fp-row-3">
-            <FSelect label="Day" value={breakdown.timeline.day}
+            <FComboInput label="Day" value={breakdown.timeline.day}
               options={storyDayOptions}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, day: v })} />
             <FSelect label="Time" value={breakdown.timeline.time}
@@ -2222,6 +2222,28 @@ function FSelect({ label, value, options, onChange }: {
       <select className="fi-select" value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => <option key={o} value={o}>{o || '—'}</option>)}
       </select>
+    </div>
+  );
+}
+
+/** Editable text input with a datalist for suggestions — type freely or pick from the list. */
+function FComboInput({ label, value, options, onChange }: {
+  label: string; value: string; options: string[]; onChange: (v: string) => void;
+}) {
+  const listId = `dl-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  return (
+    <div className="fi-wrap">
+      <label className="fi-label">{label}</label>
+      <input
+        className="fi-select"
+        list={listId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Day 1"
+      />
+      <datalist id={listId}>
+        {options.filter(Boolean).map((o) => <option key={o} value={o} />)}
+      </datalist>
     </div>
   );
 }
