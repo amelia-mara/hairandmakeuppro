@@ -143,7 +143,7 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
             className="hub-hero-cta"
             onClick={isAuthenticated ? onCreateProject : onNavigateToAuth}
           >
-            Get Started
+            {isAuthenticated ? 'Create a Project' : 'Get Started'}
           </button>
         </div>
       </div>
