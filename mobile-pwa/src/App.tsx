@@ -20,6 +20,7 @@ import { Budget } from '@/components/budget';
 import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/components/more';
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
+import { BugReportButton } from '@/components/bug-report/BugReportButton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   WelcomeScreen,
@@ -673,6 +674,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppContent />
+      {/* Beta bug report button — visible on all screens */}
+      <BugReportButton />
     </ErrorBoundary>
   );
 }
