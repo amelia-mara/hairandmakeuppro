@@ -54,8 +54,6 @@
   padding: 0;
 }
 .ct-content {
-  max-width: 680px;
-  margin: 0 auto;
   padding: 24px 32px 60px;
   display: flex; flex-direction: column; gap: 24px;
 }
@@ -98,7 +96,7 @@
 
 /* HMW grid */
 .ct-hmw-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 .ct-hmw-item {
