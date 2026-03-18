@@ -27,6 +27,9 @@ const applyTheme = (resolved: 'light' | 'dark') => {
     root.classList.remove('light', 'dark');
     if (resolved === 'light') {
       root.classList.add('light');
+      root.setAttribute('data-theme', 'light');
+    } else {
+      root.removeAttribute('data-theme');
     }
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {

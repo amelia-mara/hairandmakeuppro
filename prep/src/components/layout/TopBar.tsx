@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface TopBarProps {
   title?: string;
@@ -6,28 +7,6 @@ interface TopBarProps {
   onNavigate?: (page: string) => void;
   projectType?: string;
   onBackToHub?: () => void;
-}
-
-function useTheme() {
-  const [theme, setThemeState] = useState(() => {
-    try { return localStorage.getItem('prep-theme') || 'gold'; } catch { return 'gold'; }
-  });
-  const setTheme = useCallback((t: string) => {
-    setThemeState(t);
-    if (t === 'gold') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', t);
-    }
-    try { localStorage.setItem('prep-theme', t); } catch { /* ignore */ }
-  }, []);
-  /* Apply on mount */
-  useEffect(() => {
-    if (theme !== 'gold') {
-      document.documentElement.setAttribute('data-theme', theme);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  return { theme, setTheme };
 }
 
 const NAV_ITEMS = [
@@ -49,7 +28,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
   const [accountOpen, setAccountOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useThemeStore();
 
   // Close nav on outside click
   useEffect(() => {
@@ -210,7 +189,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                 <div className="account-card">
                   <div className="account-theme-header">
                     <span className="account-row-title">Theme</span>
-                    <span className="account-theme-current">{theme === 'gold' ? 'Gold' : theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
+                    <span className="account-theme-current">{theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
                   </div>
                   <div className="account-theme-grid">
                     {THEMES.map((t) => (
@@ -243,11 +222,8 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
 /* ━━━ Theme options ━━━ */
 const THEMES = [
   { id: 'light', label: 'Light', icon: ThemeLightIcon },
-  { id: 'gold', label: 'Gold', icon: ThemeGoldIcon },
-  { id: 'silver', label: 'Silver', icon: ThemeSilverIcon },
-  { id: 'teal', label: 'Teal', icon: ThemeTealIcon },
-  { id: 'rose', label: 'Rose', icon: ThemeRoseIcon },
-  { id: 'ice', label: 'Ice', icon: ThemeIceIcon },
+  { id: 'dark', label: 'Dark', icon: ThemeDarkIcon },
+  { id: 'system', label: 'System', icon: ThemeSystemIcon },
 ];
 
 /* ━━━ Account panel icons ━━━ */
@@ -272,24 +248,12 @@ function ThemeLightIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
 }
 
-function ThemeGoldIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
-}
-
-function ThemeSilverIcon() {
+function ThemeDarkIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
 }
 
-function ThemeTealIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>;
-}
-
-function ThemeRoseIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>;
-}
-
-function ThemeIceIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/></svg>;
+function ThemeSystemIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>;
 }
 
 /* ━━━ SVG Icons ━━━ */
