@@ -21,7 +21,6 @@ import {
   isNonPresent,
   type ParsedScene,
   type StoryDayResult,
-  type StoryDayConfidence,
 } from './storyDayDetection';
 
 /* ━━━ Scene conversion ━━━ */
