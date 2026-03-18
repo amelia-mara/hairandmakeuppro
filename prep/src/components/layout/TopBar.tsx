@@ -212,7 +212,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
 }
 
 /* ━━━ Theme options ━━━ */
-const THEMES: { id: Theme; label: string; icon: () => JSX.Element }[] = [
+const THEMES: { id: Theme; label: string; icon: () => React.JSX.Element }[] = [
   { id: 'light', label: 'Light', icon: ThemeLightIcon },
   { id: 'dark', label: 'Dark', icon: ThemeDarkIcon },
   { id: 'system', label: 'System', icon: ThemeSystemIcon },
