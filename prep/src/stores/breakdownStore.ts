@@ -97,7 +97,7 @@ export const STAGE_SUGGESTIONS = [
 
 export interface SceneBreakdown {
   sceneId: string;
-  timeline: { day: string; time: string; type: string; note: string };
+  timeline: { day: string; dayConfirmed?: boolean; time: string; type: string; note: string };
   characters: CharacterBreakdown[];
   continuityEvents: ContinuityEvent[];
 }

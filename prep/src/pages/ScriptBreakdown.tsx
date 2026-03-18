@@ -1780,18 +1780,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
   const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
 
-  /* Auto-populate DAY options from story days in scene data */
-  const storyDayOptions = useMemo(() => {
-    const days = new Set<string>();
-    allScenes.forEach((s) => { if (s.storyDay) days.add(s.storyDay); });
-    const sorted = Array.from(days).sort((a, b) => {
-      const na = parseInt(a.replace(/\D/g, '')) || 0;
-      const nb = parseInt(b.replace(/\D/g, '')) || 0;
-      return na - nb;
-    });
-    return ['', ...sorted];
-  }, [allScenes]);
-
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -1830,9 +1818,15 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>
           <div className="fp-row-3">
-            <FComboInput label="Day" value={breakdown.timeline.day}
-              options={storyDayOptions}
-              onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, day: v })} />
+            <div className="fi-wrap">
+              <label className="fi-label">Day</label>
+              <input
+                className={`fi-select fi-day-input ${breakdown.timeline.dayConfirmed ? 'fi-day--confirmed' : 'fi-day--suggested'}`}
+                value={breakdown.timeline.day}
+                onChange={(e) => onUpdateTimeline({ ...breakdown.timeline, day: e.target.value, dayConfirmed: true })}
+                placeholder={scene.storyDay || 'Day 1'}
+              />
+            </div>
             <FSelect label="Time" value={breakdown.timeline.time}
               options={['', 'Day', 'Night', 'Dawn', 'Dusk']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, time: v })} />
@@ -2252,27 +2246,6 @@ function FSelect({ label, value, options, onChange }: {
   );
 }
 
-/** Editable text input with a datalist for suggestions — type freely or pick from the list. */
-function FComboInput({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void;
-}) {
-  const listId = `dl-${label.toLowerCase().replace(/\s+/g, '-')}`;
-  return (
-    <div className="fi-wrap">
-      <label className="fi-label">{label}</label>
-      <input
-        className="fi-select"
-        list={listId}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Day 1"
-      />
-      <datalist id={listId}>
-        {options.filter(Boolean).map((o) => <option key={o} value={o} />)}
-      </datalist>
-    </div>
-  );
-}
 
 function ordinal(n: number) {
   const s = ['th', 'st', 'nd', 'rd'];
