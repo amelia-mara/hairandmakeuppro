@@ -23,7 +23,6 @@ import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   WelcomeScreen,
-  BetaLandingScreen,
   BetaCodeScreen,
   SignInScreen,
   SignUpScreen,
