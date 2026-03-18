@@ -11,6 +11,7 @@ import { Budget } from '@/pages/Budget';
 import { Timesheet } from '@/pages/Timesheet';
 import { CharacterDesign } from '@/pages/CharacterDesign';
 import { AuthPage } from '@/pages/AuthPage';
+import { BetaCodePage } from '@/pages/BetaCodePage';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -19,11 +20,17 @@ function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState('dashboard');
   const [showAuth, setShowAuth] = useState(false);
+  const [showBetaCode, setShowBetaCode] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const getProject = useProjectStore((s) => s.getProject);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const handleNavigateToAuth = (mode: 'login' | 'signup' = 'signup') => {
+    if (mode === 'signup') {
+      // Require beta code before signup
+      setShowBetaCode(true);
+      return;
+    }
     setAuthMode(mode);
     setShowAuth(true);
   };
@@ -51,16 +58,44 @@ function App() {
 
   // When auth completes (store updates to authenticated), return to hub
   useEffect(() => {
-    if (showAuth && isAuthenticated) {
+    if ((showAuth || showBetaCode) && isAuthenticated) {
       setShowAuth(false);
+      setShowBetaCode(false);
     }
-  }, [showAuth, isAuthenticated]);
+  }, [showAuth, showBetaCode, isAuthenticated]);
+
+  // Beta code entry page (before signup)
+  if (showBetaCode && !isAuthenticated) {
+    return (
+      <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <BetaCodePage
+          onValidated={() => {
+            setShowBetaCode(false);
+            setAuthMode('signup');
+            setShowAuth(true);
+          }}
+          onBack={() => setShowBetaCode(false)}
+          onSignIn={() => {
+            setShowBetaCode(false);
+            setAuthMode('login');
+            setShowAuth(true);
+          }}
+        />
+      </div>
+    );
+  }
 
   // Auth page
   if (showAuth && !isAuthenticated) {
     return (
       <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <AuthPage initialMode={authMode} />
+        <AuthPage
+          initialMode={authMode}
+          onRequestSignup={() => {
+            setShowAuth(false);
+            setShowBetaCode(true);
+          }}
+        />
       </div>
     );
   }

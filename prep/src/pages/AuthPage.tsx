@@ -3,9 +3,10 @@ import { useAuthStore } from '@/stores/authStore';
 
 interface AuthPageProps {
   initialMode?: 'login' | 'signup';
+  onRequestSignup?: () => void;
 }
 
-export function AuthPage({ initialMode = 'signup' }: AuthPageProps) {
+export function AuthPage({ initialMode = 'signup', onRequestSignup }: AuthPageProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -123,7 +124,14 @@ export function AuthPage({ initialMode = 'signup' }: AuthPageProps) {
             ) : (
               <>
                 Don&apos;t have an account?{' '}
-                <button className="auth-switch-btn" onClick={() => { setMode('signup'); setError(''); }}>
+                <button className="auth-switch-btn" onClick={() => {
+                  if (onRequestSignup) {
+                    onRequestSignup();
+                  } else {
+                    setMode('signup');
+                    setError('');
+                  }
+                }}>
                   Create one
                 </button>
               </>
