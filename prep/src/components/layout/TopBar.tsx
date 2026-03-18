@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useThemeStore } from '@/stores/themeStore';
+import { useThemeStore, type Theme } from '@/stores/themeStore';
 
 interface TopBarProps {
   title?: string;
@@ -220,7 +220,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
 }
 
 /* ━━━ Theme options ━━━ */
-const THEMES = [
+const THEMES: { id: Theme; label: string; icon: () => JSX.Element }[] = [
   { id: 'light', label: 'Light', icon: ThemeLightIcon },
   { id: 'dark', label: 'Dark', icon: ThemeDarkIcon },
   { id: 'system', label: 'System', icon: ThemeSystemIcon },
