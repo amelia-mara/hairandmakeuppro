@@ -212,7 +212,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   const filteredScenes = nonPreambleScenes.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return s.location.toLowerCase().includes(q) || String(s.number).includes(q);
+    if (s.location.toLowerCase().includes(q) || String(s.number).includes(q)) return true;
+    if (s.scriptContent.toLowerCase().includes(q)) return true;
+    const charNames = s.characterIds.map((cid) => ALL_CHARACTERS.find((c) => c.id === cid)?.name ?? '').join(' ').toLowerCase();
+    return charNames.includes(q);
   });
 
   const selectScene = useCallback((id: string) => {
@@ -220,6 +223,13 @@ export function ScriptBreakdown({ projectId }: Props) {
     setScrollTrigger(n => n + 1);
     setActiveTab('script');
   }, []);
+
+  /* Auto-select first matching scene when search query changes */
+  useEffect(() => {
+    if (searchQuery && filteredScenes.length > 0 && !filteredScenes.some((s) => s.id === selectedSceneId)) {
+      selectScene(filteredScenes[0].id);
+    }
+  }, [searchQuery, filteredScenes, selectedSceneId, selectScene]);
 
   /* Called by IntersectionObserver as user scrolls through script */
   const onSceneVisible = useCallback((id: string) => {
@@ -261,7 +271,7 @@ export function ScriptBreakdown({ projectId }: Props) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
             </svg>
-            <input className="sl-search-input" placeholder="Search scenes..."
+            <input className="sl-search-input" placeholder="Search scenes, script, characters..."
               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
           <div className="sl-list" ref={sceneListRef}>
@@ -886,6 +896,22 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     return <>{parts}</>;
   }, [charNamePattern, onCharClick]);
 
+  /* Render preamble (title page) — centred text with bold title */
+  const renderPreambleContent = useCallback((scene: Scene) => {
+    const lines = scene.scriptContent.split('\n');
+    let titleFound = false;
+    return lines.map((line, i) => {
+      const trimmed = line.trim();
+      const isTitle = !titleFound && trimmed !== '';
+      if (isTitle) titleFound = true;
+      return (
+        <div key={`pre-${i}`} className={`sv-line${isTitle ? ' sv-preamble-title' : ''}`}>
+          {trimmed || '\u00A0'}
+        </div>
+      );
+    });
+  }, []);
+
   /* Render a scene's content with inline highlights */
   const renderSceneContent = useCallback((scene: Scene) => {
     const sceneTags = tagStore.getTagsForScene(scene.id);
@@ -1100,7 +1126,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           {/* Merge preamble content into the first scene */}
           {idx === 0 && preambleScene && (
             <div className="sv-content sv-preamble-content">
-              {renderSceneContent(preambleScene)}
+              {renderPreambleContent(preambleScene)}
             </div>
           )}
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
@@ -1754,18 +1780,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
   const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
 
-  /* Auto-populate DAY options from story days in scene data */
-  const storyDayOptions = useMemo(() => {
-    const days = new Set<string>();
-    allScenes.forEach((s) => { if (s.storyDay) days.add(s.storyDay); });
-    const sorted = Array.from(days).sort((a, b) => {
-      const na = parseInt(a.replace(/\D/g, '')) || 0;
-      const nb = parseInt(b.replace(/\D/g, '')) || 0;
-      return na - nb;
-    });
-    return ['', ...sorted];
-  }, [allScenes]);
-
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -1804,9 +1818,15 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>
           <div className="fp-row-3">
-            <FSelect label="Day" value={breakdown.timeline.day}
-              options={storyDayOptions}
-              onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, day: v })} />
+            <div className="fi-wrap">
+              <label className="fi-label">Day</label>
+              <input
+                className={`fi-select fi-day-input ${breakdown.timeline.dayConfirmed ? 'fi-day--confirmed' : 'fi-day--suggested'}`}
+                value={breakdown.timeline.day}
+                onChange={(e) => onUpdateTimeline({ ...breakdown.timeline, day: e.target.value, dayConfirmed: true })}
+                placeholder={scene.storyDay || 'Day 1'}
+              />
+            </div>
             <FSelect label="Time" value={breakdown.timeline.time}
               options={['', 'Day', 'Night', 'Dawn', 'Dusk']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, time: v })} />
@@ -2225,6 +2245,7 @@ function FSelect({ label, value, options, onChange }: {
     </div>
   );
 }
+
 
 function ordinal(n: number) {
   const s = ['th', 'st', 'nd', 'rd'];

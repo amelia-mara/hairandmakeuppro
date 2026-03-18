@@ -4,39 +4,133 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hair &amp; Makeup Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #1A1208;
+      --bg-surface: #251A0A;
+      --bg-card: #2E2010;
+      --bg-card-hover: #3A2A16;
+      --text-heading: #F5EFE0;
+      --text-primary: #F5EFE0;
+      --text-secondary: #C4A882;
+      --text-muted: #9A8068;
+      --border-card: rgba(232, 98, 26, 0.12);
+      --border-medium: rgba(232, 98, 26, 0.25);
+      --accent: #E8621A;
+      --accent-warm: #F0882A;
+      --accent-gold: #D4943A;
+      --teal: #4ABFB0;
+      --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-display: 'Playfair Display', Georgia, serif;
+    }
 
     body {
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1612;
-      color: #e8e0d4;
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
     }
 
+    /* ━━━ Rainbow swirl decoration ━━━ */
+    .rainbow-container {
+      position: fixed;
+      top: -80px;
+      right: -140px;
+      width: 600px;
+      height: 600px;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+    .rainbow-ring {
+      position: absolute;
+      border-radius: 50%;
+      border-style: solid;
+      border-color: transparent;
+    }
+    .rainbow-ring--1 {
+      width: 600px; height: 600px;
+      top: 0; left: 0;
+      border-width: 28px;
+      border-color: rgba(232, 98, 26, 0.6);
+    }
+    .rainbow-ring--2 {
+      width: 530px; height: 530px;
+      top: 35px; left: 35px;
+      border-width: 24px;
+      border-color: rgba(240, 136, 42, 0.55);
+    }
+    .rainbow-ring--3 {
+      width: 470px; height: 470px;
+      top: 65px; left: 65px;
+      border-width: 24px;
+      border-color: rgba(74, 191, 176, 0.45);
+    }
+
+    /* ━━━ Layout ━━━ */
     .landing {
       text-align: center;
       padding: 40px 24px;
-      max-width: 520px;
+      max-width: 600px;
       width: 100%;
+      position: relative;
+      z-index: 2;
+      animation: fadeInUp 0.6s ease-out;
     }
 
+    /* ━━━ Badge ━━━ */
+    .landing-badge {
+      display: inline-block;
+      font-family: var(--font-sans);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+      background: rgba(74, 191, 176, 0.12);
+      border: 1px solid rgba(74, 191, 176, 0.3);
+      border-radius: 999px;
+      padding: 8px 24px;
+      margin-bottom: 32px;
+    }
+
+    /* ━━━ Heading ━━━ */
     .landing h1 {
-      font-size: 1.8rem;
+      font-family: var(--font-display);
+      font-size: 2.75rem;
       font-weight: 700;
-      margin-bottom: 8px;
-      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+      color: var(--text-heading);
+    }
+    .landing h1 em {
+      font-style: italic;
+      color: var(--accent);
     }
 
-    .landing p {
-      color: #a89b8c;
-      font-size: 0.95rem;
-      margin-bottom: 48px;
+    .landing-subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 52px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
+    /* ━━━ App cards ━━━ */
     .app-buttons {
       display: flex;
       flex-direction: column;
@@ -46,21 +140,28 @@
     .app-btn {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 20px 24px;
-      border-radius: 12px;
+      gap: 18px;
+      padding: 22px 28px;
+      border-radius: 14px;
       text-decoration: none;
-      color: #e8e0d4;
-      border: 1px solid #3d352d;
-      background: #2a2520;
-      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+      color: var(--text-primary);
+      border: 1.5px solid var(--border-card);
+      background:
+        linear-gradient(135deg, rgba(232, 98, 26, 0.03) 0%, transparent 60%),
+        var(--bg-card);
+      transition: all 0.25s ease;
       cursor: pointer;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
 
     .app-btn:hover {
-      background: #342e28;
-      border-color: #5a4f44;
-      transform: translateY(-1px);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(232, 98, 26, 0.15);
     }
 
     .app-btn:active {
@@ -68,14 +169,15 @@
     }
 
     .app-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 10px;
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.4rem;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .app-icon--checks {
@@ -83,35 +185,92 @@
     }
 
     .app-icon--prep {
-      background: linear-gradient(135deg, #D4943A, #c07d2a);
+      background: linear-gradient(135deg, #E8621A, #D4943A);
     }
 
     .app-info {
       text-align: left;
+      flex: 1;
     }
 
     .app-info h2 {
+      font-family: var(--font-sans);
       font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 2px;
+      font-weight: 700;
+      margin-bottom: 3px;
+      color: var(--text-heading);
     }
 
     .app-info span {
-      font-size: 0.8rem;
-      color: #a89b8c;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
     }
 
     .app-arrow {
       margin-left: auto;
-      color: #5a4f44;
-      font-size: 1.2rem;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .app-btn:hover .app-arrow {
+      color: var(--accent);
+      transform: translateX(2px);
+    }
+
+    /* ━━━ Divider ━━━ */
+    .landing-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 40px 0 0;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .landing-divider::before,
+    .landing-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(232, 98, 26, 0.2), transparent);
+    }
+
+    /* ━━━ Animations ━━━ */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ━━━ Responsive ━━━ */
+    @media (max-width: 480px) {
+      .landing h1 { font-size: 2rem; }
+      .landing { padding: 32px 20px; }
+      .app-btn { padding: 18px 20px; gap: 14px; }
+      .rainbow-container { width: 400px; height: 400px; top: -60px; right: -100px; }
+      .rainbow-ring--1 { width: 400px; height: 400px; border-width: 20px; }
+      .rainbow-ring--2 { width: 350px; height: 350px; top: 25px; left: 25px; border-width: 18px; }
+      .rainbow-ring--3 { width: 310px; height: 310px; top: 45px; left: 45px; border-width: 18px; }
     }
   </style>
 </head>
 <body>
+  <!-- Rainbow swirl decoration -->
+  <div class="rainbow-container">
+    <div class="rainbow-ring rainbow-ring--1"></div>
+    <div class="rainbow-ring rainbow-ring--2"></div>
+    <div class="rainbow-ring rainbow-ring--3"></div>
+  </div>
+
   <div class="landing">
-    <h1>Hair &amp; Makeup Pro</h1>
-    <p>Production tools for hair &amp; makeup departments</p>
+    <div class="landing-badge">FOR FILM AND TV DEPARTMENTS</div>
+
+    <h1>Checks <em>Happy.</em></h1>
+    <p class="landing-subtitle">
+      The complete package. For all your pre-production and on-set needs.
+      Beautifully organised.
+    </p>
 
     <div class="app-buttons">
       <a href="/mobile/" class="app-btn">
@@ -136,6 +295,8 @@
         <span class="app-arrow">&rsaquo;</span>
       </a>
     </div>
+
+    <div class="landing-divider">hair &amp; makeup pro</div>
   </div>
 </body>
 </html>

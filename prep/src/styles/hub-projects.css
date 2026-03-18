@@ -43,6 +43,7 @@
   font-size: 1.5rem;
   color: var(--text-heading);
   margin: 0;
+  text-transform: uppercase;
 }
 .hub-projects-grid {
   display: grid;

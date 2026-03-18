@@ -25,14 +25,13 @@ import './styles/timesheet-layout.css';
 import './styles/timesheet-crew.css';
 import './styles/timesheet-weekly.css';
 import './styles/timesheet-redesign.css';
+import './styles/auth.css';
 import App from './App';
 
-// Initialize theme before render
+// Initialize theme before render — triggers applyTheme which sets both class and data-theme
 import { useThemeStore } from '@/stores/themeStore';
-const { theme } = useThemeStore.getState();
-if (theme === 'light') {
-  document.documentElement.classList.add('light');
-}
+const { theme, setTheme } = useThemeStore.getState();
+setTheme(theme);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

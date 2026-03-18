@@ -309,6 +309,8 @@
 
 .sv-content { position: relative; }
 .sv-preamble-content { margin-bottom: 1.5em; padding-bottom: 1.5em; border-bottom: 1px solid var(--border-light, #e0d6cc); opacity: 0.8; }
+.sv-preamble-content .sv-line { text-align: center; }
+.sv-preamble-content .sv-line.sv-preamble-title { font-weight: 700; font-size: 1.15em; }
 
 /* ━━━ Tag popup ━━━ */
 .sv-tag-popup {
