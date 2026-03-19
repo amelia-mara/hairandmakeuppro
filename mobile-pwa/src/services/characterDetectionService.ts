@@ -69,7 +69,7 @@ export async function runBackgroundCharacterDetection(
             id: c.id,
             name: c.name,
             initials: c.initials,
-            avatar_colour: c.avatarColour || '#C9A961',
+            avatar_colour: c.avatarColour || '#D4943A',
           })),
           sceneCharacters: updatedProject.scenes.flatMap(s =>
             s.characters.map(charId => ({ scene_id: s.id, character_id: charId }))

@@ -257,7 +257,7 @@ export function Budget() {
     /* Header */
     .header { margin-bottom: 28px; }
     .header h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
-    .header .project { font-size: 15px; color: #C9A962; font-weight: 600; margin-bottom: 4px; }
+    .header .project { font-size: 15px; color: #E8621A; font-weight: 600; margin-bottom: 4px; }
     .header .date { font-size: 12px; color: #888; }
 
     /* Summary Cards */
@@ -275,15 +275,15 @@ export function Budget() {
     }
     .summary-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
     .summary-card .value { font-size: 20px; font-weight: 700; color: #1a1a1a; }
-    .summary-card.gold { border-color: #C9A962; background: #faf6ed; }
-    .summary-card.gold .value { color: #C9A962; }
-    .summary-card.over .value { color: #dc3545; }
+    .summary-card.gold { border-color: #E8621A; background: #faf6ed; }
+    .summary-card.gold .value { color: #E8621A; }
+    .summary-card.over .value { color: #E8621A; }
 
     /* Progress Bar */
     .progress-wrap { margin-bottom: 28px; }
     .progress-bar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 4px; background: #C9A962; }
-    .progress-fill.over { background: #dc3545; }
+    .progress-fill { height: 100%; border-radius: 4px; background: #E8621A; }
+    .progress-fill.over { background: #E8621A; }
     .progress-label { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: #888; }
 
     /* Sections */
@@ -295,7 +295,7 @@ export function Budget() {
       letter-spacing: 0.8px;
       color: #888;
       padding-bottom: 6px;
-      border-bottom: 2px solid #C9A962;
+      border-bottom: 2px solid #E8621A;
       margin-bottom: 12px;
     }
 
@@ -303,9 +303,9 @@ export function Budget() {
     .cat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
     .cat-row .name { color: #333; }
     .cat-row .bar-wrap { flex: 1; margin: 0 16px; display: flex; align-items: center; }
-    .cat-bar { height: 6px; background: #C9A962; border-radius: 3px; opacity: 0.6; }
+    .cat-bar { height: 6px; background: #E8621A; border-radius: 3px; opacity: 0.6; }
     .cat-row .amt { font-weight: 600; color: #1a1a1a; min-width: 80px; text-align: right; }
-    .cat-total { display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #C9A962; font-weight: 700; margin-top: 4px; }
+    .cat-total { display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #E8621A; font-weight: 700; margin-top: 4px; }
 
     /* Receipts Table */
     table.receipts { width: 100%; border-collapse: collapse; }
@@ -330,7 +330,7 @@ export function Budget() {
     table.receipts .amt { text-align: right; font-weight: 600; white-space: nowrap; }
     table.receipts .cat { font-size: 11px; color: #666; }
     table.receipts .desc { font-size: 11px; color: #999; }
-    table.receipts tfoot td { border-top: 2px solid #C9A962; font-weight: 700; padding-top: 12px; }
+    table.receipts tfoot td { border-top: 2px solid #E8621A; font-weight: 700; padding-top: 12px; }
 
     /* Receipt Filing */
     .filing-entry {
@@ -459,17 +459,17 @@ export function Budget() {
         ${floatReceived > 0 ? `
         <tr style="border-bottom:1px solid #f0f0f0">
           <td style="padding:8px 0; color:#666">Float Remaining</td>
-          <td style="padding:8px 0; text-align:right; font-weight:700; color:${floatReceived - totalSpent >= 0 ? '#198754' : '#dc3545'}">${sym}${(floatReceived - totalSpent).toFixed(2)}</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:${floatReceived - totalSpent >= 0 ? '#4ABFB0' : '#E8621A'}">${sym}${(floatReceived - totalSpent).toFixed(2)}</td>
         </tr>` : ''}
         ${floatReceived > 0 && floatReceived < budgetTotal ? `
         <tr style="border-bottom:1px solid #f0f0f0">
           <td style="padding:8px 0; color:#666">Outstanding from Production</td>
-          <td style="padding:8px 0; text-align:right; font-weight:700; color:#C9A962">${sym}${(budgetTotal - floatReceived).toFixed(2)}</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#E8621A">${sym}${(budgetTotal - floatReceived).toFixed(2)}</td>
         </tr>` : ''}
         ${floatReceived > 0 && totalSpent > floatReceived ? `
         <tr>
           <td style="padding:8px 0; color:#666">Owed by Production (overspend on float)</td>
-          <td style="padding:8px 0; text-align:right; font-weight:700; color:#dc3545">${sym}${(totalSpent - floatReceived).toFixed(2)}</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#E8621A">${sym}${(totalSpent - floatReceived).toFixed(2)}</td>
         </tr>` : ''}
       </tbody>
     </table>

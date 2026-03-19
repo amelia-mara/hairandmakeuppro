@@ -48,7 +48,7 @@ export default {
         'text-placeholder': 'var(--color-text-placeholder)',
         success: '#4ABFB0',         /* Teal — success states */
         warning: '#F5A623',         /* Amber — warning states */
-        error: '#f44336',
+        error: '#C4522A',           /* Gold Dark — error states */
         // Dark mode specific colors - warm brown solids
         'dark-bg': '#1A1208',
         'dark-bg-secondary': '#201808',
@@ -56,12 +56,12 @@ export default {
         'dark-card': '#2E2010',
         'dark-card-hover': '#3A2A16',
         'dark-input-bg': '#251A0A',
-        'dark-border': 'rgba(255, 255, 255, 0.06)',
+        'dark-border': 'rgba(212, 148, 58, 0.08)',
         'dark-border-focus': 'rgba(232, 98, 26, 0.35)',
-        'dark-text-primary': '#ffffff',
-        'dark-text-secondary': '#a0a0a0',
-        'dark-text-muted': '#777777',
-        'dark-text-light': '#666666',
+        'dark-text-primary': '#F5EFE0',
+        'dark-text-secondary': '#C4A882',
+        'dark-text-muted': '#9A8068',
+        'dark-text-light': '#7A5C3A',
       },
       fontFamily: {
         sans: [

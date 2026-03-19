@@ -1,16 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input } from '@/components/ui';
 
 export function SignUpScreen() {
   const { setScreen, goBack, signUp, isLoading, error, clearError } = useAuthStore();
-
-  // Guard: redirect to beta code entry if not validated
-  useEffect(() => {
-    if (!(window as any).__betaValidated) {
-      setScreen('beta-code', false);
-    }
-  }, [setScreen]);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

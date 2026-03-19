@@ -502,7 +502,7 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
   const bgStyle = highlight === 'gold'
     ? { backgroundColor: '#fffbeb', border: '1px solid var(--color-gold)' }
     : highlight === 'orange'
-    ? { backgroundColor: '#fff7ed', border: '1px solid #f97316' }
+    ? { backgroundColor: '#fff7ed', border: '1px solid #F0882A' }
     : { backgroundColor: 'var(--color-input-bg)', border: '1px solid var(--color-border)' };
 
   return (
@@ -514,7 +514,7 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
         {hint && (
           <span
             className="text-[9px] font-semibold"
-            style={{ color: highlight === 'orange' ? '#f97316' : 'var(--color-gold)' }}
+            style={{ color: highlight === 'orange' ? '#F0882A' : 'var(--color-gold)' }}
           >
             {hint}
           </span>

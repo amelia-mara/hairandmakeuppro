@@ -80,7 +80,7 @@ export function Lookbooks() {
             : name.substring(0, 2).toUpperCase();
 
           // Generate a color based on cast number
-          const colors = ['#C9A962', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#6366F1', '#22C55E', '#EF4444'];
+          const colors = ['#D4943A', '#E8621A', '#F0882A', '#4ABFB0', '#F5A623', '#5A3E28', '#F2C4A0', '#C4522A'];
           const avatarColour = colors[castMember.number % colors.length];
 
           charactersMap.set(placeholderId, {

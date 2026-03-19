@@ -95,12 +95,12 @@ export function generateContinuityBiblePDF(
           align-items: center;
           padding: 60px 40px;
         }
-        .cover-rule { width: 80px; height: 3px; background: #C9A962; margin: 0 auto 40px; }
+        .cover-rule { width: 80px; height: 3px; background: #E8621A; margin: 0 auto 40px; }
         .cover-title { font-size: 38px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.5px; margin-bottom: 6px; }
-        .cover-subtitle { font-size: 18px; font-weight: 400; color: #C9A962; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 50px; }
+        .cover-subtitle { font-size: 18px; font-weight: 400; color: #E8621A; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 50px; }
         .cover-stats { display: flex; gap: 40px; justify-content: center; margin-bottom: 50px; }
         .cover-stat { text-align: center; }
-        .cover-stat-value { font-size: 28px; font-weight: 700; color: #C9A962; display: block; }
+        .cover-stat-value { font-size: 28px; font-weight: 700; color: #E8621A; display: block; }
         .cover-stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         .cover-meta { font-size: 12px; color: #999; line-height: 1.8; }
         .cover-meta strong { color: #666; }
@@ -113,18 +113,18 @@ export function generateContinuityBiblePDF(
           margin: 0 0 6px 0;
           padding: 30px 40px 0;
         }
-        .section-heading-rule { width: 50px; height: 3px; background: #C9A962; margin: 0 0 30px 40px; }
+        .section-heading-rule { width: 50px; height: 3px; background: #E8621A; margin: 0 0 30px 40px; }
 
         /* ── Table of Contents ── */
         .toc { padding: 30px 40px; }
         .toc h2 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-        .toc-rule { width: 50px; height: 3px; background: #C9A962; margin-bottom: 30px; }
-        .toc h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #C9A962; margin-bottom: 10px; }
+        .toc-rule { width: 50px; height: 3px; background: #E8621A; margin-bottom: 30px; }
+        .toc h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #E8621A; margin-bottom: 10px; }
         .toc ul { list-style: none; padding: 0; margin: 0 0 24px 0; }
         .toc li { padding: 3px 0; font-size: 12px; border-bottom: 1px dotted #e5e5e5; }
         .toc li:last-child { border-bottom: none; }
         .toc a { color: #444; text-decoration: none; }
-        .toc a:hover { color: #C9A962; }
+        .toc a:hover { color: #E8621A; }
         .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .toc-scenes-list { columns: 2; column-gap: 24px; }
         .toc-scenes-list li { break-inside: avoid; }
@@ -132,7 +132,7 @@ export function generateContinuityBiblePDF(
         /* ── Character Section ── */
         .character-section { padding: 0 40px; margin-bottom: 20px; page-break-inside: avoid; }
         .character-header {
-          background: linear-gradient(135deg, #C9A962, #B8975A);
+          background: linear-gradient(135deg, #E8621A, #C4522A);
           color: white;
           padding: 16px 20px;
           border-radius: 8px 8px 0 0;
@@ -161,7 +161,7 @@ export function generateContinuityBiblePDF(
         .look-scenes { font-size: 11px; color: #777; margin-top: 2px; }
         .look-time {
           font-size: 11px;
-          color: #C9A962;
+          color: #E8621A;
           font-weight: 500;
           white-space: nowrap;
         }
@@ -214,7 +214,7 @@ export function generateContinuityBiblePDF(
           font-size: 10px;
           text-transform: uppercase;
           letter-spacing: 1.5px;
-          color: #C9A962;
+          color: #E8621A;
           font-weight: 600;
           margin: 0 0 8px 0;
           padding-bottom: 6px;
@@ -231,7 +231,7 @@ export function generateContinuityBiblePDF(
           padding: 10px 14px;
           background: #f8f8f8;
           border-radius: 6px;
-          border-left: 3px solid #C9A962;
+          border-left: 3px solid #E8621A;
         }
         .notes-section h4 {
           font-size: 10px;
@@ -257,7 +257,7 @@ export function generateContinuityBiblePDF(
         }
         .scene-number {
           font-size: 11px;
-          color: #C9A962;
+          color: #E8621A;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -965,11 +965,11 @@ export function generateCharacterLookbookPDF(
         @media print { .page-break { page-break-before: always; } }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
         .character-cover { text-align: center; padding: 100px 20px; }
-        .character-name { font-size: 48px; color: #C9A962; margin-bottom: 10px; }
+        .character-name { font-size: 48px; color: #E8621A; margin-bottom: 10px; }
         .character-subtitle { font-size: 18px; color: #666; }
         .look-page { margin-bottom: 40px; }
         .look-header { margin-bottom: 20px; }
-        .look-header h2 { color: #C9A962; margin: 0 0 5px; }
+        .look-header h2 { color: #E8621A; margin: 0 0 5px; }
         .scenes-list { color: #666; font-size: 14px; margin: 0; }
         .app-time { color: #999; font-size: 12px; margin: 5px 0 0; }
         .photo-section { display: flex; gap: 20px; margin-bottom: 20px; }
@@ -979,7 +979,7 @@ export function generateCharacterLookbookPDF(
         .photo-placeholder { background: #f5f5f5; border: 1px dashed #ccc; border-radius: 4px; padding: 40px; text-align: center; color: #999; }
         .photo-placeholder.master { width: 250px; min-height: 300px; display: flex; align-items: center; justify-content: center; }
         .details-section { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        .details-section h3 { font-size: 14px; color: #C9A962; border-bottom: 1px solid #eee; padding-bottom: 5px; margin: 0 0 10px; }
+        .details-section h3 { font-size: 14px; color: #E8621A; border-bottom: 1px solid #eee; padding-bottom: 5px; margin: 0 0 10px; }
         .detail-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f5f5f5; }
         .detail-label { color: #666; }
         .detail-value { color: #333; font-weight: 500; }
@@ -1049,13 +1049,13 @@ export function generateTimesheetsPDF(
       <title>${projectName} - Timesheets</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }
-        h1 { color: #C9A962; }
+        h1 { color: #E8621A; }
         .summary-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
         .summary-item { background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center; }
         .summary-label { font-size: 12px; color: #666; }
         .summary-value { font-size: 24px; font-weight: bold; color: #333; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #C9A962; color: white; padding: 10px; text-align: left; font-size: 12px; }
+        th { background: #E8621A; color: white; padding: 10px; text-align: left; font-size: 12px; }
         td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
         tr:nth-child(even) { background: #f9f9f9; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; }

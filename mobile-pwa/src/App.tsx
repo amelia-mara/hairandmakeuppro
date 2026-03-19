@@ -20,15 +20,17 @@ import { Budget } from '@/components/budget';
 import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/components/more';
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
+import { BugReportButton } from '@/components/bug-report/BugReportButton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   WelcomeScreen,
-  BetaCodeScreen,
   SignInScreen,
   SignUpScreen,
   JoinProjectScreen,
   ProjectHubScreen,
   CreateProjectScreen,
+  VerifyEmailScreen,
+  BetaCodeScreen,
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
@@ -341,12 +343,14 @@ function AppContent() {
     switch (currentScreen) {
       case 'welcome':
         return <WelcomeScreen />;
-      case 'beta-code':
-        return <BetaCodeScreen />;
       case 'signin':
         return <SignInScreen />;
       case 'signup':
         return <SignUpScreen />;
+      case 'verify-email':
+        return <VerifyEmailScreen />;
+      case 'beta-code':
+        return <BetaCodeScreen />;
       case 'hub':
         return <ProjectHubScreen />;
       case 'join':
@@ -676,6 +680,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppContent />
+      {/* Beta bug report button — visible on all screens */}
+      <BugReportButton />
     </ErrorBoundary>
   );
 }

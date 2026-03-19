@@ -408,45 +408,57 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
 
-          const appUser: User = {
-            id: authUser.id,
-            email: authUser.email!,
-            name,
-            // In beta mode, all users get Designer tier
-            tier: BETA_MODE ? 'designer' : 'trainee',
-            createdAt: new Date(),
-          };
-
-          // If beta validated (via beta code gate), grant beta access
-          if ((window as any).__betaValidated) {
-            try {
-              await supabase
-                .from('users')
-                .update({
-                  beta_access: true,
-                  beta_granted_at: new Date().toISOString(),
-                  tier: 'designer',
-                })
-                .eq('id', authUser.id);
-            } catch (betaErr) {
-              console.error('Failed to write beta_access — will fix manually:', betaErr);
-            }
+          // Check if user came through the beta code gate
+          const betaValidated = !!(window as any).__betaValidated;
+          if (betaValidated) {
             // Clear the transient flag
             delete (window as any).__betaValidated;
           }
 
-          set({
-            isAuthenticated: true,
-            user: appUser,
-            isLoading: false,
-            error: null,
-            // Skip plan selection in beta mode, go directly to hub
-            currentScreen: BETA_MODE ? 'hub' : 'select-plan',
-            hasCompletedOnboarding: BETA_MODE,
-            hasSelectedPlan: BETA_MODE,
-            subscription: createDefaultSubscription(),
-            projectMemberships: [],
-          });
+          const appUser: User = {
+            id: authUser.id,
+            email: authUser.email!,
+            name,
+            // Beta-validated users get Designer tier
+            tier: betaValidated || BETA_MODE ? 'designer' : 'trainee',
+            createdAt: new Date(),
+          };
+
+          if (betaValidated) {
+            // Grant beta access in the database
+            await supabase.from('users').update({
+              beta_access: true,
+              beta_granted_at: new Date().toISOString(),
+              tier: 'designer',
+            }).eq('id', authUser.id);
+
+            // Beta users skip email verification and go straight to hub
+            set({
+              isAuthenticated: true,
+              user: appUser,
+              isLoading: false,
+              error: null,
+              currentScreen: 'hub',
+              hasCompletedOnboarding: true,
+              hasSelectedPlan: true,
+              subscription: createDefaultSubscription(),
+              projectMemberships: [],
+            });
+          } else {
+            // Show verify-email screen so user knows to check their inbox.
+            // Don't set isAuthenticated yet — they need to confirm first.
+            set({
+              isAuthenticated: false,
+              user: appUser,
+              isLoading: false,
+              error: null,
+              currentScreen: 'verify-email',
+              hasCompletedOnboarding: false,
+              hasSelectedPlan: false,
+              subscription: createDefaultSubscription(),
+              projectMemberships: [],
+            });
+          }
 
           return true;
         } catch (error) {
@@ -767,8 +779,11 @@ export const useAuthStore = create<AuthState>()(
           return { success: true, code: inviteCode };
         } catch (error) {
           console.error('Create project error:', error);
-          set({ isLoading: false, error: 'Failed to create project. Please try again.' });
-          return { success: false, error: 'Failed to create project' };
+          const message = error instanceof TypeError && error.message === 'Load failed'
+            ? 'Unable to connect. Please check your email is verified and try signing in again.'
+            : 'Failed to create project. Please try again.';
+          set({ isLoading: false, error: message });
+          return { success: false, error: message };
         }
       },
 
