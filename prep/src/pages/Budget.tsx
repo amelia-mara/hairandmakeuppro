@@ -248,7 +248,7 @@ export function Budget({ projectId }: BudgetProps) {
             <div className="bg-page-header">
               <div>
                 <div className="bg-eyebrow">01 — Overview</div>
-                <h2 className="bg-title">Budget Overview</h2>
+                <h2 className="bg-title"><span className="bg-title-italic">Budget</span>{' '}<span className="bg-title-regular">Overview</span></h2>
                 <div className="bg-subtitle">{scenes.length} scenes · Hair &amp; Makeup</div>
               </div>
               <div className="bg-header-actions">

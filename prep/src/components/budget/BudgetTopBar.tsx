@@ -15,7 +15,7 @@ export function BudgetTopBar({ onImportCSV, onExport }: BudgetTopBarProps) {
 
   return (
     <div className="budget-top-bar">
-      <h1 className="budget-top-bar-title"><span className="heading-italic">Budget</span> System</h1>
+      <h1 className="budget-top-bar-title"><span className="heading-italic">Budget</span>{' '}<span className="heading-regular">System</span></h1>
       <div className="budget-top-bar-actions">
         <button className="btn-ghost" onClick={onImportCSV}>
           <ImportIcon />
