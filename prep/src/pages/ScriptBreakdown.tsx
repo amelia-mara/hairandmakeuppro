@@ -721,6 +721,44 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     return () => document.removeEventListener('mousedown', handler);
   }, [popup]);
 
+  /* Clamp popup within viewport after render (measures real height) */
+  useEffect(() => {
+    if (!popup || !popupRef.current) return;
+    const el = popupRef.current;
+    const rect = el.getBoundingClientRect();
+    const pad = 10;
+    let needsUpdate = false;
+    let newY = popup.y;
+    let newX = popup.x;
+    let newPopBelow = popup.popBelow;
+
+    if (rect.top < pad) {
+      // Popup is above viewport — flip to below or push down
+      newY = pad;
+      newPopBelow = true;
+      needsUpdate = true;
+    } else if (rect.bottom > window.innerHeight - pad) {
+      // Popup is below viewport — push up
+      newY = window.innerHeight - rect.height - pad;
+      newPopBelow = false;
+      needsUpdate = true;
+    }
+    if (rect.left < pad) {
+      newX = popup.x + (pad - rect.left);
+      needsUpdate = true;
+    } else if (rect.right > window.innerWidth - pad) {
+      newX = popup.x - (rect.right - window.innerWidth + pad);
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      // Directly update the element style to avoid re-render loop
+      el.style.left = `${newX}px`;
+      el.style.top = `${newY}px`;
+      el.style.transform = newPopBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
+    }
+  }, [popup]);
+
   /* Handle text selection on the script paper */
   const handleMouseUp = useCallback((sceneId: string) => {
     const sel = window.getSelection();
@@ -747,12 +785,22 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
 
     const rect = range.getBoundingClientRect();
 
-    // Detect if selection is near the top of the viewport — pop below instead
-    const popBelow = rect.top < 200;
+    // Estimate popup height (character list ~280px, field picker ~350px)
+    const estPopupHeight = 350;
+    // Detect if selection is near the top — pop below instead of above
+    const popBelow = rect.top < estPopupHeight + 20;
+    // Clamp Y so popup never goes above viewport or below it
+    let y = popBelow ? rect.bottom + 10 : rect.top - 10;
+    if (popBelow && y + estPopupHeight > window.innerHeight - 10) {
+      y = window.innerHeight - estPopupHeight - 10;
+    }
+    if (!popBelow && y - estPopupHeight < 10) {
+      y = estPopupHeight + 10;
+    }
 
     setPopup({
       x: Math.min(Math.max(rect.left + rect.width / 2, 170), window.innerWidth - 170),
-      y: popBelow ? rect.bottom + 10 : rect.top - 10,
+      y,
       sceneId,
       startOffset: startIdx,
       endOffset: startIdx + text.length,
