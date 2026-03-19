@@ -17,6 +17,7 @@ import { AuthPage } from '@/pages/AuthPage';
 import { BetaCodePage } from '@/pages/BetaCodePage';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useProjectSync } from '@/hooks/useProjectSync';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -134,63 +135,14 @@ function App() {
 
   // Project view — TopBar with nav dropdown + content
   if (selectedProjectId) {
-    const project = getProject(selectedProjectId);
-    const projectTitle = project?.title || 'Project';
-
     return (
-      <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        {/* Rainbow swirl decoration — consistent across all pages */}
-        <div className="page-rainbow">
-          <div className="rainbow-ring rainbow-ring--1" />
-          <div className="rainbow-ring rainbow-ring--2" />
-          <div className="rainbow-ring rainbow-ring--3" />
-        </div>
-        <TopBar
-          title={projectTitle}
-          activePage={activePage}
-          onNavigate={setActivePage}
-          projectType={project?.type}
-          onBackToHub={handleBackToHub}
-          onNavigateToAuth={() => handleNavigateToAuth('login')}
-        />
-        <ProjectLayout
-          projectId={selectedProjectId}
-          activePage={activePage}
-          onNavigate={setActivePage}
-          onBackToHub={handleBackToHub}
-        >
-          {activePage === 'dashboard' && (
-            <ProjectDashboard projectId={selectedProjectId} />
-          )}
-          {activePage === 'script' && (
-            <ScriptBreakdown projectId={selectedProjectId} />
-          )}
-          {activePage === 'breakdown' && (
-            <BreakdownSheet projectId={selectedProjectId} />
-          )}
-          {activePage === 'character-design' && (
-            <CharacterDesign projectId={selectedProjectId} />
-          )}
-          {activePage === 'continuity' && (
-            <ContinuityTracker projectId={selectedProjectId} />
-          )}
-          {activePage === 'budget' && (
-            <Budget projectId={selectedProjectId} />
-          )}
-          {activePage === 'timesheet' && (
-            <Timesheet projectId={selectedProjectId} />
-          )}
-          {activePage === 'schedule' && (
-            <Schedule projectId={selectedProjectId} />
-          )}
-          {activePage === 'call-sheets' && (
-            <CallSheets projectId={selectedProjectId} />
-          )}
-          {activePage === 'team' && (
-            <Team projectId={selectedProjectId} />
-          )}
-        </ProjectLayout>
-      </div>
+      <ProjectView
+        projectId={selectedProjectId}
+        activePage={activePage}
+        onNavigate={setActivePage}
+        onBackToHub={handleBackToHub}
+        onNavigateToAuth={() => handleNavigateToAuth('login')}
+      />
     );
   }
 
@@ -209,6 +161,131 @@ function App() {
           onCancel={handleCloseModal}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * ProjectView — wrapper component that connects the project to Supabase sync.
+ * This is a separate component so the useProjectSync hook has proper lifecycle.
+ */
+function ProjectView({
+  projectId,
+  activePage,
+  onNavigate,
+  onBackToHub,
+  onNavigateToAuth,
+}: {
+  projectId: string;
+  activePage: string;
+  onNavigate: (page: string) => void;
+  onBackToHub: () => void;
+  onNavigateToAuth: () => void;
+}) {
+  const getProject = useProjectStore((s) => s.getProject);
+  const project = getProject(projectId);
+  const projectTitle = project?.title || 'Project';
+
+  // Connect to Supabase sync + Realtime subscriptions
+  const { loading, saveStatus } = useProjectSync(projectId);
+
+  // Show loading state while fetching from Supabase
+  if (loading) {
+    return (
+      <div
+        className="ambient-light min-h-screen"
+        style={{
+          backgroundColor: 'var(--bg-primary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div className="brand-logo" style={{ fontSize: '1.75rem', marginBottom: '16px' }}>
+            <span className="brand-logo-checks">Checks</span>{' '}
+            <span className="brand-logo-happy">Happy.</span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading project...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Rainbow swirl decoration — consistent across all pages */}
+      <div className="page-rainbow">
+        <div className="rainbow-ring rainbow-ring--1" />
+        <div className="rainbow-ring rainbow-ring--2" />
+        <div className="rainbow-ring rainbow-ring--3" />
+      </div>
+      <TopBar
+        title={projectTitle}
+        activePage={activePage}
+        onNavigate={onNavigate}
+        projectType={project?.type}
+        onBackToHub={onBackToHub}
+        onNavigateToAuth={onNavigateToAuth}
+      />
+      {/* Save status indicator */}
+      {saveStatus === 'saving' && (
+        <div style={{
+          position: 'fixed', top: 12, right: 16, zIndex: 9999,
+          padding: '4px 12px', borderRadius: '6px',
+          backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)',
+          fontSize: '0.75rem', opacity: 0.8,
+        }}>
+          Saving...
+        </div>
+      )}
+      {saveStatus === 'saved' && (
+        <div style={{
+          position: 'fixed', top: 12, right: 16, zIndex: 9999,
+          padding: '4px 12px', borderRadius: '6px',
+          backgroundColor: 'var(--bg-secondary)', color: 'var(--accent-green, #22c55e)',
+          fontSize: '0.75rem', opacity: 0.8,
+        }}>
+          Saved
+        </div>
+      )}
+      <ProjectLayout
+        projectId={projectId}
+        activePage={activePage}
+        onNavigate={onNavigate}
+        onBackToHub={onBackToHub}
+      >
+        {activePage === 'dashboard' && (
+          <ProjectDashboard projectId={projectId} />
+        )}
+        {activePage === 'script' && (
+          <ScriptBreakdown projectId={projectId} />
+        )}
+        {activePage === 'breakdown' && (
+          <BreakdownSheet projectId={projectId} />
+        )}
+        {activePage === 'character-design' && (
+          <CharacterDesign projectId={projectId} />
+        )}
+        {activePage === 'continuity' && (
+          <ContinuityTracker projectId={projectId} />
+        )}
+        {activePage === 'budget' && (
+          <Budget projectId={projectId} />
+        )}
+        {activePage === 'timesheet' && (
+          <Timesheet projectId={projectId} />
+        )}
+        {activePage === 'schedule' && (
+          <Schedule projectId={projectId} />
+        )}
+        {activePage === 'call-sheets' && (
+          <CallSheets projectId={projectId} />
+        )}
+        {activePage === 'team' && (
+          <Team projectId={projectId} />
+        )}
+      </ProjectLayout>
     </div>
   );
 }

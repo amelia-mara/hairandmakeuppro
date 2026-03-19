@@ -7,6 +7,11 @@ import { useSyncStore } from '@/stores/syncStore';
 import { initChangeTracking } from '@/services/syncChangeTracker';
 import { flushAutoSave } from '@/services/autoSave';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
+import {
+  subscribeToProject as subscribeRealtime,
+  unsubscribeFromProject as unsubscribeRealtime,
+  resubscribeToProject,
+} from '@/services/realtimeSync';
 
 // Initialize change tracking (idempotent, runs once)
 initChangeTracking();
@@ -153,11 +158,29 @@ function AppContent() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isAuthenticated) {
         refreshUserProjects();
+        // Re-subscribe to Realtime and refresh data on foreground
+        const projectId = useProjectStore.getState().currentProject?.id;
+        if (projectId) {
+          resubscribeToProject(projectId);
+        }
+      } else if (document.visibilityState === 'hidden') {
+        // Unsubscribe on background to save resources
+        unsubscribeRealtime();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isAuthenticated, refreshUserProjects]);
+
+  // Subscribe to Realtime when a project is loaded
+  useEffect(() => {
+    if (!currentProject?.id || !isAuthenticated) {
+      unsubscribeRealtime();
+      return;
+    }
+    const unsub = subscribeRealtime(currentProject.id);
+    return () => unsub();
+  }, [currentProject?.id, isAuthenticated]);
 
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
