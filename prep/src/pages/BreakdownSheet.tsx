@@ -535,10 +535,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                             <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>
                           )}
                         </td>
-                        <td className="bs-col-sfx">
+                        <td className={`bs-col-sfx${sfx ? ' bs-cell--flag' : ''}`}>
                           {sfx || <span className="bs-empty">—</span>}
                         </td>
-                        <td className="bs-col-env">
+                        <td className={`bs-col-env${environmental ? ' bs-cell--flag' : ''}`}>
                           {environmental || <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-action">
