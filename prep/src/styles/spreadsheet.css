@@ -526,6 +526,38 @@
   background: rgba(74, 191, 176, 0.22);
 }
 
+/* ━━━ Embedded Breakdown Table (inside Script page right panel) ━━━ */
+
+.bs-embedded {
+  flex: 1; overflow-y: auto; overflow-x: auto;
+  padding: 8px 12px 40px;
+}
+.bs-embedded .bs-scene-block {
+  margin-top: 16px;
+}
+.bs-embedded .bs-scene-block:first-child {
+  margin-top: 4px;
+}
+.bs-embedded .bs-scene-header {
+  padding: 14px 16px 10px;
+}
+.bs-embedded .bs-table th {
+  padding: 8px 12px;
+  font-size: 0.625rem;
+}
+.bs-embedded .bs-table td {
+  padding: 10px 12px;
+  font-size: 0.75rem;
+}
+
+/* Wider right panel when showing full breakdown */
+.bd-right--breakdown {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 500px !important;
+  max-width: none !important;
+}
+
 /* ━━━ Split-view layout ━━━ */
 
 .bs-split-wrap {
