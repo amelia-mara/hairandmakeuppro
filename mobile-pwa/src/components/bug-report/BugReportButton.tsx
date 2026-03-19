@@ -131,7 +131,7 @@ export function BugReportButton() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-24 left-4 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-full shadow-lg transition-all active:scale-95"
+          className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-full shadow-lg transition-all active:scale-95"
           style={{
             backgroundColor: '#ef4444',
             boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)',

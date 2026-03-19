@@ -8,7 +8,7 @@ export function WelcomeScreen() {
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
       {/* Main content area */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-end px-8 pb-10">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
         {/* Text logo — stacked with heavy overlap and offset */}
         <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
           <span className="absolute z-10 left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#3D2B1A]">
