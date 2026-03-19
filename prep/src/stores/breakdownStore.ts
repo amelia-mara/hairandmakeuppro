@@ -1335,3 +1335,109 @@ export const useCharacterOverridesStore = create<CharacterOverridesState>()(
     }
   )
 );
+
+
+/* ━━━ Revised Scenes Store — tracks unreviewed script revision changes ━━━ */
+
+export interface SceneChange {
+  sceneId: string;
+  sceneNumber: number;
+  changeType: 'modified' | 'added' | 'omitted';
+  summary: string; // brief description of what changed
+  oldContent?: string;
+  newContent?: string;
+}
+
+interface RevisedScenesState {
+  // keyed by projectId
+  revisions: Record<string, {
+    changes: SceneChange[];
+    reviewedSceneIds: string[]; // scenes that have been reviewed
+    uploadedAt: string;
+    filename: string;
+  }>;
+  setRevision: (projectId: string, data: { changes: SceneChange[]; filename: string }) => void;
+  markReviewed: (projectId: string, sceneId: string) => void;
+  markAllReviewed: (projectId: string) => void;
+  clearRevision: (projectId: string) => void;
+  getUnreviewedChanges: (projectId: string) => SceneChange[];
+  isSceneRevised: (projectId: string, sceneId: string) => boolean;
+  getRevision: (projectId: string) => RevisedScenesState['revisions'][string] | undefined;
+}
+
+export const useRevisedScenesStore = create<RevisedScenesState>()(
+  persist(
+    (set, get) => ({
+      revisions: {},
+
+      setRevision: (projectId, { changes, filename }) =>
+        set((s) => ({
+          revisions: {
+            ...s.revisions,
+            [projectId]: {
+              changes,
+              reviewedSceneIds: [],
+              uploadedAt: new Date().toISOString(),
+              filename,
+            },
+          },
+        })),
+
+      markReviewed: (projectId, sceneId) =>
+        set((s) => {
+          const rev = s.revisions[projectId];
+          if (!rev) return s;
+          return {
+            revisions: {
+              ...s.revisions,
+              [projectId]: {
+                ...rev,
+                reviewedSceneIds: [...new Set([...rev.reviewedSceneIds, sceneId])],
+              },
+            },
+          };
+        }),
+
+      markAllReviewed: (projectId) =>
+        set((s) => {
+          const rev = s.revisions[projectId];
+          if (!rev) return s;
+          return {
+            revisions: {
+              ...s.revisions,
+              [projectId]: {
+                ...rev,
+                reviewedSceneIds: rev.changes.map((c) => c.sceneId),
+              },
+            },
+          };
+        }),
+
+      clearRevision: (projectId) =>
+        set((s) => {
+          const { [projectId]: _, ...rest } = s.revisions;
+          return { revisions: rest };
+        }),
+
+      getUnreviewedChanges: (projectId) => {
+        const rev = get().revisions[projectId];
+        if (!rev) return [];
+        return rev.changes.filter((c) => !rev.reviewedSceneIds.includes(c.sceneId));
+      },
+
+      isSceneRevised: (projectId, sceneId) => {
+        const rev = get().revisions[projectId];
+        if (!rev) return false;
+        const change = rev.changes.find((c) => c.sceneId === sceneId);
+        if (!change) return false;
+        return !rev.reviewedSceneIds.includes(sceneId);
+      },
+
+      getRevision: (projectId) => get().revisions[projectId],
+    }),
+    {
+      name: 'prep-happy-revised-scenes',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
