@@ -10,6 +10,7 @@ import {
 import { useProjectStore } from '@/stores/projectStore';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
+import { supabase } from '@/lib/supabase';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DRAGGABLE PANEL RESIZE HOOK
@@ -113,6 +114,7 @@ export function ScriptBreakdown({ projectId }: Props) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showDraftsModal, setShowDraftsModal] = useState(false);
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -491,7 +493,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                     <button className="tools-dropdown-item" onClick={() => { setShowUploadModal(true); setToolsOpen(false); }}>
                       <ImportIcon /> <span>Import New Script</span>
                     </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Previous drafts'); setToolsOpen(false); }}>
+                    <button className="tools-dropdown-item" onClick={() => { setShowDraftsModal(true); setToolsOpen(false); }}>
                       <DraftsIcon /> <span>View Previous Drafts</span>
                     </button>
                     <button className="tools-dropdown-item" onClick={() => { console.log('View breakdown'); setToolsOpen(false); }}>
@@ -560,6 +562,14 @@ export function ScriptBreakdown({ projectId }: Props) {
             updateProject(projectId, { scriptFilename: filename });
             setShowUploadModal(false);
           }}
+        />
+      )}
+
+      {/* Previous Drafts Modal */}
+      {showDraftsModal && (
+        <PreviousDraftsModal
+          projectId={projectId}
+          onClose={() => setShowDraftsModal(false)}
         />
       )}
     </div>
@@ -1383,6 +1393,48 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
         sceneCount: scenes.length,
         rawText: parsed.rawText,
       });
+
+      // Upload PDF to Supabase storage and create script_uploads record
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const timestamp = Date.now();
+          const storagePath = `${projectId}/scripts/${timestamp}_${selectedFile.name}`;
+
+          // Upload file to storage
+          await supabase.storage
+            .from('project-documents')
+            .upload(storagePath, selectedFile, { upsert: false });
+
+          // Get current max version number for this project
+          const { data: versions } = await supabase
+            .from('script_uploads')
+            .select('version_number')
+            .eq('project_id', projectId)
+            .order('version_number', { ascending: false })
+            .limit(1);
+
+          const nextVersion = (versions?.[0]?.version_number ?? 0) + 1;
+
+          // Create script_uploads record (trigger auto-deactivates previous)
+          await supabase.from('script_uploads').insert({
+            project_id: projectId,
+            version_number: nextVersion,
+            storage_path: storagePath,
+            file_name: selectedFile.name,
+            file_size: selectedFile.size,
+            raw_text: parsed.rawText,
+            scene_count: scenesWithStoryDays.length,
+            character_count: characters.length,
+            is_active: true,
+            status: 'parsed',
+            uploaded_by: session.user.id,
+          });
+        }
+      } catch (uploadErr) {
+        // Non-blocking: local data is already saved, Supabase sync is best-effort
+        console.warn('Failed to sync script to Supabase:', uploadErr);
+      }
 
       setProgress(100);
       setStatusText('Done!');
@@ -2252,6 +2304,284 @@ function ordinal(n: number) {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
+
+/* ━━━ PREVIOUS DRAFTS MODAL ━━━ */
+
+interface ScriptDraft {
+  id: string;
+  file_name: string;
+  storage_path: string;
+  file_size: number | null;
+  scene_count: number | null;
+  character_count: number | null;
+  version_number: number;
+  version_label: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+function PreviousDraftsModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [viewingPdf, setViewingPdf] = useState<{ url: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (viewingPdf) setViewingPdf(null);
+        else onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose, viewingPdf]);
+
+  useEffect(() => {
+    async function fetchDrafts() {
+      setLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('script_uploads')
+          .select('id, file_name, storage_path, file_size, scene_count, character_count, version_number, version_label, is_active, created_at')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+        setDrafts(data || []);
+      } catch (err) {
+        console.error('Failed to fetch drafts:', err);
+        setError('Failed to load previous drafts.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDrafts();
+  }, [projectId]);
+
+  const handleViewPdf = async (draft: ScriptDraft) => {
+    try {
+      const { data, error: urlError } = await supabase.storage
+        .from('project-documents')
+        .createSignedUrl(draft.storage_path, 3600); // 1 hour expiry
+
+      if (urlError) throw urlError;
+      if (data?.signedUrl) {
+        setViewingPdf({ url: data.signedUrl, name: draft.file_name });
+      }
+    } catch (err) {
+      console.error('Failed to get PDF URL:', err);
+      setError('Failed to load PDF. Please try again.');
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      + ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatSize = (bytes: number | null) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // PDF Viewer - full screen overlay
+  if (viewingPdf) {
+    return (
+      <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={() => setViewingPdf(null)}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          width: '90vw', height: '90vh', maxWidth: 1000,
+          background: 'var(--bg-primary, #1a1815)',
+          borderRadius: 12, overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 24px',
+            borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => setViewingPdf(null)} style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+                </svg>
+              </button>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-heading)' }}>
+                {viewingPdf.name}
+              </span>
+            </div>
+            <button onClick={() => setViewingPdf(null)} style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', padding: 4,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          {/* PDF iframe */}
+          <div style={{ flex: 1, background: '#fff' }}>
+            <iframe
+              src={viewingPdf.url}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title={viewingPdf.name}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-glass" style={{ width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '24px 28px 0',
+        }}>
+          <h2 style={{
+            fontSize: '0.8125rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
+          }}>
+            <span className="heading-italic">Previous</span>{' '}
+            <span className="heading-regular">Drafts</span>
+          </h2>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', color: 'var(--text-muted)',
+            cursor: 'pointer', padding: 4,
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ padding: '20px 28px 28px', overflowY: 'auto', flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: 0, marginBottom: 20 }}>
+            View previously uploaded script drafts. Click on any draft to view the full PDF.
+          </p>
+
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+              Loading drafts...
+            </div>
+          )}
+
+          {error && (
+            <p style={{ color: '#ef4444', fontSize: '0.8125rem' }}>{error}</p>
+          )}
+
+          {!loading && !error && drafts.length === 0 && (
+            <div style={{
+              textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)',
+              fontSize: '0.875rem',
+            }}>
+              No previous drafts found. Upload a script to get started.
+            </div>
+          )}
+
+          {!loading && drafts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {drafts.map((draft) => (
+                <button
+                  key={draft.id}
+                  onClick={() => handleViewPdf(draft)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 16px',
+                    background: draft.is_active
+                      ? 'rgba(212, 148, 58, 0.08)'
+                      : 'var(--bg-secondary, rgba(255,255,255,0.03))',
+                    border: draft.is_active
+                      ? '1px solid rgba(212, 148, 58, 0.25)'
+                      : '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = draft.is_active
+                      ? 'rgba(212, 148, 58, 0.12)'
+                      : 'var(--bg-tertiary, rgba(255,255,255,0.06))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = draft.is_active
+                      ? 'rgba(212, 148, 58, 0.08)'
+                      : 'var(--bg-secondary, rgba(255,255,255,0.03))';
+                  }}
+                >
+                  {/* PDF Icon */}
+                  <div style={{
+                    width: 40, height: 48, borderRadius: 6,
+                    background: 'rgba(232, 98, 26, 0.1)',
+                    border: '1px solid rgba(232, 98, 26, 0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8621A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                      <path d="M14 2v6h6"/>
+                    </svg>
+                  </div>
+
+                  {/* Details */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        color: 'var(--text-heading)', fontWeight: 500, fontSize: '0.875rem',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {draft.version_label || draft.file_name}
+                      </span>
+                      {draft.is_active && (
+                        <span style={{
+                          fontSize: '0.6875rem', fontWeight: 600,
+                          color: '#D4943A',
+                          background: 'rgba(212, 148, 58, 0.15)',
+                          padding: '1px 8px', borderRadius: 4,
+                          textTransform: 'uppercase', letterSpacing: '0.05em',
+                        }}>
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <div style={{
+                      color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 3,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <span>{formatDate(draft.created_at)}</span>
+                      {draft.file_size && <span>·</span>}
+                      {draft.file_size && <span>{formatSize(draft.file_size)}</span>}
+                      {draft.scene_count && <span>·</span>}
+                      {draft.scene_count && <span>{draft.scene_count} scenes</span>}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function ToolsIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
