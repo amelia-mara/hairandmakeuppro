@@ -8,6 +8,7 @@ import {
   type ScriptTag, type ParsedCharacterData, type SceneChange,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
 import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
@@ -266,10 +267,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   return (
     <div className="bd-page">
       {/* Three panels with draggable dividers */}
-      <div className={`bd-panels ${splitView ? 'bd-panels--split' : ''}`}>
+      <div className={`bd-panels`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
-        {!splitView && (
+        {(
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
@@ -372,7 +373,7 @@ export function ScriptBreakdown({ projectId }: Props) {
         )}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
-        <div className={`bd-center ${splitView ? 'bd-center--split' : ''}`}>
+        <div className="bd-center">
           {/* File divider tabs */}
           <div className="cp-tabstrip">
             <div className="cp-tabs-row">
@@ -502,21 +503,19 @@ export function ScriptBreakdown({ projectId }: Props) {
         </div>
 
         {/* Right divider */}
-        {!splitView && (
         <div className="bd-divider" onMouseDown={rightPanel.onMouseDown} onDoubleClick={rightPanel.onDoubleClick}>
           <div className="bd-divider-grip" />
         </div>
-        )}
 
-        {/* ━━━ RIGHT — Breakdown Form ━━━ */}
-        <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--split' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
+        {/* ━━━ RIGHT — Breakdown Form or Full Breakdown Table ━━━ */}
+        <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
           <div className="fp-panel-header">
-            <span className="fp-panel-title">Scene Breakdown</span>
+            <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
             {splitView && (
               <button
                 className="btn-ghost bd-btn bd-split-close"
                 onClick={() => setSplitView(false)}
-                aria-label="Close split view"
+                aria-label="Close breakdown view"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
@@ -564,35 +563,39 @@ export function ScriptBreakdown({ projectId }: Props) {
               )}
             </div>
           </div>
-          {scene && (
-          <BreakdownFormPanel
-            scene={scene} characters={sceneCharacters} breakdown={breakdown}
-            activeCharacterId={activeTab !== 'script' ? activeTab : null}
-            saveStatus={saveStatus}
-            scenes={filteredScenes}
-            allScenes={ALL_SCENES}
-            allCharacters={ALL_CHARACTERS}
-            allLooks={ALL_LOOKS}
-            onNavigate={selectScene}
-            onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
-            onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
-            onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
-            onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
-            onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
-            onRemoveCharacter={(charId, action, mergeTargetId) => {
-              if (action === 'not-in-scene') {
-                parsedScriptStore.removeCharacterFromScene(projectId, validSceneId, charId);
-                store.removeCharacterBreakdown(validSceneId, charId);
-              } else if (action === 'not-a-character') {
-                parsedScriptStore.removeCharacterEntirely(projectId, charId);
-                store.removeCharacterFromAllBreakdowns(charId);
-              } else if (action === 'duplicate' && mergeTargetId) {
-                parsedScriptStore.mergeCharacters(projectId, charId, mergeTargetId);
-                store.mergeCharacterBreakdowns(charId, mergeTargetId);
-              }
-              triggerSave();
-            }}
-          />
+          {splitView ? (
+            <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
+          ) : (
+            scene && (
+            <BreakdownFormPanel
+              scene={scene} characters={sceneCharacters} breakdown={breakdown}
+              activeCharacterId={activeTab !== 'script' ? activeTab : null}
+              saveStatus={saveStatus}
+              scenes={filteredScenes}
+              allScenes={ALL_SCENES}
+              allCharacters={ALL_CHARACTERS}
+              allLooks={ALL_LOOKS}
+              onNavigate={selectScene}
+              onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
+              onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
+              onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
+              onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
+              onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
+              onRemoveCharacter={(charId, action, mergeTargetId) => {
+                if (action === 'not-in-scene') {
+                  parsedScriptStore.removeCharacterFromScene(projectId, validSceneId, charId);
+                  store.removeCharacterBreakdown(validSceneId, charId);
+                } else if (action === 'not-a-character') {
+                  parsedScriptStore.removeCharacterEntirely(projectId, charId);
+                  store.removeCharacterFromAllBreakdowns(charId);
+                } else if (action === 'duplicate' && mergeTargetId) {
+                  parsedScriptStore.mergeCharacters(projectId, charId, mergeTargetId);
+                  store.mergeCharacterBreakdowns(charId, mergeTargetId);
+                }
+                triggerSave();
+              }}
+            />
+            )
           )}
         </div>
       </div>
