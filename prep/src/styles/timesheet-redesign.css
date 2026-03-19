@@ -144,12 +144,21 @@
 }
 
 .tsr-ph-title {
-  font-family: var(--font-sans);
-  font-size: 21px;
-  font-weight: 700;
-  color: var(--text-heading);
+  font-size: 1.75rem;
+  font-weight: 900;
   letter-spacing: -0.01em;
   line-height: 1.2;
+  margin: 0 0 4px;
+  color: var(--text-heading);
+  text-transform: uppercase;
+}
+.tsr-ph-title-italic {
+  font-family: 'DM Sans', sans-serif;
+  font-style: italic;
+  color: var(--accent);
+}
+.tsr-ph-title-regular {
+  font-family: 'DM Sans', sans-serif;
 }
 
 .tsr-ph-sub {
