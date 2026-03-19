@@ -35,7 +35,7 @@ export function ScheduleScreen({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-text-primary">Today's Scenes</h1>
+            <h1 className="text-lg font-semibold text-text-primary uppercase" style={{ fontFamily: "'DM Sans', sans-serif" }}>Today's Scenes</h1>
           </div>
         </div>
       </div>

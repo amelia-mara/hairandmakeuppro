@@ -57,7 +57,7 @@ export function TeamScreen({
                 </svg>
               </button>
               <div>
-                <h1 className="text-lg font-semibold text-text-primary">Team</h1>
+                <h1 className="text-lg font-semibold text-text-primary uppercase" style={{ fontFamily: "'DM Sans', sans-serif" }}>Team</h1>
                 <p className="text-xs text-text-muted">
                   {teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'}
                 </p>

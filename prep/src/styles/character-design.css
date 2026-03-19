@@ -13,8 +13,9 @@
 ════════════════════════════════ */
 .cd-gallery-wrap{max-width:1200px;margin:0 auto;padding:36px 36px 80px;}
 .cd-gallery-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:32px;}
-.cd-gh-eyebrow{font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent, #D4691E);margin-bottom:4px;}
-.cd-gh-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:var(--text-primary);letter-spacing:-0.02em;line-height:1.1;}
+.cd-gh-title{font-size:1.75rem;font-weight:900;letter-spacing:-0.01em;margin:0 0 4px;color:var(--text-heading);text-transform:uppercase;}
+.cd-title-italic{font-family:'DM Sans',sans-serif;font-style:italic;color:var(--accent);}
+.cd-title-regular{font-family:'DM Sans',sans-serif;}
 .cd-gh-sub{font-size:13px;color:var(--text-tertiary);margin-top:6px;}
 .cd-gh-actions{display:flex;gap:8px;align-items:center;}
 

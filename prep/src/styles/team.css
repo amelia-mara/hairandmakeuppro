@@ -22,14 +22,15 @@
   letter-spacing: -0.01em;
   margin: 0 0 4px;
   color: var(--text-heading);
+  text-transform: uppercase;
 }
 .tm-title-italic {
-  font-family: var(--font-display);
+  font-family: 'DM Sans', sans-serif;
   font-style: italic;
   color: var(--accent);
 }
 .tm-title-regular {
-  font-family: var(--font-display);
+  font-family: 'DM Sans', sans-serif;
 }
 
 .tm-subtitle {

@@ -174,7 +174,7 @@ export function SignInScreen() {
         <p className="text-text-secondary">
           Don't have an account?{' '}
           <button
-            onClick={() => setScreen('signup')}
+            onClick={() => setScreen('beta-code')}
             className="text-gold font-medium hover:underline"
           >
             Sign up
