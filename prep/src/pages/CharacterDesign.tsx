@@ -283,8 +283,10 @@ export function CharacterDesign({ projectId }: Props) {
         <div className="cd-gallery-wrap">
           <div className="cd-gallery-header">
             <div>
-              <div className="cd-gh-eyebrow">Prep Happy — Character Design</div>
-              <div className="cd-gh-title">{project?.title || 'Project'}</div>
+              <h1 className="cd-gh-title">
+                <span className="cd-title-italic">Character</span>{' '}
+                <span className="cd-title-regular">Design</span>
+              </h1>
               <div className="cd-gh-sub">
                 {allCharacters.length} character{allCharacters.length !== 1 ? 's' : ''} · Hair &amp; Makeup
               </div>
