@@ -139,7 +139,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           },
           characters: s.characterIds.map((cid) => ({
             characterId: cid, lookId: '',
-            entersWith: emptyHMW(), sfx: '',
+            entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
             changeType: 'no-change' as const, changeNotes: '',
             exitsWith: emptyHMW(), notes: '',
           })),
