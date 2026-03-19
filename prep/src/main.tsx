@@ -25,6 +25,7 @@ import './styles/timesheet-layout.css';
 import './styles/timesheet-crew.css';
 import './styles/timesheet-weekly.css';
 import './styles/timesheet-redesign.css';
+import './styles/schedule.css';
 import './styles/call-sheets.css';
 import './styles/auth.css';
 import App from './App';
