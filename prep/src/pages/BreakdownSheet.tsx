@@ -252,7 +252,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /** Build an export row for a character in a scene (shared between copy & CSV) */
   const buildExportRows = useCallback(() => {
-    const headers = ['Scene', 'Day', 'Character', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Continuity Notes'];
+    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Environmental', 'Action', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < scenes.length; idx++) {
       const s = scenes[idx];
@@ -271,6 +271,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
         const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
         const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
         const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
+        const envTags = tags.filter((t) => t.categoryId === 'environmental');
+        const actionTags = tags.filter((t) => t.categoryId === 'action');
 
         const resolve = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) =>
           manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
@@ -279,10 +281,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           String(s.number),
           storyDay,
           ch.name,
+          charLook?.name || '',
           resolve(cb?.entersWith.hair, hairTags, charLook?.hair),
           resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup),
           resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
           cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '',
+          cb?.environmental || envTags.map((t) => t.text).join(', ') || '',
+          cb?.action || actionTags.map((t) => t.text).join(', ') || '',
           notes,
         ]);
       }
@@ -452,10 +457,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                 <thead>
                   <tr>
                     <th className="bs-col-char">Character</th>
+                    <th className="bs-col-look">Look</th>
                     <th className="bs-col-hair">Hair</th>
                     <th className="bs-col-makeup">Makeup</th>
                     <th className="bs-col-wardrobe">Wardrobe</th>
                     <th className="bs-col-sfx">SFX / Prosthetics</th>
+                    <th className="bs-col-env">Environmental</th>
+                    <th className="bs-col-action">Action</th>
                     <th className="bs-col-notes">Continuity Notes</th>
                   </tr>
                 </thead>
@@ -471,6 +479,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
                     const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
                     const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
+                    const envTags = tags.filter((t) => t.categoryId === 'environmental');
+                    const actionTags = tags.filter((t) => t.categoryId === 'action');
 
                     // Resolve values: manual entry → tag text → look defaults
                     const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
@@ -485,6 +495,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const makeup = resolveField(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
                     const wardrobe = resolveField(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
                     const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
+                    const environmental = cb?.environmental || envTags.map((t) => t.text).join(', ') || '';
+                    const action = cb?.action || actionTags.map((t) => t.text).join(', ') || '';
 
                     // Build continuity notes
                     const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
@@ -500,8 +512,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                           <div className="bs-char-stack">
                             <span className="bs-char-name">{ch.name}</span>
                             <span className="bs-char-billing">{ordinal(ch.billing)}</span>
-                            {charLook && <span className="bs-char-look">{charLook.name}</span>}
                           </div>
+                        </td>
+                        <td className="bs-col-look">
+                          {charLook ? <span className="bs-look-name">{charLook.name}</span> : <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-hair">
                           {hair || <span className="bs-empty">—</span>}
@@ -523,6 +537,12 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                         </td>
                         <td className="bs-col-sfx">
                           {sfx || <span className="bs-empty">—</span>}
+                        </td>
+                        <td className="bs-col-env">
+                          {environmental || <span className="bs-empty">—</span>}
+                        </td>
+                        <td className="bs-col-action">
+                          {action || <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-notes">
                           {hasChange && cb?.changeNotes && (

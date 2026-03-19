@@ -266,12 +266,15 @@
 }
 
 /* Column widths */
-.bs-col-char { width: 150px; }
-.bs-col-hair { width: 170px; }
-.bs-col-makeup { width: 170px; }
-.bs-col-wardrobe { width: 170px; }
-.bs-col-sfx { width: 140px; }
-.bs-col-notes { min-width: 200px; }
+.bs-col-char { width: 130px; }
+.bs-col-look { width: 120px; }
+.bs-col-hair { width: 150px; }
+.bs-col-makeup { width: 150px; }
+.bs-col-wardrobe { width: 150px; }
+.bs-col-sfx { width: 120px; }
+.bs-col-env { width: 130px; }
+.bs-col-action { width: 130px; }
+.bs-col-notes { min-width: 180px; }
 
 /* Character cell — stacked name + billing + look */
 .bs-char-stack {
@@ -296,6 +299,13 @@
   color: var(--accent-cue);
   font-style: italic;
   margin-top: 2px;
+}
+
+/* Look name in dedicated column */
+.bs-look-name {
+  font-size: 0.8125rem; font-weight: 500;
+  color: var(--accent-cue);
+  font-style: italic;
 }
 
 /* Exit state note (shown below main value) */
