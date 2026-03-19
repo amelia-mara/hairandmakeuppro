@@ -337,6 +337,8 @@
 .sv-tag-popup--fixed {
   position: fixed;
   z-index: 9999;
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
 }
 .sv-tag-popup-title {
   font-size: 0.6875rem;
