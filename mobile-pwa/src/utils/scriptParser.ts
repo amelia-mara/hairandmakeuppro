@@ -1134,7 +1134,7 @@ export function convertParsedScriptToProject(
       .slice(0, 2);
 
     // Generate color
-    const colors = ['#C9A961', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#6366F1'];
+    const colors = ['#D4943A', '#E8621A', '#F0882A', '#4ABFB0', '#F5A623', '#5A3E28', '#F2C4A0', '#C4522A'];
     const avatarColour = colors[index % colors.length];
 
     return {

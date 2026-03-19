@@ -39,16 +39,16 @@ export interface CastSyncResult {
 
 // Character colors for new characters
 const CHARACTER_COLORS = [
-  '#C9A961', // Gold
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#10B981', // Green
-  '#F59E0B', // Amber
-  '#EF4444', // Red
-  '#3B82F6', // Blue
-  '#6366F1', // Indigo
-  '#14B8A6', // Teal
-  '#F97316', // Orange
+  '#D4943A', // Gold
+  '#E8621A', // Orange Primary
+  '#F0882A', // Orange Warm
+  '#4ABFB0', // Teal
+  '#F5A623', // Amber
+  '#5A3E28', // Earth
+  '#F2C4A0', // Peach
+  '#C4522A', // Gold Dark
+  '#A8DDD4', // Teal Light
+  '#3D2B1A', // Bark
 ];
 
 /**

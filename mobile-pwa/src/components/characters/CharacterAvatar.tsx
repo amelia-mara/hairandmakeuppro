@@ -12,7 +12,7 @@ export function CharacterAvatar({
   size = 'md',
   className,
 }: CharacterAvatarProps) {
-  const bgColor = character.avatarColour ?? '#C9A962';
+  const bgColor = character.avatarColour ?? '#E8621A';
 
   return (
     <div

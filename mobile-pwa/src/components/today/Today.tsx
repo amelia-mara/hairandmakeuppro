@@ -1165,7 +1165,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
     }
     const statusColors: Record<ShootingSceneStatus, { bg: string; text: string; color: string }> = {
       'upcoming': { bg: 'bg-gray-100', text: 'text-text-muted', color: '#6b7280' },
-      'in-progress': { bg: 'bg-gold-100/50', text: 'text-gold', color: '#C9A962' },
+      'in-progress': { bg: 'bg-gold-100/50', text: 'text-gold', color: '#E8621A' },
       'wrapped': { bg: 'bg-green-50', text: 'text-green-600', color: '#22c55e' },
     };
     return { ...statusColors[shootingScene.status], label: statusLabels[shootingScene.status] };
@@ -1265,15 +1265,15 @@ const TodaySceneCard = memo(function TodaySceneCard({
             className="absolute left-0 top-0 bottom-0 w-1 rounded-l-card"
             style={{
               background: shootingScene.status === 'in-progress'
-                ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Gold gradient
+                ? 'linear-gradient(180deg, #F0882A 0%, #E8621A 100%)' // Gold gradient
                 : shootingScene.status === 'wrapped'
                   ? filmingStatus === 'complete'
                     ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)' // Emerald gradient
                     : filmingStatus === 'partial'
-                      ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Warm gold gradient
+                      ? 'linear-gradient(180deg, #F0882A 0%, #E8621A 100%)' // Warm gold gradient
                       : filmingStatus === 'not-filmed'
-                        ? 'linear-gradient(180deg, #f87171 0%, #ef4444 100%)' // Soft red gradient
-                        : 'linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%)' // Gray gradient
+                        ? 'linear-gradient(180deg, #C4522A 0%, #A04020 100%)' // Warm brown gradient
+                        : 'linear-gradient(180deg, #BDA88E 0%, #A89279 100%)' // Warm taupe gradient
                   : 'transparent' // No bar for upcoming
             }}
           />
@@ -1433,7 +1433,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
               <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-border/50">
                 {characters.map((char) => {
                   const look = getLookForCharacter(char.id, shootingScene.sceneNumber, char.actorNumber);
-                  const bgColor = char.avatarColour ?? '#C9A962';
+                  const bgColor = char.avatarColour ?? '#E8621A';
                   return (
                     <button
                       key={char.id}

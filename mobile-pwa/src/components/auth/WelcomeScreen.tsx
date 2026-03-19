@@ -4,150 +4,131 @@ export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
 
   return (
-    <div className="min-h-screen flex flex-col" style={{
+    <div className="min-h-screen flex flex-col relative overflow-hidden font-sans" style={{
       background: 'linear-gradient(180deg, #fffdfb 0%, #fefcfb 30%, #faf6f0 70%, #f5efe5 100%)'
     }}>
       {/* Main content area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Wordmark - stacked with colored stripes, offset text */}
-        <div className="flex flex-col mb-2" style={{ width: '100%', maxWidth: '340px' }}>
-          <h1 style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 800,
-            fontSize: '48px',
-            color: '#4A3020',
-            lineHeight: 1.1,
-            marginBottom: '0',
-            textAlign: 'left',
-            paddingLeft: '20px',
-          }}>
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
+        {/* Text logo — stacked with heavy overlap and offset */}
+        <div className="relative mb-8" style={{ width: '280px', height: '100px' }}>
+          <span className="absolute z-10 left-[35px] top-0 text-[50px] leading-none font-serif font-bold text-[#3D2B1A]">
             Checks
-          </h1>
-
-          {/* Colored stripes - orange, amber, blue (top to bottom) */}
-          <div style={{ width: '100vw', margin: '6px 0', marginLeft: '-20px' }}>
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8621A, transparent)', marginBottom: '3px' }} />
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #D4A843, transparent)', marginBottom: '3px' }} />
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #5B9BD5, transparent)' }} />
-          </div>
-
-          <h1 style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 800,
-            fontStyle: 'italic',
-            fontSize: '48px',
-            color: '#E8621A',
-            lineHeight: 1.1,
-            marginTop: '0',
-            textAlign: 'right',
-            paddingRight: '20px',
-            transform: 'rotate(-3deg)',
-            transformOrigin: 'center',
-          }}>
+          </span>
+          <span className="absolute z-10 left-[85px] top-[38px] text-[50px] leading-none font-serif font-bold italic text-gold" style={{ transform: 'rotate(-5deg)' }}>
             Happy
-          </h1>
+          </span>
+          {/* Rainbow stripes — straight lines through the middle of the logo text, behind text */}
+          <div className="absolute pointer-events-none -z-10" style={{ top: '38px', left: '-50vw', right: '-50vw' }}>
+            <div className="w-full h-[9px] bg-[#F0C8A0] opacity-40 mb-[4px]" />
+            <div className="w-full h-[9px] bg-[#A8DDD4] opacity-45 mb-[4px]" />
+            <div className="w-full h-[9px] bg-[#E8621A] opacity-25" />
+          </div>
         </div>
 
         {/* Tagline */}
-        <p className="text-lg mb-10" style={{ color: '#6a6a6a' }}>
+        <p className="text-lg text-[#5A3E28] mb-10">
           Your personal onset assistant
         </p>
 
-        {/* Feature icons - BLACK, SOLID, BOLD */}
-        <div className="flex items-center justify-center w-full max-w-md mb-12">
-          {/* Capture - Camera icon - SOLID */}
+        {/* Feature icons — bold, filled style */}
+        <div className="flex items-center justify-center w-full max-w-md mt-4">
+          {/* Capture — bold filled camera */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
-              {/* Camera body - filled for solid look */}
+              {/* Camera body */}
               <path
                 d="M4 18C4 15.79 5.79 14 8 14H14L18 8H38L42 14H48C50.21 14 52 15.79 52 18V44C52 46.21 50.21 48 48 48H8C5.79 48 4 46.21 4 44V18Z"
-                fill="#1a1a1a"
+                fill="#3D2B1A"
               />
-              {/* Camera lens - white circle */}
-              <circle cx="28" cy="30" r="10" fill="#fefcfb" />
-              {/* Camera lens inner - black dot */}
-              <circle cx="28" cy="30" r="5" fill="#1a1a1a" />
+              {/* Lens outer ring */}
+              <circle cx="28" cy="30" r="11" fill="#fefcfb" />
+              {/* Lens inner */}
+              <circle cx="28" cy="30" r="6" fill="#3D2B1A" />
+              {/* Lens highlight */}
+              <circle cx="28" cy="30" r="2.5" fill="#fefcfb" />
             </svg>
-            <span className="text-base font-serif text-[#1a1a1a]">Capture</span>
+            <span className="text-sm font-medium text-[#3D2B1A]">Capture</span>
           </div>
 
-          {/* Vertical divider */}
+          {/* Divider */}
           <div className="w-px h-24 bg-[#c5c0b5]" />
 
-          {/* Track - Sync arrows icon - BOLD */}
+          {/* Track — bold filled sync arrows */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
-              {/* Circular arrow - top arc */}
+              {/* Top arc */}
               <path
                 d="M28 8C16.954 8 8 16.954 8 28c0 4.5 1.5 8.6 4 12"
-                stroke="#1a1a1a"
-                strokeWidth="4"
+                stroke="#3D2B1A"
+                strokeWidth="5"
                 strokeLinecap="round"
                 fill="none"
               />
-              {/* Circular arrow - bottom arc */}
+              {/* Bottom arc */}
               <path
                 d="M28 48c11.046 0 20-8.954 20-20 0-4.5-1.5-8.6-4-12"
-                stroke="#1a1a1a"
-                strokeWidth="4"
+                stroke="#3D2B1A"
+                strokeWidth="5"
                 strokeLinecap="round"
                 fill="none"
               />
-              {/* Arrow head - bottom left - FILLED */}
-              <polygon points="4,36 14,44 16,32" fill="#1a1a1a" />
-              {/* Arrow head - top right - FILLED */}
-              <polygon points="52,20 42,12 40,24" fill="#1a1a1a" />
+              {/* Arrow head bottom-left */}
+              <polygon points="4,36 15,43 16,30" fill="#3D2B1A" />
+              {/* Arrow head top-right */}
+              <polygon points="52,20 41,13 40,26" fill="#3D2B1A" />
             </svg>
-            <span className="text-base font-serif text-[#1a1a1a]">Track</span>
+            <span className="text-sm font-medium text-[#3D2B1A]">Track</span>
           </div>
 
-          {/* Vertical divider */}
+          {/* Divider */}
           <div className="w-px h-24 bg-[#c5c0b5]" />
 
-          {/* Collaborate - People icon - Already solid */}
+          {/* Collaborate — bold filled people */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
-              {/* Center person (larger) */}
-              <circle cx="28" cy="14" r="8" fill="#1a1a1a" />
-              <path d="M14 48v-10c0-7.732 6.268-14 14-14s14 6.268 14 14v10" fill="#1a1a1a" />
-              {/* Left person */}
-              <circle cx="10" cy="20" r="6" fill="#1a1a1a" />
-              <path d="M0 48v-8c0-5.523 4.477-10 10-10 2.5 0 4.8.9 6.5 2.4" fill="#1a1a1a" />
-              {/* Right person */}
-              <circle cx="46" cy="20" r="6" fill="#1a1a1a" />
-              <path d="M56 48v-8c0-5.523-4.477-10-10-10-2.5 0-4.8.9-6.5 2.4" fill="#1a1a1a" />
+              {/* Center person head */}
+              <circle cx="28" cy="14" r="7" fill="#3D2B1A" />
+              {/* Center person body */}
+              <path d="M16 46v-8c0-6.627 5.373-12 12-12s12 5.373 12 12v8" fill="#3D2B1A" />
+              {/* Left person head */}
+              <circle cx="11" cy="20" r="5.5" fill="#3D2B1A" />
+              {/* Left person body */}
+              <path d="M0 46v-6c0-5.523 4.477-10 10-10 2.2 0 4.2.7 5.8 1.9" fill="#3D2B1A" />
+              {/* Right person head */}
+              <circle cx="45" cy="20" r="5.5" fill="#3D2B1A" />
+              {/* Right person body */}
+              <path d="M56 46v-6c0-5.523-4.477-10-10-10-2.2 0-4.2.7-5.8 1.9" fill="#3D2B1A" />
             </svg>
-            <span className="text-base font-serif text-[#1a1a1a]">Collaborate</span>
+            <span className="text-sm font-medium text-[#3D2B1A]">Collaborate</span>
           </div>
         </div>
       </div>
 
       {/* Bottom action buttons */}
-      <div className="px-8 pb-10 space-y-4">
-        {/* Sign In - Orange gradient background */}
+      <div className="relative z-10 px-8 pb-10 pt-8 space-y-4">
+        {/* Sign In — solid orange, pill-shaped */}
         <button
           onClick={() => setScreen('signin')}
-          className="w-full h-14 rounded-full font-semibold text-lg transition-all duration-200
-            text-white active:scale-[0.98] shadow-md"
-          style={{ background: 'linear-gradient(180deg, #E8621A 0%, #D4570F 100%)' }}
+          className="w-full h-14 rounded-pill font-semibold text-lg transition-all duration-200
+            bg-gold text-white active:scale-[0.98] shadow-md hover:bg-gold-dark"
         >
           Sign In
         </button>
 
-        {/* Create Account - Dark border outlined */}
+        {/* Create Account — outlined, pill-shaped */}
         <button
           onClick={() => setScreen('beta-code')}
-          className="w-full h-14 rounded-full font-semibold text-lg transition-all duration-200
-            border-2 border-[#3a2a1a] text-[#3a2a1a] bg-transparent active:scale-[0.98]"
+          className="w-full h-14 rounded-pill font-semibold text-lg transition-all duration-200
+            border-2 border-[#3D2B1A] text-[#3D2B1A] bg-transparent active:scale-[0.98]"
         >
           Create Account
         </button>
 
         {/* Join a Team */}
-        <div className="pt-4 flex items-center justify-center gap-4">
+        <div className="pt-6 flex items-center justify-center gap-4">
           <div className="flex-1 h-px bg-[#c5c0b5]" />
           <button
-            className="text-sm text-[#7a7a7a] hover:text-[#4a4a4a] transition-colors whitespace-nowrap"
+            className="text-sm text-[#7a7a7a] hover:text-[#5A3E28] transition-colors whitespace-nowrap"
             onClick={() => setScreen('beta-code')}
           >
             Join a Team

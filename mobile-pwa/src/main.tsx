@@ -18,7 +18,7 @@ const initTheme = () => {
   // Update meta theme-color
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
-    metaThemeColor.setAttribute('content', resolved === 'dark' ? '#000000' : '#f5f4f2');
+    metaThemeColor.setAttribute('content', resolved === 'dark' ? '#1A1208' : '#F5EFE0');
   }
 };
 
@@ -28,7 +28,7 @@ initTheme();
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/mobile/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
 

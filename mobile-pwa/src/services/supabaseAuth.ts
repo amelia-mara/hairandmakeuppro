@@ -32,6 +32,7 @@ export async function signUp({ email, password, name }: SignUpData): Promise<{ u
         data: {
           name,
         },
+        emailRedirectTo: `${window.location.origin}/mobile/`,
       },
     });
 
