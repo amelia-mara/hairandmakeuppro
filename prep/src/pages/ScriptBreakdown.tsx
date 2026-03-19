@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
-  useCharacterOverridesStore,
+  useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag, type ParsedCharacterData,
+  type ScriptTag, type ParsedCharacterData, type SceneChange,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
+import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
 import { supabase } from '@/lib/supabase';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -115,6 +116,8 @@ export function ScriptBreakdown({ projectId }: Props) {
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDraftsModal, setShowDraftsModal] = useState(false);
+  const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
+  const revisedStore = useRevisedScenesStore();
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -282,8 +285,9 @@ export function ScriptBreakdown({ projectId }: Props) {
               const isActive = s.id === selectedSceneId;
               const bd = store.getBreakdown(s.id);
               const colorClass = sceneColorClass(s.intExt, s.dayNight);
+              const isRevised = revisedStore.isSceneRevised(projectId, s.id);
               return (
-                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
+                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass} ${isRevised ? 'sl-card--revised' : ''}`}
                   onClick={() => selectScene(s.id)}>
                   <div className="sl-card-top">
                     <span className="sl-card-num">{s.number}</span>
@@ -297,6 +301,31 @@ export function ScriptBreakdown({ projectId }: Props) {
                     )}
                     <span className={`sl-card-status sl-card-status--${status}`} />
                   </div>
+                  {isActive && isRevised && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '6px 10px', margin: '6px 0 0',
+                      background: 'rgba(232, 98, 26, 0.12)',
+                      borderRadius: 6, fontSize: '0.6875rem', color: '#E8621A', fontWeight: 600,
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 9v4"/><path d="M12 17h.01"/>
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      </svg>
+                      <span style={{ flex: 1 }}>Revised — review changes</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); revisedStore.markReviewed(projectId, s.id); }}
+                        style={{
+                          background: '#E8621A', border: 'none', borderRadius: 4,
+                          color: '#fff', fontSize: '0.625rem', fontWeight: 700,
+                          padding: '2px 8px', cursor: 'pointer', textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        ✓ Reviewed
+                      </button>
+                    </div>
+                  )}
                   {isActive && (
                     <div className="sl-card-expand">
                       {bd && (bd.timeline.day || bd.timeline.type) && (
@@ -558,9 +587,18 @@ export function ScriptBreakdown({ projectId }: Props) {
         <ScriptUploadModal
           projectId={projectId}
           onClose={() => setShowUploadModal(false)}
-          onUploaded={(filename) => {
+          onUploaded={(filename, diffResult) => {
             updateProject(projectId, { scriptFilename: filename });
             setShowUploadModal(false);
+            if (diffResult && diffResult.changes.length > 0) {
+              // Store revision changes for highlighting
+              revisedStore.setRevision(projectId, {
+                changes: diffResult.changes,
+                filename,
+              });
+              // Show changes summary modal
+              setShowChangesModal(diffResult);
+            }
           }}
         />
       )}
@@ -570,6 +608,19 @@ export function ScriptBreakdown({ projectId }: Props) {
         <PreviousDraftsModal
           projectId={projectId}
           onClose={() => setShowDraftsModal(false)}
+        />
+      )}
+
+      {/* Changes Summary Modal */}
+      {showChangesModal && (
+        <ChangesSummaryModal
+          diffResult={showChangesModal}
+          onClose={() => setShowChangesModal(null)}
+          onGoToScene={(sceneId) => {
+            setShowChangesModal(null);
+            setSelectedSceneId(sceneId);
+            setScrollTrigger((n) => n + 1);
+          }}
         />
       )}
     </div>
@@ -1129,7 +1180,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
           data-scene-id={scene.id}
-          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
+          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''} ${useRevisedScenesStore.getState().isSceneRevised(projectId, scene.id) ? 'sv-paper--revised' : ''}`}
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
@@ -1229,7 +1280,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
 interface ScriptUploadModalProps {
   projectId: string;
   onClose: () => void;
-  onUploaded: (filename: string) => void;
+  onUploaded: (filename: string, diffResult?: DiffResult) => void;
 }
 
 function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModalProps) {
@@ -1242,6 +1293,9 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setScript = useScriptUploadStore((s) => s.setScript);
   const setParsedData = useParsedScriptStore((s) => s.setParsedData);
+  const existingParsed = useParsedScriptStore((s) => s.getParsedData(projectId));
+  const breakdownStore = useBreakdownStore();
+  const synopsisStore = useSynopsisStore();
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -1294,7 +1348,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
     setStatusText('Reading file...');
 
     try {
-      // Use the real script parser (PDF, FDX, Fountain, TXT)
       const parsed: ParsedScript = await parseScriptFile(selectedFile, (status) => {
         setStatusText(status);
       });
@@ -1303,7 +1356,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
       setStatusText('Detecting characters...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Convert parsed data to the Scene/Character format the app expects
       // Build character ID mapping
       const charIdMap = new Map<string, string>();
       const characters: Character[] = parsed.characters.map((pc, idx) => {
@@ -1358,7 +1410,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
-          // Preamble has no slugline to strip; regular scenes strip the first line (heading)
           scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
         };
       });
@@ -1367,16 +1418,76 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
       setStatusText('Generating looks...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Auto-generate looks per character using story day detection
-      // Mirrors the mobile app (Checks Happy) approach: detect story days from
-      // time-of-day transitions, then create one look per character per story day
       const { looks: generatedLooks, scenes: scenesWithStoryDays } = generateLooksFromScript(scenes, characters);
+
+      // ━━━ REVISION DETECTION: if existing script data exists, remap breakdowns ━━━
+      const isRevision = !!existingParsed;
+      let diffResult: DiffResult | undefined;
+
+      if (isRevision) {
+        setProgress(90);
+        setStatusText('Comparing with previous draft...');
+        await new Promise(r => setTimeout(r, 200));
+
+        diffResult = diffScripts(
+          existingParsed.scenes,
+          scenesWithStoryDays,
+          existingParsed.characters,
+          characters,
+        );
+
+        // Remap breakdown data from old scene IDs → new scene IDs
+        // This preserves all breakdown work (HMW entries, continuity, synopses, etc.)
+        for (const [oldSceneId, newSceneId] of diffResult.idMap) {
+          if (oldSceneId === newSceneId) continue;
+
+          // Remap main breakdown
+          const existingBreakdown = breakdownStore.getBreakdown(oldSceneId);
+          if (existingBreakdown) {
+            // Also remap character IDs within the breakdown
+            const remappedCharBreakdowns = existingBreakdown.characters.map((cb) => {
+              const newCharId = diffResult!.characterIdMap.get(cb.characterId);
+              return newCharId ? { ...cb, characterId: newCharId } : cb;
+            });
+            breakdownStore.setBreakdown(newSceneId, {
+              ...existingBreakdown,
+              sceneId: newSceneId,
+              characters: remappedCharBreakdowns,
+            });
+          }
+
+          // Remap synopsis
+          const existingSynopsis = synopsisStore.getSynopsis(oldSceneId, '');
+          if (existingSynopsis) {
+            synopsisStore.setSynopsis(newSceneId, existingSynopsis);
+          }
+        }
+
+        // For matched scenes, preserve story day assignments from previous breakdown
+        for (const [oldSceneId, newSceneId] of diffResult.idMap) {
+          const oldScene = existingParsed.scenes.find((s) => s.id === oldSceneId);
+          const newScene = scenesWithStoryDays.find((s) => s.id === newSceneId);
+          if (oldScene?.storyDay && newScene) {
+            newScene.storyDay = oldScene.storyDay;
+          }
+        }
+
+        // Preserve character profile overrides by remapping character IDs
+        const charOverrides = useCharacterOverridesStore.getState();
+        for (const [oldCharId, newCharId] of diffResult.characterIdMap) {
+          if (oldCharId === newCharId) continue;
+          const existing = charOverrides.overrides[oldCharId];
+          if (existing) {
+            charOverrides.updateCharacter(newCharId, existing);
+          }
+        }
+      }
 
       setProgress(95);
       setStatusText('Saving...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Store parsed data with generated looks and story day assignments
+      // Store parsed data
       setParsedData(projectId, {
         scenes: scenesWithStoryDays,
         characters,
@@ -1385,7 +1496,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
         parsedAt: new Date().toISOString(),
       });
 
-      // Also store in script upload store for backward compat
+      // Store in script upload store for backward compat
       setScript(projectId, {
         projectId,
         filename: selectedFile.name,
@@ -1401,12 +1512,10 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           const timestamp = Date.now();
           const storagePath = `${projectId}/scripts/${timestamp}_${selectedFile.name}`;
 
-          // Upload file to storage
           await supabase.storage
             .from('project-documents')
             .upload(storagePath, selectedFile, { upsert: false });
 
-          // Get current max version number for this project
           const { data: versions } = await supabase
             .from('script_uploads')
             .select('version_number')
@@ -1416,7 +1525,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
 
           const nextVersion = (versions?.[0]?.version_number ?? 0) + 1;
 
-          // Create script_uploads record (trigger auto-deactivates previous)
           await supabase.from('script_uploads').insert({
             project_id: projectId,
             version_number: nextVersion,
@@ -1432,7 +1540,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           });
         }
       } catch (uploadErr) {
-        // Non-blocking: local data is already saved, Supabase sync is best-effort
         console.warn('Failed to sync script to Supabase:', uploadErr);
       }
 
@@ -1440,7 +1547,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
       setStatusText('Done!');
       await new Promise(r => setTimeout(r, 300));
 
-      onUploaded(selectedFile.name);
+      onUploaded(selectedFile.name, diffResult);
     } catch (err) {
       console.error('Script processing error:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -2273,6 +2380,183 @@ function SceneRangeSelect({ sceneRange, allScenes, onChange }: {
     </div>
   );
 }
+
+/* ━━━ CHANGES SUMMARY MODAL ━━━ */
+
+function ChangesSummaryModal({
+  diffResult,
+  onClose,
+  onGoToScene,
+}: {
+  diffResult: DiffResult;
+  onClose: () => void;
+  onGoToScene: (sceneId: string) => void;
+}) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  const { changes, stats } = diffResult;
+  const changeTypeIcon = (type: SceneChange['changeType']) => {
+    switch (type) {
+      case 'modified': return { color: '#E8621A', label: 'Modified', icon: '~' };
+      case 'added': return { color: '#22c55e', label: 'Added', icon: '+' };
+      case 'omitted': return { color: '#94a3b8', label: 'Omitted', icon: '−' };
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-glass" style={{ width: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ padding: '24px 28px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{
+              fontSize: '0.8125rem', letterSpacing: '0.1em',
+              textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
+            }}>
+              <span className="heading-italic">Script</span>{' '}
+              <span className="heading-regular">Changes</span>
+            </h2>
+            <button onClick={onClose} style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', padding: 4,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Stats bar */}
+          <div style={{
+            display: 'flex', gap: 16, marginTop: 16, marginBottom: 8,
+            fontSize: '0.8125rem', color: 'var(--text-muted)',
+          }}>
+            {stats.modified > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#E8621A', display: 'inline-block' }} />
+                {stats.modified} modified
+              </span>
+            )}
+            {stats.added > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                {stats.added} added
+              </span>
+            )}
+            {stats.omitted > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+                {stats.omitted} omitted
+              </span>
+            )}
+            <span style={{ marginLeft: 'auto' }}>
+              {stats.unchanged} unchanged
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 28px 28px', overflowY: 'auto', flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: '0 0 16px' }}>
+            Changed scenes are highlighted in orange in the scene list. Click a scene below to jump to it and review the changes. Your existing breakdown data has been preserved.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {changes.map((change) => {
+              const info = changeTypeIcon(change.changeType);
+              return (
+                <button
+                  key={change.sceneId + change.sceneNumber}
+                  onClick={() => onGoToScene(change.sceneId)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 14px',
+                    background: 'var(--bg-secondary, rgba(255,255,255,0.03))',
+                    border: `1px solid ${info.color}30`,
+                    borderLeft: `3px solid ${info.color}`,
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${info.color}10`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-secondary, rgba(255,255,255,0.03))';
+                  }}
+                >
+                  {/* Change type indicator */}
+                  <span style={{
+                    width: 26, height: 26, borderRadius: 6,
+                    background: `${info.color}18`,
+                    color: info.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', fontWeight: 700, flexShrink: 0,
+                    fontFamily: 'monospace',
+                  }}>
+                    {info.icon}
+                  </span>
+
+                  {/* Details */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        color: 'var(--text-heading)', fontWeight: 600, fontSize: '0.8125rem',
+                      }}>
+                        Scene {change.sceneNumber}
+                      </span>
+                      <span style={{
+                        fontSize: '0.6875rem', fontWeight: 500,
+                        color: info.color,
+                        background: `${info.color}15`,
+                        padding: '1px 6px', borderRadius: 4,
+                        textTransform: 'uppercase', letterSpacing: '0.03em',
+                      }}>
+                        {info.label}
+                      </span>
+                    </div>
+                    <div style={{
+                      color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {change.summary}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '16px 28px',
+          borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+          display: 'flex', justifyContent: 'flex-end', gap: 10,
+        }}>
+          <button onClick={onClose} style={{
+            padding: '8px 20px', borderRadius: 8, cursor: 'pointer',
+            background: 'var(--accent-gold, #D4943A)', border: 'none',
+            color: '#1a1a1a', fontSize: '0.8125rem', fontWeight: 600,
+          }}>
+            Review Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ━━━ Form primitives ━━━ */
 
