@@ -9,6 +9,7 @@ import { BreakdownSheet } from '@/pages/BreakdownSheet';
 import { ContinuityTracker } from '@/pages/ContinuityTracker';
 import { Budget } from '@/pages/Budget';
 import { Timesheet } from '@/pages/Timesheet';
+import { CallSheets } from '@/pages/CallSheets';
 import { CharacterDesign } from '@/pages/CharacterDesign';
 import { AuthPage } from '@/pages/AuthPage';
 import { BetaCodePage } from '@/pages/BetaCodePage';
@@ -176,6 +177,9 @@ function App() {
           )}
           {activePage === 'timesheet' && (
             <Timesheet projectId={selectedProjectId} />
+          )}
+          {activePage === 'call-sheets' && (
+            <CallSheets projectId={selectedProjectId} />
           )}
         </ProjectLayout>
       </div>

@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { id: 'budget', label: 'Budget', icon: BudgetIcon },
   { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
+  { id: 'call-sheets', label: 'Call Sheets', icon: CallSheetsIcon },
   { id: 'crew', label: 'Crew', icon: CrewIcon },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
@@ -345,6 +346,16 @@ function ScheduleIcon() {
       <line x1="16" y1="2" x2="16" y2="6"/>
       <line x1="8" y1="2" x2="8" y2="6"/>
       <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  );
+}
+
+function CallSheetsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/>
+      <path d="M15 3v5h6"/>
+      <path d="M10 12h4M10 16h4"/>
     </svg>
   );
 }
