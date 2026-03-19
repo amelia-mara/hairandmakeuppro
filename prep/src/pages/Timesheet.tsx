@@ -238,7 +238,7 @@ function OverviewPanel({
       <div className="tsr-ph">
         <div>
           <div className="tsr-ph-eyebrow">01 — Overview</div>
-          <div className="tsr-ph-title">Timesheet Overview</div>
+          <h2 className="tsr-ph-title"><span className="tsr-ph-title-italic">Timesheet</span>{' '}<span className="tsr-ph-title-regular">Overview</span></h2>
           <div className="tsr-ph-sub">{crew.length} crew members active</div>
         </div>
       </div>
