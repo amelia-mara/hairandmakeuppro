@@ -55,6 +55,8 @@ export interface CharacterBreakdown {
   lookId: string;
   entersWith: HMWEntry;
   sfx: string;
+  environmental: string;
+  action: string;
   changeType: 'no-change' | 'change';
   changeNotes: string;
   exitsWith: HMWEntry;
@@ -126,16 +128,26 @@ export const CONTINUITY_EVENT_TYPES = ['Wound', 'Bruise', 'Prosthetic', 'Scar', 
 /* ━━━ Category colours ━━━ */
 
 export const BREAKDOWN_CATEGORIES = [
-  { id: 'cast', label: 'Cast', color: '#6ba3f7' },
-  { id: 'hair', label: 'Hair', color: '#D4943A' },
-  { id: 'makeup', label: 'Makeup', color: '#F2C4A0' },
-  { id: 'sfx', label: 'SFX', color: '#ef4444' },
-  { id: 'health', label: 'Health', color: '#4ABFB0' },
-  { id: 'injuries', label: 'Injuries', color: '#f97316' },
-  { id: 'stunts', label: 'Stunts', color: '#a855f7' },
-  { id: 'weather', label: 'Weather', color: '#38bdf8' },
-  { id: 'wardrobe', label: 'Wardrobe', color: '#ec4899' },
-  { id: 'extras', label: 'Extras', color: '#78716c' },
+  // ━━━ Scene Breakdown fields ━━━
+  { id: 'hair',           label: 'Hair',              color: '#D4943A', group: 'breakdown', field: 'entersWith.hair' },
+  { id: 'makeup',         label: 'Makeup',            color: '#C2785C', group: 'breakdown', field: 'entersWith.makeup' },
+  { id: 'wardrobe',       label: 'Wardrobe',          color: '#ec4899', group: 'breakdown', field: 'entersWith.wardrobe' },
+  { id: 'sfx',            label: 'SFX / Prosthetics', color: '#ef4444', group: 'breakdown', field: 'sfx' },
+  { id: 'environmental',  label: 'Environmental',     color: '#38bdf8', group: 'breakdown', field: 'environmental' },
+  { id: 'action',         label: 'Action',            color: '#a855f7', group: 'breakdown', field: 'action' },
+  { id: 'notes',          label: 'Notes',             color: '#78716c', group: 'breakdown', field: 'notes' },
+
+  // ━━━ Character Profile fields ━━━
+  { id: 'age',            label: 'Age',               color: '#8B7355', group: 'profile', field: 'age' },
+  { id: 'gender',         label: 'Gender',            color: '#8B7355', group: 'profile', field: 'gender' },
+  { id: 'hairColour',     label: 'Hair Colour',       color: '#D4943A', group: 'profile', field: 'hairColour' },
+  { id: 'hairType',       label: 'Hair Type',         color: '#B8860B', group: 'profile', field: 'hairType' },
+  { id: 'eyeColour',      label: 'Eye Colour',        color: '#4ABFB0', group: 'profile', field: 'eyeColour' },
+  { id: 'skinTone',       label: 'Skin Tone',         color: '#F2C4A0', group: 'profile', field: 'skinTone' },
+  { id: 'build',          label: 'Build',             color: '#6ba3f7', group: 'profile', field: 'build' },
+  { id: 'features',       label: 'Features',          color: '#f97316', group: 'profile', field: 'distinguishingFeatures' },
+  { id: 'profileNotes',   label: 'Profile Notes',     color: '#78716c', group: 'profile', field: 'notes' },
+  { id: 'scriptDesc',     label: 'Script Description',color: '#D4A843', group: 'profile', field: 'scriptNotes' },
 ];
 
 /* ━━━ Mock Characters ━━━ */
@@ -599,7 +611,7 @@ const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
       {
         characterId: 'c1', lookId: 'l1',
         entersWith: { hair: 'Low ponytail, clean', makeup: 'Minimal foundation, no lip', wardrobe: 'Dark blazer, white shirt, badge on belt' },
-        sfx: '',
+        sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: { hair: 'Low ponytail, clean', makeup: 'Minimal foundation, no lip', wardrobe: 'Dark blazer, white shirt, badge on belt' },
         notes: 'End of a long shift — slight fatigue under eyes',
@@ -607,7 +619,7 @@ const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
       {
         characterId: 'c2', lookId: 'l4',
         entersWith: { hair: 'Neat, groomed', makeup: 'Powder for shine', wardrobe: 'Charcoal suit, no tie, sleeves rolled' },
-        sfx: '',
+        sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: { hair: 'Neat, groomed', makeup: 'Powder for shine', wardrobe: 'Charcoal suit, no tie, sleeves rolled' },
         notes: 'Carrying two coffees on entry',
@@ -615,7 +627,7 @@ const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
       {
         characterId: 'c3', lookId: 'l6',
         entersWith: { hair: 'Silver bob, styled', makeup: 'Subtle foundation, neutral lip', wardrobe: 'Navy pantsuit, pearl earrings' },
-        sfx: '',
+        sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: { hair: 'Silver bob, styled', makeup: 'Subtle foundation, neutral lip', wardrobe: 'Navy pantsuit, pearl earrings' },
         notes: 'Behind one-way mirror. Radio earpiece visible.',
@@ -631,14 +643,14 @@ const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
       {
         characterId: 'c1', lookId: 'l1',
         entersWith: { hair: 'Low ponytail, clean', makeup: 'Minimal foundation', wardrobe: 'Dark blazer, badge visible' },
-        sfx: '',
+        sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: { hair: 'Low ponytail, clean', makeup: 'Minimal foundation', wardrobe: 'Dark blazer, badge visible' },
         notes: '',
       },
       {
         characterId: 'c2', lookId: '',
-        entersWith: emptyHMW(), sfx: '',
+        entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: emptyHMW(), notes: '',
       },
@@ -652,7 +664,7 @@ const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
     characters: [
       {
         characterId: 'c1', lookId: 'l2',
-        entersWith: emptyHMW(), sfx: '',
+        entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: emptyHMW(), notes: '',
       },
@@ -667,18 +679,18 @@ const INITIAL_BREAKDOWNS: Record<string, SceneBreakdown> = {
       {
         characterId: 'c1', lookId: 'l1',
         entersWith: { hair: 'Low ponytail', makeup: 'Minimal', wardrobe: '' },
-        sfx: '', changeType: 'no-change', changeNotes: '',
+        sfx: '', environmental: '', action: '', changeType: 'no-change', changeNotes: '',
         exitsWith: emptyHMW(), notes: '',
       },
       {
         characterId: 'c4', lookId: '',
-        entersWith: emptyHMW(), sfx: '',
+        entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: emptyHMW(), notes: '',
       },
       {
         characterId: 'c5', lookId: '',
-        entersWith: emptyHMW(), sfx: '',
+        entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
         changeType: 'no-change', changeNotes: '',
         exitsWith: emptyHMW(), notes: '',
       },
