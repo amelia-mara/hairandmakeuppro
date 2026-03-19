@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, type CSSProperties } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, emptyHMW,
   useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore,
@@ -91,6 +91,95 @@ function CopyIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
 }
 
+/* ━━━ Split-view script panel icon ━━━ */
+
+function SplitViewIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>;
+}
+
+/* ━━━ Script panel for split view ━━━ */
+
+function ScriptPanel({ scenes, characters, activeSceneId, onSceneClick }: {
+  scenes: Scene[];
+  characters: Character[];
+  activeSceneId: string | null;
+  onSceneClick: (sceneId: string) => void;
+}) {
+  const sceneRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (activeSceneId && sceneRefs.current[activeSceneId]) {
+      sceneRefs.current[activeSceneId]!.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeSceneId]);
+
+  /** Build a map of uppercase character names for cue highlighting */
+  const charNameMap = useMemo(() => {
+    const m = new Map<string, Character>();
+    for (const c of characters) {
+      m.set(c.name.toUpperCase(), c);
+      // Also map first name
+      const first = c.name.split(' ')[0].toUpperCase();
+      if (first.length > 1) m.set(first, c);
+    }
+    return m;
+  }, [characters]);
+
+  const renderSceneContent = useCallback((scene: Scene) => {
+    const lines = scene.scriptContent.split('\n');
+
+    // Detect character cues
+    const cueSet = new Set<number>();
+    const dialogueSet = new Set<number>();
+    let inDialogue = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      const cueName = trimmed.replace(/\s*\(.*?\)\s*/g, '').trim();
+      if (trimmed === trimmed.toUpperCase() && trimmed.length <= 50 && cueName && charNameMap.has(cueName)) {
+        cueSet.add(i);
+        inDialogue = true;
+      } else if (inDialogue) {
+        if (trimmed === '') {
+          inDialogue = false;
+        } else {
+          dialogueSet.add(i);
+        }
+      }
+    }
+
+    return lines.map((line, i) => {
+      const trimmed = line.trim();
+      let cls = 'bs-sv-line';
+      if (cueSet.has(i)) cls += ' bs-sv-cue';
+      else if (dialogueSet.has(i)) cls += ' bs-sv-dialogue';
+      return <div key={i} className={cls}>{trimmed || '\u00A0'}</div>;
+    });
+  }, [charNameMap]);
+
+  return (
+    <div className="bs-script-panel">
+      <div className="bs-script-panel-header">Script</div>
+      <div className="bs-script-panel-body">
+        {scenes.map((scene) => (
+          <div
+            key={scene.id}
+            ref={(el) => { sceneRefs.current[scene.id] = el; }}
+            className={`bs-sv-scene ${activeSceneId === scene.id ? 'bs-sv-scene--active' : ''}`}
+            onClick={() => onSceneClick(scene.id)}
+          >
+            <div className="bs-sv-scene-heading">
+              {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
+            </div>
+            <div className="bs-sv-scene-body">
+              {renderSceneContent(scene)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ━━━ Main Component ━━━ */
 
 export function BreakdownSheet({ projectId }: { projectId: string }) {
@@ -102,7 +191,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'breakdown' | 'lookbook' | 'bible'>('breakdown');
+  const [splitView, setSplitView] = useState(false);
+  const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sceneBlockRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const lookbookMeta = useLookbookMeta(projectId);
 
   /* Resolve data source: parsed script → mock data fallback */
@@ -213,6 +305,18 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     exportCSV(rows, 'breakdown.csv');
   }, [buildExportRows]);
 
+  /* Handle scene click from script panel → scroll breakdown to that scene */
+  const handleScriptSceneClick = useCallback((sceneId: string) => {
+    setActiveSceneId(sceneId);
+    const el = sceneBlockRefs.current[sceneId];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  /* Handle scene click from breakdown → highlight in script */
+  const handleBreakdownSceneClick = useCallback((sceneId: string) => {
+    setActiveSceneId(sceneId);
+  }, []);
+
   return (
     <div className="bs-page">
       {/* Header */}
@@ -228,6 +332,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           {activeTab === 'breakdown' && (
             <>
               <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
+              <button
+                className={`bs-action-btn ${splitView ? 'bs-action-btn--active' : ''}`}
+                onClick={() => setSplitView((v) => !v)}
+                title={splitView ? 'Close script panel' : 'Show script alongside breakdown'}
+              >
+                <SplitViewIcon /> {splitView ? 'Close Script' : 'Script'}
+              </button>
               <div className="bs-filter">
                 <FilterIcon />
                 <select className="bs-filter-select" value={filterChar} onChange={(e) => setFilterChar(e.target.value)}>
@@ -273,7 +384,16 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
       )}
 
       {/* Spreadsheet */}
-      {activeTab === 'breakdown' && <div className="bs-scroll" ref={scrollRef}>
+      {activeTab === 'breakdown' && <div className={`bs-split-wrap ${splitView ? 'bs-split-wrap--active' : ''}`}>
+        {splitView && (
+          <ScriptPanel
+            scenes={scenes}
+            characters={characters}
+            activeSceneId={activeSceneId}
+            onSceneClick={handleScriptSceneClick}
+          />
+        )}
+        <div className="bs-scroll" ref={scrollRef}>
         {scenesWithCast.map((scene) => {
           const globalIdx = scenes.indexOf(scene);
           const bd = store.getBreakdown(scene.id);
@@ -294,7 +414,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
             : '';
 
           return (
-            <div key={scene.id} className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass}`}>
+            <div
+              key={scene.id}
+              ref={(el) => { sceneBlockRefs.current[scene.id] = el; }}
+              className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass} ${splitView && activeSceneId === scene.id ? 'bs-scene-block--highlighted' : ''}`}
+              onClick={splitView ? () => handleBreakdownSceneClick(scene.id) : undefined}
+              style={splitView ? { cursor: 'pointer' } as CSSProperties : undefined}
+            >
               {/* Time jump banner */}
               {isTimeJump && (
                 <div className="bs-time-jump-banner">
@@ -422,6 +548,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
             <p>No scenes with characters found{filterChar ? ' for this character' : ''}.</p>
           </div>
         )}
+      </div>
       </div>}
     </div>
   );

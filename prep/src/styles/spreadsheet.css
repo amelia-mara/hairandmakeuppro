@@ -502,3 +502,123 @@
     0 4px 16px rgba(120, 100, 60, 0.04);
 }
 
+/* ━━━ Split-view layout ━━━ */
+
+.bs-split-wrap {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.bs-split-wrap--active {
+  flex-direction: row;
+}
+
+/* Active toggle button state */
+.bs-action-btn--active {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.30);
+  color: var(--accent);
+}
+
+/* Scene block highlight when clicked in split view */
+.bs-scene-block--highlighted {
+  outline: 2px solid rgba(var(--a), 0.35);
+  outline-offset: -1px;
+}
+
+/* ━━━ Script Panel (left side of split view) ━━━ */
+
+.bs-script-panel {
+  width: 400px; min-width: 320px; max-width: 500px;
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border-card);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+
+.bs-script-panel-header {
+  padding: 14px 20px;
+  font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border-card);
+  flex-shrink: 0;
+}
+
+.bs-script-panel-body {
+  flex: 1; overflow-y: auto;
+  padding: 8px 0;
+}
+
+/* Individual scene in script panel */
+.bs-sv-scene {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(var(--a), 0.06);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bs-sv-scene:hover {
+  background: rgba(var(--a), 0.03);
+}
+.bs-sv-scene--active {
+  background: rgba(var(--a), 0.06);
+  border-left: 3px solid var(--accent);
+}
+
+.bs-sv-scene-heading {
+  font-size: 0.8125rem; font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--a), 0.08);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+.bs-sv-scene-body {
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* Script line types */
+.bs-sv-line {
+  min-height: 1.2em;
+}
+.bs-sv-cue {
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 8px;
+  cursor: default;
+}
+.bs-sv-dialogue {
+  padding-left: 20%;
+  padding-right: 10%;
+}
+
+/* Light theme overrides for script panel */
+[data-theme="light"] .bs-script-panel {
+  background: #FEFCF8;
+  border-right-color: rgba(160, 140, 100, 0.25);
+}
+[data-theme="light"] .bs-script-panel-header {
+  border-bottom-color: rgba(160, 140, 100, 0.25);
+}
+[data-theme="light"] .bs-sv-scene--active {
+  background: rgba(210, 195, 165, 0.25);
+}
+[data-theme="light"] .bs-sv-scene:hover {
+  background: rgba(210, 195, 165, 0.15);
+}
+[data-theme="light"] .bs-sv-scene-heading {
+  color: #5A3E28;
+}
+[data-theme="light"] .bs-sv-cue {
+  color: #A0522D;
+}
+[data-theme="light"] .bs-action-btn--active {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.30);
+  color: var(--accent);
+}
+
