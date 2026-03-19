@@ -11,6 +11,7 @@ import { Budget } from '@/pages/Budget';
 import { Timesheet } from '@/pages/Timesheet';
 import { CallSheets } from '@/pages/CallSheets';
 import { Schedule } from '@/pages/Schedule';
+import { Team } from '@/pages/Team';
 import { CharacterDesign } from '@/pages/CharacterDesign';
 import { AuthPage } from '@/pages/AuthPage';
 import { BetaCodePage } from '@/pages/BetaCodePage';
@@ -184,6 +185,9 @@ function App() {
           )}
           {activePage === 'call-sheets' && (
             <CallSheets projectId={selectedProjectId} />
+          )}
+          {activePage === 'team' && (
+            <Team projectId={selectedProjectId} />
           )}
         </ProjectLayout>
       </div>

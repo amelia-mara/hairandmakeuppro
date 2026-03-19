@@ -22,7 +22,7 @@ const NAV_ITEMS = [
   { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
   { id: 'call-sheets', label: 'Call Sheets', icon: CallSheetsIcon },
-  { id: 'crew', label: 'Crew', icon: CrewIcon },
+  { id: 'team', label: 'Team', icon: TeamIcon },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
@@ -360,7 +360,7 @@ function CallSheetsIcon() {
   );
 }
 
-function CrewIcon() {
+function TeamIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
