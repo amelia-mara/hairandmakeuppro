@@ -169,7 +169,8 @@ export function ScriptBreakdown({ projectId }: Props) {
         characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },
-          sfx: '', changeType: 'no-change', changeNotes: '',
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change', changeNotes: '',
           exitsWith: { hair: '', makeup: '', wardrobe: '' },
           notes: '',
         })),
@@ -425,49 +426,47 @@ export function ScriptBreakdown({ projectId }: Props) {
                   projectId={projectId}
                   onTagCreated={(sceneId, characterId, categoryId, text) => {
                     const charOverrides = useCharacterOverridesStore.getState();
-                    /* Auto-fill breakdown fields based on category */
-                    const fieldMap: Record<string, { field: 'entersWith'; key: 'hair' | 'makeup' | 'wardrobe' } | { field: 'sfx' }> = {
-                      hair: { field: 'entersWith', key: 'hair' },
-                      makeup: { field: 'entersWith', key: 'makeup' },
-                      wardrobe: { field: 'entersWith', key: 'wardrobe' },
-                    };
-                    const mapping = fieldMap[categoryId];
-                    if (mapping) {
+                    const cat = BREAKDOWN_CATEGORIES.find(c => c.id === categoryId);
+                    if (!cat) return;
+
+                    if (cat.group === 'breakdown') {
+                      /* Auto-fill scene breakdown fields */
                       const bd = store.getBreakdown(sceneId);
                       const cb = bd?.characters.find((c) => c.characterId === characterId);
                       if (cb) {
-                        if ('key' in mapping) {
-                          const existing = cb[mapping.field][mapping.key];
-                          const newVal = existing ? `${existing}, ${text}` : text;
+                        if (cat.field.startsWith('entersWith.')) {
+                          const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+                          const existing = cb.entersWith[key];
                           store.updateCharacterBreakdown(sceneId, characterId, {
-                            [mapping.field]: { ...cb[mapping.field], [mapping.key]: newVal },
+                            entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${text}` : text },
+                          });
+                        } else {
+                          const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+                          const existing = cb[field] || '';
+                          store.updateCharacterBreakdown(sceneId, characterId, {
+                            [field]: existing ? `${existing}, ${text}` : text,
                           });
                         }
                       }
-                    } else if (categoryId === 'sfx') {
-                      const bd = store.getBreakdown(sceneId);
-                      const cb = bd?.characters.find((c) => c.characterId === characterId);
-                      if (cb) {
-                        const existing = cb.sfx;
-                        store.updateCharacterBreakdown(sceneId, characterId, {
-                          sfx: existing ? `${existing}, ${text}` : text,
-                        });
-                      }
-                    }
-                    /* Parse description text for profile data and auto-fill character profile */
-                    const extracted = extractProfileData(text);
-                    if (Object.keys(extracted).length > 0) {
-                      const char = ALL_CHARACTERS.find((c) => c.id === characterId);
-                      if (char) {
-                        const resolved = charOverrides.getCharacter(char);
-                        const updates: Record<string, string> = {};
-                        for (const [key, value] of Object.entries(extracted)) {
-                          if (!resolved[key as keyof Character]) {
-                            updates[key] = value;
+                    } else if (cat.group === 'profile') {
+                      /* Auto-fill character profile fields */
+                      if (cat.field === 'scriptNotes') {
+                        // Script Description tags are stored as tags and displayed in Script Notes tab
+                        // No direct field update — the tag itself serves as the record
+                      } else {
+                        const profileField = cat.field as keyof Character;
+                        const char = ALL_CHARACTERS.find((c) => c.id === characterId);
+                        if (char) {
+                          const resolved = charOverrides.getCharacter(char);
+                          const existing = (resolved[profileField] as string) || '';
+                          // For notes, append; for other fields, only fill if empty
+                          if (profileField === 'notes') {
+                            charOverrides.updateCharacter(characterId, {
+                              [profileField]: existing ? `${existing}. ${text}` : text,
+                            });
+                          } else if (!existing) {
+                            charOverrides.updateCharacter(characterId, { [profileField]: text });
                           }
-                        }
-                        if (Object.keys(updates).length > 0) {
-                          charOverrides.updateCharacter(characterId, updates);
                         }
                       }
                     }
@@ -649,8 +648,8 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick category, Step 2: pick character, Step 3 (cast): pick existing or create new */
-  step: 'category' | 'character' | 'cast';
+  /** Step 1: pick character, Step 2: pick field/category */
+  step: 'character' | 'field';
   categoryId?: string;
   characterId?: string;
   /** When true, popup appears below the selection instead of above */
@@ -794,70 +793,23 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
       startOffset: startIdx,
       endOffset: startIdx + text.length,
       text,
-      step: 'category',
+      step: 'character',
       popBelow,
     });
 
     sel.removeAllRanges();
   }, [scenes]);
 
-  /* Step 1: User picks category (tag type) */
-  const handleCategoryPick = useCallback((catId: string) => {
-    if (!popup) return;
-    if (catId === 'cast') {
-      setPopup({ ...popup, step: 'cast', categoryId: catId });
-    } else {
-      setPopup({ ...popup, step: 'character', categoryId: catId });
-    }
-  }, [popup]);
-
-  /* Step 2: User picks character from dropdown → tag is created */
-  const handleCharacterPick = useCallback((charId: string) => {
-    if (!popup || !popup.categoryId) return;
-    tagStore.addTag({
-      id: `tag-${Date.now()}`,
-      sceneId: popup.sceneId,
-      startOffset: popup.startOffset,
-      endOffset: popup.endOffset,
-      text: popup.text,
-      categoryId: popup.categoryId,
-      characterId: charId,
-    });
-    onTagCreated(popup.sceneId, charId, popup.categoryId, popup.text);
-    setPopup(null);
-  }, [popup, tagStore, onTagCreated]);
-
   const parsedScriptStore = useParsedScriptStore();
 
-  /* Cast: user picks an existing character to link the highlighted text to */
-  const handleCastMerge = useCallback((charId: string) => {
+  /* Step 1: User picks a character → advance to field selection */
+  const handleCharacterPick = useCallback((charId: string) => {
     if (!popup) return;
-    // Add character to scene if not already present
-    const pd = parsedScriptStore.getParsedData(projectId);
-    if (pd) {
-      const sceneData = pd.scenes.find(s => s.id === popup.sceneId);
-      if (sceneData && !sceneData.characterIds.includes(charId)) {
-        const updated = pd.scenes.map(s =>
-          s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, charId] } : s
-        );
-        parsedScriptStore.setParsedData(projectId, { ...pd, scenes: updated });
-      }
-    }
-    // Create a cast tag linking highlighted text to the character
-    tagStore.addTag({
-      id: `tag-${Date.now()}`,
-      sceneId: popup.sceneId,
-      startOffset: popup.startOffset,
-      endOffset: popup.endOffset,
-      text: popup.text,
-      categoryId: 'cast',
-      characterId: charId,
-    });
-    setPopup(null);
-  }, [popup, tagStore, parsedScriptStore, projectId]);
+    setPopup({ ...popup, step: 'field', characterId: charId });
+  }, [popup]);
 
-  /* Cast: user creates a brand new character from the highlighted text */
-  const handleCastCreateNew = useCallback(() => {
+  /* Step 1b: User creates a new character → add to project, advance to field selection */
+  const handleCreateNewCharacter = useCallback(() => {
     if (!popup) return;
     const pd = parsedScriptStore.getParsedData(projectId);
     if (!pd) return;
@@ -870,24 +822,29 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
       age: '', gender: '', hairColour: '', hairType: '',
       eyeColour: '', skinTone: '', build: '', distinguishingFeatures: '', notes: '',
     };
-    // Add character to the project and to this scene
     const updatedChars = [...pd.characters, newChar];
     const updatedScenes = pd.scenes.map(s =>
       s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, newId] } : s
     );
     parsedScriptStore.setParsedData(projectId, { ...pd, characters: updatedChars, scenes: updatedScenes });
-    // Create a cast tag
+    setPopup({ ...popup, step: 'field', characterId: newId });
+  }, [popup, parsedScriptStore, projectId]);
+
+  /* Step 2: User picks a field/category → create tag + auto-populate */
+  const handleFieldPick = useCallback((catId: string) => {
+    if (!popup || !popup.characterId) return;
     tagStore.addTag({
       id: `tag-${Date.now()}`,
       sceneId: popup.sceneId,
       startOffset: popup.startOffset,
       endOffset: popup.endOffset,
       text: popup.text,
-      categoryId: 'cast',
-      characterId: newId,
+      categoryId: catId,
+      characterId: popup.characterId,
     });
+    onTagCreated(popup.sceneId, popup.characterId, catId, popup.text);
     setPopup(null);
-  }, [popup, tagStore, parsedScriptStore, projectId]);
+  }, [popup, tagStore, onTagCreated]);
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
@@ -1205,64 +1162,55 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           top: popup.y,
           transform: popup.popBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
         }}>
-          {popup.step === 'category' && (
+          {popup.step === 'character' && (
             <>
-              <div className="sv-tag-popup-title">Tag type</div>
-              <div className="sv-tag-popup-grid">
-                {BREAKDOWN_CATEGORIES.map((cat) => (
-                  <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleCategoryPick(cat.id)}>
-                    <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
-                    {cat.label}
+              <div className="sv-tag-popup-title">Assign to character</div>
+              <div className="sv-tag-popup-quoted">"{popup.text.length > 50 ? popup.text.slice(0, 50) + '…' : popup.text}"</div>
+              <div className="sv-tag-popup-charlist">
+                {popupChars.map((ch) => (
+                  <button key={ch.id} className="sv-tag-popup-char-item" onClick={() => handleCharacterPick(ch.id)}>
+                    <span className="sv-tag-popup-char-avatar">{ch.name.charAt(0)}</span>
+                    <span>{ch.name}</span>
                   </button>
                 ))}
+                <button className="sv-tag-popup-char-item sv-tag-popup-char-item--new" onClick={handleCreateNewCharacter}>
+                  <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(212, 148, 58, 0.2)', color: '#D4943A' }}>+</span>
+                  <span>New Character</span>
+                </button>
               </div>
               <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup(null)}>
                 Cancel
               </button>
             </>
           )}
-          {popup.step === 'character' && (
+          {popup.step === 'field' && (
             <>
               <div className="sv-tag-popup-title">
-                <span className="sv-tag-popup-swatch" style={{ background: BREAKDOWN_CATEGORIES.find((c) => c.id === popup.categoryId)?.color }} />
-                {' '}{BREAKDOWN_CATEGORIES.find((c) => c.id === popup.categoryId)?.label} — Assign to:
+                Tag as — <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{popupChars.find(c => c.id === popup.characterId)?.name}</span>
               </div>
-              <select
-                className="sv-tag-popup-select"
-                defaultValue=""
-                onChange={(e) => { if (e.target.value) handleCharacterPick(e.target.value); }}
-              >
-                <option value="" disabled>Select character…</option>
-                {popupChars.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.name}</option>
-                ))}
-              </select>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
-                Back
-              </button>
-            </>
-          )}
-          {popup.step === 'cast' && (
-            <>
-              <div className="sv-tag-popup-title">
-                <span className="sv-tag-popup-swatch" style={{ background: BREAKDOWN_CATEGORIES.find((c) => c.id === 'cast')?.color }} />
-                {' '}Cast — "{popup.text}"
+              <div className="sv-tag-popup-field-section">
+                <div className="sv-tag-popup-field-label">Scene Breakdown</div>
+                <div className="sv-tag-popup-grid">
+                  {BREAKDOWN_CATEGORIES.filter(c => c.group === 'breakdown').map((cat) => (
+                    <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleFieldPick(cat.id)}>
+                      <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <select
-                className="sv-tag-popup-select"
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value === '__create_new__') handleCastCreateNew();
-                  else if (e.target.value) handleCastMerge(e.target.value);
-                }}
-              >
-                <option value="" disabled>Select existing character or create new…</option>
-                {popupChars.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.name}</option>
-                ))}
-                <option value="__create_new__">+ Create new character "{popup.text.trim().toUpperCase()}"</option>
-              </select>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
+              <div className="sv-tag-popup-field-section">
+                <div className="sv-tag-popup-field-label">Character Profile</div>
+                <div className="sv-tag-popup-grid">
+                  {BREAKDOWN_CATEGORIES.filter(c => c.group === 'profile').map((cat) => (
+                    <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleFieldPick(cat.id)}>
+                      <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'character' })}>
                 Back
               </button>
             </>
@@ -2219,15 +2167,15 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
         <TagPills tags={sfxTags} color={catColor('sfx')} />
       </div>
 
-      {(healthTags.length > 0 || injuryTags.length > 0 || stuntTags.length > 0 || weatherTags.length > 0) && (
-        <div className="cb-field">
-          <label className="cb-label">Tagged from Script</label>
-          {healthTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('health') }}>Health</span><TagPills tags={healthTags} color={catColor('health')} /></>}
-          {injuryTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('injuries') }}>Injuries</span><TagPills tags={injuryTags} color={catColor('injuries')} /></>}
-          {stuntTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('stunts') }}>Stunts</span><TagPills tags={stuntTags} color={catColor('stunts')} /></>}
-          {weatherTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('weather') }}>Weather</span><TagPills tags={weatherTags} color={catColor('weather')} /></>}
-        </div>
-      )}
+      <div className="cb-field">
+        <FInput label="Environmental" value={cb.environmental || ''} onChange={(v) => onUpdate({ environmental: v })} />
+        <TagPills tags={sceneTags.filter(t => t.categoryId === 'environmental')} color={catColor('environmental')} />
+      </div>
+
+      <div className="cb-field">
+        <FInput label="Action" value={cb.action || ''} onChange={(v) => onUpdate({ action: v })} />
+        <TagPills tags={sceneTags.filter(t => t.categoryId === 'action')} color={catColor('action')} />
+      </div>
 
       <div className="cb-field">
         <label className="cb-label">Changes</label>
