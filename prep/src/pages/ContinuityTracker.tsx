@@ -103,7 +103,7 @@ export function ContinuityTracker({ projectId }: Props) {
         },
         characters: sc.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
-          entersWith: emptyHMW(), sfx: '',
+          entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
           changeType: 'no-change' as const, changeNotes: '',
           exitsWith: emptyHMW(), notes: '',
         })),

@@ -162,6 +162,19 @@
   background: var(--bg-card);
 }
 
+/* Revised scene — deep orange highlight for unreviewed changes */
+.sl-card--revised {
+  border-left: 3px solid #E8621A !important;
+  background: rgba(232, 98, 26, 0.06) !important;
+  box-shadow: 0 1px 4px rgba(232, 98, 26, 0.15);
+}
+.sl-card--revised:not(.sl-card--active) {
+  border-color: rgba(232, 98, 26, 0.3);
+}
+.sl-card--revised .sl-card-num {
+  color: #E8621A;
+}
+
 .sl-card-top {
   display: flex;
   align-items: baseline;

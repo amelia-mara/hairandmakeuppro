@@ -266,12 +266,15 @@
 }
 
 /* Column widths */
-.bs-col-char { width: 150px; }
-.bs-col-hair { width: 170px; }
-.bs-col-makeup { width: 170px; }
-.bs-col-wardrobe { width: 170px; }
-.bs-col-sfx { width: 140px; }
-.bs-col-notes { min-width: 200px; }
+.bs-col-char { width: 130px; }
+.bs-col-look { width: 120px; }
+.bs-col-hair { width: 150px; }
+.bs-col-makeup { width: 150px; }
+.bs-col-wardrobe { width: 150px; }
+.bs-col-sfx { width: 120px; }
+.bs-col-env { width: 130px; }
+.bs-col-action { width: 130px; }
+.bs-col-notes { min-width: 180px; }
 
 /* Character cell — stacked name + billing + look */
 .bs-char-stack {
@@ -296,6 +299,13 @@
   color: var(--accent-cue);
   font-style: italic;
   margin-top: 2px;
+}
+
+/* Look name in dedicated column */
+.bs-look-name {
+  font-size: 0.8125rem; font-weight: 500;
+  color: var(--accent-cue);
+  font-style: italic;
 }
 
 /* Exit state note (shown below main value) */
@@ -326,6 +336,16 @@
   box-shadow: inset 4px 0 0 rgba(239, 68, 68, 0.7);
 }
 
+/* Flag cell — warm orange highlight for SFX / Environmental when filled */
+.bs-cell--flag {
+  background: rgba(232, 98, 26, 0.12);
+}
+
+/* Light theme */
+[data-theme="light"] .bs-cell--flag {
+  background: rgba(232, 98, 26, 0.14);
+}
+
 /* Empty dash */
 .bs-empty {
   color: var(--text-muted); opacity: 0.35;
@@ -351,13 +371,15 @@
   line-height: 1.3;
 }
 
-/* Time jump scene highlight */
+/* Time jump scene highlight — solid row tint instead of border glow */
 .bs-scene-block--time-jump {
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow:
-    0 0 0 2px rgba(245, 158, 11, 0.15),
-    0 1px 4px rgba(0,0,0,0.06),
-    0 4px 16px rgba(0,0,0,0.03);
+  border-color: rgba(74, 191, 176, 0.35);
+}
+.bs-scene-block--time-jump .bs-table tbody tr {
+  background: rgba(74, 191, 176, 0.12);
+}
+.bs-scene-block--time-jump .bs-table tbody tr:hover {
+  background: rgba(74, 191, 176, 0.20);
 }
 
 .bs-time-jump-banner {
@@ -495,10 +517,164 @@
   border-bottom-color: rgba(245, 158, 11, 0.3);
 }
 [data-theme="light"] .bs-scene-block--time-jump {
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow:
-    0 0 0 2px rgba(245, 158, 11, 0.15),
-    0 1px 3px rgba(120, 100, 60, 0.08),
-    0 4px 16px rgba(120, 100, 60, 0.04);
+  border-color: rgba(74, 191, 176, 0.4);
+}
+[data-theme="light"] .bs-scene-block--time-jump .bs-table tbody tr {
+  background: rgba(74, 191, 176, 0.14);
+}
+[data-theme="light"] .bs-scene-block--time-jump .bs-table tbody tr:hover {
+  background: rgba(74, 191, 176, 0.22);
+}
+
+/* ━━━ Embedded Breakdown Table (inside Script page right panel) ━━━ */
+
+.bs-embedded {
+  flex: 1; overflow-y: auto; overflow-x: auto;
+  padding: 8px 12px 40px;
+}
+.bs-embedded .bs-scene-block {
+  margin-top: 16px;
+}
+.bs-embedded .bs-scene-block:first-child {
+  margin-top: 4px;
+}
+.bs-embedded .bs-scene-header {
+  padding: 14px 16px 10px;
+}
+.bs-embedded .bs-table th {
+  padding: 8px 12px;
+  font-size: 0.625rem;
+}
+.bs-embedded .bs-table td {
+  padding: 10px 12px;
+  font-size: 0.75rem;
+}
+
+/* Wider right panel when showing full breakdown */
+.bd-right--breakdown {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 500px !important;
+  max-width: none !important;
+}
+
+/* ━━━ Split-view layout ━━━ */
+
+.bs-split-wrap {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.bs-split-wrap--active {
+  flex-direction: row;
+}
+
+/* Active toggle button state */
+.bs-action-btn--active {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.30);
+  color: var(--accent);
+}
+
+/* Scene block highlight when clicked in split view */
+.bs-scene-block--highlighted {
+  outline: 2px solid rgba(var(--a), 0.35);
+  outline-offset: -1px;
+}
+
+/* ━━━ Script Panel (left side of split view) ━━━ */
+
+.bs-script-panel {
+  width: 400px; min-width: 320px; max-width: 500px;
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border-card);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+
+.bs-script-panel-header {
+  padding: 14px 20px;
+  font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border-card);
+  flex-shrink: 0;
+}
+
+.bs-script-panel-body {
+  flex: 1; overflow-y: auto;
+  padding: 8px 0;
+}
+
+/* Individual scene in script panel */
+.bs-sv-scene {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(var(--a), 0.06);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bs-sv-scene:hover {
+  background: rgba(var(--a), 0.03);
+}
+.bs-sv-scene--active {
+  background: rgba(var(--a), 0.06);
+  border-left: 3px solid var(--accent);
+}
+
+.bs-sv-scene-heading {
+  font-size: 0.8125rem; font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--a), 0.08);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+.bs-sv-scene-body {
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* Script line types */
+.bs-sv-line {
+  min-height: 1.2em;
+}
+.bs-sv-cue {
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 8px;
+  cursor: default;
+}
+.bs-sv-dialogue {
+  padding-left: 20%;
+  padding-right: 10%;
+}
+
+/* Light theme overrides for script panel */
+[data-theme="light"] .bs-script-panel {
+  background: #FEFCF8;
+  border-right-color: rgba(160, 140, 100, 0.25);
+}
+[data-theme="light"] .bs-script-panel-header {
+  border-bottom-color: rgba(160, 140, 100, 0.25);
+}
+[data-theme="light"] .bs-sv-scene--active {
+  background: rgba(210, 195, 165, 0.25);
+}
+[data-theme="light"] .bs-sv-scene:hover {
+  background: rgba(210, 195, 165, 0.15);
+}
+[data-theme="light"] .bs-sv-scene-heading {
+  color: #5A3E28;
+}
+[data-theme="light"] .bs-sv-cue {
+  color: #A0522D;
+}
+[data-theme="light"] .bs-action-btn--active {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.30);
+  color: var(--accent);
 }
 

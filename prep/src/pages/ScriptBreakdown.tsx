@@ -3,13 +3,16 @@ import { createPortal } from 'react-dom';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES, CONTINUITY_EVENT_TYPES,
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
-  useCharacterOverridesStore,
+  useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag, type ParsedCharacterData,
+  type ScriptTag, type ParsedCharacterData, type SceneChange,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
+import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
+import { supabase } from '@/lib/supabase';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DRAGGABLE PANEL RESIZE HOOK
@@ -113,6 +116,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showDraftsModal, setShowDraftsModal] = useState(false);
+  const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
+  const [splitView, setSplitView] = useState(false);
+  const revisedStore = useRevisedScenesStore();
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -164,7 +171,8 @@ export function ScriptBreakdown({ projectId }: Props) {
         characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },
-          sfx: '', changeType: 'no-change', changeNotes: '',
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change', changeNotes: '',
           exitsWith: { hair: '', makeup: '', wardrobe: '' },
           notes: '',
         })),
@@ -259,9 +267,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   return (
     <div className="bd-page">
       {/* Three panels with draggable dividers */}
-      <div className="bd-panels">
+      <div className={`bd-panels`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
+        {(
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
@@ -280,8 +289,9 @@ export function ScriptBreakdown({ projectId }: Props) {
               const isActive = s.id === selectedSceneId;
               const bd = store.getBreakdown(s.id);
               const colorClass = sceneColorClass(s.intExt, s.dayNight);
+              const isRevised = revisedStore.isSceneRevised(projectId, s.id);
               return (
-                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass}`}
+                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass} ${isRevised ? 'sl-card--revised' : ''}`}
                   onClick={() => selectScene(s.id)}>
                   <div className="sl-card-top">
                     <span className="sl-card-num">{s.number}</span>
@@ -295,6 +305,31 @@ export function ScriptBreakdown({ projectId }: Props) {
                     )}
                     <span className={`sl-card-status sl-card-status--${status}`} />
                   </div>
+                  {isActive && isRevised && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '6px 10px', margin: '6px 0 0',
+                      background: 'rgba(232, 98, 26, 0.12)',
+                      borderRadius: 6, fontSize: '0.6875rem', color: '#E8621A', fontWeight: 600,
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 9v4"/><path d="M12 17h.01"/>
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      </svg>
+                      <span style={{ flex: 1 }}>Revised — review changes</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); revisedStore.markReviewed(projectId, s.id); }}
+                        style={{
+                          background: '#E8621A', border: 'none', borderRadius: 4,
+                          color: '#fff', fontSize: '0.625rem', fontWeight: 700,
+                          padding: '2px 8px', cursor: 'pointer', textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        ✓ Reviewed
+                      </button>
+                    </div>
+                  )}
                   {isActive && (
                     <div className="sl-card-expand">
                       {bd && (bd.timeline.day || bd.timeline.type) && (
@@ -335,6 +370,7 @@ export function ScriptBreakdown({ projectId }: Props) {
             })}
           </div>
         </div>
+        )}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
@@ -394,49 +430,47 @@ export function ScriptBreakdown({ projectId }: Props) {
                   projectId={projectId}
                   onTagCreated={(sceneId, characterId, categoryId, text) => {
                     const charOverrides = useCharacterOverridesStore.getState();
-                    /* Auto-fill breakdown fields based on category */
-                    const fieldMap: Record<string, { field: 'entersWith'; key: 'hair' | 'makeup' | 'wardrobe' } | { field: 'sfx' }> = {
-                      hair: { field: 'entersWith', key: 'hair' },
-                      makeup: { field: 'entersWith', key: 'makeup' },
-                      wardrobe: { field: 'entersWith', key: 'wardrobe' },
-                    };
-                    const mapping = fieldMap[categoryId];
-                    if (mapping) {
+                    const cat = BREAKDOWN_CATEGORIES.find(c => c.id === categoryId);
+                    if (!cat) return;
+
+                    if (cat.group === 'breakdown') {
+                      /* Auto-fill scene breakdown fields */
                       const bd = store.getBreakdown(sceneId);
                       const cb = bd?.characters.find((c) => c.characterId === characterId);
                       if (cb) {
-                        if ('key' in mapping) {
-                          const existing = cb[mapping.field][mapping.key];
-                          const newVal = existing ? `${existing}, ${text}` : text;
+                        if (cat.field.startsWith('entersWith.')) {
+                          const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+                          const existing = cb.entersWith[key];
                           store.updateCharacterBreakdown(sceneId, characterId, {
-                            [mapping.field]: { ...cb[mapping.field], [mapping.key]: newVal },
+                            entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${text}` : text },
+                          });
+                        } else {
+                          const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+                          const existing = cb[field] || '';
+                          store.updateCharacterBreakdown(sceneId, characterId, {
+                            [field]: existing ? `${existing}, ${text}` : text,
                           });
                         }
                       }
-                    } else if (categoryId === 'sfx') {
-                      const bd = store.getBreakdown(sceneId);
-                      const cb = bd?.characters.find((c) => c.characterId === characterId);
-                      if (cb) {
-                        const existing = cb.sfx;
-                        store.updateCharacterBreakdown(sceneId, characterId, {
-                          sfx: existing ? `${existing}, ${text}` : text,
-                        });
-                      }
-                    }
-                    /* Parse description text for profile data and auto-fill character profile */
-                    const extracted = extractProfileData(text);
-                    if (Object.keys(extracted).length > 0) {
-                      const char = ALL_CHARACTERS.find((c) => c.id === characterId);
-                      if (char) {
-                        const resolved = charOverrides.getCharacter(char);
-                        const updates: Record<string, string> = {};
-                        for (const [key, value] of Object.entries(extracted)) {
-                          if (!resolved[key as keyof Character]) {
-                            updates[key] = value;
+                    } else if (cat.group === 'profile') {
+                      /* Auto-fill character profile fields */
+                      if (cat.field === 'scriptNotes') {
+                        // Script Description tags are stored as tags and displayed in Script Notes tab
+                        // No direct field update — the tag itself serves as the record
+                      } else {
+                        const profileField = cat.field as keyof Character;
+                        const char = ALL_CHARACTERS.find((c) => c.id === characterId);
+                        if (char) {
+                          const resolved = charOverrides.getCharacter(char);
+                          const existing = (resolved[profileField] as string) || '';
+                          // For notes, append; for other fields, only fill if empty
+                          if (profileField === 'notes') {
+                            charOverrides.updateCharacter(characterId, {
+                              [profileField]: existing ? `${existing}. ${text}` : text,
+                            });
+                          } else if (!existing) {
+                            charOverrides.updateCharacter(characterId, { [profileField]: text });
                           }
-                        }
-                        if (Object.keys(updates).length > 0) {
-                          charOverrides.updateCharacter(characterId, updates);
                         }
                       }
                     }
@@ -473,10 +507,21 @@ export function ScriptBreakdown({ projectId }: Props) {
           <div className="bd-divider-grip" />
         </div>
 
-        {/* ━━━ RIGHT — Breakdown Form ━━━ */}
-        <div className="bd-right bd-panel-surface" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
+        {/* ━━━ RIGHT — Breakdown Form or Full Breakdown Table ━━━ */}
+        <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
           <div className="fp-panel-header">
-            <span className="fp-panel-title">Scene Breakdown</span>
+            <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
+            {splitView && (
+              <button
+                className="btn-ghost bd-btn bd-split-close"
+                onClick={() => setSplitView(false)}
+                aria-label="Close breakdown view"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                </svg>
+              </button>
+            )}
             <div className="fp-panel-actions" ref={toolsRef} style={{ position: 'relative' }}>
               <button className="btn-ghost bd-btn" onClick={() => setToolsOpen(!toolsOpen)}>
                 <ToolsIcon /> Tools
@@ -491,10 +536,10 @@ export function ScriptBreakdown({ projectId }: Props) {
                     <button className="tools-dropdown-item" onClick={() => { setShowUploadModal(true); setToolsOpen(false); }}>
                       <ImportIcon /> <span>Import New Script</span>
                     </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Previous drafts'); setToolsOpen(false); }}>
+                    <button className="tools-dropdown-item" onClick={() => { setShowDraftsModal(true); setToolsOpen(false); }}>
                       <DraftsIcon /> <span>View Previous Drafts</span>
                     </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('View breakdown'); setToolsOpen(false); }}>
+                    <button className="tools-dropdown-item" onClick={() => { setSplitView(true); setToolsOpen(false); }}>
                       <BreakdownViewIcon /> <span>View Breakdown</span>
                     </button>
                   </div>
@@ -518,35 +563,39 @@ export function ScriptBreakdown({ projectId }: Props) {
               )}
             </div>
           </div>
-          {scene && (
-          <BreakdownFormPanel
-            scene={scene} characters={sceneCharacters} breakdown={breakdown}
-            activeCharacterId={activeTab !== 'script' ? activeTab : null}
-            saveStatus={saveStatus}
-            scenes={filteredScenes}
-            allScenes={ALL_SCENES}
-            allCharacters={ALL_CHARACTERS}
-            allLooks={ALL_LOOKS}
-            onNavigate={selectScene}
-            onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
-            onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
-            onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
-            onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
-            onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
-            onRemoveCharacter={(charId, action, mergeTargetId) => {
-              if (action === 'not-in-scene') {
-                parsedScriptStore.removeCharacterFromScene(projectId, validSceneId, charId);
-                store.removeCharacterBreakdown(validSceneId, charId);
-              } else if (action === 'not-a-character') {
-                parsedScriptStore.removeCharacterEntirely(projectId, charId);
-                store.removeCharacterFromAllBreakdowns(charId);
-              } else if (action === 'duplicate' && mergeTargetId) {
-                parsedScriptStore.mergeCharacters(projectId, charId, mergeTargetId);
-                store.mergeCharacterBreakdowns(charId, mergeTargetId);
-              }
-              triggerSave();
-            }}
-          />
+          {splitView ? (
+            <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
+          ) : (
+            scene && (
+            <BreakdownFormPanel
+              scene={scene} characters={sceneCharacters} breakdown={breakdown}
+              activeCharacterId={activeTab !== 'script' ? activeTab : null}
+              saveStatus={saveStatus}
+              scenes={filteredScenes}
+              allScenes={ALL_SCENES}
+              allCharacters={ALL_CHARACTERS}
+              allLooks={ALL_LOOKS}
+              onNavigate={selectScene}
+              onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
+              onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
+              onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
+              onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
+              onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
+              onRemoveCharacter={(charId, action, mergeTargetId) => {
+                if (action === 'not-in-scene') {
+                  parsedScriptStore.removeCharacterFromScene(projectId, validSceneId, charId);
+                  store.removeCharacterBreakdown(validSceneId, charId);
+                } else if (action === 'not-a-character') {
+                  parsedScriptStore.removeCharacterEntirely(projectId, charId);
+                  store.removeCharacterFromAllBreakdowns(charId);
+                } else if (action === 'duplicate' && mergeTargetId) {
+                  parsedScriptStore.mergeCharacters(projectId, charId, mergeTargetId);
+                  store.mergeCharacterBreakdowns(charId, mergeTargetId);
+                }
+                triggerSave();
+              }}
+            />
+            )
           )}
         </div>
       </div>
@@ -556,9 +605,39 @@ export function ScriptBreakdown({ projectId }: Props) {
         <ScriptUploadModal
           projectId={projectId}
           onClose={() => setShowUploadModal(false)}
-          onUploaded={(filename) => {
+          onUploaded={(filename, diffResult) => {
             updateProject(projectId, { scriptFilename: filename });
             setShowUploadModal(false);
+            if (diffResult && diffResult.changes.length > 0) {
+              // Store revision changes for highlighting
+              revisedStore.setRevision(projectId, {
+                changes: diffResult.changes,
+                filename,
+              });
+              // Show changes summary modal
+              setShowChangesModal(diffResult);
+            }
+          }}
+        />
+      )}
+
+      {/* Previous Drafts Modal */}
+      {showDraftsModal && (
+        <PreviousDraftsModal
+          projectId={projectId}
+          onClose={() => setShowDraftsModal(false)}
+        />
+      )}
+
+      {/* Changes Summary Modal */}
+      {showChangesModal && (
+        <ChangesSummaryModal
+          diffResult={showChangesModal}
+          onClose={() => setShowChangesModal(null)}
+          onGoToScene={(sceneId) => {
+            setShowChangesModal(null);
+            setSelectedSceneId(sceneId);
+            setScrollTrigger((n) => n + 1);
           }}
         />
       )}
@@ -588,67 +667,12 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick category, Step 2: pick character, Step 3 (cast): pick existing or create new */
-  step: 'category' | 'character' | 'cast';
+  /** Step 1: pick character, Step 2: pick field/category */
+  step: 'character' | 'field';
   categoryId?: string;
   characterId?: string;
   /** When true, popup appears below the selection instead of above */
   popBelow?: boolean;
-}
-
-/** Extract profile-relevant data from a description string */
-function extractProfileData(text: string): Partial<Record<'age' | 'gender' | 'hairColour' | 'hairType' | 'eyeColour' | 'skinTone' | 'build' | 'distinguishingFeatures', string>> {
-  const result: Record<string, string> = {};
-  const t = text.toLowerCase();
-
-  // Age patterns: "aged 32", "32 years old", "early 30s", "mid-twenties", "(32)"
-  const ageMatch = t.match(/\b(?:aged?\s+|age\s+)?(\d{1,3})\s*(?:years?\s*old|yrs?\s*old|y\.?o\.?)?\b/) ||
-    t.match(/\b(early|mid|late)\s*-?\s*(teens|twenties|thirties|forties|fifties|sixties|seventies|eighties)\b/) ||
-    t.match(/\b(early|mid|late)\s*-?\s*(\d0)s\b/);
-  if (ageMatch) result.age = ageMatch[0].trim();
-
-  // Gender patterns
-  if (/\b(female|woman|girl|she)\b/i.test(t)) result.gender = 'Female';
-  else if (/\b(male|man|boy|he)\b/i.test(t) && !/\bshe\b/i.test(t)) result.gender = 'Male';
-
-  // Hair colour
-  const hairColourMatch = t.match(/\b(blonde?|brunette|red(?:head)?|auburn|black|dark\s*brown|light\s*brown|brown|grey|gray|silver|white|ginger|strawberry\s*blonde?|sandy|chestnut|raven|platinum)\b.*?hair/i) ||
-    t.match(/hair.*?\b(blonde?|brunette|red|auburn|black|dark\s*brown|light\s*brown|brown|grey|gray|silver|white|ginger|strawberry\s*blonde?|sandy|chestnut|raven|platinum)\b/i);
-  if (hairColourMatch) result.hairColour = hairColourMatch[1].charAt(0).toUpperCase() + hairColourMatch[1].slice(1);
-
-  // Hair type
-  const hairTypeMatch = t.match(/\b(curly|straight|wavy|frizzy|coiled|braided|dreadlocks|afro|bald|shaved|buzz\s*cut|bob|ponytail|bun|long|short|shoulder[- ]length|cropped|thinning|thick|fine)\b.*?hair/i) ||
-    t.match(/hair.*?\b(curly|straight|wavy|frizzy|coiled|braided|dreadlocks|afro|bald|shaved|buzz\s*cut|bob|ponytail|bun|long|short|shoulder[- ]length|cropped|thinning|thick|fine)\b/i);
-  if (hairTypeMatch) result.hairType = hairTypeMatch[1].charAt(0).toUpperCase() + hairTypeMatch[1].slice(1);
-
-  // Eye colour
-  const eyeMatch = t.match(/\b(blue|green|brown|hazel|grey|gray|amber|dark|light)\b.*?eyes?/i) ||
-    t.match(/eyes?.*?\b(blue|green|brown|hazel|grey|gray|amber|dark|light)\b/i);
-  if (eyeMatch) result.eyeColour = eyeMatch[1].charAt(0).toUpperCase() + eyeMatch[1].slice(1);
-
-  // Skin tone
-  const skinMatch = t.match(/\b(pale|fair|light|medium|olive|tan(?:ned)?|dark|deep|warm|cool|ebony|porcelain)\b.*?(?:skin|complex)/i);
-  if (skinMatch) result.skinTone = skinMatch[1].charAt(0).toUpperCase() + skinMatch[1].slice(1);
-
-  // Build
-  const buildMatch = t.match(/\b(slim|slender|thin|petite|athletic|muscular|stocky|heavy[- ]?set|broad|tall|short|lanky|wiry|stout|bulky|lean|average)\b.*?(?:build|frame|physique|figure)?/i);
-  if (buildMatch) result.build = buildMatch[1].charAt(0).toUpperCase() + buildMatch[1].slice(1);
-
-  // Distinguishing features — scars, tattoos, birthmarks, piercings, glasses, etc.
-  const featurePatterns = [
-    /\b(scar\b[^.;,]*)/i, /\b(tattoo\b[^.;,]*)/i, /\b(birthmark\b[^.;,]*)/i,
-    /\b(piercing\b[^.;,]*)/i, /\b(glasses\b)/i, /\b(freckles\b)/i,
-    /\b(beard\b[^.;,]*)/i, /\b(moustache\b[^.;,]*)/i, /\b(limp\b[^.;,]*)/i,
-    /\b(missing\s+\w+[^.;,]*)/i, /\b(prosthetic\b[^.;,]*)/i,
-  ];
-  const features: string[] = [];
-  for (const pat of featurePatterns) {
-    const m = t.match(pat);
-    if (m) features.push(m[1].trim());
-  }
-  if (features.length > 0) result.distinguishingFeatures = features.join(', ');
-
-  return result;
 }
 
 function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
@@ -697,6 +721,44 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     return () => document.removeEventListener('mousedown', handler);
   }, [popup]);
 
+  /* Clamp popup within viewport after render (measures real height) */
+  useEffect(() => {
+    if (!popup || !popupRef.current) return;
+    const el = popupRef.current;
+    const rect = el.getBoundingClientRect();
+    const pad = 10;
+    let needsUpdate = false;
+    let newY = popup.y;
+    let newX = popup.x;
+    let newPopBelow = popup.popBelow;
+
+    if (rect.top < pad) {
+      // Popup is above viewport — flip to below or push down
+      newY = pad;
+      newPopBelow = true;
+      needsUpdate = true;
+    } else if (rect.bottom > window.innerHeight - pad) {
+      // Popup is below viewport — push up
+      newY = window.innerHeight - rect.height - pad;
+      newPopBelow = false;
+      needsUpdate = true;
+    }
+    if (rect.left < pad) {
+      newX = popup.x + (pad - rect.left);
+      needsUpdate = true;
+    } else if (rect.right > window.innerWidth - pad) {
+      newX = popup.x - (rect.right - window.innerWidth + pad);
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      // Directly update the element style to avoid re-render loop
+      el.style.left = `${newX}px`;
+      el.style.top = `${newY}px`;
+      el.style.transform = newPopBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
+    }
+  }, [popup]);
+
   /* Handle text selection on the script paper */
   const handleMouseUp = useCallback((sceneId: string) => {
     const sel = window.getSelection();
@@ -723,80 +785,43 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
 
     const rect = range.getBoundingClientRect();
 
-    // Detect if selection is near the top of the viewport — pop below instead
-    const popBelow = rect.top < 200;
+    // Estimate popup height (character list ~280px, field picker ~350px)
+    const estPopupHeight = 350;
+    // Detect if selection is near the top — pop below instead of above
+    const popBelow = rect.top < estPopupHeight + 20;
+    // Clamp Y so popup never goes above viewport or below it
+    let y = popBelow ? rect.bottom + 10 : rect.top - 10;
+    if (popBelow && y + estPopupHeight > window.innerHeight - 10) {
+      y = window.innerHeight - estPopupHeight - 10;
+    }
+    if (!popBelow && y - estPopupHeight < 10) {
+      y = estPopupHeight + 10;
+    }
 
     setPopup({
       x: Math.min(Math.max(rect.left + rect.width / 2, 170), window.innerWidth - 170),
-      y: popBelow ? rect.bottom + 10 : rect.top - 10,
+      y,
       sceneId,
       startOffset: startIdx,
       endOffset: startIdx + text.length,
       text,
-      step: 'category',
+      step: 'character',
       popBelow,
     });
 
     sel.removeAllRanges();
   }, [scenes]);
 
-  /* Step 1: User picks category (tag type) */
-  const handleCategoryPick = useCallback((catId: string) => {
-    if (!popup) return;
-    if (catId === 'cast') {
-      setPopup({ ...popup, step: 'cast', categoryId: catId });
-    } else {
-      setPopup({ ...popup, step: 'character', categoryId: catId });
-    }
-  }, [popup]);
-
-  /* Step 2: User picks character from dropdown → tag is created */
-  const handleCharacterPick = useCallback((charId: string) => {
-    if (!popup || !popup.categoryId) return;
-    tagStore.addTag({
-      id: `tag-${Date.now()}`,
-      sceneId: popup.sceneId,
-      startOffset: popup.startOffset,
-      endOffset: popup.endOffset,
-      text: popup.text,
-      categoryId: popup.categoryId,
-      characterId: charId,
-    });
-    onTagCreated(popup.sceneId, charId, popup.categoryId, popup.text);
-    setPopup(null);
-  }, [popup, tagStore, onTagCreated]);
-
   const parsedScriptStore = useParsedScriptStore();
 
-  /* Cast: user picks an existing character to link the highlighted text to */
-  const handleCastMerge = useCallback((charId: string) => {
+  /* Step 1: User picks a character → advance to field selection */
+  const handleCharacterPick = useCallback((charId: string) => {
     if (!popup) return;
-    // Add character to scene if not already present
-    const pd = parsedScriptStore.getParsedData(projectId);
-    if (pd) {
-      const sceneData = pd.scenes.find(s => s.id === popup.sceneId);
-      if (sceneData && !sceneData.characterIds.includes(charId)) {
-        const updated = pd.scenes.map(s =>
-          s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, charId] } : s
-        );
-        parsedScriptStore.setParsedData(projectId, { ...pd, scenes: updated });
-      }
-    }
-    // Create a cast tag linking highlighted text to the character
-    tagStore.addTag({
-      id: `tag-${Date.now()}`,
-      sceneId: popup.sceneId,
-      startOffset: popup.startOffset,
-      endOffset: popup.endOffset,
-      text: popup.text,
-      categoryId: 'cast',
-      characterId: charId,
-    });
-    setPopup(null);
-  }, [popup, tagStore, parsedScriptStore, projectId]);
+    setPopup({ ...popup, step: 'field', characterId: charId });
+  }, [popup]);
 
-  /* Cast: user creates a brand new character from the highlighted text */
-  const handleCastCreateNew = useCallback(() => {
+  /* Step 1b: User creates a new character → add to project, advance to field selection */
+  const handleCreateNewCharacter = useCallback(() => {
     if (!popup) return;
     const pd = parsedScriptStore.getParsedData(projectId);
     if (!pd) return;
@@ -809,24 +834,29 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
       age: '', gender: '', hairColour: '', hairType: '',
       eyeColour: '', skinTone: '', build: '', distinguishingFeatures: '', notes: '',
     };
-    // Add character to the project and to this scene
     const updatedChars = [...pd.characters, newChar];
     const updatedScenes = pd.scenes.map(s =>
       s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, newId] } : s
     );
     parsedScriptStore.setParsedData(projectId, { ...pd, characters: updatedChars, scenes: updatedScenes });
-    // Create a cast tag
+    setPopup({ ...popup, step: 'field', characterId: newId });
+  }, [popup, parsedScriptStore, projectId]);
+
+  /* Step 2: User picks a field/category → create tag + auto-populate */
+  const handleFieldPick = useCallback((catId: string) => {
+    if (!popup || !popup.characterId) return;
     tagStore.addTag({
       id: `tag-${Date.now()}`,
       sceneId: popup.sceneId,
       startOffset: popup.startOffset,
       endOffset: popup.endOffset,
       text: popup.text,
-      categoryId: 'cast',
-      characterId: newId,
+      categoryId: catId,
+      characterId: popup.characterId,
     });
+    onTagCreated(popup.sceneId, popup.characterId, catId, popup.text);
     setPopup(null);
-  }, [popup, tagStore, parsedScriptStore, projectId]);
+  }, [popup, tagStore, onTagCreated]);
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
@@ -1119,7 +1149,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
           data-scene-id={scene.id}
-          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
+          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''} ${useRevisedScenesStore.getState().isSceneRevised(projectId, scene.id) ? 'sv-paper--revised' : ''}`}
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
@@ -1144,64 +1174,52 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           top: popup.y,
           transform: popup.popBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
         }}>
-          {popup.step === 'category' && (
-            <>
-              <div className="sv-tag-popup-title">Tag type</div>
-              <div className="sv-tag-popup-grid">
-                {BREAKDOWN_CATEGORIES.map((cat) => (
-                  <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleCategoryPick(cat.id)}>
-                    <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup(null)}>
-                Cancel
-              </button>
-            </>
-          )}
           {popup.step === 'character' && (
             <>
-              <div className="sv-tag-popup-title">
-                <span className="sv-tag-popup-swatch" style={{ background: BREAKDOWN_CATEGORIES.find((c) => c.id === popup.categoryId)?.color }} />
-                {' '}{BREAKDOWN_CATEGORIES.find((c) => c.id === popup.categoryId)?.label} — Assign to:
-              </div>
-              <select
-                className="sv-tag-popup-select"
-                defaultValue=""
-                onChange={(e) => { if (e.target.value) handleCharacterPick(e.target.value); }}
-              >
-                <option value="" disabled>Select character…</option>
+              <div className="sv-tag-popup-title">Assign to character</div>
+              <div className="sv-tag-popup-quoted">"{popup.text.length > 50 ? popup.text.slice(0, 50) + '…' : popup.text}"</div>
+              <div className="sv-tag-popup-charlist">
                 {popupChars.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.name}</option>
+                  <button key={ch.id} className="sv-tag-popup-char-item" onClick={() => handleCharacterPick(ch.id)}>
+                    <span className="sv-tag-popup-char-avatar">{ch.name.charAt(0)}</span>
+                    <span>{ch.name}</span>
+                  </button>
                 ))}
-              </select>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
-                Back
-              </button>
+                <button className="sv-tag-popup-char-item sv-tag-popup-char-item--new" onClick={handleCreateNewCharacter}>
+                  <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(212, 148, 58, 0.2)', color: '#D4943A' }}>+</span>
+                  <span>New Character</span>
+                </button>
+              </div>
             </>
           )}
-          {popup.step === 'cast' && (
+          {popup.step === 'field' && (
             <>
               <div className="sv-tag-popup-title">
-                <span className="sv-tag-popup-swatch" style={{ background: BREAKDOWN_CATEGORIES.find((c) => c.id === 'cast')?.color }} />
-                {' '}Cast — "{popup.text}"
+                Tag as — <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{popupChars.find(c => c.id === popup.characterId)?.name}</span>
               </div>
-              <select
-                className="sv-tag-popup-select"
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value === '__create_new__') handleCastCreateNew();
-                  else if (e.target.value) handleCastMerge(e.target.value);
-                }}
-              >
-                <option value="" disabled>Select existing character or create new…</option>
-                {popupChars.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.name}</option>
-                ))}
-                <option value="__create_new__">+ Create new character "{popup.text.trim().toUpperCase()}"</option>
-              </select>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'category' })}>
+              <div className="sv-tag-popup-field-section">
+                <div className="sv-tag-popup-field-label">Scene Breakdown</div>
+                <div className="sv-tag-popup-grid">
+                  {BREAKDOWN_CATEGORIES.filter(c => c.group === 'breakdown').map((cat) => (
+                    <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleFieldPick(cat.id)}>
+                      <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="sv-tag-popup-field-section">
+                <div className="sv-tag-popup-field-label">Character Profile</div>
+                <div className="sv-tag-popup-grid">
+                  {BREAKDOWN_CATEGORIES.filter(c => c.group === 'profile').map((cat) => (
+                    <button key={cat.id} className="sv-tag-popup-btn" onClick={() => handleFieldPick(cat.id)}>
+                      <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'character' })}>
                 Back
               </button>
             </>
@@ -1219,7 +1237,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
 interface ScriptUploadModalProps {
   projectId: string;
   onClose: () => void;
-  onUploaded: (filename: string) => void;
+  onUploaded: (filename: string, diffResult?: DiffResult) => void;
 }
 
 function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModalProps) {
@@ -1232,6 +1250,9 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setScript = useScriptUploadStore((s) => s.setScript);
   const setParsedData = useParsedScriptStore((s) => s.setParsedData);
+  const existingParsed = useParsedScriptStore((s) => s.getParsedData(projectId));
+  const breakdownStore = useBreakdownStore();
+  const synopsisStore = useSynopsisStore();
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -1284,7 +1305,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
     setStatusText('Reading file...');
 
     try {
-      // Use the real script parser (PDF, FDX, Fountain, TXT)
       const parsed: ParsedScript = await parseScriptFile(selectedFile, (status) => {
         setStatusText(status);
       });
@@ -1293,7 +1313,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
       setStatusText('Detecting characters...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Convert parsed data to the Scene/Character format the app expects
       // Build character ID mapping
       const charIdMap = new Map<string, string>();
       const characters: Character[] = parsed.characters.map((pc, idx) => {
@@ -1348,7 +1367,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
-          // Preamble has no slugline to strip; regular scenes strip the first line (heading)
           scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
         };
       });
@@ -1357,16 +1375,76 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
       setStatusText('Generating looks...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Auto-generate looks per character using story day detection
-      // Mirrors the mobile app (Checks Happy) approach: detect story days from
-      // time-of-day transitions, then create one look per character per story day
       const { looks: generatedLooks, scenes: scenesWithStoryDays } = generateLooksFromScript(scenes, characters);
+
+      // ━━━ REVISION DETECTION: if existing script data exists, remap breakdowns ━━━
+      const isRevision = !!existingParsed;
+      let diffResult: DiffResult | undefined;
+
+      if (isRevision) {
+        setProgress(90);
+        setStatusText('Comparing with previous draft...');
+        await new Promise(r => setTimeout(r, 200));
+
+        diffResult = diffScripts(
+          existingParsed.scenes,
+          scenesWithStoryDays,
+          existingParsed.characters,
+          characters,
+        );
+
+        // Remap breakdown data from old scene IDs → new scene IDs
+        // This preserves all breakdown work (HMW entries, continuity, synopses, etc.)
+        for (const [oldSceneId, newSceneId] of diffResult.idMap) {
+          if (oldSceneId === newSceneId) continue;
+
+          // Remap main breakdown
+          const existingBreakdown = breakdownStore.getBreakdown(oldSceneId);
+          if (existingBreakdown) {
+            // Also remap character IDs within the breakdown
+            const remappedCharBreakdowns = existingBreakdown.characters.map((cb) => {
+              const newCharId = diffResult!.characterIdMap.get(cb.characterId);
+              return newCharId ? { ...cb, characterId: newCharId } : cb;
+            });
+            breakdownStore.setBreakdown(newSceneId, {
+              ...existingBreakdown,
+              sceneId: newSceneId,
+              characters: remappedCharBreakdowns,
+            });
+          }
+
+          // Remap synopsis
+          const existingSynopsis = synopsisStore.getSynopsis(oldSceneId, '');
+          if (existingSynopsis) {
+            synopsisStore.setSynopsis(newSceneId, existingSynopsis);
+          }
+        }
+
+        // For matched scenes, preserve story day assignments from previous breakdown
+        for (const [oldSceneId, newSceneId] of diffResult.idMap) {
+          const oldScene = existingParsed.scenes.find((s) => s.id === oldSceneId);
+          const newScene = scenesWithStoryDays.find((s) => s.id === newSceneId);
+          if (oldScene?.storyDay && newScene) {
+            newScene.storyDay = oldScene.storyDay;
+          }
+        }
+
+        // Preserve character profile overrides by remapping character IDs
+        const charOverrides = useCharacterOverridesStore.getState();
+        for (const [oldCharId, newCharId] of diffResult.characterIdMap) {
+          if (oldCharId === newCharId) continue;
+          const existing = charOverrides.overrides[oldCharId];
+          if (existing) {
+            charOverrides.updateCharacter(newCharId, existing);
+          }
+        }
+      }
 
       setProgress(95);
       setStatusText('Saving...');
       await new Promise(r => setTimeout(r, 200));
 
-      // Store parsed data with generated looks and story day assignments
+      // Store parsed data
       setParsedData(projectId, {
         scenes: scenesWithStoryDays,
         characters,
@@ -1375,7 +1453,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
         parsedAt: new Date().toISOString(),
       });
 
-      // Also store in script upload store for backward compat
+      // Store in script upload store for backward compat
       setScript(projectId, {
         projectId,
         filename: selectedFile.name,
@@ -1384,11 +1462,49 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
         rawText: parsed.rawText,
       });
 
+      // Upload PDF to Supabase storage and create script_uploads record
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const timestamp = Date.now();
+          const storagePath = `${projectId}/scripts/${timestamp}_${selectedFile.name}`;
+
+          await supabase.storage
+            .from('project-documents')
+            .upload(storagePath, selectedFile, { upsert: false });
+
+          const { data: versions } = await supabase
+            .from('script_uploads')
+            .select('version_number')
+            .eq('project_id', projectId)
+            .order('version_number', { ascending: false })
+            .limit(1);
+
+          const nextVersion = (versions?.[0]?.version_number ?? 0) + 1;
+
+          await supabase.from('script_uploads').insert({
+            project_id: projectId,
+            version_number: nextVersion,
+            storage_path: storagePath,
+            file_name: selectedFile.name,
+            file_size: selectedFile.size,
+            raw_text: parsed.rawText,
+            scene_count: scenesWithStoryDays.length,
+            character_count: characters.length,
+            is_active: true,
+            status: 'parsed',
+            uploaded_by: session.user.id,
+          });
+        }
+      } catch (uploadErr) {
+        console.warn('Failed to sync script to Supabase:', uploadErr);
+      }
+
       setProgress(100);
       setStatusText('Done!');
       await new Promise(r => setTimeout(r, 300));
 
-      onUploaded(selectedFile.name);
+      onUploaded(selectedFile.name, diffResult);
     } catch (err) {
       console.error('Script processing error:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -1978,10 +2094,6 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   const makeupTags = sceneTags.filter((t) => t.categoryId === 'makeup');
   const wardrobeTags = sceneTags.filter((t) => t.categoryId === 'wardrobe');
   const sfxTags = sceneTags.filter((t) => t.categoryId === 'sfx');
-  const healthTags = sceneTags.filter((t) => t.categoryId === 'health');
-  const injuryTags = sceneTags.filter((t) => t.categoryId === 'injuries');
-  const stuntTags = sceneTags.filter((t) => t.categoryId === 'stunts');
-  const weatherTags = sceneTags.filter((t) => t.categoryId === 'weather');
 
   /* Descriptive tags — cast tags with a description, or any tag with description text */
   const descTags = sceneTags.filter((t) => {
@@ -2060,15 +2172,15 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
         <TagPills tags={sfxTags} color={catColor('sfx')} />
       </div>
 
-      {(healthTags.length > 0 || injuryTags.length > 0 || stuntTags.length > 0 || weatherTags.length > 0) && (
-        <div className="cb-field">
-          <label className="cb-label">Tagged from Script</label>
-          {healthTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('health') }}>Health</span><TagPills tags={healthTags} color={catColor('health')} /></>}
-          {injuryTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('injuries') }}>Injuries</span><TagPills tags={injuryTags} color={catColor('injuries')} /></>}
-          {stuntTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('stunts') }}>Stunts</span><TagPills tags={stuntTags} color={catColor('stunts')} /></>}
-          {weatherTags.length > 0 && <><span className="cb-tag-cat" style={{ color: catColor('weather') }}>Weather</span><TagPills tags={weatherTags} color={catColor('weather')} /></>}
-        </div>
-      )}
+      <div className="cb-field">
+        <FInput label="Environmental" value={cb.environmental || ''} onChange={(v) => onUpdate({ environmental: v })} />
+        <TagPills tags={sceneTags.filter(t => t.categoryId === 'environmental')} color={catColor('environmental')} />
+      </div>
+
+      <div className="cb-field">
+        <FInput label="Action" value={cb.action || ''} onChange={(v) => onUpdate({ action: v })} />
+        <TagPills tags={sceneTags.filter(t => t.categoryId === 'action')} color={catColor('action')} />
+      </div>
 
       <div className="cb-field">
         <label className="cb-label">Changes</label>
@@ -2222,6 +2334,183 @@ function SceneRangeSelect({ sceneRange, allScenes, onChange }: {
   );
 }
 
+/* ━━━ CHANGES SUMMARY MODAL ━━━ */
+
+function ChangesSummaryModal({
+  diffResult,
+  onClose,
+  onGoToScene,
+}: {
+  diffResult: DiffResult;
+  onClose: () => void;
+  onGoToScene: (sceneId: string) => void;
+}) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  const { changes, stats } = diffResult;
+  const changeTypeIcon = (type: SceneChange['changeType']) => {
+    switch (type) {
+      case 'modified': return { color: '#E8621A', label: 'Modified', icon: '~' };
+      case 'added': return { color: '#22c55e', label: 'Added', icon: '+' };
+      case 'omitted': return { color: '#94a3b8', label: 'Omitted', icon: '−' };
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-glass" style={{ width: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ padding: '24px 28px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{
+              fontSize: '0.8125rem', letterSpacing: '0.1em',
+              textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
+            }}>
+              <span className="heading-italic">Script</span>{' '}
+              <span className="heading-regular">Changes</span>
+            </h2>
+            <button onClick={onClose} style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', padding: 4,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Stats bar */}
+          <div style={{
+            display: 'flex', gap: 16, marginTop: 16, marginBottom: 8,
+            fontSize: '0.8125rem', color: 'var(--text-muted)',
+          }}>
+            {stats.modified > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#E8621A', display: 'inline-block' }} />
+                {stats.modified} modified
+              </span>
+            )}
+            {stats.added > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                {stats.added} added
+              </span>
+            )}
+            {stats.omitted > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+                {stats.omitted} omitted
+              </span>
+            )}
+            <span style={{ marginLeft: 'auto' }}>
+              {stats.unchanged} unchanged
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 28px 28px', overflowY: 'auto', flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: '0 0 16px' }}>
+            Changed scenes are highlighted in orange in the scene list. Click a scene below to jump to it and review the changes. Your existing breakdown data has been preserved.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {changes.map((change) => {
+              const info = changeTypeIcon(change.changeType);
+              return (
+                <button
+                  key={change.sceneId + change.sceneNumber}
+                  onClick={() => onGoToScene(change.sceneId)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 14px',
+                    background: 'var(--bg-secondary, rgba(255,255,255,0.03))',
+                    border: `1px solid ${info.color}30`,
+                    borderLeft: `3px solid ${info.color}`,
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${info.color}10`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-secondary, rgba(255,255,255,0.03))';
+                  }}
+                >
+                  {/* Change type indicator */}
+                  <span style={{
+                    width: 26, height: 26, borderRadius: 6,
+                    background: `${info.color}18`,
+                    color: info.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', fontWeight: 700, flexShrink: 0,
+                    fontFamily: 'monospace',
+                  }}>
+                    {info.icon}
+                  </span>
+
+                  {/* Details */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        color: 'var(--text-heading)', fontWeight: 600, fontSize: '0.8125rem',
+                      }}>
+                        Scene {change.sceneNumber}
+                      </span>
+                      <span style={{
+                        fontSize: '0.6875rem', fontWeight: 500,
+                        color: info.color,
+                        background: `${info.color}15`,
+                        padding: '1px 6px', borderRadius: 4,
+                        textTransform: 'uppercase', letterSpacing: '0.03em',
+                      }}>
+                        {info.label}
+                      </span>
+                    </div>
+                    <div style={{
+                      color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {change.summary}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '16px 28px',
+          borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+          display: 'flex', justifyContent: 'flex-end', gap: 10,
+        }}>
+          <button onClick={onClose} style={{
+            padding: '8px 20px', borderRadius: 8, cursor: 'pointer',
+            background: 'var(--accent-gold, #D4943A)', border: 'none',
+            color: '#1a1a1a', fontSize: '0.8125rem', fontWeight: 600,
+          }}>
+            Review Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ━━━ Form primitives ━━━ */
 
 function FInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
@@ -2252,6 +2541,284 @@ function ordinal(n: number) {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
+
+/* ━━━ PREVIOUS DRAFTS MODAL ━━━ */
+
+interface ScriptDraft {
+  id: string;
+  file_name: string;
+  storage_path: string;
+  file_size: number | null;
+  scene_count: number | null;
+  character_count: number | null;
+  version_number: number;
+  version_label: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+function PreviousDraftsModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [viewingPdf, setViewingPdf] = useState<{ url: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (viewingPdf) setViewingPdf(null);
+        else onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose, viewingPdf]);
+
+  useEffect(() => {
+    async function fetchDrafts() {
+      setLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('script_uploads')
+          .select('id, file_name, storage_path, file_size, scene_count, character_count, version_number, version_label, is_active, created_at')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+        setDrafts(data || []);
+      } catch (err) {
+        console.error('Failed to fetch drafts:', err);
+        setError('Failed to load previous drafts.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDrafts();
+  }, [projectId]);
+
+  const handleViewPdf = async (draft: ScriptDraft) => {
+    try {
+      const { data, error: urlError } = await supabase.storage
+        .from('project-documents')
+        .createSignedUrl(draft.storage_path, 3600); // 1 hour expiry
+
+      if (urlError) throw urlError;
+      if (data?.signedUrl) {
+        setViewingPdf({ url: data.signedUrl, name: draft.file_name });
+      }
+    } catch (err) {
+      console.error('Failed to get PDF URL:', err);
+      setError('Failed to load PDF. Please try again.');
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      + ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatSize = (bytes: number | null) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // PDF Viewer - full screen overlay
+  if (viewingPdf) {
+    return (
+      <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={() => setViewingPdf(null)}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          width: '90vw', height: '90vh', maxWidth: 1000,
+          background: 'var(--bg-primary, #1a1815)',
+          borderRadius: 12, overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 24px',
+            borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => setViewingPdf(null)} style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+                </svg>
+              </button>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-heading)' }}>
+                {viewingPdf.name}
+              </span>
+            </div>
+            <button onClick={() => setViewingPdf(null)} style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', padding: 4,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          {/* PDF iframe */}
+          <div style={{ flex: 1, background: '#fff' }}>
+            <iframe
+              src={viewingPdf.url}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title={viewingPdf.name}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-glass" style={{ width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '24px 28px 0',
+        }}>
+          <h2 style={{
+            fontSize: '0.8125rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
+          }}>
+            <span className="heading-italic">Previous</span>{' '}
+            <span className="heading-regular">Drafts</span>
+          </h2>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', color: 'var(--text-muted)',
+            cursor: 'pointer', padding: 4,
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ padding: '20px 28px 28px', overflowY: 'auto', flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: 0, marginBottom: 20 }}>
+            View previously uploaded script drafts. Click on any draft to view the full PDF.
+          </p>
+
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+              Loading drafts...
+            </div>
+          )}
+
+          {error && (
+            <p style={{ color: '#ef4444', fontSize: '0.8125rem' }}>{error}</p>
+          )}
+
+          {!loading && !error && drafts.length === 0 && (
+            <div style={{
+              textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)',
+              fontSize: '0.875rem',
+            }}>
+              No previous drafts found. Upload a script to get started.
+            </div>
+          )}
+
+          {!loading && drafts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {drafts.map((draft) => (
+                <button
+                  key={draft.id}
+                  onClick={() => handleViewPdf(draft)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 16px',
+                    background: draft.is_active
+                      ? 'rgba(212, 148, 58, 0.08)'
+                      : 'var(--bg-secondary, rgba(255,255,255,0.03))',
+                    border: draft.is_active
+                      ? '1px solid rgba(212, 148, 58, 0.25)'
+                      : '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = draft.is_active
+                      ? 'rgba(212, 148, 58, 0.12)'
+                      : 'var(--bg-tertiary, rgba(255,255,255,0.06))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = draft.is_active
+                      ? 'rgba(212, 148, 58, 0.08)'
+                      : 'var(--bg-secondary, rgba(255,255,255,0.03))';
+                  }}
+                >
+                  {/* PDF Icon */}
+                  <div style={{
+                    width: 40, height: 48, borderRadius: 6,
+                    background: 'rgba(232, 98, 26, 0.1)',
+                    border: '1px solid rgba(232, 98, 26, 0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8621A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                      <path d="M14 2v6h6"/>
+                    </svg>
+                  </div>
+
+                  {/* Details */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        color: 'var(--text-heading)', fontWeight: 500, fontSize: '0.875rem',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {draft.version_label || draft.file_name}
+                      </span>
+                      {draft.is_active && (
+                        <span style={{
+                          fontSize: '0.6875rem', fontWeight: 600,
+                          color: '#D4943A',
+                          background: 'rgba(212, 148, 58, 0.15)',
+                          padding: '1px 8px', borderRadius: 4,
+                          textTransform: 'uppercase', letterSpacing: '0.05em',
+                        }}>
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <div style={{
+                      color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 3,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <span>{formatDate(draft.created_at)}</span>
+                      {draft.file_size && <span>·</span>}
+                      {draft.file_size && <span>{formatSize(draft.file_size)}</span>}
+                      {draft.scene_count && <span>·</span>}
+                      {draft.scene_count && <span>{draft.scene_count} scenes</span>}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function ToolsIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;

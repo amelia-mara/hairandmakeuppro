@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, type CSSProperties } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, emptyHMW,
   useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore,
@@ -91,6 +91,95 @@ function CopyIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
 }
 
+/* ━━━ Split-view script panel icon ━━━ */
+
+function SplitViewIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>;
+}
+
+/* ━━━ Script panel for split view ━━━ */
+
+function ScriptPanel({ scenes, characters, activeSceneId, onSceneClick }: {
+  scenes: Scene[];
+  characters: Character[];
+  activeSceneId: string | null;
+  onSceneClick: (sceneId: string) => void;
+}) {
+  const sceneRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (activeSceneId && sceneRefs.current[activeSceneId]) {
+      sceneRefs.current[activeSceneId]!.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeSceneId]);
+
+  /** Build a map of uppercase character names for cue highlighting */
+  const charNameMap = useMemo(() => {
+    const m = new Map<string, Character>();
+    for (const c of characters) {
+      m.set(c.name.toUpperCase(), c);
+      // Also map first name
+      const first = c.name.split(' ')[0].toUpperCase();
+      if (first.length > 1) m.set(first, c);
+    }
+    return m;
+  }, [characters]);
+
+  const renderSceneContent = useCallback((scene: Scene) => {
+    const lines = scene.scriptContent.split('\n');
+
+    // Detect character cues
+    const cueSet = new Set<number>();
+    const dialogueSet = new Set<number>();
+    let inDialogue = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      const cueName = trimmed.replace(/\s*\(.*?\)\s*/g, '').trim();
+      if (trimmed === trimmed.toUpperCase() && trimmed.length <= 50 && cueName && charNameMap.has(cueName)) {
+        cueSet.add(i);
+        inDialogue = true;
+      } else if (inDialogue) {
+        if (trimmed === '') {
+          inDialogue = false;
+        } else {
+          dialogueSet.add(i);
+        }
+      }
+    }
+
+    return lines.map((line, i) => {
+      const trimmed = line.trim();
+      let cls = 'bs-sv-line';
+      if (cueSet.has(i)) cls += ' bs-sv-cue';
+      else if (dialogueSet.has(i)) cls += ' bs-sv-dialogue';
+      return <div key={i} className={cls}>{trimmed || '\u00A0'}</div>;
+    });
+  }, [charNameMap]);
+
+  return (
+    <div className="bs-script-panel">
+      <div className="bs-script-panel-header">Script</div>
+      <div className="bs-script-panel-body">
+        {scenes.map((scene) => (
+          <div
+            key={scene.id}
+            ref={(el) => { sceneRefs.current[scene.id] = el; }}
+            className={`bs-sv-scene ${activeSceneId === scene.id ? 'bs-sv-scene--active' : ''}`}
+            onClick={() => onSceneClick(scene.id)}
+          >
+            <div className="bs-sv-scene-heading">
+              {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
+            </div>
+            <div className="bs-sv-scene-body">
+              {renderSceneContent(scene)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ━━━ Main Component ━━━ */
 
 export function BreakdownSheet({ projectId }: { projectId: string }) {
@@ -102,7 +191,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'breakdown' | 'lookbook' | 'bible'>('breakdown');
+  const [splitView, setSplitView] = useState(false);
+  const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sceneBlockRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const lookbookMeta = useLookbookMeta(projectId);
 
   /* Resolve data source: parsed script → mock data fallback */
@@ -139,7 +231,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           },
           characters: s.characterIds.map((cid) => ({
             characterId: cid, lookId: '',
-            entersWith: emptyHMW(), sfx: '',
+            entersWith: emptyHMW(), sfx: '', environmental: '', action: '',
             changeType: 'no-change' as const, changeNotes: '',
             exitsWith: emptyHMW(), notes: '',
           })),
@@ -160,7 +252,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /** Build an export row for a character in a scene (shared between copy & CSV) */
   const buildExportRows = useCallback(() => {
-    const headers = ['Scene', 'Day', 'Character', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Continuity Notes'];
+    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Environmental', 'Action', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < scenes.length; idx++) {
       const s = scenes[idx];
@@ -179,6 +271,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
         const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
         const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
         const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
+        const envTags = tags.filter((t) => t.categoryId === 'environmental');
+        const actionTags = tags.filter((t) => t.categoryId === 'action');
 
         const resolve = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) =>
           manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
@@ -187,10 +281,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           String(s.number),
           storyDay,
           ch.name,
+          charLook?.name || '',
           resolve(cb?.entersWith.hair, hairTags, charLook?.hair),
           resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup),
           resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
           cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '',
+          cb?.environmental || envTags.map((t) => t.text).join(', ') || '',
+          cb?.action || actionTags.map((t) => t.text).join(', ') || '',
           notes,
         ]);
       }
@@ -213,6 +310,18 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     exportCSV(rows, 'breakdown.csv');
   }, [buildExportRows]);
 
+  /* Handle scene click from script panel → scroll breakdown to that scene */
+  const handleScriptSceneClick = useCallback((sceneId: string) => {
+    setActiveSceneId(sceneId);
+    const el = sceneBlockRefs.current[sceneId];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  /* Handle scene click from breakdown → highlight in script */
+  const handleBreakdownSceneClick = useCallback((sceneId: string) => {
+    setActiveSceneId(sceneId);
+  }, []);
+
   return (
     <div className="bs-page">
       {/* Header */}
@@ -228,6 +337,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           {activeTab === 'breakdown' && (
             <>
               <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
+              <button
+                className={`bs-action-btn ${splitView ? 'bs-action-btn--active' : ''}`}
+                onClick={() => setSplitView((v) => !v)}
+                title={splitView ? 'Close script panel' : 'Show script alongside breakdown'}
+              >
+                <SplitViewIcon /> {splitView ? 'Close Script' : 'Script'}
+              </button>
               <div className="bs-filter">
                 <FilterIcon />
                 <select className="bs-filter-select" value={filterChar} onChange={(e) => setFilterChar(e.target.value)}>
@@ -273,7 +389,16 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
       )}
 
       {/* Spreadsheet */}
-      {activeTab === 'breakdown' && <div className="bs-scroll" ref={scrollRef}>
+      {activeTab === 'breakdown' && <div className={`bs-split-wrap ${splitView ? 'bs-split-wrap--active' : ''}`}>
+        {splitView && (
+          <ScriptPanel
+            scenes={scenes}
+            characters={characters}
+            activeSceneId={activeSceneId}
+            onSceneClick={handleScriptSceneClick}
+          />
+        )}
+        <div className="bs-scroll" ref={scrollRef}>
         {scenesWithCast.map((scene) => {
           const globalIdx = scenes.indexOf(scene);
           const bd = store.getBreakdown(scene.id);
@@ -294,7 +419,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
             : '';
 
           return (
-            <div key={scene.id} className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass}`}>
+            <div
+              key={scene.id}
+              ref={(el) => { sceneBlockRefs.current[scene.id] = el; }}
+              className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass} ${splitView && activeSceneId === scene.id ? 'bs-scene-block--highlighted' : ''}`}
+              onClick={splitView ? () => handleBreakdownSceneClick(scene.id) : undefined}
+              style={splitView ? { cursor: 'pointer' } as CSSProperties : undefined}
+            >
               {/* Time jump banner */}
               {isTimeJump && (
                 <div className="bs-time-jump-banner">
@@ -326,10 +457,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                 <thead>
                   <tr>
                     <th className="bs-col-char">Character</th>
+                    <th className="bs-col-look">Look</th>
                     <th className="bs-col-hair">Hair</th>
                     <th className="bs-col-makeup">Makeup</th>
                     <th className="bs-col-wardrobe">Wardrobe</th>
                     <th className="bs-col-sfx">SFX / Prosthetics</th>
+                    <th className="bs-col-env">Environmental</th>
+                    <th className="bs-col-action">Action</th>
                     <th className="bs-col-notes">Continuity Notes</th>
                   </tr>
                 </thead>
@@ -345,6 +479,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
                     const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
                     const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
+                    const envTags = tags.filter((t) => t.categoryId === 'environmental');
+                    const actionTags = tags.filter((t) => t.categoryId === 'action');
 
                     // Resolve values: manual entry → tag text → look defaults
                     const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
@@ -359,6 +495,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const makeup = resolveField(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
                     const wardrobe = resolveField(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
                     const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
+                    const environmental = cb?.environmental || envTags.map((t) => t.text).join(', ') || '';
+                    const action = cb?.action || actionTags.map((t) => t.text).join(', ') || '';
 
                     // Build continuity notes
                     const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
@@ -374,8 +512,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                           <div className="bs-char-stack">
                             <span className="bs-char-name">{ch.name}</span>
                             <span className="bs-char-billing">{ordinal(ch.billing)}</span>
-                            {charLook && <span className="bs-char-look">{charLook.name}</span>}
                           </div>
+                        </td>
+                        <td className="bs-col-look">
+                          {charLook ? <span className="bs-look-name">{charLook.name}</span> : <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-hair">
                           {hair || <span className="bs-empty">—</span>}
@@ -395,8 +535,14 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                             <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>
                           )}
                         </td>
-                        <td className="bs-col-sfx">
+                        <td className={`bs-col-sfx${sfx ? ' bs-cell--flag' : ''}`}>
                           {sfx || <span className="bs-empty">—</span>}
+                        </td>
+                        <td className={`bs-col-env${environmental ? ' bs-cell--flag' : ''}`}>
+                          {environmental || <span className="bs-empty">—</span>}
+                        </td>
+                        <td className="bs-col-action">
+                          {action || <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-notes">
                           {hasChange && cb?.changeNotes && (
@@ -422,7 +568,169 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
             <p>No scenes with characters found{filterChar ? ' for this character' : ''}.</p>
           </div>
         )}
+      </div>
       </div>}
+    </div>
+  );
+}
+
+/* ━━━ Embedded Breakdown Table (for Script page split view) ━━━ */
+
+export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId: string; activeSceneId: string }) {
+  const store = useBreakdownStore();
+  const tagStore = useTagStore();
+  const synopsisStore = useSynopsisStore();
+  const parsedScriptStore = useParsedScriptStore();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sceneRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const parsedData = parsedScriptStore.getParsedData(projectId);
+  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
+  const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
+
+  const timeJumpSceneIds = useMemo(() => {
+    const jumpIds = new Set<string>();
+    let prevDay = '';
+    for (const s of scenes) {
+      const day = s.storyDay || '';
+      if (prevDay && day && day !== prevDay) jumpIds.add(s.id);
+      if (day) prevDay = day;
+    }
+    return jumpIds;
+  }, [scenes]);
+
+  const scenesWithCast = scenes.filter((s) => s.characterIds.length > 0);
+
+  useEffect(() => {
+    if (activeSceneId && sceneRefs.current[activeSceneId]) {
+      sceneRefs.current[activeSceneId]!.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeSceneId]);
+
+  return (
+    <div className="bs-embedded" ref={scrollRef}>
+      {scenesWithCast.map((scene) => {
+        const globalIdx = scenes.indexOf(scene);
+        const bd = store.getBreakdown(scene.id);
+        const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
+        const charIds = scene.characterIds;
+        const timelineType = bd?.timeline.type;
+        const showBadge = timelineType && timelineType !== 'Normal' && timelineType !== '';
+        const storyDay = bd?.timeline.day || scene.storyDay || '';
+        const isTimeJump = timeJumpSceneIds.has(scene.id);
+        const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== ''
+          ? `bs-scene-block--${timelineType.toLowerCase().replace(/\s+/g, '-')}` : '';
+        const isActive = scene.id === activeSceneId;
+
+        return (
+          <div
+            key={scene.id}
+            ref={(el) => { sceneRefs.current[scene.id] = el; }}
+            className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass} ${isActive ? 'bs-scene-block--highlighted' : ''}`}
+          >
+            {isTimeJump && (
+              <div className="bs-time-jump-banner">
+                <span className="bs-time-jump-icon">&#9203;</span>
+                TIME JUMP — {storyDay}
+                {bd?.timeline.note && <span className="bs-time-jump-detail"> · {bd.timeline.note}</span>}
+              </div>
+            )}
+            <div className="bs-scene-header">
+              <div className="bs-scene-header-main">
+                <span className="bs-scene-num">SC {scene.number}</span>
+                {storyDay && <span className="bs-scene-day">{storyDay}</span>}
+                <span className="bs-scene-location">{scene.intExt}. {scene.location} — {scene.dayNight}</span>
+                {showBadge && <span className="bs-scene-badge">{timelineType?.toUpperCase()}</span>}
+              </div>
+              {synopsis && <div className="bs-scene-synopsis">{synopsis}</div>}
+            </div>
+            <table className="bs-table">
+              <thead>
+                <tr>
+                  <th className="bs-col-char">Character</th>
+                  <th className="bs-col-look">Look</th>
+                  <th className="bs-col-hair">Hair</th>
+                  <th className="bs-col-makeup">Makeup</th>
+                  <th className="bs-col-wardrobe">Wardrobe</th>
+                  <th className="bs-col-sfx">SFX</th>
+                  <th className="bs-col-env">Env.</th>
+                  <th className="bs-col-action">Action</th>
+                  <th className="bs-col-notes">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {charIds.map((cid) => {
+                  const ch = characters.find((c) => c.id === cid);
+                  if (!ch) return null;
+                  const cb = bd?.characters.find((c) => c.characterId === cid);
+                  const tags = tagStore.getTagsForScene(scene.id).filter((t) => t.characterId === cid);
+                  const hairTags = tags.filter((t) => t.categoryId === 'hair');
+                  const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
+                  const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
+                  const sfxTags = tags.filter((t) => t.categoryId === 'sfx');
+                  const envTags = tags.filter((t) => t.categoryId === 'environmental');
+                  const actionTags = tags.filter((t) => t.categoryId === 'action');
+                  const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
+                  const resolve = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) =>
+                    manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
+                  const hair = resolve(cb?.entersWith.hair, hairTags, charLook?.hair);
+                  const makeup = resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
+                  const wardrobe = resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
+                  const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
+                  const environmental = cb?.environmental || envTags.map((t) => t.text).join(', ') || '';
+                  const action = cb?.action || actionTags.map((t) => t.text).join(', ') || '';
+                  const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
+                  const hasEvents = bd?.continuityEvents.some((e) => e.characterId === cid);
+                  const hasChange = cb?.changeType === 'change';
+                  return (
+                    <tr key={cid} className={`bs-row ${hasEvents ? 'bs-row--continuity' : ''}`}>
+                      <td className="bs-col-char">
+                        <div className="bs-char-stack">
+                          <span className="bs-char-name">{ch.name}</span>
+                          <span className="bs-char-billing">{ordinal(ch.billing)}</span>
+                        </div>
+                      </td>
+                      <td className="bs-col-look">
+                        {charLook ? <span className="bs-look-name">{charLook.name}</span> : <span className="bs-empty">—</span>}
+                      </td>
+                      <td className="bs-col-hair">
+                        {hair || <span className="bs-empty">—</span>}
+                        {hasChange && cb?.exitsWith.hair && <div className="bs-exit-note">Exit: {cb.exitsWith.hair}</div>}
+                      </td>
+                      <td className="bs-col-makeup">
+                        {makeup || <span className="bs-empty">—</span>}
+                        {hasChange && cb?.exitsWith.makeup && <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>}
+                      </td>
+                      <td className="bs-col-wardrobe">
+                        {wardrobe || <span className="bs-empty">—</span>}
+                        {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
+                      </td>
+                      <td className={`bs-col-sfx${sfx ? ' bs-cell--flag' : ''}`}>
+                        {sfx || <span className="bs-empty">—</span>}
+                      </td>
+                      <td className={`bs-col-env${environmental ? ' bs-cell--flag' : ''}`}>
+                        {environmental || <span className="bs-empty">—</span>}
+                      </td>
+                      <td className="bs-col-action">
+                        {action || <span className="bs-empty">—</span>}
+                      </td>
+                      <td className="bs-col-notes">
+                        {hasChange && cb?.changeNotes && <div className="bs-change-note">{cb.changeNotes}</div>}
+                        {continuity
+                          ? continuity.startsWith('Same as')
+                            ? <span className="bs-same-ref">{continuity}</span>
+                            : continuity
+                          : !hasChange ? <span className="bs-empty">—</span> : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
     </div>
   );
 }

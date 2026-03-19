@@ -117,7 +117,7 @@ export function WelcomeScreen() {
 
         {/* Create Account — outlined, pill-shaped */}
         <button
-          onClick={() => setScreen('signup')}
+          onClick={() => setScreen('beta-code')}
           className="w-full h-14 rounded-pill font-semibold text-lg transition-all duration-200
             border-2 border-[#3D2B1A] text-[#3D2B1A] bg-transparent active:scale-[0.98]"
         >
@@ -129,7 +129,7 @@ export function WelcomeScreen() {
           <div className="flex-1 h-px bg-[#c5c0b5]" />
           <button
             className="text-sm text-[#7a7a7a] hover:text-[#5A3E28] transition-colors whitespace-nowrap"
-            onClick={() => setScreen('signup')}
+            onClick={() => setScreen('beta-code')}
           >
             Join a Team
           </button>
