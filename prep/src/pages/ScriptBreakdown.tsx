@@ -1190,9 +1190,6 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
                   <span>New Character</span>
                 </button>
               </div>
-              <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup(null)}>
-                Cancel
-              </button>
             </>
           )}
           {popup.step === 'field' && (
