@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useScheduleStore, type ProductionSchedule, type ScheduleVersion } from '@/stores/scheduleStore';
 import { parseSchedulePDF } from '@/utils/scheduleParser';
 
