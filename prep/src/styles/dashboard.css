@@ -198,4 +198,34 @@
   position: relative;
 }
 
+/* ━━━ Split View Mode ━━━ */
+.bd-panels--split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.bd-center--split {
+  flex: 1 1 50%;
+  min-width: 0;
+  border-right: 1px solid var(--border-card);
+}
+
+.bd-right--split {
+  flex: 1 1 50%;
+  min-width: 0;
+  width: auto !important;
+  max-width: none;
+}
+
+.bd-split-close {
+  margin-left: auto;
+  padding: 4px 6px !important;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+.bd-split-close:hover {
+  opacity: 1;
+}
+
 /* ━━━ Draggable Divider ━━━ */

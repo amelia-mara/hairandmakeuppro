@@ -117,6 +117,7 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
+  const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
 
   /* Resolve data source: parsed script → mock data fallback */
@@ -265,9 +266,10 @@ export function ScriptBreakdown({ projectId }: Props) {
   return (
     <div className="bd-page">
       {/* Three panels with draggable dividers */}
-      <div className="bd-panels">
+      <div className={`bd-panels ${splitView ? 'bd-panels--split' : ''}`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
+        {!splitView && (
         <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
           <div className="sl-header">
             <span className="sl-header-label">Scenes</span>
@@ -367,9 +369,10 @@ export function ScriptBreakdown({ projectId }: Props) {
             })}
           </div>
         </div>
+        )}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
-        <div className="bd-center">
+        <div className={`bd-center ${splitView ? 'bd-center--split' : ''}`}>
           {/* File divider tabs */}
           <div className="cp-tabstrip">
             <div className="cp-tabs-row">
@@ -499,14 +502,27 @@ export function ScriptBreakdown({ projectId }: Props) {
         </div>
 
         {/* Right divider */}
+        {!splitView && (
         <div className="bd-divider" onMouseDown={rightPanel.onMouseDown} onDoubleClick={rightPanel.onDoubleClick}>
           <div className="bd-divider-grip" />
         </div>
+        )}
 
         {/* ━━━ RIGHT — Breakdown Form ━━━ */}
-        <div className="bd-right bd-panel-surface" style={{ width: rightPanel.width, minWidth: rightPanel.width }}>
+        <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--split' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
           <div className="fp-panel-header">
             <span className="fp-panel-title">Scene Breakdown</span>
+            {splitView && (
+              <button
+                className="btn-ghost bd-btn bd-split-close"
+                onClick={() => setSplitView(false)}
+                aria-label="Close split view"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                </svg>
+              </button>
+            )}
             <div className="fp-panel-actions" ref={toolsRef} style={{ position: 'relative' }}>
               <button className="btn-ghost bd-btn" onClick={() => setToolsOpen(!toolsOpen)}>
                 <ToolsIcon /> Tools
@@ -524,7 +540,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                     <button className="tools-dropdown-item" onClick={() => { setShowDraftsModal(true); setToolsOpen(false); }}>
                       <DraftsIcon /> <span>View Previous Drafts</span>
                     </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('View breakdown'); setToolsOpen(false); }}>
+                    <button className="tools-dropdown-item" onClick={() => { setSplitView(true); setToolsOpen(false); }}>
                       <BreakdownViewIcon /> <span>View Breakdown</span>
                     </button>
                   </div>
