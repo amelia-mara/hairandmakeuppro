@@ -5,3 +5,5 @@ export { JoinProjectScreen } from './JoinProjectScreen';
 export { ProjectHubScreen } from './ProjectHubScreen';
 export { CreateProjectScreen } from './CreateProjectScreen';
 export { VerifyEmailScreen } from './VerifyEmailScreen';
+export { BetaCodeScreen } from './BetaCodeScreen';
+export { BetaLandingScreen } from './BetaLandingScreen';

@@ -1,0 +1,247 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CALL SHEETS PAGE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.cs-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 40px 80px;
+}
+
+/* ── Header ── */
+.cs-header {
+  margin-bottom: 36px;
+}
+
+.cs-title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+  color: var(--text-heading);
+}
+.cs-title-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--accent);
+}
+.cs-title-regular {
+  font-family: var(--font-display);
+}
+
+.cs-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Thumbnail grid ── */
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+/* ── Upload card (first position) ── */
+.cs-upload-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  aspect-ratio: 0.707;                     /* A4 ratio */
+  border: 2px dashed rgba(var(--a), 0.2);
+  border-radius: var(--radius-card);
+  background: rgba(var(--a), 0.03);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+}
+.cs-upload-card:hover {
+  border-color: rgba(var(--a), 0.4);
+  background: rgba(var(--a), 0.06);
+  color: var(--accent);
+}
+.cs-upload-card:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cs-upload-icon {
+  opacity: 0.6;
+}
+.cs-upload-card:hover .cs-upload-icon {
+  opacity: 1;
+}
+
+.cs-upload-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.cs-upload-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(var(--a), 0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: cs-spin 0.7s linear infinite;
+}
+@keyframes cs-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Call sheet card ── */
+.cs-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cs-card:hover {
+  border-color: rgba(var(--a), 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.cs-card-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 0.707;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  overflow: hidden;
+}
+.cs-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cs-card-info {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cs-card-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-card-date {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+/* Remove button */
+.cs-card-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+.cs-card:hover .cs-card-remove {
+  opacity: 1;
+}
+.cs-card-remove:hover {
+  background: rgba(200, 60, 60, 0.8);
+  color: #fff;
+}
+
+/* ── PDF Viewer overlay ── */
+.cs-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: cs-fade-in 0.15s ease-out;
+}
+@keyframes cs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cs-viewer-panel {
+  width: 100%;
+  max-width: 900px;
+  height: 90vh;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+
+.cs-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.cs-viewer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.cs-viewer-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.cs-viewer-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: rgba(var(--a), 0.06);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cs-viewer-close:hover {
+  background: rgba(var(--a), 0.12);
+  color: var(--text-primary);
+}
+
+.cs-viewer-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #fff;
+}

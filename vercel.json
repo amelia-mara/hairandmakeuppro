@@ -4,6 +4,8 @@
   "framework": null,
   "rewrites": [
     { "source": "/prep", "destination": "/prep/index.html" },
-    { "source": "/mobile", "destination": "/mobile/index.html" }
+    { "source": "/prep/(.*)", "destination": "/prep/index.html" },
+    { "source": "/mobile", "destination": "/mobile/index.html" },
+    { "source": "/mobile/(.*)", "destination": "/mobile/index.html" }
   ]
 }

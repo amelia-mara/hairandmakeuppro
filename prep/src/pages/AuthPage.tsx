@@ -3,32 +3,49 @@ import { useAuthStore } from '@/stores/authStore';
 
 interface AuthPageProps {
   initialMode?: 'login' | 'signup';
+  onRequestSignup?: () => void;
 }
 
-export function AuthPage({ initialMode = 'signup' }: AuthPageProps) {
+export function AuthPage({ initialMode = 'signup', onRequestSignup }: AuthPageProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, signup } = useAuthStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
-    if (mode === 'signup') {
-      if (!name.trim() || !email.trim() || !password.trim()) {
-        setError('Please fill in all fields.');
-        return;
+    try {
+      if (mode === 'signup') {
+        if (!name.trim() || !email.trim() || !password.trim()) {
+          setError('Please fill in all fields.');
+          setIsSubmitting(false);
+          return;
+        }
+        const success = await signup(name.trim(), email.trim(), password);
+        if (!success) {
+          setError(useAuthStore.getState().error || 'Sign up failed. Please try again.');
+        }
+      } else {
+        if (!email.trim() || !password.trim()) {
+          setError('Please fill in all fields.');
+          setIsSubmitting(false);
+          return;
+        }
+        const success = await login(email.trim(), password);
+        if (!success) {
+          setError(useAuthStore.getState().error || 'Invalid email or password.');
+        }
       }
-      signup(name.trim(), email.trim(), password);
-    } else {
-      if (!email.trim() || !password.trim()) {
-        setError('Please fill in all fields.');
-        return;
-      }
-      login(email.trim(), password);
+    } catch {
+      setError(useAuthStore.getState().error || 'An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -107,8 +124,15 @@ export function AuthPage({ initialMode = 'signup' }: AuthPageProps) {
 
             {error && <p className="auth-error">{error}</p>}
 
-            <button type="submit" className="auth-submit">
-              {mode === 'signup' ? 'Create Account' : 'Sign In'}
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={isSubmitting}
+              style={{ opacity: isSubmitting ? 0.7 : 1 }}
+            >
+              {isSubmitting
+                ? (mode === 'signup' ? 'Creating account...' : 'Signing in...')
+                : (mode === 'signup' ? 'Create Account' : 'Sign In')}
             </button>
           </form>
 
@@ -123,7 +147,14 @@ export function AuthPage({ initialMode = 'signup' }: AuthPageProps) {
             ) : (
               <>
                 Don&apos;t have an account?{' '}
-                <button className="auth-switch-btn" onClick={() => { setMode('signup'); setError(''); }}>
+                <button className="auth-switch-btn" onClick={() => {
+                  if (onRequestSignup) {
+                    onRequestSignup();
+                  } else {
+                    setMode('signup');
+                    setError('');
+                  }
+                }}>
                   Create one
                 </button>
               </>

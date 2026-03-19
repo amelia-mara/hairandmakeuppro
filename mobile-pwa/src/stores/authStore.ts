@@ -408,28 +408,57 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
 
+          // Check if user came through the beta code gate
+          const betaValidated = !!(window as any).__betaValidated;
+          if (betaValidated) {
+            // Clear the transient flag
+            delete (window as any).__betaValidated;
+          }
+
           const appUser: User = {
             id: authUser.id,
             email: authUser.email!,
             name,
-            // In beta mode, all users get Designer tier
-            tier: BETA_MODE ? 'designer' : 'trainee',
+            // Beta-validated users get Designer tier
+            tier: betaValidated || BETA_MODE ? 'designer' : 'trainee',
             createdAt: new Date(),
           };
 
-          // Show verify-email screen so user knows to check their inbox.
-          // Don't set isAuthenticated yet — they need to confirm first.
-          set({
-            isAuthenticated: false,
-            user: appUser,
-            isLoading: false,
-            error: null,
-            currentScreen: 'verify-email',
-            hasCompletedOnboarding: false,
-            hasSelectedPlan: false,
-            subscription: createDefaultSubscription(),
-            projectMemberships: [],
-          });
+          if (betaValidated) {
+            // Grant beta access in the database
+            await supabase.from('users').update({
+              beta_access: true,
+              beta_granted_at: new Date().toISOString(),
+              tier: 'designer',
+            }).eq('id', authUser.id);
+
+            // Beta users skip email verification and go straight to hub
+            set({
+              isAuthenticated: true,
+              user: appUser,
+              isLoading: false,
+              error: null,
+              currentScreen: 'hub',
+              hasCompletedOnboarding: true,
+              hasSelectedPlan: true,
+              subscription: createDefaultSubscription(),
+              projectMemberships: [],
+            });
+          } else {
+            // Show verify-email screen so user knows to check their inbox.
+            // Don't set isAuthenticated yet — they need to confirm first.
+            set({
+              isAuthenticated: false,
+              user: appUser,
+              isLoading: false,
+              error: null,
+              currentScreen: 'verify-email',
+              hasCompletedOnboarding: false,
+              hasSelectedPlan: false,
+              subscription: createDefaultSubscription(),
+              projectMemberships: [],
+            });
+          }
 
           return true;
         } catch (error) {
