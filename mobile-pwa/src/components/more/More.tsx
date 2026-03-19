@@ -1421,7 +1421,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h1 className="text-lg font-semibold text-text-primary">Schedule</h1>
+              <h1 className="text-lg font-semibold text-text-primary uppercase" style={{ fontFamily: "'DM Sans', sans-serif" }}>Schedule</h1>
             </div>
             {schedule ? (
               <div className="flex items-center gap-2">
@@ -1882,7 +1882,7 @@ function CallSheetArchive({ onBack }: ViewerProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h1 className="text-lg font-semibold text-text-primary">Call Sheets</h1>
+              <h1 className="text-lg font-semibold text-text-primary uppercase" style={{ fontFamily: "'DM Sans', sans-serif" }}>Call Sheets</h1>
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
