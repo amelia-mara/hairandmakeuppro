@@ -672,61 +672,6 @@ interface TagPopupState {
   popBelow?: boolean;
 }
 
-/** Extract profile-relevant data from a description string */
-function extractProfileData(text: string): Partial<Record<'age' | 'gender' | 'hairColour' | 'hairType' | 'eyeColour' | 'skinTone' | 'build' | 'distinguishingFeatures', string>> {
-  const result: Record<string, string> = {};
-  const t = text.toLowerCase();
-
-  // Age patterns: "aged 32", "32 years old", "early 30s", "mid-twenties", "(32)"
-  const ageMatch = t.match(/\b(?:aged?\s+|age\s+)?(\d{1,3})\s*(?:years?\s*old|yrs?\s*old|y\.?o\.?)?\b/) ||
-    t.match(/\b(early|mid|late)\s*-?\s*(teens|twenties|thirties|forties|fifties|sixties|seventies|eighties)\b/) ||
-    t.match(/\b(early|mid|late)\s*-?\s*(\d0)s\b/);
-  if (ageMatch) result.age = ageMatch[0].trim();
-
-  // Gender patterns
-  if (/\b(female|woman|girl|she)\b/i.test(t)) result.gender = 'Female';
-  else if (/\b(male|man|boy|he)\b/i.test(t) && !/\bshe\b/i.test(t)) result.gender = 'Male';
-
-  // Hair colour
-  const hairColourMatch = t.match(/\b(blonde?|brunette|red(?:head)?|auburn|black|dark\s*brown|light\s*brown|brown|grey|gray|silver|white|ginger|strawberry\s*blonde?|sandy|chestnut|raven|platinum)\b.*?hair/i) ||
-    t.match(/hair.*?\b(blonde?|brunette|red|auburn|black|dark\s*brown|light\s*brown|brown|grey|gray|silver|white|ginger|strawberry\s*blonde?|sandy|chestnut|raven|platinum)\b/i);
-  if (hairColourMatch) result.hairColour = hairColourMatch[1].charAt(0).toUpperCase() + hairColourMatch[1].slice(1);
-
-  // Hair type
-  const hairTypeMatch = t.match(/\b(curly|straight|wavy|frizzy|coiled|braided|dreadlocks|afro|bald|shaved|buzz\s*cut|bob|ponytail|bun|long|short|shoulder[- ]length|cropped|thinning|thick|fine)\b.*?hair/i) ||
-    t.match(/hair.*?\b(curly|straight|wavy|frizzy|coiled|braided|dreadlocks|afro|bald|shaved|buzz\s*cut|bob|ponytail|bun|long|short|shoulder[- ]length|cropped|thinning|thick|fine)\b/i);
-  if (hairTypeMatch) result.hairType = hairTypeMatch[1].charAt(0).toUpperCase() + hairTypeMatch[1].slice(1);
-
-  // Eye colour
-  const eyeMatch = t.match(/\b(blue|green|brown|hazel|grey|gray|amber|dark|light)\b.*?eyes?/i) ||
-    t.match(/eyes?.*?\b(blue|green|brown|hazel|grey|gray|amber|dark|light)\b/i);
-  if (eyeMatch) result.eyeColour = eyeMatch[1].charAt(0).toUpperCase() + eyeMatch[1].slice(1);
-
-  // Skin tone
-  const skinMatch = t.match(/\b(pale|fair|light|medium|olive|tan(?:ned)?|dark|deep|warm|cool|ebony|porcelain)\b.*?(?:skin|complex)/i);
-  if (skinMatch) result.skinTone = skinMatch[1].charAt(0).toUpperCase() + skinMatch[1].slice(1);
-
-  // Build
-  const buildMatch = t.match(/\b(slim|slender|thin|petite|athletic|muscular|stocky|heavy[- ]?set|broad|tall|short|lanky|wiry|stout|bulky|lean|average)\b.*?(?:build|frame|physique|figure)?/i);
-  if (buildMatch) result.build = buildMatch[1].charAt(0).toUpperCase() + buildMatch[1].slice(1);
-
-  // Distinguishing features — scars, tattoos, birthmarks, piercings, glasses, etc.
-  const featurePatterns = [
-    /\b(scar\b[^.;,]*)/i, /\b(tattoo\b[^.;,]*)/i, /\b(birthmark\b[^.;,]*)/i,
-    /\b(piercing\b[^.;,]*)/i, /\b(glasses\b)/i, /\b(freckles\b)/i,
-    /\b(beard\b[^.;,]*)/i, /\b(moustache\b[^.;,]*)/i, /\b(limp\b[^.;,]*)/i,
-    /\b(missing\s+\w+[^.;,]*)/i, /\b(prosthetic\b[^.;,]*)/i,
-  ];
-  const features: string[] = [];
-  for (const pat of featurePatterns) {
-    const m = t.match(pat);
-    if (m) features.push(m[1].trim());
-  }
-  if (features.length > 0) result.distinguishingFeatures = features.join(', ');
-
-  return result;
-}
-
 function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
   scenes: Scene[];
   preambleScene?: Scene;
@@ -2101,10 +2046,6 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   const makeupTags = sceneTags.filter((t) => t.categoryId === 'makeup');
   const wardrobeTags = sceneTags.filter((t) => t.categoryId === 'wardrobe');
   const sfxTags = sceneTags.filter((t) => t.categoryId === 'sfx');
-  const healthTags = sceneTags.filter((t) => t.categoryId === 'health');
-  const injuryTags = sceneTags.filter((t) => t.categoryId === 'injuries');
-  const stuntTags = sceneTags.filter((t) => t.categoryId === 'stunts');
-  const weatherTags = sceneTags.filter((t) => t.categoryId === 'weather');
 
   /* Descriptive tags — cast tags with a description, or any tag with description text */
   const descTags = sceneTags.filter((t) => {
