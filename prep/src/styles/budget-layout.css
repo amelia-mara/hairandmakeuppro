@@ -29,11 +29,20 @@
 }
 
 .budget-top-bar-title {
-  font-family: var(--font-sans);
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
   color: var(--text-heading);
-  margin: 0;
+  text-transform: uppercase;
+}
+.budget-top-bar-title .heading-italic {
+  font-family: 'DM Sans', sans-serif;
+  font-style: italic;
+  color: var(--accent);
+}
+.budget-top-bar-title .heading-regular {
+  font-family: 'DM Sans', sans-serif;
 }
 
 .budget-top-bar-actions {
