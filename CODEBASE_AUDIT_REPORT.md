@@ -178,6 +178,9 @@ Several components exceed 1,000 lines, combining UI, business logic, and data fe
 | `mobile-pwa/src/components/breakdown/Breakdown.tsx` | 1,094 |
 | `mobile-pwa/src/components/home/Home.tsx` | 1,049 |
 | `prep/src/pages/ScriptBreakdown.tsx` | 2,842 |
+| `prep/src/stores/breakdownStore.ts` | 1,456 (12 stores) |
+
+`ScriptBreakdown.tsx` is the single largest file in the codebase — it implements a 3-panel layout with script viewing, character management, tagging, upload modals, diff viewing, breakdown forms, and continuity tracking all in one component.
 
 **Recommendation:** Extract sub-components and custom hooks. A component over ~400 lines typically needs splitting.
 
@@ -244,13 +247,28 @@ Most prep stores use only `persist` to localStorage with no server sync. This me
 
 **Recommendation:** Either integrate the same sync services, or clearly document that prep is local-only.
 
-### 5.5 🟡 Missing Error Boundaries
+### 5.5 🟡 Prep `breakdownStore.ts` Contains 12 Stores in One File
+
+`prep/src/stores/breakdownStore.ts` (1,456 lines) packs **12 separate Zustand stores** into a single file: `useBreakdownStore`, `useTagStore`, `useSynopsisStore`, `useSceneMetaStore`, `useContinuityTrackerStore`, `useContinuityPhotosStore`, `useScriptUploadStore`, `useParsedScriptStore`, `useCharacterOverridesStore`, `useRevisedScenesStore`, plus type definitions and mock data constants.
+
+**Risk:** Extremely hard to navigate, test, or refactor. Any edit risks breaking unrelated stores.
+
+**Recommendation:** Split into separate files per store (e.g., `stores/breakdownStore.ts`, `stores/tagStore.ts`, `stores/synopsisStore.ts`, etc.).
+
+### 5.6 🟡 Prep and Mobile Have Divergent Data Models
+
+The prep `types/index.ts` is only 15 lines (one type + one constant), while mobile's is 1,634 lines. The prep app defines most of its types inline within `breakdownStore.ts`, leading to:
+- No shared type contract between the two apps
+- Different field names and structures for the same concepts
+- No guarantee that data synced from one app is compatible with the other
+
+### 5.7 🟡 Missing Error Boundaries
 
 Only one `ErrorBoundary.tsx` exists (mobile). No granular error boundaries around critical sections (photo capture, PDF parsing, Supabase operations).
 
 **Recommendation:** Add error boundaries around route-level components and complex features (script upload, photo capture, sync operations).
 
-### 5.6 🟡 No Rate Limiting on API Endpoints
+### 5.8 🟡 No Rate Limiting on API Endpoints
 
 The `/api/ai.js` and `/api/bug-report.js` endpoints have no rate limiting, authentication checks, or CORS restrictions.
 
