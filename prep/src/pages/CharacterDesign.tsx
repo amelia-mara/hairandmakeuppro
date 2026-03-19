@@ -5,7 +5,6 @@ import {
   useCharacterOverridesStore,
   type Character, type Scene,
 } from '@/stores/breakdownStore';
-import { useProjectStore } from '@/stores/projectStore';
 
 /* ━━━ Types ━━━ */
 
@@ -124,7 +123,6 @@ export function CharacterDesign({ projectId }: Props) {
   const parsedScriptStore = useParsedScriptStore();
   const overridesStore = useCharacterOverridesStore();
   const designStore = useCharacterDesignStore();
-  const project = useProjectStore((s) => s.getProject(projectId));
 
   const parsedData = parsedScriptStore.getParsedData(projectId);
   const allCharacters: Character[] = useMemo(() => {
