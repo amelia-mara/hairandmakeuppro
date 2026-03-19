@@ -10,42 +10,42 @@ export function WelcomeScreen() {
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         {/* Wordmark - stacked with colored stripes, offset text */}
-        <div className="flex flex-col items-center mb-2">
-          <div style={{ position: 'relative', width: '280px' }}>
-            <h1 style={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 800,
-              fontSize: '48px',
-              color: '#4A3020',
-              lineHeight: 1,
-              margin: '0 0 -2px 0',
-              textAlign: 'center',
-              paddingLeft: '40px',
-            }}>
-              Checks
-            </h1>
+        <div className="flex flex-col mb-2" style={{ width: '100%', maxWidth: '340px' }}>
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 800,
+            fontSize: '48px',
+            color: '#4A3020',
+            lineHeight: 1.1,
+            marginBottom: '0',
+            textAlign: 'left',
+            paddingLeft: '20px',
+          }}>
+            Checks
+          </h1>
 
-            {/* Colored stripes - orange, amber, blue (top to bottom) */}
-            <div style={{ width: '100vw', position: 'relative', left: '50%', transform: 'translateX(-50%)', margin: '2px 0 0 0' }}>
-              <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8621A, transparent)', marginBottom: '3px' }} />
-              <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #D4A843, transparent)', marginBottom: '3px' }} />
-              <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #5B9BD5, transparent)' }} />
-            </div>
-
-            <h1 style={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 800,
-              fontStyle: 'italic',
-              fontSize: '48px',
-              color: '#E8621A',
-              lineHeight: 1,
-              margin: '-6px 0 0 0',
-              textAlign: 'center',
-              transform: 'rotate(-2deg)',
-            }}>
-              Happy
-            </h1>
+          {/* Colored stripes - orange, amber, blue (top to bottom) */}
+          <div style={{ width: '100vw', margin: '6px 0', marginLeft: '-20px' }}>
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #E8621A, transparent)', marginBottom: '3px' }} />
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #D4A843, transparent)', marginBottom: '3px' }} />
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #5B9BD5, transparent)' }} />
           </div>
+
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 800,
+            fontStyle: 'italic',
+            fontSize: '48px',
+            color: '#E8621A',
+            lineHeight: 1.1,
+            marginTop: '0',
+            textAlign: 'right',
+            paddingRight: '20px',
+            transform: 'rotate(-3deg)',
+            transformOrigin: 'center',
+          }}>
+            Happy
+          </h1>
         </div>
 
         {/* Tagline */}
