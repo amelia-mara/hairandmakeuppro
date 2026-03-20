@@ -2198,44 +2198,31 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
       <div className="cb-field">
         <label className="cb-label">Look</label>
         {showNewLookInput ? (
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <input
-              ref={newLookInputRef}
-              className="cb-select"
-              type="text"
-              placeholder="Enter look name..."
-              value={newLookName}
-              onChange={(e) => setNewLookName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newLookName.trim()) {
-                  const newId = onAddLook(char.id, newLookName.trim());
-                  onUpdate({ lookId: newId });
-                  setNewLookName('');
-                  setShowNewLookInput(false);
-                } else if (e.key === 'Escape') {
-                  setNewLookName('');
-                  setShowNewLookInput(false);
-                }
-              }}
-              autoFocus
-            />
-            <button
-              className="cb-copy-prev-btn"
-              style={{ whiteSpace: 'nowrap' }}
-              onClick={() => {
-                if (newLookName.trim()) {
-                  const newId = onAddLook(char.id, newLookName.trim());
-                  onUpdate({ lookId: newId });
-                  setNewLookName('');
-                  setShowNewLookInput(false);
-                }
-              }}
-            >Save</button>
-            <button
-              className="cb-copy-prev-btn"
-              onClick={() => { setNewLookName(''); setShowNewLookInput(false); }}
-            >Cancel</button>
-          </div>
+          <input
+            ref={newLookInputRef}
+            className="cb-select"
+            type="text"
+            placeholder="Type look name..."
+            value={newLookName}
+            onChange={(e) => setNewLookName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                (e.target as HTMLInputElement).blur();
+              } else if (e.key === 'Escape') {
+                setNewLookName('');
+                setShowNewLookInput(false);
+              }
+            }}
+            onBlur={() => {
+              if (newLookName.trim()) {
+                const newId = onAddLook(char.id, newLookName.trim());
+                onUpdate({ lookId: newId });
+              }
+              setNewLookName('');
+              setShowNewLookInput(false);
+            }}
+            autoFocus
+          />
         ) : (
           <select className="cb-select" value={cb.lookId} onChange={(e) => {
             if (e.target.value === '__new') {
