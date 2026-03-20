@@ -2185,8 +2185,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
   const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
-  const bStore = useBreakdownStore();
-
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
