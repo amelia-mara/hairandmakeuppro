@@ -552,6 +552,211 @@ export async function approveTimesheetEntry(
 }
 
 // ============================================================================
+// BUDGET — one JSONB row per project
+// ============================================================================
+
+export async function fetchBudget(projectId: string) {
+  const { data, error } = await supabase
+    .from('budget_data')
+    .select('*')
+    .eq('project_id', projectId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export function saveBudget(
+  projectId: string,
+  budget: {
+    projectInfo: unknown;
+    categories: unknown[];
+    expenses: unknown[];
+    receipts: unknown[];
+    isLTD: boolean;
+    currency: string;
+  },
+) {
+  if (receivingFromRealtime) return;
+  debounced(`budget:${projectId}`, async () => {
+    const { error } = await supabase
+      .from('budget_data')
+      .upsert({
+        project_id: projectId,
+        project_info: budget.projectInfo as unknown as Json,
+        categories: budget.categories as unknown as Json,
+        expenses: budget.expenses as unknown as Json,
+        receipts: budget.receipts as unknown as Json,
+        is_ltd: budget.isLTD,
+        currency: budget.currency,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'project_id' });
+    if (error) throw error;
+    console.log('[PrepSync] Budget saved');
+  });
+}
+
+// ============================================================================
+// SCRIPT TAGS — JSONB array per project
+// ============================================================================
+
+export async function fetchTags(projectId: string) {
+  const { data, error } = await supabase
+    .from('script_tags')
+    .select('*')
+    .eq('project_id', projectId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export function saveTags(projectId: string, tags: unknown[]) {
+  if (receivingFromRealtime) return;
+  debounced(`tags:${projectId}`, async () => {
+    const { error } = await supabase
+      .from('script_tags')
+      .upsert({
+        project_id: projectId,
+        tags: tags as unknown as Json,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'project_id' });
+    if (error) throw error;
+    console.log('[PrepSync] Tags saved');
+  });
+}
+
+// ============================================================================
+// SCRIPT REVISIONS — latest revision per project
+// ============================================================================
+
+export async function fetchRevision(projectId: string) {
+  const { data, error } = await supabase
+    .from('script_revisions')
+    .select('*')
+    .eq('project_id', projectId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export function saveRevision(
+  projectId: string,
+  revision: {
+    changes: unknown[];
+    reviewedSceneIds: string[];
+    filename: string;
+    uploadedAt: string;
+  },
+) {
+  if (receivingFromRealtime) return;
+  debounced(`revision:${projectId}`, async () => {
+    const { error } = await supabase
+      .from('script_revisions')
+      .upsert({
+        project_id: projectId,
+        changes: revision.changes as unknown as Json,
+        reviewed_scene_ids: revision.reviewedSceneIds as unknown as Json,
+        filename: revision.filename,
+        uploaded_at: revision.uploadedAt,
+      }, { onConflict: 'project_id' });
+    if (error) throw error;
+    console.log('[PrepSync] Revision saved');
+  });
+}
+
+// ============================================================================
+// CONTINUITY PHOTOS — upload to / download from Supabase Storage
+// ============================================================================
+
+/**
+ * Upload a continuity photo (data URI) to Supabase Storage.
+ * Returns the public URL for the stored file.
+ */
+export async function uploadContinuityPhoto(
+  projectId: string,
+  sceneId: string,
+  characterId: string,
+  photoId: string,
+  dataUri: string,
+): Promise<string | null> {
+  try {
+    // Convert data URI to blob
+    const res = await fetch(dataUri);
+    const blob = await res.blob();
+    const ext = blob.type.includes('png') ? 'png' : 'jpg';
+    const path = `${projectId}/${sceneId}-${characterId}/${photoId}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from('continuity-photos')
+      .upload(path, blob, { upsert: true, contentType: blob.type });
+
+    if (error) {
+      console.error('[PrepSync] Photo upload failed:', error);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('continuity-photos')
+      .getPublicUrl(path);
+
+    console.log('[PrepSync] Photo uploaded:', path);
+    return urlData.publicUrl;
+  } catch (err) {
+    console.error('[PrepSync] Photo upload error:', err);
+    return null;
+  }
+}
+
+/**
+ * Get a signed URL for a continuity photo from Supabase Storage.
+ */
+export async function getContinuityPhotoUrl(storagePath: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from('continuity-photos')
+      .createSignedUrl(storagePath, 3600); // 1 hour expiry
+    if (error) throw error;
+    return data.signedUrl;
+  } catch (err) {
+    console.error('[PrepSync] Photo URL error:', err);
+    return null;
+  }
+}
+
+/**
+ * Save continuity photo metadata to Supabase.
+ * The actual image is in Supabase Storage; this saves the reference.
+ */
+export function saveContinuityPhotoMeta(
+  _projectId: string,
+  sceneId: string,
+  characterId: string,
+  photosData: {
+    anglePhotos: Record<string, { id: string; url: string; filename: string; addedAt: string } | undefined>;
+    masterRef: { id: string; url: string; filename: string; addedAt: string } | null;
+    additional: { id: string; url: string; filename: string; addedAt: string }[];
+  },
+) {
+  if (receivingFromRealtime) return;
+  const key = `${sceneId}-${characterId}`;
+  debounced(`photos:${key}`, async () => {
+    // Store photo metadata in continuity_events as a JSONB field
+    const { error } = await supabase
+      .from('continuity_events')
+      .update({
+        continuity_events_data: {
+          prep_photos: photosData,
+        } as unknown as Json,
+      })
+      .eq('id', key);
+    // If no matching continuity_events row, that's ok — photos depend on continuity entries existing
+    if (error && !error.message.includes('0 rows')) {
+      throw error;
+    }
+    console.log('[PrepSync] Photo metadata saved for', key);
+  });
+}
+
+// ============================================================================
 // FULL PROJECT LOAD — fetch everything in correct order
 // ============================================================================
 
@@ -568,6 +773,9 @@ export interface PrepProjectData {
   callSheets: Record<string, unknown>[];
   timesheetEntries: Record<string, unknown>[];
   scriptUpload: Record<string, unknown> | null;
+  budget: Record<string, unknown> | null;
+  tags: Record<string, unknown> | null;
+  revision: Record<string, unknown> | null;
 }
 
 export async function loadFullProject(projectId: string): Promise<PrepProjectData> {
@@ -575,7 +783,7 @@ export async function loadFullProject(projectId: string): Promise<PrepProjectDat
   const project = await fetchProject(projectId);
 
   // 2. Independent data in parallel
-  const [scenes, characters, looks, schedule, callSheets, timesheetEntries, scriptUpload] =
+  const [scenes, characters, looks, schedule, callSheets, timesheetEntries, scriptUpload, budget, tags, revision] =
     await Promise.all([
       fetchScenes(projectId),
       fetchCharacters(projectId),
@@ -584,6 +792,9 @@ export async function loadFullProject(projectId: string): Promise<PrepProjectDat
       fetchCallSheets(projectId),
       fetchTimesheetEntries(projectId),
       fetchScriptUpload(projectId),
+      fetchBudget(projectId).catch(() => null),
+      fetchTags(projectId).catch(() => null),
+      fetchRevision(projectId).catch(() => null),
     ]);
 
   // 3. Dependent data
@@ -624,6 +835,9 @@ export async function loadFullProject(projectId: string): Promise<PrepProjectDat
     photos,
     schedule,
     callSheets,
+    budget: budget as Record<string, unknown> | null,
+    tags: tags as Record<string, unknown> | null,
+    revision: revision as Record<string, unknown> | null,
     timesheetEntries,
     scriptUpload,
   };
