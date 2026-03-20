@@ -68,6 +68,19 @@ async function hydrateProjects(userId: string) {
       projects: [...store.projects, ...newProjects],
     });
   }
+
+  // Update existing projects with Supabase data (restores metadata after re-login)
+  const existingFromSupa = sbProjects.filter((sp) => existingIds.has(sp.id));
+  for (const sp of existingFromSupa) {
+    const local = store.projects.find((p) => p.id === sp.id);
+    if (local && !local.scenes && !local.characters) {
+      // Project exists locally but has no data — will be populated by useProjectSync
+      useProjectStore.getState().updateProject(sp.id, {
+        title: sp.name,
+        type: sp.production_type || local.type,
+      });
+    }
+  }
 }
 
 interface AuthState {
