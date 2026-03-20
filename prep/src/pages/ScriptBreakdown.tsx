@@ -812,6 +812,22 @@ export function ScriptBreakdown({ projectId }: Props) {
                 });
                 return newId;
               }}
+              onSetLook={(lookId, hair, makeup, wardrobe) => {
+                // Update the look template with current entersWith values
+                parsedScriptStore.updateLook(projectId, lookId, { hair, makeup, wardrobe });
+                // Propagate to all scenes that use this look
+                const allBreakdowns = store.breakdowns;
+                for (const [sceneId, bd] of Object.entries(allBreakdowns)) {
+                  for (const ch of bd.characters) {
+                    if (ch.lookId === lookId) {
+                      store.updateCharacterBreakdown(sceneId, ch.characterId, {
+                        entersWith: { hair, makeup, wardrobe },
+                      });
+                    }
+                  }
+                }
+                triggerSave();
+              }}
             />
             )
           )}
@@ -2166,7 +2182,7 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -2178,6 +2194,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   onRemoveEvent: (id: string) => void;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
+  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
 }) {
   if (!breakdown) return null;
 
@@ -2286,7 +2303,8 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 onUpdateEvent={onUpdateEvent}
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
-                onAddLook={onAddLook} />
+                onAddLook={onAddLook}
+                onSetLook={onSetLook} />
             );
           })}
         </div>
@@ -2348,7 +2366,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook }: {
   char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -2360,6 +2378,7 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   sceneId: string;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
+  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
@@ -2487,6 +2506,11 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
             {looks.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             <option value="__new">+ New Look</option>
           </select>
+        )}
+        {cb.lookId && (
+          <button className="cb-set-look-btn" onClick={() => {
+            onSetLook(cb.lookId, cb.entersWith.hair, cb.entersWith.makeup, cb.entersWith.wardrobe);
+          }}>Set Look</button>
         )}
       </div>
 
