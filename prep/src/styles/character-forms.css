@@ -163,6 +163,23 @@
 }
 .cb-same-btn:hover { text-decoration: underline; }
 
+.cb-set-look-btn {
+  margin-top: 4px;
+  font-size: 0.625rem;
+  color: var(--text-primary, #e0e0e0);
+  background: var(--accent-gold, #c9a84c);
+  border: none;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.cb-set-look-btn:hover {
+  opacity: 0.85;
+}
+
 /* Per-character continuity events */
 .cb-continuity {
   margin-top: 14px;
