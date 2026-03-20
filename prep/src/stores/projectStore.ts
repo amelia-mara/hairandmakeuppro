@@ -20,6 +20,7 @@ interface ProjectState {
   projects: Project[];
   selectedProjectId: string | null;
   addProject: (project: Project) => void;
+  setProjects: (projects: Project[]) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   selectProject: (id: string | null) => void;
@@ -34,6 +35,8 @@ export const useProjectStore = create<ProjectState>()(
 
       addProject: (project) =>
         set((state) => ({ projects: [...state.projects, project] })),
+
+      setProjects: (projects) => set({ projects }),
 
       updateProject: (id, updates) =>
         set((state) => ({
