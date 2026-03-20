@@ -27,6 +27,9 @@ import {
   saveRevision,
   uploadContinuityPhoto,
   saveContinuityPhotoMeta,
+  uploadCallSheetToStorage,
+  removeCallSheetFromSupabase,
+  saveTimesheetFull,
   flushPrepSync,
   onSaveStatusChange,
   setReceivingFromRealtime,
@@ -50,6 +53,8 @@ import {
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useBudgetStore } from '@/stores/budgetStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
+import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -245,6 +250,55 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               }
               if (data.budget.is_ltd !== undefined) {
                 budgetStore.setState({ isLTD: data.budget.is_ltd as boolean });
+              }
+            }
+
+            // ── Populate call sheets store from call_sheet_data ──
+            if (data.callSheets.length > 0) {
+              const csStore = useCallSheetStore(projectId!);
+              const existingIds = new Set(csStore.getState().sheets.map(s => s.id));
+              for (const row of data.callSheets) {
+                const id = row.id as string;
+                if (existingIds.has(id)) continue;
+                const parsed = row.parsed_data as Record<string, unknown> | null;
+                if (parsed?.pdfUrl) {
+                  csStore.getState().addSheet({
+                    id,
+                    name: (parsed.name as string) || '',
+                    date: (row.shoot_date as string) || '',
+                    dataUri: parsed.pdfUrl as string,
+                    thumbnailUri: (parsed.thumbnailUrl as string) || '',
+                    uploadedAt: (parsed.uploadedAt as string) || (row.created_at as string) || '',
+                  });
+                }
+              }
+            }
+
+            // ── Populate timesheet store from timesheets ──
+            if (data.timesheetEntries.length > 0) {
+              const tsStore = useTimesheetStore(projectId!);
+              // Look for the full Prep state dump (sentinel row)
+              const fullStateRow = data.timesheetEntries.find(
+                (e) => (e.week_starting as string) === '1970-01-01',
+              );
+              if (fullStateRow) {
+                const entries = fullStateRow.entries as Record<string, unknown> | null;
+                if (entries?._prepTimesheetState) {
+                  const state = tsStore.getState();
+                  if (entries.production) state.setProduction(entries.production as any);
+                  if (Array.isArray(entries.crew) && entries.crew.length > 0) {
+                    // Only hydrate crew if local store is empty
+                    if (state.crew.length === 0) {
+                      tsStore.setState({ crew: entries.crew as any });
+                    }
+                  }
+                  if (entries.entries && typeof entries.entries === 'object') {
+                    const localEntries = state.entries;
+                    if (Object.keys(localEntries).length === 0) {
+                      tsStore.setState({ entries: entries.entries as any });
+                    }
+                  }
+                }
               }
             }
 
@@ -677,6 +731,75 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           })();
         }
       }
+    });
+
+    return unsub;
+  }, [projectId, hasPrepAccess]);
+
+  // Watch call sheet store → upload to Supabase Storage + save metadata
+  useEffect(() => {
+    if (!projectId || !hasPrepAccess) return;
+
+    const csStore = useCallSheetStore(projectId);
+    let prevSheetIds = new Set(csStore.getState().sheets.map(s => s.id));
+
+    const unsub = csStore.subscribe((state) => {
+      const currentIds = new Set(state.sheets.map(s => s.id));
+
+      // Detect new sheets (added)
+      for (const sheet of state.sheets) {
+        if (!prevSheetIds.has(sheet.id) && sheet.dataUri.startsWith('data:')) {
+          // Upload new sheet to Supabase Storage
+          uploadCallSheetToStorage(projectId, sheet).then((urls) => {
+            if (urls) {
+              // Replace data URIs with storage URLs in the store
+              setReceivingFromRealtime(true);
+              try {
+                csStore.setState((s) => ({
+                  sheets: s.sheets.map(sh =>
+                    sh.id === sheet.id
+                      ? { ...sh, dataUri: urls.pdfUrl, thumbnailUri: urls.thumbnailUrl }
+                      : sh,
+                  ),
+                }));
+              } finally {
+                setReceivingFromRealtime(false);
+              }
+            }
+          });
+        }
+      }
+
+      // Detect removed sheets
+      for (const oldId of prevSheetIds) {
+        if (!currentIds.has(oldId)) {
+          removeCallSheetFromSupabase(projectId, oldId);
+        }
+      }
+
+      prevSheetIds = currentIds;
+    });
+
+    return unsub;
+  }, [projectId, hasPrepAccess]);
+
+  // Watch timesheet store → save full state to Supabase
+  useEffect(() => {
+    if (!projectId || !hasPrepAccess) return;
+
+    const tsStore = useTimesheetStore(projectId);
+    const unsub = tsStore.subscribe((state, prevState) => {
+      if (
+        state.production === prevState.production &&
+        state.crew === prevState.crew &&
+        state.entries === prevState.entries
+      ) return;
+
+      saveTimesheetFull(projectId, {
+        production: state.production,
+        crew: state.crew,
+        entries: state.entries,
+      });
     });
 
     return unsub;
