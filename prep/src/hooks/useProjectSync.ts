@@ -22,6 +22,11 @@ import {
   saveBreakdown,
   saveContinuityEntry,
   saveSchedule,
+  saveBudget,
+  saveTags,
+  saveRevision,
+  uploadContinuityPhoto,
+  saveContinuityPhotoMeta,
   flushPrepSync,
   onSaveStatusChange,
   setReceivingFromRealtime,
@@ -34,13 +39,17 @@ import {
   useParsedScriptStore,
   useBreakdownStore,
   useContinuityTrackerStore,
+  useContinuityPhotosStore,
   useSynopsisStore,
   useSceneMetaStore,
   useCharacterOverridesStore,
   useScriptUploadStore,
+  useTagStore,
+  useRevisedScenesStore,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useBudgetStore } from '@/stores/budgetStore';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -138,7 +147,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               }
             }
 
-            // ── Populate continuity tracker from continuity_events ──
+            // ── Populate continuity tracker and photos from continuity_events ──
             for (const entry of data.continuityEntries) {
               const sceneId = entry.scene_id as string;
               const characterId = entry.character_id as string;
@@ -158,6 +167,28 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                   },
                   notes: (entry.general_notes as string) || '',
                 });
+
+                // Restore continuity photos from the stored metadata
+                const evData = entry.continuity_events_data as Record<string, any> | null;
+                if (evData?.prep_photos) {
+                  const pp = evData.prep_photos;
+                  const photosStore = useContinuityPhotosStore.getState();
+                  if (pp.masterRef) {
+                    photosStore.setMasterRef(sceneId, characterId, pp.masterRef);
+                  }
+                  if (pp.anglePhotos) {
+                    for (const [angle, photo] of Object.entries(pp.anglePhotos)) {
+                      if (photo) {
+                        photosStore.setAnglePhoto(sceneId, characterId, angle as any, photo as any);
+                      }
+                    }
+                  }
+                  if (pp.additional && Array.isArray(pp.additional)) {
+                    for (const photo of pp.additional) {
+                      photosStore.addAdditionalPhoto(sceneId, characterId, photo);
+                    }
+                  }
+                }
               }
             }
 
@@ -187,6 +218,58 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 sceneCount: (data.scriptUpload.scene_count as number) || scenes.length,
                 rawText: (data.scriptUpload.raw_text as string) || '',
               });
+            }
+
+            // ── Populate budget store ──
+            if (data.budget) {
+              const budgetStore = useBudgetStore(projectId!);
+              const state = budgetStore.getState();
+              const projectInfo = (data.budget.project_info as any) || {};
+              const categories = (data.budget.categories as any[]) || [];
+              const expenses = (data.budget.expenses as any[]) || [];
+              const receipts = (data.budget.receipts as any[]) || [];
+              if (projectInfo && Object.keys(projectInfo).length > 0) {
+                state.setProjectInfo(projectInfo);
+              }
+              if (categories.length > 0) {
+                budgetStore.setState({ categories });
+              }
+              if (expenses.length > 0) {
+                budgetStore.setState({ expenses });
+              }
+              if (receipts.length > 0) {
+                budgetStore.setState({ receipts });
+              }
+              if (data.budget.currency) {
+                budgetStore.setState({ currency: data.budget.currency as any });
+              }
+              if (data.budget.is_ltd !== undefined) {
+                budgetStore.setState({ isLTD: data.budget.is_ltd as boolean });
+              }
+            }
+
+            // ── Populate tags store ──
+            if (data.tags) {
+              const tags = (data.tags.tags as any[]) || [];
+              if (tags.length > 0) {
+                useTagStore.setState({ tags });
+              }
+            }
+
+            // ── Populate revised scenes store ──
+            if (data.revision) {
+              const changes = (data.revision.changes as any[]) || [];
+              const reviewedSceneIds = (data.revision.reviewed_scene_ids as string[]) || [];
+              const filename = (data.revision.filename as string) || '';
+              const uploadedAt = (data.revision.uploaded_at as string) || new Date().toISOString();
+              if (changes.length > 0) {
+                useRevisedScenesStore.setState({
+                  revisions: {
+                    ...useRevisedScenesStore.getState().revisions,
+                    [projectId!]: { changes, reviewedSceneIds, filename, uploadedAt },
+                  },
+                });
+              }
             }
           } finally {
             setReceivingFromRealtime(false);
@@ -438,6 +521,162 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
         days: state.current.days,
         status: state.current.status,
       });
+    });
+
+    return unsub;
+  }, [projectId, hasPrepAccess]);
+
+  // Watch budget store → save to Supabase
+  useEffect(() => {
+    if (!projectId || !hasPrepAccess) return;
+
+    const budgetStore = useBudgetStore(projectId);
+    const unsub = budgetStore.subscribe((state, prevState) => {
+      // Check if any budget data changed
+      if (
+        state.projectInfo === prevState.projectInfo &&
+        state.categories === prevState.categories &&
+        state.expenses === prevState.expenses &&
+        state.receipts === prevState.receipts &&
+        state.isLTD === prevState.isLTD &&
+        state.currency === prevState.currency
+      ) return;
+
+      saveBudget(projectId, {
+        projectInfo: state.projectInfo,
+        categories: state.categories,
+        expenses: state.expenses,
+        receipts: state.receipts,
+        isLTD: state.isLTD,
+        currency: state.currency,
+      });
+    });
+
+    return unsub;
+  }, [projectId, hasPrepAccess]);
+
+  // Watch tags store → save to Supabase
+  useEffect(() => {
+    if (!projectId || !hasPrepAccess) return;
+
+    const unsub = useTagStore.subscribe((state, prevState) => {
+      if (state.tags === prevState.tags) return;
+      saveTags(projectId, state.tags);
+    });
+
+    return unsub;
+  }, [projectId, hasPrepAccess]);
+
+  // Watch revised scenes store → save to Supabase
+  useEffect(() => {
+    if (!projectId || !hasPrepAccess) return;
+
+    const unsub = useRevisedScenesStore.subscribe((state, prevState) => {
+      const curr = state.revisions[projectId];
+      const prev = prevState.revisions[projectId];
+      if (curr === prev) return;
+
+      if (curr) {
+        saveRevision(projectId, {
+          changes: curr.changes,
+          reviewedSceneIds: curr.reviewedSceneIds,
+          filename: curr.filename,
+          uploadedAt: curr.uploadedAt,
+        });
+      }
+    });
+
+    return unsub;
+  }, [projectId, hasPrepAccess]);
+
+  // Watch continuity photos store → upload to Supabase Storage + save metadata
+  useEffect(() => {
+    if (!projectId || !hasPrepAccess) return;
+
+    const unsub = useContinuityPhotosStore.subscribe((state, prevState) => {
+      if (state.photos === prevState.photos) return;
+
+      for (const key of Object.keys(state.photos)) {
+        if (state.photos[key] !== prevState.photos[key]) {
+          const photos = state.photos[key];
+          if (!photos) continue;
+
+          const [sceneId, characterId] = key.split('-');
+          if (!sceneId || !characterId) continue;
+
+          // Upload any new data URI photos to Supabase Storage
+          const uploadIfDataUri = async (photo: { id: string; url: string; filename: string; addedAt: string }) => {
+            if (photo.url.startsWith('data:') || photo.url.startsWith('blob:')) {
+              const storageUrl = await uploadContinuityPhoto(
+                projectId, sceneId, characterId, photo.id, photo.url
+              );
+              if (storageUrl) {
+                // Update the store with the storage URL so it persists
+                return { ...photo, url: storageUrl };
+              }
+            }
+            return photo;
+          };
+
+          // Process uploads in background
+          (async () => {
+            let updated = false;
+            const newAnglePhotos = { ...photos.anglePhotos };
+            for (const [angle, photo] of Object.entries(photos.anglePhotos)) {
+              if (photo && (photo.url.startsWith('data:') || photo.url.startsWith('blob:'))) {
+                const uploaded = await uploadIfDataUri(photo);
+                if (uploaded.url !== photo.url) {
+                  newAnglePhotos[angle as keyof typeof newAnglePhotos] = uploaded as any;
+                  updated = true;
+                }
+              }
+            }
+
+            let newMasterRef = photos.masterRef;
+            if (photos.masterRef && (photos.masterRef.url.startsWith('data:') || photos.masterRef.url.startsWith('blob:'))) {
+              newMasterRef = await uploadIfDataUri(photos.masterRef);
+              if (newMasterRef.url !== photos.masterRef.url) updated = true;
+            }
+
+            const newAdditional: typeof photos.additional = [];
+            for (const photo of photos.additional) {
+              if (photo.url.startsWith('data:') || photo.url.startsWith('blob:')) {
+                const uploaded = await uploadIfDataUri(photo);
+                newAdditional.push(uploaded);
+                if (uploaded.url !== photo.url) updated = true;
+              } else {
+                newAdditional.push(photo);
+              }
+            }
+
+            // Save photo metadata to continuity_events
+            saveContinuityPhotoMeta(projectId, sceneId, characterId, {
+              anglePhotos: newAnglePhotos as any,
+              masterRef: newMasterRef,
+              additional: newAdditional,
+            });
+
+            // Update store with storage URLs if any were uploaded
+            if (updated) {
+              setReceivingFromRealtime(true);
+              try {
+                useContinuityPhotosStore.setState((s) => ({
+                  photos: {
+                    ...s.photos,
+                    [key]: {
+                      anglePhotos: newAnglePhotos,
+                      masterRef: newMasterRef,
+                      additional: newAdditional,
+                    },
+                  },
+                }));
+              } finally {
+                setReceivingFromRealtime(false);
+              }
+            }
+          })();
+        }
+      }
     });
 
     return unsub;
