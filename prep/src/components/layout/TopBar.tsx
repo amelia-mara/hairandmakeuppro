@@ -206,7 +206,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                     </div>
 
                     {/* Sign out */}
-                    <button className="account-signout" onClick={() => logout()}>
+                    <button className="account-signout" onClick={() => { setAccountOpen(false); logout(); }}>
                       Sign Out
                     </button>
                   </div>
