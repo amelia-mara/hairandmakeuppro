@@ -258,6 +258,18 @@ function ProjectView({
           Saved
         </div>
       )}
+      {saveStatus === 'error' && (
+        <div style={{
+          position: 'fixed', top: 12, right: 16, zIndex: 9999,
+          padding: '4px 12px', borderRadius: '6px',
+          backgroundColor: '#7f1d1d', color: '#fca5a5',
+          fontSize: '0.75rem', cursor: 'pointer',
+        }}
+          title="Some changes may not have been saved to the cloud. Try making an edit to retry."
+        >
+          Save failed — check connection
+        </div>
+      )}
       <ProjectLayout
         projectId={projectId}
         activePage={activePage}
