@@ -5,7 +5,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
   useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag, type ParsedCharacterData, type SceneChange,
+  type ScriptTag, type ParsedCharacterData, type ParsedSceneData, type SceneChange,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
@@ -116,10 +116,115 @@ export function ScriptBreakdown({ projectId }: Props) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
   const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
+
+  /* Drafts dropdown state (inline within Tools menu) */
+  const [draftsExpanded, setDraftsExpanded] = useState(false);
+  const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [viewingDraftPdf, setViewingDraftPdf] = useState<{ url: string; name: string } | null>(null);
+  const [loadingDraftId, setLoadingDraftId] = useState<string | null>(null);
+
+  /* Fetch drafts when the drafts sub-dropdown is opened */
+  useEffect(() => {
+    if (!draftsExpanded || drafts.length > 0) return;
+    async function fetchDrafts() {
+      setDraftsLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('script_uploads')
+          .select('id, file_name, storage_path, file_size, scene_count, character_count, version_number, version_label, is_active, created_at, parsed_data')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+        setDrafts(data || []);
+      } catch (err) {
+        console.error('Failed to fetch drafts:', err);
+      } finally {
+        setDraftsLoading(false);
+      }
+    }
+    fetchDrafts();
+  }, [draftsExpanded, projectId, drafts.length]);
+
+  /* Reset drafts cache when tools menu closes */
+  useEffect(() => {
+    if (!toolsOpen) {
+      setDraftsExpanded(false);
+      setDrafts([]);
+    }
+  }, [toolsOpen]);
+
+  /* Load a previous draft's praised/parsed data */
+  const handleLoadDraft = useCallback(async (draft: ScriptDraft) => {
+    if (draft.is_active || !draft.parsed_data) return;
+    setLoadingDraftId(draft.id);
+    try {
+      // Load the draft's parsed data into the parsedScriptStore
+      parsedScriptStore.setParsedData(projectId, {
+        scenes: draft.parsed_data.scenes,
+        characters: draft.parsed_data.characters,
+        looks: draft.parsed_data.looks,
+        filename: draft.parsed_data.filename,
+        parsedAt: draft.parsed_data.parsedAt,
+      });
+
+      // Update script upload store
+      scriptUpload.setScript(projectId, {
+        projectId,
+        filename: draft.file_name,
+        uploadedAt: draft.created_at,
+        sceneCount: draft.scene_count || 0,
+        rawText: '',
+      });
+
+      // Update active status in Supabase
+      await supabase.from('script_uploads')
+        .update({ is_active: false })
+        .eq('project_id', projectId)
+        .eq('is_active', true);
+
+      await supabase.from('script_uploads')
+        .update({ is_active: true })
+        .eq('id', draft.id);
+
+      // Update project filename
+      updateProject(projectId, { scriptFilename: draft.file_name });
+
+      // Refresh drafts list to show new active state
+      setDrafts((prev) => prev.map((d) => ({
+        ...d,
+        is_active: d.id === draft.id,
+      })));
+
+      setToolsOpen(false);
+    } catch (err) {
+      console.error('Failed to load draft:', err);
+    } finally {
+      setLoadingDraftId(null);
+    }
+  }, [projectId, parsedScriptStore, scriptUpload, updateProject]);
+
+  /* View a draft's original PDF */
+  const handleViewDraftPdf = useCallback(async (e: React.MouseEvent, draft: ScriptDraft) => {
+    e.stopPropagation();
+    try {
+      const { data, error: urlError } = await supabase.storage
+        .from('project-documents')
+        .createSignedUrl(draft.storage_path, 3600);
+
+      if (urlError) throw urlError;
+      if (data?.signedUrl) {
+        setViewingDraftPdf({ url: data.signedUrl, name: draft.file_name });
+        setToolsOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to get PDF URL:', err);
+    }
+  }, []);
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -541,9 +646,62 @@ export function ScriptBreakdown({ projectId }: Props) {
                     <button className="tools-dropdown-item" onClick={() => { setShowUploadModal(true); setToolsOpen(false); }}>
                       <ImportIcon /> <span>Import New Script</span>
                     </button>
-                    <button className="tools-dropdown-item" onClick={() => { setShowDraftsModal(true); setToolsOpen(false); }}>
-                      <DraftsIcon /> <span>View Previous Drafts</span>
+                    <button
+                      className={`tools-dropdown-item ${draftsExpanded ? 'tools-dropdown-item--expanded' : ''}`}
+                      onClick={() => setDraftsExpanded(!draftsExpanded)}
+                    >
+                      <DraftsIcon />
+                      <span style={{ flex: 1 }}>Script Drafts</span>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transition: 'transform 0.2s ease', transform: draftsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <path d="m6 9 6 6 6-6"/>
+                      </svg>
                     </button>
+                    {draftsExpanded && (
+                      <div className="tools-drafts-sub">
+                        {draftsLoading && (
+                          <div className="tools-drafts-loading">Loading drafts...</div>
+                        )}
+                        {!draftsLoading && drafts.length === 0 && (
+                          <div className="tools-drafts-empty">No drafts yet</div>
+                        )}
+                        {!draftsLoading && drafts.map((draft) => (
+                          <div
+                            key={draft.id}
+                            className={`tools-draft-item ${draft.is_active ? 'tools-draft-item--active' : ''}`}
+                            onClick={() => handleLoadDraft(draft)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="tools-draft-info">
+                              <div className="tools-draft-name">
+                                {draft.version_label || draft.file_name}
+                                {draft.is_active && <span className="tools-draft-badge">Current</span>}
+                              </div>
+                              <div className="tools-draft-meta">
+                                {new Date(draft.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {draft.scene_count ? ` · ${draft.scene_count} scenes` : ''}
+                                {!draft.parsed_data && !draft.is_active ? ' · PDF only' : ''}
+                              </div>
+                            </div>
+                            {loadingDraftId === draft.id && (
+                              <span className="tools-draft-spinner" />
+                            )}
+                            <button
+                              className="tools-draft-eye"
+                              onClick={(e) => handleViewDraftPdf(e, draft)}
+                              title="View original PDF"
+                              aria-label="View original PDF"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <button className="tools-dropdown-item" onClick={() => { setSplitView(true); setToolsOpen(false); }}>
                       <BreakdownViewIcon /> <span>View Breakdown</span>
                     </button>
@@ -633,12 +791,52 @@ export function ScriptBreakdown({ projectId }: Props) {
         />
       )}
 
-      {/* Previous Drafts Modal */}
-      {showDraftsModal && (
-        <PreviousDraftsModal
-          projectId={projectId}
-          onClose={() => setShowDraftsModal(false)}
-        />
+      {/* Draft PDF Viewer */}
+      {viewingDraftPdf && (
+        <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={() => setViewingDraftPdf(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: '90vw', height: '90vh', maxWidth: 1000,
+            background: 'var(--bg-primary, #1a1815)',
+            borderRadius: 12, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => setViewingDraftPdf(null)} style={{
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
+                  cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center',
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+                  </svg>
+                </button>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-heading)' }}>
+                  {viewingDraftPdf.name}
+                </span>
+              </div>
+              <button onClick={() => setViewingDraftPdf(null)} style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', padding: 4,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, background: '#fff' }}>
+              <iframe
+                src={viewingDraftPdf.url}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title={viewingDraftPdf.name}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Changes Summary Modal */}
@@ -1532,6 +1730,13 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
             raw_text: parsed.rawText,
             scene_count: scenesWithStoryDays.length,
             character_count: characters.length,
+            parsed_data: {
+              scenes: scenesWithStoryDays,
+              characters,
+              looks: generatedLooks,
+              filename: selectedFile.name,
+              parsedAt: new Date().toISOString(),
+            },
             is_active: true,
             status: 'parsed',
             uploaded_by: session.user.id,
@@ -2661,9 +2866,17 @@ interface ScriptDraft {
   version_label: string | null;
   is_active: boolean;
   created_at: string;
+  parsed_data: {
+    scenes: ParsedSceneData[];
+    characters: ParsedCharacterData[];
+    looks: Look[];
+    filename: string;
+    parsedAt: string;
+  } | null;
 }
 
-function PreviousDraftsModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+/* PreviousDraftsModal — legacy, kept for reference but no longer rendered */
+function _legacyPreviousDraftsModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
   const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
