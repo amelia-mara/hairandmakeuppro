@@ -599,6 +599,13 @@ export function ScriptBreakdown({ projectId }: Props) {
                 }
                 triggerSave();
               }}
+              onAddLook={(characterId, name) => {
+                const newId = `look-${Date.now()}`;
+                parsedScriptStore.addLook(projectId, {
+                  id: newId, characterId, name, description: '', hair: '', makeup: '', wardrobe: '',
+                });
+                return newId;
+              }}
             />
             )
           )}
@@ -1900,7 +1907,7 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -1911,6 +1918,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (id: string) => void;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
+  onAddLook: (characterId: string, name: string) => string;
 }) {
   if (!breakdown) return null;
 
@@ -2016,6 +2024,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 onUpdateEvent={onUpdateEvent}
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
+                onAddLook={onAddLook}
                 prevCharBreakdown={prevBreakdown?.characters.find((c) => c.characterId === ch.id)}
                 prevSceneNumber={prevScene ? String(prevScene.number) : undefined} />
             );
@@ -2079,7 +2088,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, prevCharBreakdown, prevSceneNumber }: {
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, prevCharBreakdown, prevSceneNumber }: {
   char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -2090,6 +2099,7 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   onRemoveEvent: (eventId: string) => void;
   sceneId: string;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
+  onAddLook: (characterId: string, name: string) => string;
   prevCharBreakdown?: CharacterBreakdown;
   prevSceneNumber?: string;
 }) {
@@ -2099,6 +2109,9 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [showNewLookInput, setShowNewLookInput] = useState(false);
+  const [newLookName, setNewLookName] = useState('');
+  const newLookInputRef = useRef<HTMLInputElement>(null);
   const charOverrides = useCharacterOverridesStore();
   const resolvedChar = charOverrides.getCharacter(char);
 
@@ -2184,11 +2197,58 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
 
       <div className="cb-field">
         <label className="cb-label">Look</label>
-        <select className="cb-select" value={cb.lookId} onChange={(e) => onUpdate({ lookId: e.target.value })}>
-          <option value="">Select look...</option>
-          {looks.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-          <option value="__new">+ New Look</option>
-        </select>
+        {showNewLookInput ? (
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <input
+              ref={newLookInputRef}
+              className="cb-select"
+              type="text"
+              placeholder="Enter look name..."
+              value={newLookName}
+              onChange={(e) => setNewLookName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newLookName.trim()) {
+                  const newId = onAddLook(char.id, newLookName.trim());
+                  onUpdate({ lookId: newId });
+                  setNewLookName('');
+                  setShowNewLookInput(false);
+                } else if (e.key === 'Escape') {
+                  setNewLookName('');
+                  setShowNewLookInput(false);
+                }
+              }}
+              autoFocus
+            />
+            <button
+              className="cb-copy-prev-btn"
+              style={{ whiteSpace: 'nowrap' }}
+              onClick={() => {
+                if (newLookName.trim()) {
+                  const newId = onAddLook(char.id, newLookName.trim());
+                  onUpdate({ lookId: newId });
+                  setNewLookName('');
+                  setShowNewLookInput(false);
+                }
+              }}
+            >Save</button>
+            <button
+              className="cb-copy-prev-btn"
+              onClick={() => { setNewLookName(''); setShowNewLookInput(false); }}
+            >Cancel</button>
+          </div>
+        ) : (
+          <select className="cb-select" value={cb.lookId} onChange={(e) => {
+            if (e.target.value === '__new') {
+              setShowNewLookInput(true);
+            } else {
+              onUpdate({ lookId: e.target.value });
+            }
+          }}>
+            <option value="">Select look...</option>
+            {looks.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <option value="__new">+ New Look</option>
+          </select>
+        )}
       </div>
 
       {descTags.length > 0 && (

@@ -1242,6 +1242,7 @@ interface ParsedScriptState {
   removeCharacterFromScene: (projectId: string, sceneId: string, characterId: string) => void;
   removeCharacterEntirely: (projectId: string, characterId: string) => void;
   mergeCharacters: (projectId: string, sourceCharacterId: string, targetCharacterId: string) => void;
+  addLook: (projectId: string, look: Look) => void;
 }
 
 export const useParsedScriptStore = create<ParsedScriptState>()(
@@ -1306,6 +1307,14 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
           const characters = project.characters.filter((c) => c.id !== sourceCharacterId);
           const looks = project.looks.filter((l) => l.characterId !== sourceCharacterId);
           return { projects: { ...s.projects, [projectId]: { ...project, scenes, characters, looks } } };
+        }),
+
+      addLook: (projectId, look) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const looks = [...project.looks, look];
+          return { projects: { ...s.projects, [projectId]: { ...project, looks } } };
         }),
     }),
     {
