@@ -73,6 +73,16 @@ function App() {
     }
   }, [showAuth, showBetaCode, isAuthenticated]);
 
+  // When user signs out, return to the landing page (project hub)
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      setSelectedProjectId(null);
+      setActivePage('dashboard');
+      setShowAuth(false);
+      setShowBetaCode(false);
+    }
+  }, [isAuthenticated, isLoading]);
+
   // Show loading screen while restoring session
   if (isLoading) {
     return (
