@@ -428,6 +428,11 @@ export function ScriptBreakdown({ projectId }: Props) {
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
                   projectId={projectId}
+                  onSynopsisTag={(sceneId, text) => {
+                    const existing = synopsisStore.getSynopsis(sceneId, '');
+                    synopsisStore.setSynopsis(sceneId, existing ? `${existing} ${text}` : text);
+                    triggerSave();
+                  }}
                   onTagCreated={(sceneId, characterId, categoryId, text) => {
                     const charOverrides = useCharacterOverridesStore.getState();
                     const cat = BREAKDOWN_CATEGORIES.find(c => c.id === categoryId);
@@ -675,7 +680,7 @@ interface TagPopupState {
   popBelow?: boolean;
 }
 
-function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
+function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, onSynopsisTag, projectId }: {
   scenes: Scene[];
   preambleScene?: Scene;
   characters: Character[];
@@ -685,6 +690,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
   fontSize: number;
   onCharClick: (id: string) => void;
   onTagCreated: (sceneId: string, characterId: string, categoryId: string, text: string) => void;
+  onSynopsisTag: (sceneId: string, text: string) => void;
   projectId: string;
 }) {
   const charNames = characters.map((c) => c.name);
@@ -857,6 +863,22 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     onTagCreated(popup.sceneId, popup.characterId, catId, popup.text);
     setPopup(null);
   }, [popup, tagStore, onTagCreated]);
+
+  /* Synopsis pick: tag selected text as synopsis (scene-level, no character) */
+  const handleSynopsisPick = useCallback(() => {
+    if (!popup) return;
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: 'synopsis',
+      characterId: '',
+    });
+    onSynopsisTag(popup.sceneId, popup.text);
+    setPopup(null);
+  }, [popup, tagStore, onSynopsisTag]);
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
@@ -1179,6 +1201,12 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               <div className="sv-tag-popup-title">Assign to character</div>
               <div className="sv-tag-popup-quoted">"{popup.text.length > 50 ? popup.text.slice(0, 50) + '…' : popup.text}"</div>
               <div className="sv-tag-popup-charlist">
+                <button className="sv-tag-popup-char-item sv-tag-popup-char-item--synopsis" onClick={handleSynopsisPick}>
+                  <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818CF8' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  </span>
+                  <span>Synopsis</span>
+                </button>
                 {popupChars.map((ch) => (
                   <button key={ch.id} className="sv-tag-popup-char-item" onClick={() => handleCharacterPick(ch.id)}>
                     <span className="sv-tag-popup-char-avatar">{ch.name.charAt(0)}</span>
