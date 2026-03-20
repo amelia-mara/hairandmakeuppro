@@ -2017,7 +2017,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
                 prevCharBreakdown={prevBreakdown?.characters.find((c) => c.characterId === ch.id)}
-                prevSceneNumber={prevScene?.number} />
+                prevSceneNumber={prevScene ? String(prevScene.number) : undefined} />
             );
           })}
         </div>
