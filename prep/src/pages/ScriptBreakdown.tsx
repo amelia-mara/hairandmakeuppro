@@ -2188,6 +2188,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const bStore = useBreakdownStore();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
   const synopsisStore = useSynopsisStore();
   const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
@@ -2200,6 +2201,11 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  /* Scroll breakdown panel to top when switching scenes */
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [scene.id]);
 
   return (
     <div className="fp-wrap">
@@ -2214,7 +2220,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
       </div>
 
-      <div className="fp-scroll">
+      <div className="fp-scroll" ref={scrollRef}>
         {/* Synopsis */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
