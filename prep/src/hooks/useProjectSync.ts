@@ -55,6 +55,7 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
+import { supabase } from '@/lib/supabase';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -97,7 +98,20 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
         const project = data.project;
         const prepAccess = !!(project as any).has_prep_access;
-        setHasPrepAccess(prepAccess);
+        setHasPrepAccess(true); // Always true in Prep — this is the Prep app
+
+        // Auto-fix: if project doesn't have has_prep_access, set it now
+        // so data syncs survive across sessions
+        if (!prepAccess) {
+          supabase
+            .from('projects')
+            .update({ has_prep_access: true })
+            .eq('id', projectId!)
+            .then(({ error }) => {
+              if (error) console.warn('[useProjectSync] Failed to set has_prep_access:', error);
+              else console.log('[useProjectSync] Auto-enabled has_prep_access for project', projectId);
+            });
+        }
 
         // Build scene → character ID map
         const scMap = new Map<string, string[]>();
@@ -330,8 +344,53 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           }
         }
 
-        // Subscribe to Realtime if project has prep access
-        if (prepAccess) {
+        // If Supabase had no scene data but localStorage does (data was never synced),
+        // trigger a save now so data survives future logouts
+        if (scenes.length === 0 && characters.length === 0) {
+          const localParsed = useParsedScriptStore.getState().getParsedData(projectId!);
+          if (localParsed && localParsed.scenes.length > 0) {
+            console.log('[useProjectSync] Supabase empty but localStorage has data — triggering sync');
+            // Touch the stores to trigger save watchers by re-setting the same data
+            // (save watchers check reference equality, so we need a new reference)
+            const synopses = useSynopsisStore.getState().synopses;
+            const metaOverrides = useSceneMetaStore.getState().overrides;
+            const mergedScenes = localParsed.scenes.map(s => {
+              const synOvr = synopses[s.id];
+              const metaOvr = metaOverrides[s.id];
+              return {
+                ...s,
+                synopsis: synOvr !== undefined ? synOvr : s.synopsis,
+                intExt: metaOvr?.intExt ?? s.intExt,
+                dayNight: metaOvr?.dayNight ?? s.dayNight,
+                location: metaOvr?.location ?? s.location,
+              };
+            });
+            saveScenes(projectId!, mergedScenes as any);
+
+            const charOverrides = useCharacterOverridesStore.getState().overrides;
+            const mergedChars = localParsed.characters.map(c => {
+              const ovr = charOverrides[c.id];
+              return ovr ? { ...c, ...ovr } : c;
+            });
+            saveCharacters(projectId!, mergedChars as any);
+
+            if (localParsed.looks.length > 0) {
+              saveLooks(projectId!, localParsed.looks as any);
+            }
+
+            // Sync breakdowns
+            const breakdowns = useBreakdownStore.getState().breakdowns;
+            for (const [sceneId, bd] of Object.entries(breakdowns)) {
+              // Skip mock breakdown IDs (s1, s2, etc.)
+              if (localParsed.scenes.some(s => s.id === sceneId)) {
+                saveBreakdown(projectId!, sceneId, bd as any);
+              }
+            }
+          }
+        }
+
+        // Subscribe to Realtime (always enabled in Prep app)
+        {
           const handlers: PrepRealtimeHandlers = {
             onSceneUpdate: (payload) => {
               handleSceneRealtimeUpdate(projectId!, payload);
