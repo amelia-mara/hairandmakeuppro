@@ -124,11 +124,19 @@ export function isNonPresent(slugline: string, tod: string): boolean {
       || /\[FLASHBACK\]|\[MEMORY\]|\[DREAM\]/.test(combined);
 }
 
+// ─── Written-out number words for time-jump detection ────────────────────────
+
+/** Matches written-out number words (one through fifty) as an alternative to \d+ */
+const WRITTEN_NUMBER_RE = '(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY|THIRTY|FORTY|FIFTY|A\\s+FEW|A\\s+COUPLE(?:\\s+OF)?)';
+
+/** Pre-compiled regex: written-out number + time unit + LATER */
+const WRITTEN_TIME_JUMP_RE = new RegExp(`\\b${WRITTEN_NUMBER_RE}\\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\\s+LATER\\b`);
+
 // ─── Transition detection (split by priority) ───────────────────────────────
 
 /**
  * PRIORITY 1: Explicit time-jump phrases in ACTION LINES.
- * "The next day,", "12 years later", "6 months later".
+ * "The next day,", "12 years later", "6 months later", "One week later".
  * This is the most reliable new-day signal in many scripts.
  */
 export function actionLinesIndicateTimeJump(lines: string[]): boolean {
@@ -140,7 +148,8 @@ export function actionLinesIndicateTimeJump(lines: string[]): boolean {
       || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
       || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
       || /\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)
-      || /\b\d{1,2}\s+(YEARS?|MONTHS?|WEEKS?|HOURS?)\s+LATER\b/.test(t);
+      || /\b\d{1,2}\s+(YEARS?|MONTHS?|WEEKS?|HOURS?)\s+LATER\b/.test(t)
+      || WRITTEN_TIME_JUMP_RE.test(t);
 }
 
 /**
@@ -153,7 +162,8 @@ export function todIsExplicitNewDay(tod: string): boolean {
       || /\bFOLLOWING\s+(DAY|MORNING)\b/.test(t)
       || /\bTHE\s+NEXT\s+(DAY|MORNING)\b/.test(t)
       || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
-      || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t);
+      || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
+      || WRITTEN_TIME_JUMP_RE.test(t);
 }
 
 /**

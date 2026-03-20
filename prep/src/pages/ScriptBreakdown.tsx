@@ -5,7 +5,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
   useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag, type ParsedCharacterData, type SceneChange,
+  type ScriptTag, type ParsedCharacterData, type ParsedSceneData, type SceneChange,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
@@ -116,10 +116,119 @@ export function ScriptBreakdown({ projectId }: Props) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
   const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
+
+  /* Drafts dropdown state (inline within Tools menu) */
+  const [draftsExpanded, setDraftsExpanded] = useState(false);
+  const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [viewingDraftPdf, setViewingDraftPdf] = useState<{ url: string; name: string } | null>(null);
+  const [loadingDraftId, setLoadingDraftId] = useState<string | null>(null);
+
+  /* Fetch drafts when the drafts sub-dropdown is opened */
+  useEffect(() => {
+    if (!draftsExpanded || drafts.length > 0) return;
+    async function fetchDrafts() {
+      setDraftsLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('script_uploads')
+          .select('id, file_name, storage_path, file_size, scene_count, character_count, version_number, version_label, is_active, created_at, parsed_data')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+        setDrafts(data || []);
+      } catch (err) {
+        console.error('Failed to fetch drafts:', err);
+      } finally {
+        setDraftsLoading(false);
+      }
+    }
+    fetchDrafts();
+  }, [draftsExpanded, projectId, drafts.length]);
+
+  /* Reset drafts cache when tools menu closes */
+  useEffect(() => {
+    if (!toolsOpen) {
+      setDraftsExpanded(false);
+      setDrafts([]);
+    }
+  }, [toolsOpen]);
+
+  /* Load a previous draft's praised/parsed data */
+  const handleLoadDraft = useCallback(async (draft: ScriptDraft) => {
+    if (!draft.parsed_data) return;
+    // Allow re-loading the active draft when the store is empty (e.g. after
+    // switching devices or clearing cache)
+    const storeHasData = !!parsedScriptStore.getParsedData(projectId);
+    if (draft.is_active && storeHasData) return;
+    setLoadingDraftId(draft.id);
+    try {
+      // Load the draft's parsed data into the parsedScriptStore
+      parsedScriptStore.setParsedData(projectId, {
+        scenes: draft.parsed_data.scenes,
+        characters: draft.parsed_data.characters,
+        looks: draft.parsed_data.looks,
+        filename: draft.parsed_data.filename,
+        parsedAt: draft.parsed_data.parsedAt,
+      });
+
+      // Update script upload store
+      scriptUpload.setScript(projectId, {
+        projectId,
+        filename: draft.file_name,
+        uploadedAt: draft.created_at,
+        sceneCount: draft.scene_count || 0,
+        rawText: '',
+      });
+
+      // Update active status in Supabase
+      await supabase.from('script_uploads')
+        .update({ is_active: false })
+        .eq('project_id', projectId)
+        .eq('is_active', true);
+
+      await supabase.from('script_uploads')
+        .update({ is_active: true })
+        .eq('id', draft.id);
+
+      // Update project filename
+      updateProject(projectId, { scriptFilename: draft.file_name });
+
+      // Refresh drafts list to show new active state
+      setDrafts((prev) => prev.map((d) => ({
+        ...d,
+        is_active: d.id === draft.id,
+      })));
+
+      setToolsOpen(false);
+    } catch (err) {
+      console.error('Failed to load draft:', err);
+    } finally {
+      setLoadingDraftId(null);
+    }
+  }, [projectId, parsedScriptStore, scriptUpload, updateProject]);
+
+  /* View a draft's original PDF */
+  const handleViewDraftPdf = useCallback(async (e: React.MouseEvent, draft: ScriptDraft) => {
+    e.stopPropagation();
+    try {
+      const { data, error: urlError } = await supabase.storage
+        .from('project-documents')
+        .createSignedUrl(draft.storage_path, 3600);
+
+      if (urlError) throw urlError;
+      if (data?.signedUrl) {
+        setViewingDraftPdf({ url: data.signedUrl, name: draft.file_name });
+        setToolsOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to get PDF URL:', err);
+    }
+  }, []);
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -137,6 +246,50 @@ export function ScriptBreakdown({ projectId }: Props) {
   /* Hide preamble from scene list — its content is merged into the first real scene */
   const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
   const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
+
+  /* Auto-recover: if parsedScriptStore is empty but the active draft in
+     script_uploads has parsed_data, load it. This handles the case where
+     the scenes/characters tables are empty AND localStorage was cleared. */
+  useEffect(() => {
+    if (parsedData) return; // Already have data
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('script_uploads')
+          .select('id, file_name, parsed_data, created_at, scene_count')
+          .eq('project_id', projectId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cancelled || error || !data?.parsed_data) return;
+        const pd = data.parsed_data as {
+          scenes?: any[]; characters?: any[]; looks?: any[];
+          filename?: string; parsedAt?: string;
+        };
+        if (!pd.scenes || pd.scenes.length === 0) return;
+        console.log('[ScriptBreakdown] Auto-recovering parsed data from script_uploads —', pd.scenes.length, 'scenes');
+        parsedScriptStore.setParsedData(projectId, {
+          scenes: pd.scenes || [],
+          characters: pd.characters || [],
+          looks: pd.looks || [],
+          filename: pd.filename || data.file_name || 'script.pdf',
+          parsedAt: pd.parsedAt || new Date().toISOString(),
+        });
+        scriptUpload.setScript(projectId, {
+          projectId,
+          filename: data.file_name || 'script.pdf',
+          uploadedAt: data.created_at || new Date().toISOString(),
+          sceneCount: data.scene_count || pd.scenes.length,
+          rawText: '',
+        });
+      } catch (err) {
+        console.error('[ScriptBreakdown] Auto-recover failed:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [projectId, parsedData, parsedScriptStore, scriptUpload]);
 
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
@@ -428,6 +581,11 @@ export function ScriptBreakdown({ projectId }: Props) {
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
                   projectId={projectId}
+                  onSynopsisTag={(sceneId, text) => {
+                    const existing = synopsisStore.getSynopsis(sceneId, '');
+                    synopsisStore.setSynopsis(sceneId, existing ? `${existing} ${text}` : text);
+                    triggerSave();
+                  }}
                   onTagCreated={(sceneId, characterId, categoryId, text) => {
                     const charOverrides = useCharacterOverridesStore.getState();
                     const cat = BREAKDOWN_CATEGORIES.find(c => c.id === categoryId);
@@ -536,9 +694,62 @@ export function ScriptBreakdown({ projectId }: Props) {
                     <button className="tools-dropdown-item" onClick={() => { setShowUploadModal(true); setToolsOpen(false); }}>
                       <ImportIcon /> <span>Import New Script</span>
                     </button>
-                    <button className="tools-dropdown-item" onClick={() => { setShowDraftsModal(true); setToolsOpen(false); }}>
-                      <DraftsIcon /> <span>View Previous Drafts</span>
+                    <button
+                      className={`tools-dropdown-item ${draftsExpanded ? 'tools-dropdown-item--expanded' : ''}`}
+                      onClick={() => setDraftsExpanded(!draftsExpanded)}
+                    >
+                      <DraftsIcon />
+                      <span style={{ flex: 1 }}>Script Drafts</span>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transition: 'transform 0.2s ease', transform: draftsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <path d="m6 9 6 6 6-6"/>
+                      </svg>
                     </button>
+                    {draftsExpanded && (
+                      <div className="tools-drafts-sub">
+                        {draftsLoading && (
+                          <div className="tools-drafts-loading">Loading drafts...</div>
+                        )}
+                        {!draftsLoading && drafts.length === 0 && (
+                          <div className="tools-drafts-empty">No drafts yet</div>
+                        )}
+                        {!draftsLoading && drafts.map((draft) => (
+                          <div
+                            key={draft.id}
+                            className={`tools-draft-item ${draft.is_active ? 'tools-draft-item--active' : ''}`}
+                            onClick={() => handleLoadDraft(draft)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="tools-draft-info">
+                              <div className="tools-draft-name">
+                                {draft.version_label || draft.file_name}
+                                {draft.is_active && <span className="tools-draft-badge">Current</span>}
+                              </div>
+                              <div className="tools-draft-meta">
+                                {new Date(draft.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {draft.scene_count ? ` · ${draft.scene_count} scenes` : ''}
+                                {!draft.parsed_data && !draft.is_active ? ' · PDF only' : ''}
+                              </div>
+                            </div>
+                            {loadingDraftId === draft.id && (
+                              <span className="tools-draft-spinner" />
+                            )}
+                            <button
+                              className="tools-draft-eye"
+                              onClick={(e) => handleViewDraftPdf(e, draft)}
+                              title="View original PDF"
+                              aria-label="View original PDF"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <button className="tools-dropdown-item" onClick={() => { setSplitView(true); setToolsOpen(false); }}>
                       <BreakdownViewIcon /> <span>View Breakdown</span>
                     </button>
@@ -594,6 +805,29 @@ export function ScriptBreakdown({ projectId }: Props) {
                 }
                 triggerSave();
               }}
+              onAddLook={(characterId, name) => {
+                const newId = `look-${Date.now()}`;
+                parsedScriptStore.addLook(projectId, {
+                  id: newId, characterId, name, description: '', hair: '', makeup: '', wardrobe: '',
+                });
+                return newId;
+              }}
+              onSetLook={(lookId, hair, makeup, wardrobe) => {
+                // Update the look template with current entersWith values
+                parsedScriptStore.updateLook(projectId, lookId, { hair, makeup, wardrobe });
+                // Propagate to all scenes that use this look
+                const allBreakdowns = store.breakdowns;
+                for (const [sceneId, bd] of Object.entries(allBreakdowns)) {
+                  for (const ch of bd.characters) {
+                    if (ch.lookId === lookId) {
+                      store.updateCharacterBreakdown(sceneId, ch.characterId, {
+                        entersWith: { hair, makeup, wardrobe },
+                      });
+                    }
+                  }
+                }
+                triggerSave();
+              }}
             />
             )
           )}
@@ -621,12 +855,52 @@ export function ScriptBreakdown({ projectId }: Props) {
         />
       )}
 
-      {/* Previous Drafts Modal */}
-      {showDraftsModal && (
-        <PreviousDraftsModal
-          projectId={projectId}
-          onClose={() => setShowDraftsModal(false)}
-        />
+      {/* Draft PDF Viewer */}
+      {viewingDraftPdf && (
+        <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={() => setViewingDraftPdf(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: '90vw', height: '90vh', maxWidth: 1000,
+            background: 'var(--bg-primary, #1a1815)',
+            borderRadius: 12, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => setViewingDraftPdf(null)} style={{
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
+                  cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center',
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+                  </svg>
+                </button>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-heading)' }}>
+                  {viewingDraftPdf.name}
+                </span>
+              </div>
+              <button onClick={() => setViewingDraftPdf(null)} style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', padding: 4,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, background: '#fff' }}>
+              <iframe
+                src={viewingDraftPdf.url}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title={viewingDraftPdf.name}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Changes Summary Modal */}
@@ -675,7 +949,7 @@ interface TagPopupState {
   popBelow?: boolean;
 }
 
-function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, projectId }: {
+function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, onSynopsisTag, projectId }: {
   scenes: Scene[];
   preambleScene?: Scene;
   characters: Character[];
@@ -685,6 +959,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
   fontSize: number;
   onCharClick: (id: string) => void;
   onTagCreated: (sceneId: string, characterId: string, categoryId: string, text: string) => void;
+  onSynopsisTag: (sceneId: string, text: string) => void;
   projectId: string;
 }) {
   const charNames = characters.map((c) => c.name);
@@ -857,6 +1132,22 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     onTagCreated(popup.sceneId, popup.characterId, catId, popup.text);
     setPopup(null);
   }, [popup, tagStore, onTagCreated]);
+
+  /* Synopsis pick: tag selected text as synopsis (scene-level, no character) */
+  const handleSynopsisPick = useCallback(() => {
+    if (!popup) return;
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: 'synopsis',
+      characterId: '',
+    });
+    onSynopsisTag(popup.sceneId, popup.text);
+    setPopup(null);
+  }, [popup, tagStore, onSynopsisTag]);
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
@@ -1179,6 +1470,12 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               <div className="sv-tag-popup-title">Assign to character</div>
               <div className="sv-tag-popup-quoted">"{popup.text.length > 50 ? popup.text.slice(0, 50) + '…' : popup.text}"</div>
               <div className="sv-tag-popup-charlist">
+                <button className="sv-tag-popup-char-item sv-tag-popup-char-item--synopsis" onClick={handleSynopsisPick}>
+                  <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818CF8' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  </span>
+                  <span>Synopsis</span>
+                </button>
                 {popupChars.map((ch) => (
                   <button key={ch.id} className="sv-tag-popup-char-item" onClick={() => handleCharacterPick(ch.id)}>
                     <span className="sv-tag-popup-char-avatar">{ch.name.charAt(0)}</span>
@@ -1482,6 +1779,12 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
 
           const nextVersion = (versions?.[0]?.version_number ?? 0) + 1;
 
+          // Deactivate all previous versions for this project
+          await supabase.from('script_uploads')
+            .update({ is_active: false })
+            .eq('project_id', projectId)
+            .eq('is_active', true);
+
           await supabase.from('script_uploads').insert({
             project_id: projectId,
             version_number: nextVersion,
@@ -1491,6 +1794,13 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
             raw_text: parsed.rawText,
             scene_count: scenesWithStoryDays.length,
             character_count: characters.length,
+            parsed_data: {
+              scenes: scenesWithStoryDays,
+              characters,
+              looks: generatedLooks,
+              filename: selectedFile.name,
+              parsedAt: new Date().toISOString(),
+            },
             is_active: true,
             status: 'parsed',
             uploaded_by: session.user.id,
@@ -1813,7 +2123,11 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
         )}
         {activeSubTab === 'lookbook' && (
           <div className="cv-looks">
-            {looks.length === 0 ? <p className="cv-empty">No looks created.</p> : looks.map((lk) => (
+            {looks.length === 0 ? <p className="cv-empty">No looks created.</p> : looks.slice().sort((a, b) => {
+              const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
+              const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
+              return tsA - tsB;
+            }).map((lk) => (
               <div key={lk.id} className="cv-look-card">
                 <div className="cv-look-name">{lk.name}<span className="cv-look-desc"> — {lk.description}</span></div>
                 <div className="cv-look-row"><span className="cv-look-label">Hair</span>{lk.hair}</div>
@@ -1872,7 +2186,7 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
 
 /* ━━━ BREAKDOWN FORM PANEL ━━━ */
 
-function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter }: {
+function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -1883,6 +2197,8 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   onUpdateEvent: (eventId: string, data: Partial<ContinuityEvent>) => void;
   onRemoveEvent: (id: string) => void;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
+  onAddLook: (characterId: string, name: string) => string;
+  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
 }) {
   if (!breakdown) return null;
 
@@ -1891,6 +2207,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
   const synopsisStore = useSynopsisStore();
   const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
@@ -1903,6 +2220,11 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  /* Scroll breakdown panel to top when switching scenes */
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [scene.id]);
 
   return (
     <div className="fp-wrap">
@@ -1917,7 +2239,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
         <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
       </div>
 
-      <div className="fp-scroll">
+      <div className="fp-scroll" ref={scrollRef}>
         {/* Synopsis */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Synopsis</div>
@@ -1984,7 +2306,9 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 })}
                 onUpdateEvent={onUpdateEvent}
                 onRemoveEvent={onRemoveEvent}
-                onRemoveCharacter={onRemoveCharacter} />
+                onRemoveCharacter={onRemoveCharacter}
+                onAddLook={onAddLook}
+                onSetLook={onSetLook} />
             );
           })}
         </div>
@@ -2046,8 +2370,8 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter }: {
-  char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook }: {
+  char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
   allScenes: Scene[];
@@ -2057,6 +2381,8 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   onRemoveEvent: (eventId: string) => void;
   sceneId: string;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
+  onAddLook: (characterId: string, name: string) => string;
+  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
@@ -2064,6 +2390,9 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [showNewLookInput, setShowNewLookInput] = useState(false);
+  const [newLookName, setNewLookName] = useState('');
+  const newLookInputRef = useRef<HTMLInputElement>(null);
   const charOverrides = useCharacterOverridesStore();
   const resolvedChar = charOverrides.getCharacter(char);
 
@@ -2105,19 +2434,87 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
     return true;
   });
 
+  const stripTagText = useCallback((fieldValue: string, text: string): string => {
+    // Remove the tag text from the field, handling ", text" and "text, " patterns
+    let result = fieldValue;
+    // Try removing ", text" first (when appended)
+    if (result.includes(`, ${text}`)) {
+      result = result.replace(`, ${text}`, '');
+    } else if (result.includes(`${text}, `)) {
+      result = result.replace(`${text}, `, '');
+    } else {
+      result = result.replace(text, '');
+    }
+    return result.trim();
+  }, []);
+
+  const handleDismissTag = useCallback((tag: ScriptTag) => {
+    tagStore.dismissTag(tag.id);
+    const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
+    if (!cat) return;
+    if (cat.field.startsWith('entersWith.')) {
+      const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+      const existing = cb.entersWith[key];
+      if (existing) {
+        onUpdate({ entersWith: { ...cb.entersWith, [key]: stripTagText(existing, tag.text) } });
+      }
+    } else {
+      const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+      const existing = cb[field] || '';
+      if (existing) {
+        onUpdate({ [field]: stripTagText(existing as string, tag.text) });
+      }
+    }
+  }, [cb, onUpdate, stripTagText, tagStore]);
+
+  const handleRestoreTag = useCallback((tag: ScriptTag) => {
+    tagStore.restoreTag(tag.id);
+    const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
+    if (!cat) return;
+    if (cat.field.startsWith('entersWith.')) {
+      const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+      const existing = cb.entersWith[key];
+      onUpdate({ entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${tag.text}` : tag.text } });
+    } else {
+      const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+      const existing = (cb[field] as string) || '';
+      onUpdate({ [field]: existing ? `${existing}, ${tag.text}` : tag.text });
+    }
+  }, [cb, onUpdate, tagStore]);
+
   const TagPills = ({ tags, color }: { tags: ScriptTag[]; color: string }) =>
     tags.length > 0 ? (
       <div className="cb-tag-row">
         {tags.map((t) => (
-          <span key={t.id} className="cb-tag-pill" style={{ borderColor: color, color }}>
+          <span
+            key={t.id}
+            className={`cb-tag-pill${t.dismissed ? ' cb-tag-pill--dismissed' : ''}`}
+            style={{ borderColor: color, color }}
+            onClick={t.dismissed ? () => handleRestoreTag(t) : undefined}
+            title={t.dismissed ? 'Click to re-apply to field' : undefined}
+          >
             {t.text}
-            <button className="cb-tag-remove" onClick={() => tagStore.removeTag(t.id)}>×</button>
+            {!t.dismissed && (
+              <button className="cb-tag-remove" onClick={() => handleDismissTag(t)}>×</button>
+            )}
           </span>
         ))}
       </div>
     ) : null;
 
   const catColor = (id: string) => BREAKDOWN_CATEGORIES.find((c) => c.id === id)?.color || '#999';
+
+  const handleSetLook = useCallback((lookId: string) => {
+    const look = looks.find((l) => l.id === lookId);
+    if (look) {
+      onUpdate({
+        lookId,
+        entersWith: { hair: look.hair, makeup: look.makeup, wardrobe: look.wardrobe },
+      });
+    } else {
+      onUpdate({ lookId });
+    }
+  }, [looks, onUpdate]);
 
   return (
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
@@ -2131,11 +2528,54 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
 
       <div className="cb-field">
         <label className="cb-label">Look</label>
-        <select className="cb-select" value={cb.lookId} onChange={(e) => onUpdate({ lookId: e.target.value })}>
-          <option value="">Select look...</option>
-          {looks.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-          <option value="__new">+ New Look</option>
-        </select>
+        {showNewLookInput ? (
+          <input
+            ref={newLookInputRef}
+            className="cb-select"
+            type="text"
+            placeholder="Type look name..."
+            value={newLookName}
+            onChange={(e) => setNewLookName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                (e.target as HTMLInputElement).blur();
+              } else if (e.key === 'Escape') {
+                setNewLookName('');
+                setShowNewLookInput(false);
+              }
+            }}
+            onBlur={() => {
+              if (newLookName.trim()) {
+                const newId = onAddLook(char.id, newLookName.trim());
+                onUpdate({ lookId: newId });
+              }
+              setNewLookName('');
+              setShowNewLookInput(false);
+            }}
+            autoFocus
+          />
+        ) : (
+          <select className="cb-select" value={cb.lookId} onChange={(e) => {
+            if (e.target.value === '__new') {
+              setShowNewLookInput(true);
+            } else {
+              handleSetLook(e.target.value);
+            }
+          }}>
+            <option value="">Select look...</option>
+            {looks.slice().sort((a, b) => {
+              const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
+              const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
+              return tsA - tsB;
+            }).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <option value="__new">+ New Look</option>
+          </select>
+        )}
+        {cb.lookId && (
+          <button className="cb-set-look-btn" onClick={() => {
+            onSetLook(cb.lookId, cb.entersWith.hair, cb.entersWith.makeup, cb.entersWith.wardrobe);
+          }}>Set Look</button>
+        )}
       </div>
 
       {descTags.length > 0 && (
@@ -2555,269 +2995,15 @@ interface ScriptDraft {
   version_label: string | null;
   is_active: boolean;
   created_at: string;
+  parsed_data: {
+    scenes: ParsedSceneData[];
+    characters: ParsedCharacterData[];
+    looks: Look[];
+    filename: string;
+    parsedAt: string;
+  } | null;
 }
 
-function PreviousDraftsModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
-  const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [viewingPdf, setViewingPdf] = useState<{ url: string; name: string } | null>(null);
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (viewingPdf) setViewingPdf(null);
-        else onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, viewingPdf]);
-
-  useEffect(() => {
-    async function fetchDrafts() {
-      setLoading(true);
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('script_uploads')
-          .select('id, file_name, storage_path, file_size, scene_count, character_count, version_number, version_label, is_active, created_at')
-          .eq('project_id', projectId)
-          .order('created_at', { ascending: false });
-
-        if (fetchError) throw fetchError;
-        setDrafts(data || []);
-      } catch (err) {
-        console.error('Failed to fetch drafts:', err);
-        setError('Failed to load previous drafts.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDrafts();
-  }, [projectId]);
-
-  const handleViewPdf = async (draft: ScriptDraft) => {
-    try {
-      const { data, error: urlError } = await supabase.storage
-        .from('project-documents')
-        .createSignedUrl(draft.storage_path, 3600); // 1 hour expiry
-
-      if (urlError) throw urlError;
-      if (data?.signedUrl) {
-        setViewingPdf({ url: data.signedUrl, name: draft.file_name });
-      }
-    } catch (err) {
-      console.error('Failed to get PDF URL:', err);
-      setError('Failed to load PDF. Please try again.');
-    }
-  };
-
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-      + ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatSize = (bytes: number | null) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  // PDF Viewer - full screen overlay
-  if (viewingPdf) {
-    return (
-      <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={() => setViewingPdf(null)}>
-        <div onClick={(e) => e.stopPropagation()} style={{
-          width: '90vw', height: '90vh', maxWidth: 1000,
-          background: 'var(--bg-primary, #1a1815)',
-          borderRadius: 12, overflow: 'hidden',
-          display: 'flex', flexDirection: 'column',
-          border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '16px 24px',
-            borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button onClick={() => setViewingPdf(null)} style={{
-                background: 'none', border: 'none', color: 'var(--text-muted)',
-                cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center',
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
-                </svg>
-              </button>
-              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-heading)' }}>
-                {viewingPdf.name}
-              </span>
-            </div>
-            <button onClick={() => setViewingPdf(null)} style={{
-              background: 'none', border: 'none', color: 'var(--text-muted)',
-              cursor: 'pointer', padding: 4,
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-          {/* PDF iframe */}
-          <div style={{ flex: 1, background: '#fff' }}>
-            <iframe
-              src={viewingPdf.url}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              title={viewingPdf.name}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-glass" style={{ width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '24px 28px 0',
-        }}>
-          <h2 style={{
-            fontSize: '0.8125rem', letterSpacing: '0.1em',
-            textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
-          }}>
-            <span className="heading-italic">Previous</span>{' '}
-            <span className="heading-regular">Drafts</span>
-          </h2>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            cursor: 'pointer', padding: 4,
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-
-        <div style={{ padding: '20px 28px 28px', overflowY: 'auto', flex: 1 }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: 0, marginBottom: 20 }}>
-            View previously uploaded script drafts. Click on any draft to view the full PDF.
-          </p>
-
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              Loading drafts...
-            </div>
-          )}
-
-          {error && (
-            <p style={{ color: '#ef4444', fontSize: '0.8125rem' }}>{error}</p>
-          )}
-
-          {!loading && !error && drafts.length === 0 && (
-            <div style={{
-              textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)',
-              fontSize: '0.875rem',
-            }}>
-              No previous drafts found. Upload a script to get started.
-            </div>
-          )}
-
-          {!loading && drafts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {drafts.map((draft) => (
-                <button
-                  key={draft.id}
-                  onClick={() => handleViewPdf(draft)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '14px 16px',
-                    background: draft.is_active
-                      ? 'rgba(212, 148, 58, 0.08)'
-                      : 'var(--bg-secondary, rgba(255,255,255,0.03))',
-                    border: draft.is_active
-                      ? '1px solid rgba(212, 148, 58, 0.25)'
-                      : '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
-                    borderRadius: 10,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    width: '100%',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = draft.is_active
-                      ? 'rgba(212, 148, 58, 0.12)'
-                      : 'var(--bg-tertiary, rgba(255,255,255,0.06))';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = draft.is_active
-                      ? 'rgba(212, 148, 58, 0.08)'
-                      : 'var(--bg-secondary, rgba(255,255,255,0.03))';
-                  }}
-                >
-                  {/* PDF Icon */}
-                  <div style={{
-                    width: 40, height: 48, borderRadius: 6,
-                    background: 'rgba(232, 98, 26, 0.1)',
-                    border: '1px solid rgba(232, 98, 26, 0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8621A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
-                      <path d="M14 2v6h6"/>
-                    </svg>
-                  </div>
-
-                  {/* Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{
-                        color: 'var(--text-heading)', fontWeight: 500, fontSize: '0.875rem',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {draft.version_label || draft.file_name}
-                      </span>
-                      {draft.is_active && (
-                        <span style={{
-                          fontSize: '0.6875rem', fontWeight: 600,
-                          color: '#D4943A',
-                          background: 'rgba(212, 148, 58, 0.15)',
-                          padding: '1px 8px', borderRadius: 4,
-                          textTransform: 'uppercase', letterSpacing: '0.05em',
-                        }}>
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <div style={{
-                      color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 3,
-                      display: 'flex', alignItems: 'center', gap: 8,
-                    }}>
-                      <span>{formatDate(draft.created_at)}</span>
-                      {draft.file_size && <span>·</span>}
-                      {draft.file_size && <span>{formatSize(draft.file_size)}</span>}
-                      {draft.scene_count && <span>·</span>}
-                      {draft.scene_count && <span>{draft.scene_count} scenes</span>}
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <path d="m9 18 6-6-6-6"/>
-                  </svg>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 function ToolsIcon() {

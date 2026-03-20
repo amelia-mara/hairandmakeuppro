@@ -119,6 +119,9 @@ export interface ScriptTag {
   characterId?: string;
   /** Optional description/note for this tag */
   description?: string;
+  /** When true, tag text has been removed from the breakdown field but the tag
+   *  remains visible as a script reference */
+  dismissed?: boolean;
 }
 
 /* ━━━ Continuity event types ━━━ */
@@ -868,6 +871,8 @@ interface TagState {
   addTag: (tag: ScriptTag) => void;
   removeTag: (id: string) => void;
   updateTag: (id: string, data: Partial<ScriptTag>) => void;
+  dismissTag: (id: string) => void;
+  restoreTag: (id: string) => void;
   getTagsForScene: (sceneId: string) => ScriptTag[];
   getTagsForCharacter: (characterId: string) => ScriptTag[];
 }
@@ -886,6 +891,16 @@ export const useTagStore = create<TagState>()(
       updateTag: (id, data) =>
         set((s) => ({
           tags: s.tags.map((t) => (t.id === id ? { ...t, ...data } : t)),
+        })),
+
+      dismissTag: (id) =>
+        set((s) => ({
+          tags: s.tags.map((t) => (t.id === id ? { ...t, dismissed: true } : t)),
+        })),
+
+      restoreTag: (id) =>
+        set((s) => ({
+          tags: s.tags.map((t) => (t.id === id ? { ...t, dismissed: false } : t)),
         })),
 
       getTagsForScene: (sceneId) =>
@@ -1242,6 +1257,8 @@ interface ParsedScriptState {
   removeCharacterFromScene: (projectId: string, sceneId: string, characterId: string) => void;
   removeCharacterEntirely: (projectId: string, characterId: string) => void;
   mergeCharacters: (projectId: string, sourceCharacterId: string, targetCharacterId: string) => void;
+  addLook: (projectId: string, look: Look) => void;
+  updateLook: (projectId: string, lookId: string, data: Partial<Look>) => void;
 }
 
 export const useParsedScriptStore = create<ParsedScriptState>()(
@@ -1306,6 +1323,24 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
           const characters = project.characters.filter((c) => c.id !== sourceCharacterId);
           const looks = project.looks.filter((l) => l.characterId !== sourceCharacterId);
           return { projects: { ...s.projects, [projectId]: { ...project, scenes, characters, looks } } };
+        }),
+
+      addLook: (projectId, look) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const looks = [...project.looks, look];
+          return { projects: { ...s.projects, [projectId]: { ...project, looks } } };
+        }),
+
+      updateLook: (projectId, lookId, data) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const looks = project.looks.map((l) =>
+            l.id === lookId ? { ...l, ...data } : l
+          );
+          return { projects: { ...s.projects, [projectId]: { ...project, looks } } };
         }),
     }),
     {
