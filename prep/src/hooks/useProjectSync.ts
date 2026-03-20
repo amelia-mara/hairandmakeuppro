@@ -65,7 +65,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [hasPrepAccess, setHasPrepAccess] = useState(false);
+  const [hasPrepAccess, setHasPrepAccess] = useState(true); // Default true — this is Prep, all projects sync
   const loadedRef = useRef<string | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
 

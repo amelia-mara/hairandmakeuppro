@@ -10,6 +10,7 @@ import {
 import { useProjectStore } from '@/stores/projectStore';
 import { PROJECT_TYPES, type ProjectType } from '@/types';
 import { createProjectInSupabase } from '@/services/projectService';
+import { ensurePrepAccess } from '@/services/designerUpgrade';
 
 const TYPE_ICONS: Record<ProjectType, typeof Film> = {
   'Feature Film': Film,
@@ -63,6 +64,11 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
 
       if (error) {
         console.error('[CreateProject] Supabase save failed, project saved locally only:', error);
+      }
+
+      // Ensure has_prep_access is set so data syncs to Supabase
+      if (sbProject?.id) {
+        ensurePrepAccess(sbProject.id).catch(console.error);
       }
 
       onComplete(id);
