@@ -389,7 +389,7 @@ export function saveLooks(
  * Save breakdown data for a scene. Stores as metadata on the scene record.
  */
 export function saveBreakdown(
-  projectId: string,
+  _projectId: string,
   sceneId: string,
   breakdown: Record<string, unknown>,
 ) {

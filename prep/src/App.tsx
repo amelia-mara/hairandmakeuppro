@@ -26,7 +26,6 @@ function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [showBetaCode, setShowBetaCode] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-  const getProject = useProjectStore((s) => s.getProject);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
 

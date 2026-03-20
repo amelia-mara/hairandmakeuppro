@@ -10,8 +10,7 @@
  * Only activates when project.has_prep_access === true.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useRef, useState } from 'react';
 import {
   loadFullProject,
   dbToScene,
@@ -20,16 +19,12 @@ import {
   saveScenes,
   saveCharacters,
   saveLooks,
-  saveBreakdown,
   flushPrepSync,
-  getSaveStatus,
   onSaveStatusChange,
   setReceivingFromRealtime,
-  type PrepProjectData,
 } from '@/services/supabaseSync';
 import {
   subscribeToProject,
-  unsubscribeFromProject,
   type PrepRealtimeHandlers,
 } from '@/services/realtimeSync';
 import { useParsedScriptStore } from '@/stores/breakdownStore';
@@ -248,7 +243,7 @@ function handleCharacterRealtimeUpdate(projectId: string, payload: ChangePayload
   }
 }
 
-function handleLookRealtimeUpdate(projectId: string, payload: ChangePayload) {
+function handleLookRealtimeUpdate(_projectId: string, payload: ChangePayload) {
   if ((payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') && payload.new) {
     const look = dbToLook(payload.new as Record<string, unknown>);
     console.log('[PrepSync] Look changed from app:', look.name);
