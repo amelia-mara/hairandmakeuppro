@@ -458,7 +458,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
             // Sync continuity tracker entries
             const continuityEntries = useContinuityTrackerStore.getState().entries;
-            for (const [key, entry] of Object.entries(continuityEntries)) {
+            for (const [, entry] of Object.entries(continuityEntries)) {
               if (entry && localParsed.scenes.some(s => s.id === entry.sceneId)) {
                 saveContinuityEntry(entry.sceneId, entry.characterId, {
                   status: entry.status === 'pending' ? 'not_started' : entry.status,
