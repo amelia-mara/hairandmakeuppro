@@ -2186,7 +2186,6 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
   const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
   const bStore = useBreakdownStore();
-  const prevBreakdown = prevScene ? bStore.getBreakdown(prevScene.id) : undefined;
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
@@ -2283,9 +2282,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 onUpdateEvent={onUpdateEvent}
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
-                onAddLook={onAddLook}
-                prevCharBreakdown={prevBreakdown?.characters.find((c) => c.characterId === ch.id)}
-                prevSceneNumber={prevScene ? String(prevScene.number) : undefined} />
+                onAddLook={onAddLook} />
             );
           })}
         </div>
@@ -2347,8 +2344,8 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
 
 /* ━━━ CHARACTER FORM BLOCK ━━━ */
 
-function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, prevCharBreakdown, prevSceneNumber }: {
-  char: Character; cb: CharacterBreakdown; looks: { id: string; name: string }[];
+function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook }: {
+  char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
   allScenes: Scene[];
@@ -2359,8 +2356,6 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   sceneId: string;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
-  prevCharBreakdown?: CharacterBreakdown;
-  prevSceneNumber?: string;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
@@ -2426,29 +2421,23 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
 
   const catColor = (id: string) => BREAKDOWN_CATEGORIES.find((c) => c.id === id)?.color || '#999';
 
-  const handleCopyFromPrev = useCallback(() => {
-    if (!prevCharBreakdown) return;
-    onUpdate({
-      lookId: prevCharBreakdown.lookId,
-      entersWith: { ...prevCharBreakdown.entersWith },
-      sfx: prevCharBreakdown.sfx,
-      environmental: prevCharBreakdown.environmental,
-      action: prevCharBreakdown.action,
-      notes: prevCharBreakdown.notes,
-    });
-  }, [prevCharBreakdown, onUpdate]);
+  const handleSetLook = useCallback((lookId: string) => {
+    const look = looks.find((l) => l.id === lookId);
+    if (look) {
+      onUpdate({
+        lookId,
+        entersWith: { hair: look.hair, makeup: look.makeup, wardrobe: look.wardrobe },
+      });
+    } else {
+      onUpdate({ lookId });
+    }
+  }, [looks, onUpdate]);
 
   return (
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
       <div className="cb-header">
         <span className="cb-name">{char.name}</span>
         <div className="cb-header-right">
-          {prevCharBreakdown && (
-            <button className="cb-copy-prev-btn" onClick={handleCopyFromPrev} title={`Copy from Scene ${prevSceneNumber}`}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Copy Sc {prevSceneNumber}
-            </button>
-          )}
           <span className="cb-billing-badge">{ordinal(char.billing)}</span>
           <button className="cb-remove-char-btn" onClick={() => setShowRemoveModal(true)} title="Remove character">×</button>
         </div>
@@ -2487,7 +2476,7 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
             if (e.target.value === '__new') {
               setShowNewLookInput(true);
             } else {
-              onUpdate({ lookId: e.target.value });
+              handleSetLook(e.target.value);
             }
           }}>
             <option value="">Select look...</option>
