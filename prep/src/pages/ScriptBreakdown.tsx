@@ -1517,6 +1517,12 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
 
           const nextVersion = (versions?.[0]?.version_number ?? 0) + 1;
 
+          // Deactivate all previous versions for this project
+          await supabase.from('script_uploads')
+            .update({ is_active: false })
+            .eq('project_id', projectId)
+            .eq('is_active', true);
+
           await supabase.from('script_uploads').insert({
             project_id: projectId,
             version_number: nextVersion,
