@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { PROJECT_TYPES, type ProjectType } from '@/types';
+import { createProjectInSupabase } from '@/services/projectService';
+import { ensurePrepAccess } from '@/services/designerUpgrade';
 
 const TYPE_ICONS: Record<ProjectType, typeof Film> = {
   'Feature Film': Film,
@@ -31,23 +33,50 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
 
   const canCreate = title.trim() && projectType;
 
-  const createProject = useCallback(() => {
-    if (!canCreate) return;
-    const id = `project-${Date.now()}`;
-    addProject({
-      id,
-      title: title.trim(),
-      genre: genre.trim(),
-      type: projectType,
-      status: 'setup',
-      progress: 0,
-      lastActive: new Date().toISOString(),
-      scenes: 0,
-      characters: 0,
-      createdAt: new Date().toISOString(),
-    });
-    onComplete(id);
-  }, [title, genre, projectType, canCreate, addProject, onComplete]);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const createProject = useCallback(async () => {
+    if (!canCreate || isCreating) return;
+    setIsCreating(true);
+
+    try {
+      // Create in Supabase first to get a real UUID
+      const { project: sbProject, error } = await createProjectInSupabase(
+        title.trim(),
+        projectType,
+      );
+
+      // Use Supabase UUID if available, fall back to local ID
+      const id = sbProject?.id || `project-${Date.now()}`;
+
+      addProject({
+        id,
+        title: title.trim(),
+        genre: genre.trim(),
+        type: projectType,
+        status: 'setup',
+        progress: 0,
+        lastActive: new Date().toISOString(),
+        scenes: 0,
+        characters: 0,
+        createdAt: sbProject?.created_at || new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error('[CreateProject] Supabase save failed, project saved locally only:', error);
+      }
+
+      // Ensure has_prep_access is set so data syncs to Supabase
+      if (sbProject?.id) {
+        ensurePrepAccess(sbProject.id).catch(console.error);
+      }
+
+      onComplete(id);
+    } catch (err) {
+      console.error('[CreateProject] Unexpected error:', err);
+      setIsCreating(false);
+    }
+  }, [title, genre, projectType, canCreate, isCreating, addProject, onComplete]);
 
   // Close on Escape
   useEffect(() => {
@@ -234,17 +263,17 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
           </button>
           <button
             onClick={createProject}
-            disabled={!canCreate}
+            disabled={!canCreate || isCreating}
             className="btn-gold"
             style={{
               padding: '10px 24px',
               borderRadius: '8px',
               fontSize: '0.8125rem',
-              opacity: canCreate ? 1 : 0.4,
-              cursor: canCreate ? 'pointer' : 'not-allowed',
+              opacity: canCreate && !isCreating ? 1 : 0.4,
+              cursor: canCreate && !isCreating ? 'pointer' : 'not-allowed',
             }}
           >
-            Create Project
+            {isCreating ? 'Creating…' : 'Create Project'}
           </button>
         </div>
       </div>

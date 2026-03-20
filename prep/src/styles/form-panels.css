@@ -108,6 +108,126 @@
   color: var(--accent-gold);
   background: rgba(var(--a), 0.10);
 }
+.tools-dropdown-item--expanded {
+  color: var(--accent-gold);
+  background: rgba(var(--a), 0.06);
+}
+
+/* ━━━ Drafts Sub-Dropdown (inline within Tools) ━━━ */
+
+.tools-drafts-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 4px 14px;
+  margin-bottom: 4px;
+  border-left: 2px solid rgba(var(--a), 0.12);
+  margin-left: 24px;
+  animation: drafts-sub-in 0.12s ease-out;
+}
+
+@keyframes drafts-sub-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tools-drafts-loading,
+.tools-drafts-empty {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  font-style: italic;
+}
+
+.tools-draft-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+.tools-draft-item:hover {
+  background: rgba(var(--a), 0.06);
+}
+.tools-draft-item--active {
+  background: rgba(212, 148, 58, 0.06);
+  border-color: rgba(212, 148, 58, 0.15);
+}
+
+.tools-draft-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tools-draft-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-heading);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools-draft-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #D4943A;
+  background: rgba(212, 148, 58, 0.15);
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.tools-draft-meta {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools-draft-eye {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: none;
+  border: 1px solid rgba(var(--a), 0.1);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.tools-draft-eye:hover {
+  color: var(--accent-gold);
+  border-color: rgba(212, 148, 58, 0.3);
+  background: rgba(212, 148, 58, 0.08);
+}
+
+.tools-draft-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(var(--a), 0.15);
+  border-top-color: var(--accent-gold);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ━━━ Form Panel (right) ━━━ */
 

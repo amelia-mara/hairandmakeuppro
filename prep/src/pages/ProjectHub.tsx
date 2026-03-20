@@ -21,8 +21,8 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
   const projects = useProjectStore((s) => s.projects);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // If projects exist, show project cards instead of hero
-  if (projects.length > 0) {
+  // If authenticated and projects exist, show project cards instead of hero
+  if (isAuthenticated && projects.length > 0) {
     return (
       <div className="animate-fade-in">
         <div className="hub-projects">
