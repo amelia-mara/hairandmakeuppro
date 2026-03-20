@@ -533,6 +533,113 @@ export function saveTimesheetEntry(
 }
 
 /**
+ * Upload a call sheet PDF + thumbnail to Supabase Storage and save metadata.
+ * Returns { pdfUrl, thumbnailUrl } on success.
+ */
+export async function uploadCallSheetToStorage(
+  projectId: string,
+  sheet: { id: string; name: string; date: string; dataUri: string; thumbnailUri: string; uploadedAt: string },
+): Promise<{ pdfUrl: string; thumbnailUrl: string } | null> {
+  try {
+    // Upload PDF
+    const pdfPath = `${projectId}/callsheets/${sheet.id}.pdf`;
+    const pdfBlob = await (await fetch(sheet.dataUri)).blob();
+    await supabase.storage
+      .from('project-documents')
+      .upload(pdfPath, pdfBlob, { upsert: true, contentType: 'application/pdf' });
+
+    // Upload thumbnail
+    const thumbPath = `${projectId}/callsheets/${sheet.id}_thumb.png`;
+    const thumbBlob = await (await fetch(sheet.thumbnailUri)).blob();
+    await supabase.storage
+      .from('project-documents')
+      .upload(thumbPath, thumbBlob, { upsert: true, contentType: 'image/png' });
+
+    // Get public URLs
+    const { data: pdfUrlData } = supabase.storage.from('project-documents').getPublicUrl(pdfPath);
+    const { data: thumbUrlData } = supabase.storage.from('project-documents').getPublicUrl(thumbPath);
+
+    // Save metadata to call_sheet_data
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('call_sheet_data')
+      .upsert({
+        id: sheet.id,
+        project_id: projectId,
+        shoot_date: sheet.date,
+        parsed_data: {
+          name: sheet.name,
+          storagePath: pdfPath,
+          thumbnailPath: thumbPath,
+          pdfUrl: pdfUrlData.publicUrl,
+          thumbnailUrl: thumbUrlData.publicUrl,
+          uploadedAt: sheet.uploadedAt,
+        } as unknown as Json,
+        uploaded_by: user?.id || null,
+      }, { onConflict: 'id' });
+    if (error) throw error;
+
+    console.log('[PrepSync] Call sheet uploaded:', sheet.id);
+    return { pdfUrl: pdfUrlData.publicUrl, thumbnailUrl: thumbUrlData.publicUrl };
+  } catch (err) {
+    console.error('[PrepSync] Call sheet upload failed:', err);
+    return null;
+  }
+}
+
+/**
+ * Remove a call sheet from Supabase Storage + DB.
+ */
+export async function removeCallSheetFromSupabase(
+  projectId: string,
+  sheetId: string,
+): Promise<void> {
+  try {
+    const pdfPath = `${projectId}/callsheets/${sheetId}.pdf`;
+    const thumbPath = `${projectId}/callsheets/${sheetId}_thumb.png`;
+    await supabase.storage.from('project-documents').remove([pdfPath, thumbPath]);
+    await supabase.from('call_sheet_data').delete().eq('id', sheetId);
+    console.log('[PrepSync] Call sheet removed:', sheetId);
+  } catch (err) {
+    console.error('[PrepSync] Call sheet removal failed:', err);
+  }
+}
+
+/**
+ * Save full timesheet state (crew, production settings, entries) to Supabase.
+ * Uses a single JSONB row per project in the timesheets table.
+ */
+export function saveTimesheetFull(
+  projectId: string,
+  state: {
+    production: unknown;
+    crew: unknown[];
+    entries: Record<string, unknown>;
+  },
+) {
+  if (receivingFromRealtime) return;
+  debounced(`timesheet-full:${projectId}`, async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from('timesheets')
+      .upsert({
+        project_id: projectId,
+        user_id: user.id,
+        week_starting: '1970-01-01', // sentinel: full Prep state dump
+        entries: {
+          _prepTimesheetState: true,
+          production: state.production,
+          crew: state.crew,
+          entries: state.entries,
+        } as unknown as Json,
+      }, { onConflict: 'project_id,user_id,week_starting' });
+    if (error) throw error;
+    console.log('[PrepSync] Timesheet full state saved');
+  });
+}
+
+/**
  * Approve a timesheet entry (Designer action).
  */
 export async function approveTimesheetEntry(
