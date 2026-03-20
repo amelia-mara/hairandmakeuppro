@@ -2123,7 +2123,11 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
         )}
         {activeSubTab === 'lookbook' && (
           <div className="cv-looks">
-            {looks.length === 0 ? <p className="cv-empty">No looks created.</p> : looks.map((lk) => (
+            {looks.length === 0 ? <p className="cv-empty">No looks created.</p> : looks.slice().sort((a, b) => {
+              const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
+              const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
+              return tsA - tsB;
+            }).map((lk) => (
               <div key={lk.id} className="cv-look-card">
                 <div className="cv-look-name">{lk.name}<span className="cv-look-desc"> — {lk.description}</span></div>
                 <div className="cv-look-row"><span className="cv-look-label">Hair</span>{lk.hair}</div>
@@ -2503,7 +2507,11 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
             }
           }}>
             <option value="">Select look...</option>
-            {looks.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {looks.slice().sort((a, b) => {
+              const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
+              const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
+              return tsA - tsB;
+            }).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             <option value="__new">+ New Look</option>
           </select>
         )}
