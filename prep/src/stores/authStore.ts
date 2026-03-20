@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { useProjectStore } from './projectStore';
 
 export interface User {
   id: string;
@@ -89,6 +90,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
+    // Clear all project data from memory and localStorage
+    useProjectStore.getState().selectProject(null);
+    useProjectStore.setState({ projects: [], selectedProjectId: null });
+    // Clear all prep-related localStorage keys
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('prep-')) {
+        localStorage.removeItem(key);
+      }
+    });
     set({ user: null, session: null, isAuthenticated: false });
   },
 
