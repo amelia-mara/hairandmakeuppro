@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { useProjectStore } from './projectStore';
+import { loadUserProjects, type SupabaseProject } from '@/services/projectService';
 
 export interface User {
   id: string;
@@ -31,6 +32,42 @@ function toAppUser(supabaseUser: SupabaseUser, profileName?: string): User {
     email: supabaseUser.email || '',
     initials: getInitials(name),
   };
+}
+
+/** Convert Supabase project rows to the local Project shape. */
+function supabaseToLocal(sp: SupabaseProject) {
+  return {
+    id: sp.id,
+    title: sp.name,
+    genre: '',
+    type: sp.production_type || '',
+    status: 'setup' as const,
+    progress: 0,
+    lastActive: sp.created_at,
+    scenes: 0,
+    characters: 0,
+    createdAt: sp.created_at,
+  };
+}
+
+/** Fetch user's projects from Supabase and merge into the project store. */
+async function hydrateProjects(userId: string) {
+  const { projects: sbProjects } = await loadUserProjects(userId);
+  if (sbProjects.length === 0) return;
+
+  const store = useProjectStore.getState();
+  const existingIds = new Set(store.projects.map((p) => p.id));
+
+  // Merge: keep any local projects that already exist, add new ones from Supabase
+  const newProjects = sbProjects
+    .filter((sp) => !existingIds.has(sp.id))
+    .map(supabaseToLocal);
+
+  if (newProjects.length > 0) {
+    useProjectStore.setState({
+      projects: [...store.projects, ...newProjects],
+    });
+  }
 }
 
 interface AuthState {
@@ -86,6 +123,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       isLoading: false,
       error: null,
     });
+
+    // Load user's projects from Supabase
+    hydrateProjects(data.user.id).catch(console.error);
   },
 
   signOut: async () => {
@@ -122,6 +162,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+
+      // Load user's projects from Supabase
+      hydrateProjects(data.session.user.id).catch(console.error);
     } else {
       set({
         session: null,
