@@ -160,7 +160,11 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   /* Load a previous draft's praised/parsed data */
   const handleLoadDraft = useCallback(async (draft: ScriptDraft) => {
-    if (draft.is_active || !draft.parsed_data) return;
+    if (!draft.parsed_data) return;
+    // Allow re-loading the active draft when the store is empty (e.g. after
+    // switching devices or clearing cache)
+    const storeHasData = !!parsedScriptStore.getParsedData(projectId);
+    if (draft.is_active && storeHasData) return;
     setLoadingDraftId(draft.id);
     try {
       // Load the draft's parsed data into the parsedScriptStore
@@ -242,6 +246,50 @@ export function ScriptBreakdown({ projectId }: Props) {
   /* Hide preamble from scene list — its content is merged into the first real scene */
   const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
   const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
+
+  /* Auto-recover: if parsedScriptStore is empty but the active draft in
+     script_uploads has parsed_data, load it. This handles the case where
+     the scenes/characters tables are empty AND localStorage was cleared. */
+  useEffect(() => {
+    if (parsedData) return; // Already have data
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('script_uploads')
+          .select('id, file_name, parsed_data, created_at, scene_count')
+          .eq('project_id', projectId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cancelled || error || !data?.parsed_data) return;
+        const pd = data.parsed_data as {
+          scenes?: any[]; characters?: any[]; looks?: any[];
+          filename?: string; parsedAt?: string;
+        };
+        if (!pd.scenes || pd.scenes.length === 0) return;
+        console.log('[ScriptBreakdown] Auto-recovering parsed data from script_uploads —', pd.scenes.length, 'scenes');
+        parsedScriptStore.setParsedData(projectId, {
+          scenes: pd.scenes || [],
+          characters: pd.characters || [],
+          looks: pd.looks || [],
+          filename: pd.filename || data.file_name || 'script.pdf',
+          parsedAt: pd.parsedAt || new Date().toISOString(),
+        });
+        scriptUpload.setScript(projectId, {
+          projectId,
+          filename: data.file_name || 'script.pdf',
+          uploadedAt: data.created_at || new Date().toISOString(),
+          sceneCount: data.scene_count || pd.scenes.length,
+          rawText: '',
+        });
+      } catch (err) {
+        console.error('[ScriptBreakdown] Auto-recover failed:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [projectId, parsedData, parsedScriptStore, scriptUpload]);
 
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
