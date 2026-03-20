@@ -119,6 +119,9 @@ export interface ScriptTag {
   characterId?: string;
   /** Optional description/note for this tag */
   description?: string;
+  /** When true, tag text has been removed from the breakdown field but the tag
+   *  remains visible as a script reference */
+  dismissed?: boolean;
 }
 
 /* ━━━ Continuity event types ━━━ */
@@ -868,6 +871,8 @@ interface TagState {
   addTag: (tag: ScriptTag) => void;
   removeTag: (id: string) => void;
   updateTag: (id: string, data: Partial<ScriptTag>) => void;
+  dismissTag: (id: string) => void;
+  restoreTag: (id: string) => void;
   getTagsForScene: (sceneId: string) => ScriptTag[];
   getTagsForCharacter: (characterId: string) => ScriptTag[];
 }
@@ -886,6 +891,16 @@ export const useTagStore = create<TagState>()(
       updateTag: (id, data) =>
         set((s) => ({
           tags: s.tags.map((t) => (t.id === id ? { ...t, ...data } : t)),
+        })),
+
+      dismissTag: (id) =>
+        set((s) => ({
+          tags: s.tags.map((t) => (t.id === id ? { ...t, dismissed: true } : t)),
+        })),
+
+      restoreTag: (id) =>
+        set((s) => ({
+          tags: s.tags.map((t) => (t.id === id ? { ...t, dismissed: false } : t)),
         })),
 
       getTagsForScene: (sceneId) =>

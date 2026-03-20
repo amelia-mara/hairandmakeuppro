@@ -2434,13 +2434,69 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
     return true;
   });
 
+  const stripTagText = useCallback((fieldValue: string, text: string): string => {
+    // Remove the tag text from the field, handling ", text" and "text, " patterns
+    let result = fieldValue;
+    // Try removing ", text" first (when appended)
+    if (result.includes(`, ${text}`)) {
+      result = result.replace(`, ${text}`, '');
+    } else if (result.includes(`${text}, `)) {
+      result = result.replace(`${text}, `, '');
+    } else {
+      result = result.replace(text, '');
+    }
+    return result.trim();
+  }, []);
+
+  const handleDismissTag = useCallback((tag: ScriptTag) => {
+    tagStore.dismissTag(tag.id);
+    const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
+    if (!cat) return;
+    if (cat.field.startsWith('entersWith.')) {
+      const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+      const existing = cb.entersWith[key];
+      if (existing) {
+        onUpdate({ entersWith: { ...cb.entersWith, [key]: stripTagText(existing, tag.text) } });
+      }
+    } else {
+      const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+      const existing = cb[field] || '';
+      if (existing) {
+        onUpdate({ [field]: stripTagText(existing as string, tag.text) });
+      }
+    }
+  }, [cb, onUpdate, stripTagText, tagStore]);
+
+  const handleRestoreTag = useCallback((tag: ScriptTag) => {
+    tagStore.restoreTag(tag.id);
+    const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
+    if (!cat) return;
+    if (cat.field.startsWith('entersWith.')) {
+      const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+      const existing = cb.entersWith[key];
+      onUpdate({ entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${tag.text}` : tag.text } });
+    } else {
+      const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+      const existing = (cb[field] as string) || '';
+      onUpdate({ [field]: existing ? `${existing}, ${tag.text}` : tag.text });
+    }
+  }, [cb, onUpdate, tagStore]);
+
   const TagPills = ({ tags, color }: { tags: ScriptTag[]; color: string }) =>
     tags.length > 0 ? (
       <div className="cb-tag-row">
         {tags.map((t) => (
-          <span key={t.id} className="cb-tag-pill" style={{ borderColor: color, color }}>
+          <span
+            key={t.id}
+            className={`cb-tag-pill${t.dismissed ? ' cb-tag-pill--dismissed' : ''}`}
+            style={{ borderColor: color, color }}
+            onClick={t.dismissed ? () => handleRestoreTag(t) : undefined}
+            title={t.dismissed ? 'Click to re-apply to field' : undefined}
+          >
             {t.text}
-            <button className="cb-tag-remove" onClick={() => tagStore.removeTag(t.id)}>×</button>
+            {!t.dismissed && (
+              <button className="cb-tag-remove" onClick={() => handleDismissTag(t)}>×</button>
+            )}
           </span>
         ))}
       </div>
