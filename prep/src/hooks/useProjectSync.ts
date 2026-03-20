@@ -344,6 +344,57 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           }
         }
 
+        // If Supabase scene/character tables are empty but script_uploads has
+        // parsed_data, restore from there so the script displays on load.
+        if (scenes.length === 0 && characters.length === 0 && data.scriptUpload) {
+          const sp = data.scriptUpload.parsed_data as {
+            scenes?: any[]; characters?: any[]; looks?: any[];
+            filename?: string; parsedAt?: string;
+          } | null;
+          if (sp && ((sp.scenes && sp.scenes.length > 0) || (sp.characters && sp.characters.length > 0))) {
+            console.log('[useProjectSync] Restoring from script_uploads.parsed_data —',
+              `scenes: ${sp.scenes?.length ?? 0}, characters: ${sp.characters?.length ?? 0}`);
+            setReceivingFromRealtime(true);
+            try {
+              useParsedScriptStore.getState().setParsedData(projectId!, {
+                scenes: sp.scenes || [],
+                characters: sp.characters || [],
+                looks: sp.looks || [],
+                filename: sp.filename || (data.scriptUpload.file_name as string) || 'script.pdf',
+                parsedAt: sp.parsedAt || new Date().toISOString(),
+              });
+
+              useProjectStore.getState().updateProject(projectId!, {
+                scenes: sp.scenes?.length ?? 0,
+                characters: sp.characters?.length ?? 0,
+                scriptFilename: (data.scriptUpload.file_name as string) || undefined,
+              });
+
+              // Populate script upload store so hasScript is true
+              useScriptUploadStore.getState().setScript(projectId!, {
+                projectId: projectId!,
+                filename: (data.scriptUpload.file_name as string) || 'script.pdf',
+                uploadedAt: (data.scriptUpload.created_at as string) || new Date().toISOString(),
+                sceneCount: sp.scenes?.length ?? 0,
+                rawText: '',
+              });
+
+              // Trigger a sync so the restored data persists in scenes/characters tables
+              if (sp.scenes && sp.scenes.length > 0) {
+                saveScenes(projectId!, sp.scenes as any);
+              }
+              if (sp.characters && sp.characters.length > 0) {
+                saveCharacters(projectId!, sp.characters as any);
+              }
+              if (sp.looks && sp.looks.length > 0) {
+                saveLooks(projectId!, sp.looks as any);
+              }
+            } finally {
+              setReceivingFromRealtime(false);
+            }
+          }
+        }
+
         // If Supabase had no scene data but localStorage does (data was never synced),
         // trigger a save now so data survives future logouts
         if (scenes.length === 0 && characters.length === 0) {
