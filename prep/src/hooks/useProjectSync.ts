@@ -31,6 +31,7 @@ import {
   removeCallSheetFromSupabase,
   saveTimesheetFull,
   flushPrepSync,
+  hasPendingSaves,
   onSaveStatusChange,
   setReceivingFromRealtime,
 } from '@/services/supabaseSync';
@@ -316,31 +317,42 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               }
             }
 
-            // ── Populate tags store ──
-            if (data.tags) {
-              const tags = (data.tags.tags as any[]) || [];
-              if (tags.length > 0) {
-                useTagStore.setState({ tags });
-              }
-            }
-
-            // ── Populate revised scenes store ──
-            if (data.revision) {
-              const changes = (data.revision.changes as any[]) || [];
-              const reviewedSceneIds = (data.revision.reviewed_scene_ids as string[]) || [];
-              const filename = (data.revision.filename as string) || '';
-              const uploadedAt = (data.revision.uploaded_at as string) || new Date().toISOString();
-              if (changes.length > 0) {
-                useRevisedScenesStore.setState({
-                  revisions: {
-                    ...useRevisedScenesStore.getState().revisions,
-                    [projectId!]: { changes, reviewedSceneIds, filename, uploadedAt },
-                  },
-                });
-              }
-            }
           } finally {
             setReceivingFromRealtime(false);
+          }
+        }
+
+        // ── Populate tags store (always, regardless of scene data) ──
+        if (data.tags) {
+          const tags = (data.tags.tags as any[]) || [];
+          if (tags.length > 0) {
+            setReceivingFromRealtime(true);
+            try {
+              useTagStore.setState({ tags });
+            } finally {
+              setReceivingFromRealtime(false);
+            }
+          }
+        }
+
+        // ── Populate revised scenes store (always, regardless of scene data) ──
+        if (data.revision) {
+          const changes = (data.revision.changes as any[]) || [];
+          const reviewedSceneIds = (data.revision.reviewed_scene_ids as string[]) || [];
+          const filename = (data.revision.filename as string) || '';
+          const uploadedAt = (data.revision.uploaded_at as string) || new Date().toISOString();
+          if (changes.length > 0) {
+            setReceivingFromRealtime(true);
+            try {
+              useRevisedScenesStore.setState({
+                revisions: {
+                  ...useRevisedScenesStore.getState().revisions,
+                  [projectId!]: { changes, reviewedSceneIds, filename, uploadedAt },
+                },
+              });
+            } finally {
+              setReceivingFromRealtime(false);
+            }
           }
         }
 
@@ -437,6 +449,24 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 saveBreakdown(projectId!, sceneId, bd as any);
               }
             }
+
+            // Sync tags if localStorage has them but Supabase doesn't
+            const localTags = useTagStore.getState().tags;
+            if (localTags.length > 0 && !data.tags) {
+              saveTags(projectId!, localTags);
+            }
+
+            // Sync continuity tracker entries
+            const continuityEntries = useContinuityTrackerStore.getState().entries;
+            for (const [key, entry] of Object.entries(continuityEntries)) {
+              if (entry && localParsed.scenes.some(s => s.id === entry.sceneId)) {
+                saveContinuityEntry(entry.sceneId, entry.characterId, {
+                  status: entry.status === 'pending' ? 'not_started' : entry.status,
+                  flags: { ...entry.flags } as Record<string, boolean>,
+                  generalNotes: entry.notes,
+                });
+              }
+            }
           }
         }
 
@@ -492,6 +522,47 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
         unsubRef.current = null;
       }
       flushPrepSync();
+    };
+  }, []);
+
+  // ════════════════════════════════════════════════════════════
+  // BROWSER SAFETY NETS — prevent data loss on tab close / navigate away
+  // ════════════════════════════════════════════════════════════
+
+  useEffect(() => {
+    // Warn user if they try to close the tab with unsaved changes
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasPendingSaves()) {
+        e.preventDefault();
+        // Trigger flush immediately — the browser gives us a brief window
+        flushPrepSync();
+      }
+    };
+
+    // Flush pending saves when the tab becomes hidden (user switches tabs,
+    // minimizes, or navigates away). This is the most reliable save point
+    // because the browser guarantees this event fires.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && hasPendingSaves()) {
+        flushPrepSync();
+      }
+    };
+
+    // pagehide fires when the page is being unloaded — last chance to save
+    const onPageHide = () => {
+      if (hasPendingSaves()) {
+        flushPrepSync();
+      }
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', onPageHide);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', onPageHide);
     };
   }, []);
 

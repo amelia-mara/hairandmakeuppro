@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { useProjectStore } from './projectStore';
 import { loadUserProjects, type SupabaseProject } from '@/services/projectService';
+import { flushPrepSync } from '@/services/supabaseSync';
 
 export interface User {
   id: string;
@@ -142,6 +143,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   signOut: async () => {
+    // CRITICAL: Flush all pending Supabase saves BEFORE destroying the session.
+    // The 800ms debounce means recent edits may still be queued — if we sign out
+    // first, those writes fail silently and data is lost on other devices.
+    try {
+      await flushPrepSync();
+    } catch (e) {
+      console.error('[Auth] Failed to flush pending saves before sign-out:', e);
+    }
+
     await supabase.auth.signOut();
     // Clear all project data from memory and localStorage
     useProjectStore.getState().selectProject(null);
