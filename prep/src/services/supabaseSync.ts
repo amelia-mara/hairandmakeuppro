@@ -48,12 +48,28 @@ function debounced(key: string, fn: () => Promise<void>): void {
       setTimeout(() => { if (_saveStatus === 'saved') setSaveStatus('idle'); }, 2000);
     } catch (err) {
       console.error(`[PrepSync] ${key} failed:`, err);
-      setSaveStatus('error');
+      // Retry once after 2s for transient failures (network blips, etc.)
+      setTimeout(async () => {
+        try {
+          await fn();
+          setSaveStatus('saved');
+          console.log(`[PrepSync] ${key} retry succeeded`);
+          setTimeout(() => { if (_saveStatus === 'saved') setSaveStatus('idle'); }, 2000);
+        } catch (retryErr) {
+          console.error(`[PrepSync] ${key} retry also failed:`, retryErr);
+          setSaveStatus('error');
+        }
+      }, 2000);
     }
   }, DEBOUNCE_MS);
 }
 
-/** Flush all pending saves immediately. */
+/** Returns true if there are unsaved changes waiting to be flushed. */
+export function hasPendingSaves(): boolean {
+  return Object.keys(pendingFns).length > 0;
+}
+
+/** Flush all pending saves immediately (runs in parallel for speed). */
 export async function flushPrepSync(): Promise<void> {
   const fns = Object.values({ ...pendingFns });
   for (const key of Object.keys(timers)) {
@@ -63,9 +79,15 @@ export async function flushPrepSync(): Promise<void> {
   for (const key of Object.keys(pendingFns)) {
     delete pendingFns[key];
   }
-  for (const fn of fns) {
-    try { await fn(); } catch (e) { console.error('[PrepSync] Flush failed:', e); }
+  if (fns.length === 0) return;
+  console.log(`[PrepSync] Flushing ${fns.length} pending save(s)...`);
+  const results = await Promise.allSettled(fns.map(fn => fn()));
+  for (const r of results) {
+    if (r.status === 'rejected') {
+      console.error('[PrepSync] Flush failed:', r.reason);
+    }
   }
+  console.log('[PrepSync] Flush complete');
 }
 
 /** Flag to prevent sync loops when receiving realtime updates. */
