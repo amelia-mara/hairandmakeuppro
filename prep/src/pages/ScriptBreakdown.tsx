@@ -1135,7 +1135,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     setPopup({ ...popup, step: 'field', characterId: charId });
   }, [popup]);
 
-  /* Step 1b: User creates a new character → add to project, advance to field selection */
+  /* Step 1b: User creates a new character → add to project and scene, advance to field selection */
   const handleCreateNewCharacter = useCallback(() => {
     if (!popup) return;
     const pd = parsedScriptStore.getParsedData(projectId);
@@ -1154,8 +1154,65 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
       s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, newId] } : s
     );
     parsedScriptStore.setParsedData(projectId, { ...pd, characters: updatedChars, scenes: updatedScenes });
+    // Also add to the breakdown store so they appear in scene breakdown panel
+    const bd = useBreakdownStore.getState().getBreakdown(popup.sceneId);
+    if (bd && !bd.characters.some(c => c.characterId === newId)) {
+      useBreakdownStore.getState().setBreakdown(popup.sceneId, {
+        ...bd,
+        characters: [...bd.characters, {
+          characterId: newId, lookId: '',
+          entersWith: { hair: '', makeup: '', wardrobe: '' },
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change' as const, changeNotes: '',
+          exitsWith: { hair: '', makeup: '', wardrobe: '' },
+          notes: '',
+        }],
+      });
+    }
     setPopup({ ...popup, step: 'field', characterId: newId });
   }, [popup, parsedScriptStore, projectId]);
+
+  /* Add character to scene — adds to scene.characterIds and creates CharacterBreakdown entry */
+  const handleAddCharacterToScene = useCallback(() => {
+    if (!popup || !popup.characterId) return;
+    const pd = parsedScriptStore.getParsedData(projectId);
+    if (!pd) return;
+    const scene = pd.scenes.find(s => s.id === popup.sceneId);
+    if (!scene) return;
+    // Add to scene's characterIds if not already present
+    if (!scene.characterIds.includes(popup.characterId)) {
+      const updatedScenes = pd.scenes.map(s =>
+        s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, popup.characterId!] } : s
+      );
+      parsedScriptStore.setParsedData(projectId, { ...pd, scenes: updatedScenes });
+    }
+    // Add CharacterBreakdown entry if not already present
+    const bd = useBreakdownStore.getState().getBreakdown(popup.sceneId);
+    if (bd && !bd.characters.some(c => c.characterId === popup.characterId)) {
+      useBreakdownStore.getState().setBreakdown(popup.sceneId, {
+        ...bd,
+        characters: [...bd.characters, {
+          characterId: popup.characterId, lookId: '',
+          entersWith: { hair: '', makeup: '', wardrobe: '' },
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change' as const, changeNotes: '',
+          exitsWith: { hair: '', makeup: '', wardrobe: '' },
+          notes: '',
+        }],
+      });
+    }
+    // Also create a 'cast' tag to mark the text
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: 'cast',
+      characterId: popup.characterId,
+    });
+    setPopup(null);
+  }, [popup, parsedScriptStore, projectId, tagStore]);
 
   /* Step 2: User picks a field/category → create tag + auto-populate */
   const handleFieldPick = useCallback((catId: string) => {
@@ -1581,6 +1638,10 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               <div className="sv-tag-popup-title">Assign to character</div>
               <div className="sv-tag-popup-quoted">"{popup.text.length > 50 ? popup.text.slice(0, 50) + '…' : popup.text}"</div>
               <div className="sv-tag-popup-charlist">
+                <button className="sv-tag-popup-char-item sv-tag-popup-char-item--new" onClick={handleCreateNewCharacter}>
+                  <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(212, 148, 58, 0.2)', color: '#D4943A' }}>+</span>
+                  <span>+ Character</span>
+                </button>
                 <button className="sv-tag-popup-char-item sv-tag-popup-char-item--synopsis" onClick={handleSynopsisPick}>
                   <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818CF8' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -1593,10 +1654,6 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
                     <span>{ch.name}</span>
                   </button>
                 ))}
-                <button className="sv-tag-popup-char-item sv-tag-popup-char-item--new" onClick={handleCreateNewCharacter}>
-                  <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(212, 148, 58, 0.2)', color: '#D4943A' }}>+</span>
-                  <span>New Character</span>
-                </button>
               </div>
             </>
           )}
@@ -1605,6 +1662,20 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               <div className="sv-tag-popup-title">
                 Tag as — <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{popupChars.find(c => c.id === popup.characterId)?.name}</span>
               </div>
+              {/* Add to Scene — shown when the character is not yet in this scene */}
+              {popup.characterId && (() => {
+                const scene = scenes.find(s => s.id === popup.sceneId);
+                const isInScene = scene?.characterIds.includes(popup.characterId!);
+                if (isInScene) return null;
+                return (
+                  <div className="sv-tag-popup-field-section">
+                    <button className="sv-tag-popup-btn sv-tag-popup-btn--add-scene" onClick={handleAddCharacterToScene}>
+                      <span className="sv-tag-popup-swatch" style={{ background: 'var(--accent-cue, #B8860B)' }} />
+                      Add to Scene
+                    </button>
+                  </div>
+                );
+              })()}
               <div className="sv-tag-popup-field-section">
                 <div className="sv-tag-popup-field-label">Scene Breakdown</div>
                 <div className="sv-tag-popup-grid">
