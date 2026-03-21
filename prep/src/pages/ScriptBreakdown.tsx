@@ -2183,9 +2183,18 @@ function CharacterView({ char, allScenes, allLooks }: { char: Character; subTab:
         {activeSubTab === 'lookbook' && (
           <div className="cv-looks">
             {looks.length === 0 ? <p className="cv-empty">No looks created.</p> : looks.slice().sort((a, b) => {
-              const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
-              const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
-              return tsA - tsB;
+              // Sort by earliest scene number where the look is used
+              const earliestScene = (lookId: string) => {
+                let min = Infinity;
+                for (const s of scenes) {
+                  const bd = bdStore.getBreakdown(s.id);
+                  if (bd?.characters.some(c => c.lookId === lookId)) {
+                    min = Math.min(min, s.number);
+                  }
+                }
+                return min;
+              };
+              return earliestScene(a.id) - earliestScene(b.id);
             }).map((lk) => (
               <div key={lk.id} className="cv-look-card">
                 <div className="cv-look-name">{lk.name}<span className="cv-look-desc"> — {lk.description}</span></div>
