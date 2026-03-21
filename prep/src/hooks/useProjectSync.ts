@@ -128,13 +128,23 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           dbToScene(row, scMap.get(row.id as string) || [])
         );
         const characters = data.characters.map(row => dbToCharacter(row));
-        const looks = data.looks.map(row => dbToLook(row));
+        const supabaseLooks = data.looks.map(row => dbToLook(row));
+
+        // Merge local looks with Supabase looks — keeps any looks that
+        // were created locally but haven't synced to Supabase yet (e.g.
+        // if a previous save failed or the user refreshed too quickly).
+        const localParsed = useParsedScriptStore.getState().getParsedData(projectId!);
+        const supabaseLookIds = new Set(supabaseLooks.map(l => l.id));
+        const localOnlyLooks = (localParsed?.looks || []).filter(
+          l => !supabaseLookIds.has(l.id)
+        );
+        const looks = [...supabaseLooks, ...localOnlyLooks];
 
         // Only apply to stores if we have server data
         if (scenes.length > 0 || characters.length > 0 || looks.length > 0) {
           setReceivingFromRealtime(true);
           try {
-            // Update parsedScriptStore with server data
+            // Update parsedScriptStore with server data (merged with local-only looks)
             useParsedScriptStore.getState().setParsedData(projectId!, {
               scenes: scenes as any,
               characters: characters as any,
@@ -155,12 +165,25 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             });
 
             // ── Populate breakdown store from filming_notes ──
+            // Merge with local breakdowns to preserve lookIds and other data
+            // that may not have been saved to Supabase yet (e.g. save failed).
             for (const row of data.scenes) {
               const filmingNotes = row.filming_notes as string | null;
               if (filmingNotes) {
                 try {
                   const breakdown = JSON.parse(filmingNotes);
                   if (breakdown && typeof breakdown === 'object') {
+                    const localBd = useBreakdownStore.getState().getBreakdown(row.id as string);
+                    if (localBd && breakdown.characters && Array.isArray(breakdown.characters)) {
+                      // Merge: keep local lookId if Supabase breakdown has empty lookId
+                      breakdown.characters = breakdown.characters.map((cb: any) => {
+                        const localCb = localBd.characters?.find((lc: any) => lc.characterId === cb.characterId);
+                        if (localCb && !cb.lookId && localCb.lookId) {
+                          return { ...cb, lookId: localCb.lookId };
+                        }
+                        return cb;
+                      });
+                    }
                     useBreakdownStore.getState().setBreakdown(row.id as string, breakdown);
                   }
                 } catch { /* not valid JSON, skip */ }
@@ -319,6 +342,12 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
           } finally {
             setReceivingFromRealtime(false);
+          }
+
+          // If there were local-only looks not yet in Supabase, save them now
+          if (localOnlyLooks.length > 0) {
+            console.log(`[useProjectSync] Syncing ${localOnlyLooks.length} local-only look(s) to Supabase`);
+            saveLooks(projectId!, looks as any);
           }
         }
 
