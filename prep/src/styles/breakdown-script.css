@@ -553,7 +553,7 @@
 /* ━━━ Inline highlights ━━━ */
 .sv-highlight {
   border-radius: 2px;
-  padding: 0 1px;
+  padding: 0;
   cursor: default;
   transition: background-color 0.15s ease;
 }
