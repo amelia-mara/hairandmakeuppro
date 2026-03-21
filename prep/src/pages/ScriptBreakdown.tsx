@@ -2625,7 +2625,7 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
             {looks.slice().sort((a, b) => {
               const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
               const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
-              return tsA - tsB;
+              return tsB - tsA;
             }).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             <option value="__new">+ New Look</option>
           </select>
