@@ -922,17 +922,28 @@ export function ScriptBreakdown({ projectId }: Props) {
 /* ━━━ SCRIPT VIEW — continuous scroll, all scenes, with tagging ━━━ */
 
 /** Split text into segments: plain text and tagged spans */
-function buildTaggedSegments(text: string, tags: ScriptTag[]): { start: number; end: number; tag?: ScriptTag }[] {
-  if (tags.length === 0) return [{ start: 0, end: text.length }];
-  const sorted = [...tags].sort((a, b) => a.startOffset - b.startOffset);
-  const segs: { start: number; end: number; tag?: ScriptTag }[] = [];
-  let cursor = 0;
-  for (const t of sorted) {
-    if (t.startOffset > cursor) segs.push({ start: cursor, end: t.startOffset });
-    segs.push({ start: t.startOffset, end: t.endOffset, tag: t });
-    cursor = t.endOffset;
+function buildTaggedSegments(text: string, tags: ScriptTag[]): { start: number; end: number; tags: ScriptTag[] }[] {
+  if (tags.length === 0) return [{ start: 0, end: text.length, tags: [] }];
+
+  // Collect all unique boundary points from tag start/end offsets
+  const boundaries = new Set<number>();
+  boundaries.add(0);
+  boundaries.add(text.length);
+  for (const t of tags) {
+    boundaries.add(Math.max(0, t.startOffset));
+    boundaries.add(Math.min(text.length, t.endOffset));
   }
-  if (cursor < text.length) segs.push({ start: cursor, end: text.length });
+  const sorted = Array.from(boundaries).sort((a, b) => a - b);
+
+  // Build segments between each pair of boundary points, collecting all tags that overlap
+  const segs: { start: number; end: number; tags: ScriptTag[] }[] = [];
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const start = sorted[i];
+    const end = sorted[i + 1];
+    if (start >= end) continue;
+    const overlapping = tags.filter(t => t.startOffset < end && t.endOffset > start);
+    segs.push({ start, end, tags: overlapping });
+  }
   return segs;
 }
 
@@ -1054,8 +1065,35 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     if (!scene) return;
     const scriptText = scene.scriptContent;
 
-    /* Find the selected text position within scriptContent */
-    const startIdx = scriptText.indexOf(text);
+    /* Walk the DOM to compute the actual character offset of the selection
+       within scriptContent, rather than using indexOf which always finds
+       the first occurrence and breaks for repeated words/phrases. */
+    const computeOffset = (container: Element, node: Node, offset: number): number => {
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      let charCount = 0;
+      let current: Text | null;
+      while ((current = walker.nextNode() as Text | null)) {
+        if (current === node) return charCount + offset;
+        charCount += current.textContent?.length || 0;
+      }
+      return -1;
+    };
+
+    /* Map DOM text offset to scriptContent offset by finding the closest
+       matching position. The DOM text might differ slightly from scriptContent
+       (e.g. due to character name highlighting), so we find the selected text
+       near the DOM offset position. */
+    const domOffset = computeOffset(contentEl, range.startContainer, range.startOffset);
+    let startIdx: number;
+    if (domOffset >= 0) {
+      // Search for the selected text near the DOM offset position
+      // to handle cases where DOM text doesn't perfectly align with scriptContent
+      const searchStart = Math.max(0, domOffset - 20);
+      const nearbyIdx = scriptText.indexOf(text, searchStart);
+      startIdx = nearbyIdx !== -1 ? nearbyIdx : scriptText.indexOf(text);
+    } else {
+      startIdx = scriptText.indexOf(text);
+    }
     if (startIdx === -1) return;
 
     const rect = range.getBoundingClientRect();
@@ -1305,7 +1343,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
 
       /* Find segments that overlap this line */
       const lineSegs = segments.filter((s) => s.start < lo.end + 1 && s.end > lo.start);
-      const hasTag = lineSegs.some((s) => s.tag);
+      const hasTag = lineSegs.some((s) => s.tags.length > 0);
 
       const isDialogueLine = dialogueSet.has(lineIdx);
 
@@ -1326,10 +1364,11 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
         const segStart = Math.max(seg.start, lo.start) - lo.start;
         const segEnd = Math.min(seg.end, lo.end) - lo.start;
         const segText = lo.line.slice(segStart, segEnd);
-        if (seg.tag) {
-          if (seg.tag.categoryId === 'cast' && seg.tag.characterId) {
-            // Cast tags use amber character-name styling and link to profile
-            const charId = seg.tag.characterId;
+        if (seg.tags.length > 0) {
+          // Check if any tag is a cast tag
+          const castTag = seg.tags.find(t => t.categoryId === 'cast' && t.characterId);
+          if (castTag) {
+            const charId = castTag.characterId!;
             parts.push(
               <span key={`${seg.start}-${seg.end}`} className="sv-cue-inline"
                 onClick={(e) => { e.stopPropagation(); onCharClick(charId); }}
@@ -1337,11 +1376,31 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               >{segText}</span>
             );
           } else {
-            const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === seg.tag!.categoryId);
+            // Build combined style for all overlapping tags:
+            // background from first tag, multiple underlines via box-shadow
+            const tagColors = seg.tags.map(t => {
+              const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === t.categoryId);
+              return cat?.color || '#888';
+            });
+            const titleParts = seg.tags.map(t => {
+              const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === t.categoryId);
+              const label = cat?.label || 'Tag';
+              const charName = t.characterId ? characters.find(c => c.id === t.characterId)?.name : '';
+              return charName ? `${label} → ${charName}` : label;
+            });
+            // Use box-shadow for stacked underlines so multiple tags show distinct colors
+            const underlines = tagColors.map((color, i) =>
+              `inset 0 ${-2 - i * 3}px 0 0 ${color}`
+            ).join(', ');
             parts.push(
               <span key={`${seg.start}-${seg.end}`} className="sv-highlight"
-                style={{ backgroundColor: `${cat?.color || '#888'}33`, borderBottom: `2px solid ${cat?.color || '#888'}` }}
-                title={`${cat?.label || 'Tag'}${seg.tag.characterId ? ` → ${characters.find(c => c.id === seg.tag!.characterId)?.name || ''}` : ''}`}
+                style={{
+                  backgroundColor: `${tagColors[0]}33`,
+                  borderBottom: 'none',
+                  boxShadow: underlines,
+                  paddingBottom: seg.tags.length > 1 ? `${(seg.tags.length - 1) * 3}px` : undefined,
+                }}
+                title={titleParts.join(' | ')}
               >{segText}</span>
             );
           }
