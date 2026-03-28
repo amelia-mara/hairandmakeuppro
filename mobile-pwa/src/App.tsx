@@ -20,6 +20,7 @@ import { Budget } from '@/components/budget';
 import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/components/more';
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
+import { useChatStore } from '@/stores/chatStore';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   WelcomeScreen,
@@ -285,6 +286,8 @@ function AppContent() {
 
   // Handle tab change
   const handleTabChange = (tab: NavTab) => {
+    // Close chat panel when navigating via bottom nav
+    useChatStore.getState().closeChat();
     // If clicking the same tab, increment reset key to force sub-views to reset
     if (tab === activeTab) {
       setTabResetKey(k => k + 1);

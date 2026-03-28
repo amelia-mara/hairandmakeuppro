@@ -150,10 +150,10 @@ export function ChatAssistant() {
       </button>
       )}
 
-      {/* Chat Panel - z-30 to stay below BottomNav (z-40) so users can navigate away */}
+      {/* Chat Panel - z-50 above everything, stops above bottom nav so users can still navigate */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 flex flex-col"
+          className="fixed inset-x-0 top-0 bottom-[calc(60px+env(safe-area-inset-bottom))] z-50 flex flex-col"
           style={{ backgroundColor: 'var(--color-background)' }}
         >
           {/* Header */}
@@ -257,7 +257,7 @@ export function ChatAssistant() {
 
               {/* Team Chat Input */}
               <div
-                className="px-4 pt-3 pb-24"
+                className="px-4 pt-3 pb-4"
                 style={{
                   backgroundColor: 'var(--color-card)',
                   borderTop: '1px solid var(--color-border)',
@@ -460,7 +460,7 @@ export function ChatAssistant() {
               {/* Scriptie Input Area — only when activated */}
               {scriptieActivated && (
               <div
-                className="px-4 pt-3 pb-24"
+                className="px-4 pt-3 pb-4"
                 style={{
                   backgroundColor: 'var(--color-card)',
                   borderTop: '1px solid var(--color-border)',
