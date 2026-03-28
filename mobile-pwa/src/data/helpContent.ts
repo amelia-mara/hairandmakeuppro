@@ -353,6 +353,48 @@ export const helpSections: HelpSection[] = [
     ],
   },
   {
+    id: 'beta-feedback',
+    title: 'Beta & Feedback',
+    icon: 'M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z',
+    articles: [
+      {
+        id: 'about-beta',
+        title: 'About the Checks Happy beta',
+        steps: [
+          'Checks Happy is currently in beta — you\'re one of our early users helping to shape the app.',
+          'Beta means some features are still being refined and you may encounter the occasional bug.',
+          'Your real-world feedback is incredibly valuable to us.',
+          'We\'re actively developing new features and improvements based on what beta users tell us.',
+        ],
+        tip: 'Thank you for being part of the beta! Your feedback directly influences what we build next.',
+      },
+      {
+        id: 'report-bug',
+        title: 'Reporting a bug',
+        steps: [
+          'Go to the More tab (bottom right of the navigation bar).',
+          'Scroll down and tap [Report a Bug].',
+          'Describe what happened — what you were doing, what you expected, and what went wrong.',
+          'Optionally attach up to 3 screenshots to help us understand the issue.',
+          'Tap [Send Bug Report] — your report is emailed directly to the team.',
+        ],
+        tip: 'The more detail you include, the faster we can fix it. Screenshots are especially helpful!',
+        relatedIds: ['give-feedback'],
+      },
+      {
+        id: 'give-feedback',
+        title: 'Sharing feedback and ideas',
+        steps: [
+          'We want to hear from you — whether it\'s a feature request, a workflow that feels clunky, or something you love.',
+          'Use the Report a Bug option in the More menu for any type of feedback, not just bugs.',
+          'You can also share feedback with your HOD who can pass it along to us.',
+          'Every piece of feedback helps us make Checks Happy better for the whole HMU community.',
+        ],
+        relatedIds: ['report-bug', 'about-beta'],
+      },
+    ],
+  },
+  {
     id: 'troubleshooting',
     title: 'Troubleshooting',
     icon: 'M11.42 15.17l-5.384-3.101A2.25 2.25 0 004.883 15.6L9 18.75l.165.165a2.65 2.65 0 003.723-.108l.136-.149 5.572-6.332a2.25 2.25 0 00-.42-3.263l-.102-.074a2.25 2.25 0 00-2.728.24L12 12.75l-.58 2.42z',

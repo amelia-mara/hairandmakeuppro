@@ -60,28 +60,29 @@ ${description}
     `;
 
     // Send email via Resend API
-    if (resendKey) {
-      const emailResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Checks Happy Bugs <bugs@checkshappy.com>',
-          to: [recipientEmail],
-          subject: `[Bug Report] ${description.substring(0, 60)}${description.length > 60 ? '...' : ''}`,
-          html: htmlBody,
-        }),
-      });
+    if (!resendKey) {
+      console.error('[BugReport] RESEND_API_KEY not configured');
+      return res.status(500).json({ error: 'Email service not configured' });
+    }
 
-      if (!emailResponse.ok) {
-        const errData = await emailResponse.json();
-        console.error('[BugReport] Resend error:', errData);
-        // Fall through — still return success since we log below
-      }
-    } else {
-      console.warn('[BugReport] RESEND_API_KEY not configured — logging report only');
+    const emailResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Checks Happy Bugs <bugs@checkshappy.com>',
+        to: [recipientEmail],
+        subject: `[Bug Report] ${description.substring(0, 60)}${description.length > 60 ? '...' : ''}`,
+        html: htmlBody,
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const errData = await emailResponse.json();
+      console.error('[BugReport] Resend error:', errData);
+      return res.status(502).json({ error: 'Failed to send email' });
     }
 
     // Always log the report to server logs as a backup

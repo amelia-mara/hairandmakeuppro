@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useTutorialStore } from '@/stores/tutorialStore';
 import { Button, Input } from '@/components/ui';
 import type { ProductionType, Project } from '@/types';
 import { PRODUCTION_TYPES } from '@/types';
@@ -35,6 +36,12 @@ export function CreateProjectScreen() {
     const result = await createProject(name.trim(), productionType, ownerRole, department);
 
     if (result.success && result.code) {
+      // Show tutorial on first project creation
+      const { hasCompletedTutorial, hasSkippedTutorial, startTutorial } = useTutorialStore.getState();
+      if (!hasCompletedTutorial && !hasSkippedTutorial) {
+        startTutorial();
+      }
+
       // Go directly to the upload files flow instead of showing success screen
       const { projectMemberships } = useAuthStore.getState();
       const membership = projectMemberships.find(p => p.projectCode === result.code);

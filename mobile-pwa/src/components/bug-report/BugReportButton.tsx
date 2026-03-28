@@ -5,9 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 const BUG_REPORT_BUCKET = 'bug-reports';
 
-export function BugReportButton() {
-  const [isOpen, setIsOpen] = useState(false);
+interface BugReportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
   const [description, setDescription] = useState('');
+
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,7 +113,7 @@ export function BugReportButton() {
       // Auto-close after showing success
       setTimeout(() => {
         setSubmitted(false);
-        setIsOpen(false);
+        onClose();
       }, 2000);
     } catch (err) {
       console.error('[BugReport] Submit error:', err);
@@ -120,33 +125,13 @@ export function BugReportButton() {
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setIsOpen(false);
+      onClose();
       setError(null);
     }
   };
 
   return (
     <>
-      {/* Floating Bug Report Button - left side, above bottom nav */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-full shadow-lg transition-all active:scale-95"
-          style={{
-            backgroundColor: '#ef4444',
-            boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)',
-          }}
-          aria-label="Report a bug"
-        >
-          {/* Bug icon */}
-          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          <span className="text-white text-xs font-semibold">Report Bug</span>
-        </button>
-      )}
-
-      {/* Bug Report Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
           <div
