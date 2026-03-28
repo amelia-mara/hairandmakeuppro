@@ -187,21 +187,28 @@ function mapScenes(
     scMap.get(sceneId)!.push(charId);
   }
 
-  return dbScenes.map(row => ({
-    id: row.id as string,
-    sceneNumber: (row.scene_number as string) || '0',
-    slugline: `${row.int_ext || 'INT'}. ${row.location || 'UNKNOWN'} - ${row.time_of_day || 'DAY'}`,
-    intExt: (row.int_ext as 'INT' | 'EXT') || 'INT',
-    timeOfDay: ((row.time_of_day as string) || 'DAY') as Scene['timeOfDay'],
-    synopsis: (row.synopsis as string) || '',
-    scriptContent: (row.script_content as string) || '',
-    characters: scMap.get(row.id as string) || [],
-    isComplete: (row.is_complete as boolean) || false,
-    completedAt: row.completed_at ? new Date(row.completed_at as string) : undefined,
-    filmingStatus: (row.filming_status as Scene['filmingStatus']) || undefined,
-    filmingNotes: (row.filming_notes as string) || undefined,
-    shootingDay: (row.shooting_day as number) || undefined,
-  }));
+  return dbScenes.map(row => {
+    const charIds = scMap.get(row.id as string) || [];
+    return {
+      id: row.id as string,
+      sceneNumber: (row.scene_number as string) || '0',
+      slugline: `${row.int_ext || 'INT'}. ${row.location || 'UNKNOWN'} - ${row.time_of_day || 'DAY'}`,
+      intExt: (row.int_ext as 'INT' | 'EXT') || 'INT',
+      timeOfDay: ((row.time_of_day as string) || 'DAY') as Scene['timeOfDay'],
+      synopsis: (row.synopsis as string) || '',
+      scriptContent: (row.script_content as string) || '',
+      characters: charIds,
+      isComplete: (row.is_complete as boolean) || false,
+      completedAt: row.completed_at ? new Date(row.completed_at as string) : undefined,
+      filmingStatus: (row.filming_status as Scene['filmingStatus']) || undefined,
+      filmingNotes: (row.filming_notes as string) || undefined,
+      shootingDay: (row.shooting_day as number) || undefined,
+      // Auto-confirm scenes that have characters from the server (e.g. confirmed in Prep)
+      characterConfirmationStatus: (charIds.length > 0 || !row.script_content)
+        ? 'confirmed' as const
+        : 'pending' as const,
+    };
+  });
 }
 
 function mapCharacters(dbCharacters: Record<string, unknown>[]): Character[] {
@@ -210,7 +217,7 @@ function mapCharacters(dbCharacters: Record<string, unknown>[]): Character[] {
     return {
       id: row.id as string,
       name: (row.name as string) || '',
-      initials: (row.initials as string) || '',
+      initials: (row.initials as string) || ((row.name as string) || '').split(' ').map(w => w[0]).join('').substring(0, 3),
       avatarColour: (row.avatar_colour as string) || undefined,
       actorNumber: (meta.billing as number) || undefined,
       role: ((meta.category as string) === 'supporting_artist' ? 'background' : 'lead') as 'lead' | 'supporting' | 'background',
