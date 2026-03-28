@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   try {
     const {
       description,
-      screenshotUrls = [],
+      screenshots = [],
       userEmail,
       userName,
       url,
@@ -22,14 +22,14 @@ export default async function handler(req, res) {
     const resendKey = process.env.RESEND_API_KEY;
     const recipientEmail = 'amelia-mara@outlook.com';
 
-    // Build screenshot HTML
-    const screenshotHtml = screenshotUrls.length > 0
+    // Build screenshot HTML — reference attachments by CID
+    const screenshotHtml = screenshots.length > 0
       ? `
         <h3 style="margin-top:24px;color:#1a1a1a;">Screenshots</h3>
-        ${screenshotUrls.map((url, i) => `
+        ${screenshots.map((s, i) => `
           <div style="margin:12px 0;">
-            <a href="${url}" target="_blank" style="color:#ef4444;">Screenshot ${i + 1}</a><br/>
-            <img src="${url}" alt="Screenshot ${i + 1}" style="max-width:100%;max-height:400px;border-radius:8px;margin-top:4px;border:1px solid #e5e5e5;" />
+            <p style="margin:0 0 4px;font-size:13px;color:#666;">Screenshot ${i + 1}</p>
+            <img src="cid:screenshot-${i + 1}" alt="Screenshot ${i + 1}" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid #e5e5e5;" />
           </div>
         `).join('')}
       `
@@ -59,6 +59,13 @@ ${description}
       </div>
     `;
 
+    // Build Resend attachments from base64 screenshot data
+    const attachments = screenshots.map((s, i) => ({
+      filename: s.filename || `screenshot-${i + 1}.png`,
+      content: s.content,
+      content_id: `screenshot-${i + 1}`,
+    }));
+
     // Send email via Resend API
     if (!resendKey) {
       console.error('[BugReport] RESEND_API_KEY not configured');
@@ -76,6 +83,7 @@ ${description}
         to: [recipientEmail],
         subject: `[Bug Report] ${description.substring(0, 60)}${description.length > 60 ? '...' : ''}`,
         html: htmlBody,
+        attachments,
       }),
     });
 
@@ -88,7 +96,7 @@ ${description}
     // Always log the report to server logs as a backup
     console.log('[BugReport]', JSON.stringify({
       description: description.substring(0, 200),
-      screenshotUrls,
+      screenshotCount: screenshots.length,
       userEmail,
       userName,
       timestamp,

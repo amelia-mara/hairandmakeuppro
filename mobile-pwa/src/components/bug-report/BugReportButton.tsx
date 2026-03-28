@@ -1,9 +1,5 @@
 import { useState, useRef } from 'react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import { v4 as uuidv4 } from 'uuid';
-
-const BUG_REPORT_BUCKET = 'bug-reports';
 
 interface BugReportModalProps {
   isOpen: boolean;
@@ -59,34 +55,31 @@ export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
     setError(null);
 
     try {
-      // Upload screenshots to Supabase storage
-      const screenshotUrls: string[] = [];
+      // Convert screenshots to base64 for direct email attachment
+      const screenshotAttachments: { filename: string; content: string; contentType: string }[] = [];
 
-      if (isSupabaseConfigured && screenshots.length > 0) {
-        for (const file of screenshots) {
-          const ext = file.name.split('.').pop() || 'png';
-          const path = `${uuidv4()}.${ext}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from(BUG_REPORT_BUCKET)
-            .upload(path, file, {
-              contentType: file.type || 'image/png',
-              cacheControl: '3600',
-            });
-
-          if (!uploadError) {
-            const { data: urlData } = supabase.storage
-              .from(BUG_REPORT_BUCKET)
-              .getPublicUrl(path);
-            screenshotUrls.push(urlData.publicUrl);
-          }
-        }
+      for (const file of screenshots) {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Strip the data:image/...;base64, prefix
+            resolve(result.split(',')[1]);
+          };
+          reader.readAsDataURL(file);
+        });
+        const ext = file.name.split('.').pop() || 'png';
+        screenshotAttachments.push({
+          filename: `screenshot-${screenshotAttachments.length + 1}.${ext}`,
+          content: base64,
+          contentType: file.type || 'image/png',
+        });
       }
 
       // Send bug report via API
       const reportData = {
         description: description.trim(),
-        screenshotUrls,
+        screenshots: screenshotAttachments,
         userEmail: user?.email || 'Unknown',
         userName: user?.name || 'Unknown',
         url: window.location.href,
