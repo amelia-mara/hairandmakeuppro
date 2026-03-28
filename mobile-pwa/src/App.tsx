@@ -95,27 +95,12 @@ function AppContent() {
     setAutoOpenProject,
   } = useAuthStore();
 
-  // Tutorial state — show on first login for authenticated users
+  // Tutorial state — shown after first project creation
   const {
-    hasCompletedTutorial,
-    hasSkippedTutorial,
     showTutorial,
-    startTutorial,
   } = useTutorialStore();
 
-  const tutorialTriggered = useRef(false);
-  useEffect(() => {
-    if (
-      isAuthenticated &&
-      !hasCompletedTutorial &&
-      !hasSkippedTutorial &&
-      !showTutorial &&
-      !tutorialTriggered.current
-    ) {
-      tutorialTriggered.current = true;
-      startTutorial();
-    }
-  }, [isAuthenticated, hasCompletedTutorial, hasSkippedTutorial, showTutorial, startTutorial]);
+  // Tutorial is triggered from CreateProjectScreen after first project creation
 
   // Track if we're showing the home/setup screen
   // Start as false - will be set true explicitly when needed
