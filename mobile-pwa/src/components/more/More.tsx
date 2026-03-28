@@ -27,6 +27,7 @@ import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentM
 import type { ScheduleAmendmentResult } from '@/services/scheduleAmendmentService';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { UserGuide } from '@/components/settings/UserGuide';
+import { BugReportModal } from '@/components/bug-report/BugReportButton';
 
 type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile' | 'productionDetails' | 'helpGuide';
 
@@ -221,6 +222,7 @@ interface MoreMenuProps {
 }
 
 function MoreMenu({ onNavigate, onNavigateToTab, canManage }: MoreMenuProps) {
+  const [bugReportOpen, setBugReportOpen] = useState(false);
   const { getMoreMenuItems } = useNavigationStore();
   const moreMenuItems = getMoreMenuItems();
 
@@ -324,6 +326,27 @@ function MoreMenu({ onNavigate, onNavigateToTab, canManage }: MoreMenuProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
+
+          {/* Report a Bug */}
+          <button
+            onClick={() => setBugReportOpen(true)}
+            className="w-full card flex items-center gap-4 active:scale-[0.98] transition-transform"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gold-100/50 flex items-center justify-center text-gold">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0112 12.75zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 01-1.152-6.135 23.772 23.772 0 01.198-3.83c.112-.764-.264-1.52-.974-1.822A23.904 23.904 0 0012 1.5c-2.292 0-4.49.369-6.28 1.053-.71.302-1.085 1.058-.974 1.823.098.67.155 1.35.172 2.035a23.86 23.86 0 01-.198 1.795 23.924 23.924 0 01-1.152 6.135C5.684 13.828 8.168 12.75 12 12.75z" />
+              </svg>
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-sm font-semibold text-text-primary">Report a Bug</h3>
+              <p className="text-xs text-text-muted">Help us improve the beta</p>
+            </div>
+            <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <BugReportModal isOpen={bugReportOpen} onClose={() => setBugReportOpen(false)} />
 
           {/* Edit Menu button at the bottom */}
           <div className="pt-4 border-t border-border mt-4">
