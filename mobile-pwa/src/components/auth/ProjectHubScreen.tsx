@@ -599,31 +599,41 @@ export function ProjectHubScreen() {
           lookSceneMap.set(ls.look_id, existing);
         }
 
-        const localScenes = scenes.map(s => ({
-          id: s.id,
-          sceneNumber: s.scene_number,
-          slugline: s.location || `Scene ${s.scene_number}`,
-          intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
-          timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
-          synopsis: s.synopsis || undefined,
-          scriptContent: s.script_content || undefined,
-          characters: sceneCharMap.get(s.id) || [],
-          isComplete: s.is_complete,
-          completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
-          filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
-          filmingNotes: s.filming_notes || undefined,
-          shootingDay: s.shooting_day || undefined,
-          characterConfirmationStatus: ((sceneCharMap.get(s.id) || []).length > 0 || !s.script_content)
-            ? 'confirmed' as const
-            : 'pending' as const,
-        }));
+        const localScenes = scenes.map(s => {
+          const intExt = (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT';
+          const timeOfDay = (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
+          const location = s.location || 'UNKNOWN';
+          return {
+            id: s.id,
+            sceneNumber: s.scene_number,
+            slugline: `${intExt}. ${location} - ${timeOfDay}`,
+            intExt,
+            timeOfDay,
+            synopsis: s.synopsis || undefined,
+            scriptContent: s.script_content || undefined,
+            characters: sceneCharMap.get(s.id) || [],
+            isComplete: s.is_complete,
+            completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
+            filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
+            filmingNotes: s.filming_notes || undefined,
+            shootingDay: s.shooting_day || undefined,
+            characterConfirmationStatus: ((sceneCharMap.get(s.id) || []).length > 0 || !s.script_content)
+              ? 'confirmed' as const
+              : 'pending' as const,
+          };
+        });
 
-        const localCharacters = characters.map(c => ({
-          id: c.id,
-          name: c.name,
-          initials: c.initials,
-          avatarColour: c.avatar_colour,
-        }));
+        const localCharacters = characters.map(c => {
+          const meta = ((c as any).metadata as Record<string, unknown>) || {};
+          return {
+            id: c.id,
+            name: c.name,
+            initials: c.initials || c.name.split(' ').map((w: string) => w[0]).join('').substring(0, 3),
+            avatarColour: c.avatar_colour,
+            actorNumber: (meta.billing as number) || undefined,
+            role: ((meta.category as string) === 'supporting_artist' ? 'background' : 'lead') as 'lead' | 'supporting' | 'background',
+          };
+        });
 
         const localLooks = looks.map(l => {
           // Extract embedded metadata from makeup_details JSON

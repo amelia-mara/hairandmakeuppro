@@ -55,12 +55,18 @@ type DbScriptUpload = Database['public']['Tables']['script_uploads']['Row'];
 // ============================================================================
 
 export function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'> {
+  // Extract raw location from slugline (strip INT/EXT prefix and time-of-day suffix)
+  let location = scene.slugline || '';
+  const locMatch = location.match(/^(?:INT|EXT)\.\s*(.+?)\s*-\s*(?:DAY|NIGHT|MORNING|EVENING|CONTINUOUS|DAWN|DUSK)$/i);
+  if (locMatch) {
+    location = locMatch[1].trim();
+  }
   return {
     id: scene.id,
     project_id: projectId,
     scene_number: scene.sceneNumber,
     int_ext: scene.intExt || null,
-    location: scene.slugline || null,
+    location: location || null,
     time_of_day: scene.timeOfDay || null,
     synopsis: scene.synopsis || null,
     page_count: null,
@@ -185,7 +191,7 @@ function dbToScene(
   return {
     id: db.id,
     sceneNumber: db.scene_number,
-    slugline: db.location || '',
+    slugline: `${db.int_ext || 'INT'}. ${db.location || 'UNKNOWN'} - ${db.time_of_day || 'DAY'}`,
     intExt: (db.int_ext as Scene['intExt']) || 'INT',
     timeOfDay: (db.time_of_day as Scene['timeOfDay']) || 'DAY',
     synopsis: db.synopsis || undefined,
@@ -197,7 +203,10 @@ function dbToScene(
     shootingDay: db.shooting_day || undefined,
     scriptContent: db.script_content || existingScene?.scriptContent,
     hasScheduleDiscrepancy: existingScene?.hasScheduleDiscrepancy,
-    characterConfirmationStatus: existingScene?.characterConfirmationStatus,
+    // Auto-confirm scenes that have characters from the server (e.g. confirmed in Prep)
+    characterConfirmationStatus: characterIds.length > 0
+      ? 'confirmed' as const
+      : (existingScene?.characterConfirmationStatus || 'pending' as const),
     suggestedCharacters: existingScene?.suggestedCharacters,
     amendmentStatus: existingScene?.amendmentStatus,
     previousScriptContent: existingScene?.previousScriptContent,
@@ -207,13 +216,17 @@ function dbToScene(
 }
 
 function dbToCharacter(db: DbCharacter, existingChar?: Character): Character {
+  const meta = (db as any).metadata as Record<string, unknown> | undefined;
   return {
     id: db.id,
     name: db.name,
-    initials: db.initials,
+    initials: db.initials || db.name.split(' ').map((w: string) => w[0]).join('').substring(0, 3),
     avatarColour: db.avatar_colour,
-    actorNumber: existingChar?.actorNumber,
-    role: existingChar?.role,
+    // Extract role/billing from metadata (set by Prep), fall back to local
+    actorNumber: (meta?.billing as number) || existingChar?.actorNumber,
+    role: meta?.category
+      ? ((meta.category as string) === 'supporting_artist' ? 'background' : 'lead') as 'lead' | 'supporting' | 'background'
+      : existingChar?.role,
   };
 }
 
