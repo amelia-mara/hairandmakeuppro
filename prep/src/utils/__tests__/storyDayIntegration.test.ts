@@ -49,17 +49,17 @@ const MOCK_SCENES: ParsedScene[] = [
   // 2: "the next day" — explicit marker, Day 2
   scene('2', 'INT. OFFICE - DAY', ['The next day,']),
 
-  // 3: "three weeks later" — multi-day jump (+21), Day 23
+  // 3: "three weeks later" — next depicted day (+1), Day 3
   scene('3', 'EXT. PARK - MORNING', ['Three weeks later.']),
 
-  // 4: "meanwhile" — same day, no increment, Day 23
+  // 4: "meanwhile" — same day, no increment, Day 3
   scene('4', 'INT. WAREHOUSE - MORNING', ['Meanwhile,']),
 
-  // 5: NIGHT then DAY — TOD regression, Day 24
+  // 5: NIGHT then DAY — TOD regression, Day 4
   scene('5', 'INT. BAR - NIGHT'),
   scene('6', 'EXT. STREET - DAY'),
 
-  // 6 (scene 7): DAY then NIGHT — forward progression, same Day 24
+  // 6 (scene 7): DAY then NIGHT — forward progression, same Day 4
   scene('7', 'INT. RESTAURANT - NIGHT'),
 
   // 7 (scene 8): FLASHBACK in heading
@@ -74,12 +74,7 @@ const MOCK_SCENES: ParsedScene[] = [
   // 10 (scene 11): Concurrent — different location, same TOD as scene 10
   scene('11', 'EXT. ROOFTOP - NIGHT'),
 
-  // 11 (scene 12): Concurrent cut-back — OFFICE+DAY seen on Day 24 (scene 6)
-  // After the flashback exit we're back on Day 24. OFFICE at DAY was scene 6.
-  // But location tracking was reset when we entered day 24. Let me set this up
-  // properly: we need a location+TOD that already appeared this story day.
-  // Scene 10 is BAR+NIGHT, Scene 11 is ROOFTOP+NIGHT.
-  // So BAR+NIGHT was already seen this day — cut back.
+  // 11 (scene 12): Concurrent cut-back — BAR+NIGHT already seen this day
   scene('12', 'INT. BAR - NIGHT'),
 
   // 12 (scene 13): Dialogue cue — "only seven days left"
@@ -135,19 +130,19 @@ describe('buildStoryDayMap full pipeline integration', () => {
     });
   });
 
-  it('scene 3: "three weeks later" — day increments by 21 to Day 23', () => {
+  it('scene 3: "three weeks later" — next depicted day, Day 3 (not +21)', () => {
     expect(results[2]).toMatchObject({
       sceneNumber: '3',
-      storyDay: 23,
+      storyDay: 3,
       confidence: 'explicit',
       dayChangeReason: 'explicit_marker',
     });
   });
 
-  it('scene 4: "meanwhile" — same day 23, no increment', () => {
+  it('scene 4: "meanwhile" — same day 3, no increment', () => {
     expect(results[3]).toMatchObject({
       sceneNumber: '4',
-      storyDay: 23,
+      storyDay: 3,
       dayChangeReason: 'none',
     });
   });
@@ -157,24 +152,24 @@ describe('buildStoryDayMap full pipeline integration', () => {
   it('scene 5: NIGHT sets up the baseline', () => {
     expect(results[4]).toMatchObject({
       sceneNumber: '5',
-      storyDay: 23,
+      storyDay: 3,
     });
   });
 
-  it('scene 6: NIGHT→DAY regression — new day 24, inferred, tod_regression, needsReview', () => {
+  it('scene 6: NIGHT→DAY regression — new day 4, inferred, tod_regression, needsReview', () => {
     expect(results[5]).toMatchObject({
       sceneNumber: '6',
-      storyDay: 24,
+      storyDay: 4,
       confidence: 'inferred',
       dayChangeReason: 'tod_regression',
       needsReview: true,
     });
   });
 
-  it('scene 7: DAY→NIGHT — same day 24, no increment', () => {
+  it('scene 7: DAY→NIGHT — same day 4, no increment', () => {
     expect(results[6]).toMatchObject({
       sceneNumber: '7',
-      storyDay: 24,
+      storyDay: 4,
       dayChangeReason: 'none',
     });
   });
@@ -203,10 +198,10 @@ describe('buildStoryDayMap full pipeline integration', () => {
     expect(results[8].timeline).toBe('non-present');
   });
 
-  it('scene 10: END FLASHBACK — present counter resumes at 24', () => {
+  it('scene 10: END FLASHBACK — present counter resumes at 4', () => {
     expect(results[9]).toMatchObject({
       sceneNumber: '10',
-      storyDay: 24,
+      storyDay: 4,
       timeline: 'present',
       isFlashback: false,
     });
@@ -217,7 +212,7 @@ describe('buildStoryDayMap full pipeline integration', () => {
   it('scene 11: different location, same TOD (NIGHT) — no increment, isConcurrent', () => {
     expect(results[10]).toMatchObject({
       sceneNumber: '11',
-      storyDay: 24,
+      storyDay: 4,
       isConcurrent: true,
       dayChangeReason: 'none',
     });
@@ -226,7 +221,7 @@ describe('buildStoryDayMap full pipeline integration', () => {
   it('scene 12: cut back to BAR+NIGHT seen earlier same day — no increment, isConcurrent', () => {
     expect(results[11]).toMatchObject({
       sceneNumber: '12',
-      storyDay: 24,
+      storyDay: 4,
       isConcurrent: true,
       dayChangeReason: 'none',
     });
@@ -237,7 +232,7 @@ describe('buildStoryDayMap full pipeline integration', () => {
   it('scene 13: "only seven days left" — dialogueTimeCue populated, needsReview true, day unchanged', () => {
     expect(results[12]).toMatchObject({
       sceneNumber: '13',
-      storyDay: 24,
+      storyDay: 4,
       needsReview: true,
     });
     expect(results[12].dialogueTimeCue).not.toBe('');

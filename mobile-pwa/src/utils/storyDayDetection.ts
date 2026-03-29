@@ -273,72 +273,13 @@ export function parseTodJumpDays(tod: string): number {
   return parseJumpDaysFromText(t);
 }
 
-/** Shared logic: extract the numeric day increment from uppercased text. */
-function parseJumpDaysFromText(t: string): number {
-  // "next day/morning/evening" or "following day/morning/evening" → +1
-  if (/\b(?:THE\s+)?(?:NEXT|FOLLOWING)\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)) return 1;
-
-  // "a few days later" → +3
-  if (/\bA\s+FEW\s+DAYS?\s+LATER\b/.test(t)) return 3;
-  // "a couple of days later" / "a couple days later" → +2
-  if (/\bA\s+COUPLE\s+(?:OF\s+)?DAYS?\s+LATER\b/.test(t)) return 2;
-  // "several days later" → +5
-  if (/\bSEVERAL\s+DAYS?\s+LATER\b/.test(t)) return 5;
-
-  // "a week later" → +7
-  if (/\bA\s+WEEK\s+LATER\b/.test(t)) return 7;
-
-  // "a month later" → flag as large jump, increment by 1
-  if (/\bA\s+MONTH\s+LATER\b/.test(t)) {
-    console.warn('[storyDayDetection] "a month later" detected — large jump, exact days not calculated');
-    return 1;
-  }
-
-  // Numeric: "3 days later", "2 weeks later", "6 months later", "12 years later"
-  let m = t.match(/\b(\d+)\s+DAYS?\s+LATER\b/);
-  if (m) return parseInt(m[1], 10);
-
-  m = t.match(/\b(\d+)\s+WEEKS?\s+LATER\b/);
-  if (m) return parseInt(m[1], 10) * 7;
-
-  m = t.match(/\b(\d+)\s+MONTHS?\s+LATER\b/);
-  if (m) {
-    console.warn(`[storyDayDetection] "${m[0]}" detected — large jump, exact days not calculated`);
-    return 1;
-  }
-
-  m = t.match(/\b(\d+)\s+YEARS?\s+LATER\b/);
-  if (m) {
-    console.warn(`[storyDayDetection] "${m[0]}" detected — large jump, exact days not calculated`);
-    return 1;
-  }
-
-  // Written-out number + days: "THREE DAYS LATER"
-  const writtenDaysRe = new RegExp(`\\b(${Object.keys(WRITTEN_TO_NUMBER).join('|')})\\s+DAYS?\\s+LATER\\b`);
-  m = t.match(writtenDaysRe);
-  if (m) return writtenToNumber(m[1]) || 1;
-
-  // Written-out number + weeks: "TWO WEEKS LATER"
-  const writtenWeeksRe = new RegExp(`\\b(${Object.keys(WRITTEN_TO_NUMBER).join('|')})\\s+WEEKS?\\s+LATER\\b`);
-  m = t.match(writtenWeeksRe);
-  if (m) return (writtenToNumber(m[1]) || 1) * 7;
-
-  // Written-out number + months/years: flag as large jump
-  const writtenLargeRe = new RegExp(`\\b(${Object.keys(WRITTEN_TO_NUMBER).join('|')})\\s+(MONTHS?|YEARS?)\\s+LATER\\b`);
-  m = t.match(writtenLargeRe);
-  if (m) {
-    console.warn(`[storyDayDetection] "${m[0]}" detected — large jump, exact days not calculated`);
-    return 1;
-  }
-
-  // Vague quantities + time units: "some weeks later", "many months later"
-  if (/\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?)\s+LATER\b/.test(t)) return 3;
-  if (/\b(SEVERAL|FEW|MANY|SOME)\s+(WEEKS?|MONTHS?)\s+LATER\b/.test(t)) {
-    console.warn('[storyDayDetection] Vague large time jump detected — exact days not calculated');
-    return 1;
-  }
-
-  // Fallback: something matched the boolean check but we couldn't parse a number
+/**
+ * Story days count depicted days, not elapsed calendar time.
+ * "One week later" means the next day depicted in the story — always +1.
+ * The real-world time gap between depicted days is irrelevant to
+ * story day numbering.
+ */
+function parseJumpDaysFromText(_t: string): number {
   return 1;
 }
 
