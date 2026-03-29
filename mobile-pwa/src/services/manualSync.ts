@@ -89,6 +89,7 @@ export function characterToDb(char: Character, projectId: string): Omit<DbCharac
     initials: char.initials,
     avatar_colour: char.avatarColour || '#6366f1',
     base_look_description: null,
+    metadata: null,
   };
 }
 
