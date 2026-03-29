@@ -19,6 +19,7 @@ import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
 import { Breakdown } from '@/components/breakdown';
+import { MasterBreakdown } from '@/components/master-breakdown';
 import { Lookbooks } from '@/components/lookbooks';
 import { Timesheet } from '@/components/timesheet';
 import { Budget } from '@/components/budget';
@@ -501,7 +502,7 @@ function AppContent() {
   // Render content based on active tab and current view
   const renderContent = () => {
     // If viewing a specific scene (from Today or Breakdown tabs)
-    if (currentSceneId && (activeTab === 'today' || activeTab === 'breakdown')) {
+    if (currentSceneId && (activeTab === 'today' || activeTab === 'scenes')) {
       return (
         <SceneView
           sceneId={currentSceneId}
@@ -514,8 +515,10 @@ function AppContent() {
     switch (activeTab) {
       case 'today':
         return <Today onSceneSelect={handleSceneSelect} onNavigateToTab={handleNavigateToTab} />;
-      case 'breakdown':
+      case 'scenes':
         return <Breakdown onSceneSelect={handleSceneSelect} />;
+      case 'breakdown':
+        return <MasterBreakdown />;
       case 'lookbook':
         return <Lookbooks />;
       case 'hours':

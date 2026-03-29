@@ -206,7 +206,7 @@ export function Lookbooks() {
         onBack={() => setCurrentLook(null)}
         onSceneClick={(sceneId) => {
           setCurrentLook(null);
-          setActiveTab('breakdown');
+          setActiveTab('scenes');
           setCurrentScene(sceneId);
         }}
       />

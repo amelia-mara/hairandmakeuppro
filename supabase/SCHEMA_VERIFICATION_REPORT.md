@@ -65,7 +65,7 @@ The report assumes all migrations have been applied in order. If any migration w
 
 ---
 
-#### `projects` — Status: ⚠ Missing critical column
+#### `projects` — Status: ✓ Correct
 
 **Schema columns (from migrations):**
 - `id` UUID PK DEFAULT uuid_generate_v4()
@@ -77,10 +77,9 @@ The report assumes all migrations have been applied in order. If any migration w
 - `created_at` TIMESTAMPTZ NOT NULL DEFAULT NOW()
 - `pending_deletion_at` TIMESTAMPTZ DEFAULT NULL (added in 007)
 - `department` TEXT NOT NULL DEFAULT 'hmu' CHECK (hmu/costume) (added in 013)
+- `has_prep_access` BOOLEAN NOT NULL DEFAULT false (added in 014)
 
-**Critical gap:** `has_prep_access` column does not exist anywhere — not in migrations, not in code. Per the master context, this boolean is the sync gate between the two apps. Every piece of sync logic must check `project.has_prep_access === true`. Without it, there is no way to distinguish Designer-led projects (full Prep+App sync) from app-only projects.
-
-**Verdict:** ✗ Missing `has_prep_access` — must be added before any sync work
+**Verdict:** ✓ Correct — `has_prep_access` added in migration 014, TypeScript types updated
 
 ---
 
@@ -101,22 +100,15 @@ The report assumes all migrations have been applied in order. If any migration w
 
 ---
 
-#### `characters` — Status: ⚠ Narrow for Prep
+#### `characters` — Status: ✓ Correct
 
 **Schema columns:**
 - `id`, `project_id`, `name`, `actor_name`, `initials`, `avatar_colour`, `base_look_description`, `created_at`
+- `metadata` JSONB DEFAULT '{}' (added in 014)
 
-**Prep expects (from `ParsedCharacterData` type in breakdownStore.ts):**
-- `billing` (number — cast number)
-- `category` ('principal' | 'supporting_artist')
-- `age`, `gender`, `hairColour`, `hairType`, `eyeColour`, `skinTone`, `build`
-- `distinguishingFeatures`, `notes`
+**Prep character profile fields** (`billing`, `category`, `age`, `gender`, `hairColour`, `hairType`, `eyeColour`, `skinTone`, `build`, `distinguishingFeatures`, `notes`) are stored in the `metadata` JSONB column. This avoids adding 11 columns the mobile app doesn't use.
 
-**These fields exist in Prep's localStorage stores but NOT in the database.** When Prep persistence is implemented, these fields need to be stored somewhere. Two options:
-1. Add columns to the `characters` table
-2. Store them as a JSONB `metadata` column
-
-**Verdict:** ⚠ Missing columns for Prep persistence. Not blocking mobile app, but blocking Prep persistence (Step 4).
+**Verdict:** ✓ Correct — `metadata` JSONB column added in migration 014, TypeScript types updated
 
 ---
 
@@ -332,16 +324,14 @@ Migration `011_fix_rls_policies.sql` is a comprehensive overhaul that drops ALL 
 | `is_project_owner()` | 011 | SECURITY DEFINER STABLE | ✓ |
 | `can_access_project_storage()` | 011 | SECURITY DEFINER STABLE | ✓ |
 | `can_access_storage_photo()` | 011 | Alias for above | ✓ |
-| `join_project_by_invite_code()` | 013 (latest) | SECURITY DEFINER | ✗ (013 version) |
+| `join_project_by_invite_code()` | 014 (latest) | SECURITY DEFINER | ✓ (fixed in 013+014) |
 | `lookup_project_by_invite_code()` | 011 | SECURITY DEFINER | ✓ |
 | `create_project()` | 013 | SECURITY DEFINER | ✓ |
 | `sync_scene_characters()` | 011 | SECURITY DEFINER + member check | ✓ |
 | `sync_look_scenes()` | 011 | SECURITY DEFINER + member check | ✓ |
 | `deactivate_previous_scripts()` | 011 | SECURITY DEFINER | ✓ |
 
-**Issue:** `join_project_by_invite_code()` was re-created in migration 013 without `SET search_path = public` (it was added in 011 but 013 overwrites it). This is a minor security hygiene issue, not a functional bug.
-
-**Verdict:** ⚠ Minor — `join_project_by_invite_code` needs `SET search_path` re-added
+**Verdict:** ✓ All RPC functions have correct `SET search_path = public`. Migration 013 fixed inline, migration 014 re-applies the corrected version.
 
 ---
 
@@ -367,19 +357,15 @@ Migration 010 adds these tables to `supabase_realtime` with `REPLICA IDENTITY FU
 
 ## Critical Gaps
 
-These must be fixed before Prep persistence or sync work begins:
+All critical gaps have been resolved:
 
-### 1. ✗ Missing `has_prep_access` column on `projects` table
+### 1. ✓ RESOLVED — `has_prep_access` column on `projects` table
 
-**Impact:** This is the sync gate. Without it, there is no way to distinguish Designer-led projects (full two-way sync with Prep) from app-only projects. Every sync flow must check this flag.
+**Fix applied:** Migration 014 adds `has_prep_access BOOLEAN NOT NULL DEFAULT false`. RPCs (`create_project`, `join_project_by_invite_code`, `lookup_project_by_invite_code`) updated to accept/return the column. TypeScript types in `mobile-pwa/src/types/supabase.ts` updated.
 
-**Fix:** Add `has_prep_access BOOLEAN NOT NULL DEFAULT false` to the projects table. Update `create_project` RPC to set it when a Designer creates a project.
+### 2. ✓ RESOLVED — Character metadata columns for Prep persistence
 
-### 2. ⚠ Missing character metadata columns for Prep persistence
-
-**Impact:** Prep's character profiles include `billing`, `category`, `age`, `gender`, `hairColour`, `hairType`, `eyeColour`, `skinTone`, `build`, `distinguishingFeatures`, `notes`. These are stored in localStorage only. When Prep persistence is implemented, they need to persist to Supabase.
-
-**Fix:** Add a `metadata` JSONB column to the `characters` table to hold Prep-specific character details without breaking the mobile app.
+**Fix applied:** Migration 014 adds `metadata JSONB DEFAULT '{}'` to the `characters` table. Prep serializes profile fields (billing, age, gender, etc.) into this column. TypeScript types in `mobile-pwa/src/types/supabase.ts` updated.
 
 ---
 
@@ -387,9 +373,9 @@ These must be fixed before Prep persistence or sync work begins:
 
 These should be fixed eventually but do not block the immediate work:
 
-### 1. `join_project_by_invite_code` missing `SET search_path`
+### 1. ✓ RESOLVED — `join_project_by_invite_code` missing `SET search_path`
 
-Migration 013 re-created this function without the `SET search_path = public` that was added in 011. Should be re-applied for security hygiene.
+Migration 013 fixed inline with `SET search_path = public` and `public.` schema-qualified table refs. Migration 014 re-applies the corrected version.
 
 ### 2. `receipts` and `invoices` storage not yet created
 
@@ -413,9 +399,9 @@ Should be added when lookbook generation is live and needs real-time updates.
 
 | Area | Status |
 |------|--------|
-| Tables (14 + app_config) | ✓ All exist. 1 critical missing column (`has_prep_access`). |
+| Tables (14 + app_config) | ✓ All exist with all required columns. |
 | RLS policies | ✓ Complete coverage on all tables. |
 | Storage buckets (2) | ✓ Working for current needs. |
-| RPC functions (8) | ⚠ 1 minor search_path fix needed. |
+| RPC functions (8) | ✓ All correct with search_path set. |
 | Realtime | ✓ All sync-critical tables enabled. |
-| **Overall** | **⚠ One critical gap blocks sync work. Fix script provided below.** |
+| **Overall** | **✓ All critical gaps resolved. Ready for sync work.** |
