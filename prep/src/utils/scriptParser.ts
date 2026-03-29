@@ -188,7 +188,7 @@ function normalizeScriptText(text: string): string {
     if (!/^(\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(line)) return line;
 
     // Find "- DAY", "– NIGHT", etc. followed by remaining text
-    const timeSplitRe = /(\s+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b)([\s].+)/i;
+    const timeSplitRe = /(\s+[-–—]\s*(?:MOMENTS\s+LATER|SAME\s+TIME|MAGIC\s+HOUR|GOLDEN\s+HOUR|DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SIMULTANEOUS|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING|MIDNIGHT|NOON|MIDDAY|PRE[-\s]?DAWN|TWILIGHT)\b)([\s].+)/i;
     const m = line.match(timeSplitRe);
     if (m && m.index != null) {
       const headingEnd = m.index + m[1].length;
@@ -688,7 +688,7 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   workingLine = workingLine.slice(intExtMatch[0].length).trim();
   workingLine = workingLine.replace(/^[\.\-–—]\s*/, '').trim();
 
-  const timeSeparatorPattern = /(?:\s*[-–—\.]+\s*|\s+)(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SAME TIME|MOMENTS LATER|SIMULTANEOUS|MAGIC HOUR|GOLDEN HOUR|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING)(?:\s*[-–—]?\s*(?:FLASHBACK|PRESENT|CONT(?:'D)?)?)?$/i;
+  const timeSeparatorPattern = /(?:\s*[-–—\.]+\s*|\s+)(MOMENTS LATER|SAME TIME|MAGIC HOUR|GOLDEN HOUR|DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SIMULTANEOUS|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING|MIDNIGHT|NOON|MIDDAY|PRE[-\s]?DAWN|TWILIGHT)(?:\s*[-–—]?\s*(?:FLASHBACK|PRESENT|CONT(?:'D)?)?)?$/i;
 
   let timeOfDay = 'DAY';
   let location = workingLine;
@@ -1235,6 +1235,38 @@ export function parseScriptText(text: string): ParsedScript {
 
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
+
+  /* ── Validation: compare input scene headings vs output scenes ────────── */
+  const inputHeadingRe = /^(\d+[A-Z]{0,4}\s+)?(?:INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.?|EXT\.?)\b/i;
+  const inputSceneNumRe = /^(\d+[A-Z]{0,4})\s+/i;
+  let inputHeadingCount = 0;
+  const inputExplicitNums: string[] = [];
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (inputHeadingRe.test(t)) {
+      inputHeadingCount++;
+      const numMatch = t.match(inputSceneNumRe);
+      if (numMatch) inputExplicitNums.push(numMatch[1].toUpperCase());
+    }
+  }
+
+  const outputNonPreamble = scenes.filter(s => s.sceneNumber !== '0');
+  const outputSceneNums = new Set(outputNonPreamble.map(s => s.sceneNumber));
+
+  if (inputExplicitNums.length > 0) {
+    const missing = inputExplicitNums.filter(n => !outputSceneNums.has(n));
+    if (missing.length > 0) {
+      console.warn(
+        `[scriptParser] ${missing.length} scene heading(s) in input missing from output: scene(s) ${missing.join(', ')}`
+      );
+    }
+  } else if (inputHeadingCount > outputNonPreamble.length) {
+    console.warn(
+      `[scriptParser] Found ${inputHeadingCount} scene headings in input but only ${outputNonPreamble.length} in output — ` +
+      `${inputHeadingCount - outputNonPreamble.length} scene(s) may have been dropped`
+    );
+  }
 
   return { title, scenes, characters, rawText: text };
 }
