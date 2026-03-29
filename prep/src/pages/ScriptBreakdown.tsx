@@ -952,12 +952,14 @@ interface TagPopupState {
   sceneId: string;
   startOffset: number; endOffset: number;
   text: string;
-  /** Step 1: pick character, Step 2: pick field/category */
-  step: 'character' | 'field';
+  /** Step 1: pick character, Step 2: pick field/category, edit: edit existing tag */
+  step: 'character' | 'field' | 'edit';
   categoryId?: string;
   characterId?: string;
   /** When true, popup appears below the selection instead of above */
   popBelow?: boolean;
+  /** Tag IDs being edited (set when step === 'edit') */
+  editingTagIds?: string[];
 }
 
 function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, onSynopsisTag, projectId }: {
@@ -1133,7 +1135,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     setPopup({ ...popup, step: 'field', characterId: charId });
   }, [popup]);
 
-  /* Step 1b: User creates a new character → add to project, advance to field selection */
+  /* Step 1b: User creates a new character → add to project and scene, advance to field selection */
   const handleCreateNewCharacter = useCallback(() => {
     if (!popup) return;
     const pd = parsedScriptStore.getParsedData(projectId);
@@ -1152,8 +1154,65 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
       s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, newId] } : s
     );
     parsedScriptStore.setParsedData(projectId, { ...pd, characters: updatedChars, scenes: updatedScenes });
+    // Also add to the breakdown store so they appear in scene breakdown panel
+    const bd = useBreakdownStore.getState().getBreakdown(popup.sceneId);
+    if (bd && !bd.characters.some(c => c.characterId === newId)) {
+      useBreakdownStore.getState().setBreakdown(popup.sceneId, {
+        ...bd,
+        characters: [...bd.characters, {
+          characterId: newId, lookId: '',
+          entersWith: { hair: '', makeup: '', wardrobe: '' },
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change' as const, changeNotes: '',
+          exitsWith: { hair: '', makeup: '', wardrobe: '' },
+          notes: '',
+        }],
+      });
+    }
     setPopup({ ...popup, step: 'field', characterId: newId });
   }, [popup, parsedScriptStore, projectId]);
+
+  /* Add character to scene — adds to scene.characterIds and creates CharacterBreakdown entry */
+  const handleAddCharacterToScene = useCallback(() => {
+    if (!popup || !popup.characterId) return;
+    const pd = parsedScriptStore.getParsedData(projectId);
+    if (!pd) return;
+    const scene = pd.scenes.find(s => s.id === popup.sceneId);
+    if (!scene) return;
+    // Add to scene's characterIds if not already present
+    if (!scene.characterIds.includes(popup.characterId)) {
+      const updatedScenes = pd.scenes.map(s =>
+        s.id === popup.sceneId ? { ...s, characterIds: [...s.characterIds, popup.characterId!] } : s
+      );
+      parsedScriptStore.setParsedData(projectId, { ...pd, scenes: updatedScenes });
+    }
+    // Add CharacterBreakdown entry if not already present
+    const bd = useBreakdownStore.getState().getBreakdown(popup.sceneId);
+    if (bd && !bd.characters.some(c => c.characterId === popup.characterId)) {
+      useBreakdownStore.getState().setBreakdown(popup.sceneId, {
+        ...bd,
+        characters: [...bd.characters, {
+          characterId: popup.characterId, lookId: '',
+          entersWith: { hair: '', makeup: '', wardrobe: '' },
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change' as const, changeNotes: '',
+          exitsWith: { hair: '', makeup: '', wardrobe: '' },
+          notes: '',
+        }],
+      });
+    }
+    // Also create a 'cast' tag to mark the text
+    tagStore.addTag({
+      id: `tag-${Date.now()}`,
+      sceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      text: popup.text,
+      categoryId: 'cast',
+      characterId: popup.characterId,
+    });
+    setPopup(null);
+  }, [popup, parsedScriptStore, projectId, tagStore]);
 
   /* Step 2: User picks a field/category → create tag + auto-populate */
   const handleFieldPick = useCallback((catId: string) => {
@@ -1186,6 +1245,54 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     onSynopsisTag(popup.sceneId, popup.text);
     setPopup(null);
   }, [popup, tagStore, onSynopsisTag]);
+
+  /* Edit mode: change category on an existing tag */
+  const handleEditChangeCategory = useCallback((tagId: string, newCatId: string) => {
+    tagStore.updateTag(tagId, { categoryId: newCatId });
+    setPopup(null);
+  }, [tagStore]);
+
+  /* Edit mode: delete an existing tag */
+  const handleEditDeleteTag = useCallback((tagId: string) => {
+    tagStore.removeTag(tagId);
+    // If there are more tags being edited, stay open; otherwise close
+    if (popup?.editingTagIds && popup.editingTagIds.length > 1) {
+      setPopup({
+        ...popup,
+        editingTagIds: popup.editingTagIds.filter(id => id !== tagId),
+      });
+    } else {
+      setPopup(null);
+    }
+  }, [tagStore, popup]);
+
+  /* Handle click on a highlighted tag span to open edit popup */
+  const handleTagClick = useCallback((e: React.MouseEvent, sceneId: string, tagIds: string[]) => {
+    e.stopPropagation();
+    const tags = tagIds.map(id => tagStore.tags.find(t => t.id === id)).filter(Boolean) as ScriptTag[];
+    if (tags.length === 0) return;
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const estPopupHeight = 300;
+    const popBelow = rect.top < estPopupHeight + 20;
+    let y = popBelow ? rect.bottom + 10 : rect.top - 10;
+    if (popBelow && y + estPopupHeight > window.innerHeight - 10) {
+      y = window.innerHeight - estPopupHeight - 10;
+    }
+    if (!popBelow && y - estPopupHeight < 10) {
+      y = estPopupHeight + 10;
+    }
+    setPopup({
+      x: Math.min(Math.max(rect.left + rect.width / 2, 170), window.innerWidth - 170),
+      y,
+      sceneId,
+      startOffset: tags[0].startOffset,
+      endOffset: tags[0].endOffset,
+      text: tags[0].text,
+      step: 'edit',
+      popBelow,
+      editingTagIds: tagIds,
+    });
+  }, [tagStore]);
 
   /* Build a regex that matches known character names within action/description
      lines so we can highlight them inline. Only multi-word full names and their
@@ -1392,8 +1499,9 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
             const underlines = tagColors.map((color, i) =>
               `inset 0 ${-2 - i * 3}px 0 0 ${color}`
             ).join(', ');
+            const segTagIds = seg.tags.map(t => t.id);
             parts.push(
-              <span key={`${seg.start}-${seg.end}`} className="sv-highlight"
+              <span key={`${seg.start}-${seg.end}`} className="sv-highlight sv-highlight--clickable"
                 style={{
                   backgroundColor: `${tagColors[0]}33`,
                   borderBottom: 'none',
@@ -1401,6 +1509,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
                   paddingBottom: seg.tags.length > 1 ? `${(seg.tags.length - 1) * 3}px` : undefined,
                 }}
                 title={titleParts.join(' | ')}
+                onClick={(e) => handleTagClick(e, scene.id, segTagIds)}
               >{segText}</span>
             );
           }
@@ -1417,7 +1526,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
         </div>
       );
     });
-  }, [tagStore, charNames, onCharClick, highlightCharNames]);
+  }, [tagStore, charNames, onCharClick, highlightCharNames, handleTagClick]);
 
   /* Scroll to scene when selected from the scene list.
      scrollTrigger changes on every explicit scene selection (even re-clicking
@@ -1543,7 +1652,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
                 ))}
                 <button className="sv-tag-popup-char-item sv-tag-popup-char-item--new" onClick={handleCreateNewCharacter}>
                   <span className="sv-tag-popup-char-avatar" style={{ background: 'rgba(212, 148, 58, 0.2)', color: '#D4943A' }}>+</span>
-                  <span>New Character</span>
+                  <span>+ Character</span>
                 </button>
               </div>
             </>
@@ -1553,6 +1662,20 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               <div className="sv-tag-popup-title">
                 Tag as — <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{popupChars.find(c => c.id === popup.characterId)?.name}</span>
               </div>
+              {/* Add to Scene — shown when the character is not yet in this scene */}
+              {popup.characterId && (() => {
+                const scene = scenes.find(s => s.id === popup.sceneId);
+                const isInScene = scene?.characterIds.includes(popup.characterId!);
+                if (isInScene) return null;
+                return (
+                  <div className="sv-tag-popup-field-section">
+                    <button className="sv-tag-popup-btn sv-tag-popup-btn--add-scene" onClick={handleAddCharacterToScene}>
+                      <span className="sv-tag-popup-swatch" style={{ background: 'var(--accent-cue, #B8860B)' }} />
+                      Add to Scene
+                    </button>
+                  </div>
+                );
+              })()}
               <div className="sv-tag-popup-field-section">
                 <div className="sv-tag-popup-field-label">Scene Breakdown</div>
                 <div className="sv-tag-popup-grid">
@@ -1578,6 +1701,39 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
               <button className="sv-tag-popup-char-btn sv-tag-popup-char-btn--skip" onClick={() => setPopup({ ...popup, step: 'character' })}>
                 Back
               </button>
+            </>
+          )}
+          {popup.step === 'edit' && popup.editingTagIds && (
+            <>
+              <div className="sv-tag-popup-title">Edit Tag</div>
+              <div className="sv-tag-popup-quoted">"{popup.text.length > 50 ? popup.text.slice(0, 50) + '…' : popup.text}"</div>
+              {popup.editingTagIds.map(tagId => {
+                const tag = tagStore.tags.find(t => t.id === tagId);
+                if (!tag) return null;
+                const currentCat = BREAKDOWN_CATEGORIES.find(c => c.id === tag.categoryId);
+                const charName = tag.characterId ? characters.find(c => c.id === tag.characterId)?.name : '';
+                return (
+                  <div key={tagId} className="sv-tag-popup-edit-item">
+                    <div className="sv-tag-popup-edit-header">
+                      <span className="sv-tag-popup-swatch" style={{ background: currentCat?.color || '#888' }} />
+                      <span className="sv-tag-popup-edit-label">{currentCat?.label || 'Tag'}{charName ? ` → ${charName}` : ''}</span>
+                      <button className="sv-tag-popup-delete-btn" onClick={() => handleEditDeleteTag(tagId)} title="Delete tag">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                    </div>
+                    <div className="sv-tag-popup-edit-cats">
+                      {BREAKDOWN_CATEGORIES.filter(c => c.group === 'breakdown').map(cat => (
+                        <button key={cat.id}
+                          className={`sv-tag-popup-btn${cat.id === tag.categoryId ? ' sv-tag-popup-btn--active' : ''}`}
+                          onClick={() => handleEditChangeCategory(tagId, cat.id)}>
+                          <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </>
           )}
         </div>,
@@ -2631,12 +2787,12 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
             }
           }}>
             <option value="">Select look...</option>
+            <option value="__new">+ New Look</option>
             {looks.slice().sort((a, b) => {
               const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
               const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
               return tsB - tsA;
             }).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            <option value="__new">+ New Look</option>
           </select>
         )}
         {cb.lookId && (

@@ -30,6 +30,26 @@ export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'c
 // Scene amendment status for tracking script revisions
 export type SceneAmendmentStatus = 'unchanged' | 'modified' | 'new' | 'deleted';
 
+// Prep breakdown data — populated from the prep app's breakdown editor
+export interface PrepCharacterBreakdown {
+  characterId: string;
+  lookId: string;
+  entersWith: { hair: string; makeup: string; wardrobe: string };
+  sfx: string;
+  environmental: string;
+  action: string;
+  changeType: 'no-change' | 'change';
+  changeNotes: string;
+  exitsWith: { hair: string; makeup: string; wardrobe: string };
+  notes: string;
+}
+
+export interface PrepSceneBreakdown {
+  sceneId: string;
+  timeline: { day: string; dayConfirmed?: boolean; time: string; type: string; note: string };
+  characters: PrepCharacterBreakdown[];
+}
+
 export interface Scene {
   id: string;
   sceneNumber: string; // Can be "4A", "4B", etc. for alphanumeric scene numbers
@@ -45,6 +65,7 @@ export interface Scene {
   filmingNotes?: string; // Reason for not filmed/partial
   shootingDay?: number; // Which production day this scene is scheduled
   hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
+  prepBreakdown?: PrepSceneBreakdown; // Breakdown data from prep app
 
   // Character confirmation state (for progressive workflow)
   characterConfirmationStatus?: CharacterConfirmationStatus;
@@ -274,7 +295,7 @@ export interface ContinuityEvent {
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
 
 // Navigation types
-export type NavTab = 'today' | 'breakdown' | 'lookbook' | 'hours' | 'budget' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
+export type NavTab = 'today' | 'scenes' | 'breakdown' | 'lookbook' | 'hours' | 'budget' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
 
 // Navigation item configuration
 export interface NavItemConfig {
@@ -283,12 +304,13 @@ export interface NavItemConfig {
   iconName: NavIconName;
 }
 
-export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'wallet' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
+export type NavIconName = 'calendar' | 'grid' | 'table' | 'book' | 'clock' | 'wallet' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
 
 // All available nav items (except 'more' which is fixed)
 export const ALL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'today', label: 'Today', iconName: 'calendar' },
-  { id: 'breakdown', label: 'Breakdown', iconName: 'grid' },
+  { id: 'scenes', label: 'Scenes', iconName: 'grid' },
+  { id: 'breakdown', label: 'Breakdown', iconName: 'table' },
   { id: 'lookbook', label: 'Lookbook', iconName: 'book' },
   { id: 'hours', label: 'Hours', iconName: 'clock' },
   { id: 'budget', label: 'Budget', iconName: 'wallet' },
@@ -299,7 +321,7 @@ export const ALL_NAV_ITEMS: NavItemConfig[] = [
 ];
 
 // Default bottom nav items (first 3)
-export const DEFAULT_BOTTOM_NAV: NavTab[] = ['today', 'breakdown', 'hours'];
+export const DEFAULT_BOTTOM_NAV: NavTab[] = ['today', 'scenes', 'hours'];
 
 // Filter types for scene list
 export type SceneFilter = 'all' | 'complete' | 'incomplete';
