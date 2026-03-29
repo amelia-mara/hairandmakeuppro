@@ -117,11 +117,51 @@ export function extractTOD(slugline: string): string {
   return tod;
 }
 
-/** Detect non-present timeline qualifiers. */
+/** Detect non-present timeline qualifiers from scene heading / TOD field. */
 export function isNonPresent(slugline: string, tod: string): boolean {
   const combined = (slugline + ' ' + tod).toUpperCase();
   return /\b(MEMORY|MEMORIES|FLASHBACK|FLASH\s+BACK|DREAM|VISION|HALLUCINATION)\b/.test(combined)
       || /\[FLASHBACK\]|\[MEMORY\]|\[DREAM\]/.test(combined);
+}
+
+/** Written-out number alternative for AGO/EARLIER patterns */
+const WRITTEN_NUMBER_AGO_RE = '(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY|THIRTY|FORTY|FIFTY)';
+
+/**
+ * Detect non-present timeline markers in the first 3 action lines.
+ * Catches cases where the heading looks normal but the action line
+ * immediately below declares a flashback or time-ago jump.
+ *
+ * Returns false when "END FLASHBACK" / "BACK TO PRESENT" is detected
+ * (those signal a return to the present timeline, not non-present).
+ */
+export function actionLinesIndicateNonPresent(lines: string[]): boolean {
+  const text = lines.slice(0, 3).join(' ').toUpperCase();
+  // "End flashback" / "back to present" means RETURNING to present — not non-present
+  if (actionLinesIndicateEndFlashback(lines)) return false;
+  // Flashback markers
+  if (/\b(BEGIN\s+FLASHBACK|FLASHBACK|FLASH\s+BACK)\b/.test(text)) return true;
+  // Memory / dream markers
+  if (/\b(MEMORY|MEMORIES|DREAM|VISION|HALLUCINATION)\b/.test(text)) return true;
+  // Bracket notation: [FLASHBACK], [MEMORY], [DREAM]
+  if (/\[(FLASHBACK|MEMORY|DREAM)\]/.test(text)) return true;
+  // Numeric time-ago: "2 WEEKS AGO", "10 YEARS EARLIER"
+  if (/\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(AGO|EARLIER)\b/.test(text)) return true;
+  // Written-out time-ago: "THREE MONTHS AGO", "TWENTY YEARS EARLIER"
+  const writtenAgoRe = new RegExp(`\\b${WRITTEN_NUMBER_AGO_RE}\\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\\s+(AGO|EARLIER)\\b`);
+  if (writtenAgoRe.test(text)) return true;
+  // Vague time-ago: "SEVERAL YEARS AGO", "A FEW DAYS EARLIER"
+  if (/\b(A\s+FEW|SEVERAL|SOME|MANY)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(AGO|EARLIER)\b/.test(text)) return true;
+  return false;
+}
+
+/**
+ * Detect "end of flashback" markers in the first 3 action lines.
+ * When detected, the present day counter should resume from before the flashback.
+ */
+export function actionLinesIndicateEndFlashback(lines: string[]): boolean {
+  const text = lines.slice(0, 3).join(' ').toUpperCase();
+  return /\b(END\s+FLASHBACK|BACK\s+TO\s+PRESENT|RETURN\s+TO\s+PRESENT)\b/.test(text);
 }
 
 // ─── Written-out number words for time-jump detection ────────────────────────
@@ -348,11 +388,32 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
   let prevPresentOrder = -1;
   let prevNonPresentOrder = -1;
 
+  // Flashback resume: save present-timeline state when entering a flashback
+  // sequence so it can be restored when "END FLASHBACK" / "BACK TO PRESENT"
+  // is encountered.
+  let savedPresentDay = -1;
+  let savedPrevPresentOrder = -1;
+  let inFlashbackSequence = false;
+
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
     const { tod, isNonPresent: nonPresent, rawTOD } = scene;
     const timeOrder = TIME_ORDER[tod];
     const isContinuous = tod === 'CONTINUOUS' || tod === 'LATER';
+
+    // Flashback entry: first non-present scene after present scenes
+    if (nonPresent && !inFlashbackSequence) {
+      savedPresentDay = presentDay;
+      savedPrevPresentOrder = prevPresentOrder;
+      inFlashbackSequence = true;
+    }
+
+    // Flashback exit: returning to present timeline after a flashback sequence
+    if (!nonPresent && inFlashbackSequence) {
+      presentDay = savedPresentDay;
+      prevPresentOrder = savedPrevPresentOrder;
+      inFlashbackSequence = false;
+    }
 
     // Determine: is this a new day? And how confident are we?
     let newDay = false;
@@ -456,7 +517,10 @@ export function parseSlugline(
 
   const rawTOD = extractTOD(slug);
   const tod = classifyTOD(rawTOD);
-  const nonPresent = isNonPresent(slug, rawTOD);
+  // "End flashback" markers override heading-level flashback flags
+  const nonPresent = actionLinesIndicateEndFlashback(actionLines)
+    ? false
+    : (isNonPresent(slug, rawTOD) || actionLinesIndicateNonPresent(actionLines));
 
   return {
     sceneNumber,
