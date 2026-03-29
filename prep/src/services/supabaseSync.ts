@@ -1020,6 +1020,8 @@ export function dbToScene(
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  dialogueTimeCue: string;
+  needsReview: boolean;
 } {
   return {
     id: row.id as string,
@@ -1032,6 +1034,8 @@ export function dbToScene(
     characterIds: sceneCharacterIds,
     synopsis: (row.synopsis as string) || '',
     scriptContent: (row.script_content as string) || '',
+    dialogueTimeCue: '',
+    needsReview: false,
   };
 }
 

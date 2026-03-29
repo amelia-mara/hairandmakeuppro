@@ -14,6 +14,10 @@ export interface Scene {
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  /** Dialogue time cue detected in this scene, e.g. "5 DAYS LEFT". Empty string if none. */
+  dialogueTimeCue: string;
+  /** True when a dialogue time cue suggests a missed time jump before this scene. */
+  needsReview: boolean;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -245,6 +249,8 @@ Behind the one-way mirror, DETECTIVE ROSA watches intently, arms folded.
                     DETECTIVE ROSA
               (into radio)
           Bring him in. Room two.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's2', number: 2, intExt: 'EXT', dayNight: 'DAY',
@@ -277,6 +283,8 @@ She looks up at the surrounding buildings, noting the security cameras.
           I'll pull the CCTV footage.
           Every camera in a three-block
           radius.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's3', number: 3, intExt: 'INT', dayNight: 'NIGHT',
@@ -303,6 +311,8 @@ She pins a new photo to the corkboard on her wall. Steps back. The board is cove
           What am I missing?
 
 Her gaze falls on a name written in red marker: HOLLOWAY.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's4', number: 4, intExt: 'INT', dayNight: 'DAY',
@@ -340,6 +350,8 @@ James looks up from his laptop and catches Sarah watching him. He smiles — con
           you've been asking about me.
               (gestures to chair)
           Why don't you sit down?`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's5', number: 5, intExt: 'EXT', dayNight: 'DAY',
@@ -371,6 +383,8 @@ Elena sits, leaving space between them.
                     ELENA
           Nothing. But he looked at me
           like... like he already knew.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's6', number: 6, intExt: 'INT', dayNight: 'DAY',
@@ -400,6 +414,8 @@ He holds up the tablet. Rosa leans in, expression hardening.
           Someone's setting him up.
               (beat)
           Or he's not working alone.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's7', number: 7, intExt: 'INT', dayNight: 'DAY',
@@ -428,6 +444,8 @@ He loosens his tie, runs a hand through his hair.
           Then make sure she doesn't.
 
 He hangs up. Stares at his reflection in the glass. For a moment, the mask slips — we see fear.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's8', number: 8, intExt: 'EXT', dayNight: 'NIGHT',
@@ -462,6 +480,8 @@ A SOUND from deeper in the alley. Both freeze.
               (urgent, quiet)
           That's what I'm trying to tell
           you. We need to leave. Now.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's9', number: 9, intExt: 'INT', dayNight: 'DAY',
@@ -492,6 +512,8 @@ SARAH CHEN emerges from a treatment room, butterfly bandage above her eyebrow, a
           Right now. No more half-truths.
 
 Elena looks at Marcus. He nods.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's10', number: 10, intExt: 'EXT', dayNight: 'NIGHT',
@@ -527,6 +549,8 @@ A long silence. Rosa lowers her binoculars.
                     DETECTIVE ROSA
           I'm not compromised. But you
           deserve to know.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's11', number: 11, intExt: 'INT', dayNight: 'DAY',
@@ -562,6 +586,8 @@ ELENA VASQUEZ enters through the main doors, dressed formally, clutching a folde
           He didn't see me recording.
 
 Everyone turns to look at her.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
   {
     id: 's12', number: 12, intExt: 'EXT', dayNight: 'DAY',
@@ -598,6 +624,8 @@ She pockets her badge and turns to Marcus.
 They walk together toward the car. The city skyline looms in the distance.
 
                                       FADE OUT.`,
+    dialogueTimeCue: '',
+    needsReview: false,
   },
 ];
 
@@ -1222,6 +1250,8 @@ export interface ParsedSceneData {
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  dialogueTimeCue: string;
+  needsReview: boolean;
 }
 
 export interface ParsedCharacterData {

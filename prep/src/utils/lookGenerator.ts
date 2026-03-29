@@ -118,10 +118,12 @@ export function generateLooksFromScript(
   // so the user can see at a glance which story days may need manual review.
   const updatedScenes = scenes.map((scene, i) => {
     const result = storyDayResults[i];
-    const needsReview = result.confidence === 'inferred' || result.confidence === 'inherited';
+    const confidenceUncertain = result.confidence === 'inferred' || result.confidence === 'inherited';
     return {
       ...scene,
-      storyDay: needsReview ? `${result.label} (?)` : result.label,
+      storyDay: confidenceUncertain ? `${result.label} (?)` : result.label,
+      dialogueTimeCue: result.dialogueTimeCue,
+      needsReview: result.needsReview,
     };
   });
 
