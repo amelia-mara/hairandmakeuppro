@@ -78,6 +78,33 @@
   box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
 }
+/* Delete button — top-right corner, visible on hover */
+.project-card-delete {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 5;
+  cursor: pointer;
+}
+.project-card:hover .project-card-delete {
+  opacity: 1;
+}
+.project-card-delete:hover {
+  color: var(--brand-terracotta, #C4522A);
+  border-color: var(--brand-terracotta, #C4522A);
+  background: rgba(196, 82, 42, 0.08);
+}
 .project-card-header {
   padding: 24px 24px 16px 32px;
   position: relative;
