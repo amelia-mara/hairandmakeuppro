@@ -10,6 +10,7 @@ export interface Scene {
   dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
   location: string;
   storyDay: string;
+  storyDayConfidence: 'explicit' | 'inferred' | 'inherited';
   timeInfo: string;
   characterIds: string[];
   synopsis: string;
@@ -220,7 +221,7 @@ export const MOCK_SCENES: Scene[] = [
   {
     id: 's1', number: 1, intExt: 'INT', dayNight: 'NIGHT',
     location: 'POLICE STATION - INTERROGATION ROOM',
-    storyDay: 'Day 1', timeInfo: '11:30 PM',
+    storyDay: 'Day 1', storyDayConfidence: 'explicit', timeInfo: '11:30 PM',
     characterIds: ['c1', 'c2', 'c3'],
     synopsis: 'Sarah and Marcus interrogate a witness while Rosa monitors from behind the glass.',
     scriptContent: `The room is stark — fluorescent light, steel table, two chairs on each side. A clock reads 11:32 PM.
@@ -249,7 +250,7 @@ Behind the one-way mirror, DETECTIVE ROSA watches intently, arms folded.
   {
     id: 's2', number: 2, intExt: 'EXT', dayNight: 'DAY',
     location: 'CITY STREET - DOWNTOWN',
-    storyDay: 'Day 1', timeInfo: '8:00 AM',
+    storyDay: 'Day 1', storyDayConfidence: 'explicit', timeInfo: '8:00 AM',
     characterIds: ['c1', 'c2'],
     synopsis: "Sarah and Marcus survey the crime scene outside the victim's office building.",
     scriptContent: `Morning sunlight cuts between tall buildings. Yellow crime scene tape flutters in the breeze.
@@ -281,7 +282,7 @@ She looks up at the surrounding buildings, noting the security cameras.
   {
     id: 's3', number: 3, intExt: 'INT', dayNight: 'NIGHT',
     location: "SARAH'S APARTMENT - LIVING ROOM",
-    storyDay: 'Day 1', timeInfo: '2:00 AM',
+    storyDay: 'Day 1', storyDayConfidence: 'explicit', timeInfo: '2:00 AM',
     characterIds: ['c1'],
     synopsis: 'Sarah works the case alone at home, unable to sleep.',
     scriptContent: `A small apartment, lived-in but sparse. Case files spread across the coffee table. An untouched glass of wine sits beside them.
@@ -307,7 +308,7 @@ Her gaze falls on a name written in red marker: HOLLOWAY.`,
   {
     id: 's4', number: 4, intExt: 'INT', dayNight: 'DAY',
     location: 'COFFEE SHOP',
-    storyDay: 'Day 2', timeInfo: '10:30 AM',
+    storyDay: 'Day 2', storyDayConfidence: 'explicit', timeInfo: '10:30 AM',
     characterIds: ['c1', 'c4', 'c5'],
     synopsis: "Sarah encounters James at Elena's coffee shop. Tension as she studies the suspect in his element.",
     scriptContent: `A warm, busy coffee shop. Morning rush. ELENA VASQUEZ works the espresso machine with practiced efficiency.
@@ -344,7 +345,7 @@ James looks up from his laptop and catches Sarah watching him. He smiles — con
   {
     id: 's5', number: 5, intExt: 'EXT', dayNight: 'DAY',
     location: 'PARK - WALKING PATH',
-    storyDay: 'Day 2', timeInfo: '1:00 PM',
+    storyDay: 'Day 2', storyDayConfidence: 'explicit', timeInfo: '1:00 PM',
     characterIds: ['c2', 'c5'],
     synopsis: 'Marcus meets Elena in the park for an off-the-record conversation about James.',
     scriptContent: `A quiet walking path through a tree-lined park. Dappled sunlight. Few people around.
@@ -375,7 +376,7 @@ Elena sits, leaving space between them.
   {
     id: 's6', number: 6, intExt: 'INT', dayNight: 'DAY',
     location: 'POLICE STATION - BULLPEN',
-    storyDay: 'Day 3', timeInfo: '9:00 AM',
+    storyDay: 'Day 3', storyDayConfidence: 'explicit', timeInfo: '9:00 AM',
     characterIds: ['c2', 'c3'],
     synopsis: 'Rosa briefs Marcus on new evidence that complicates the investigation.',
     scriptContent: `The bullpen buzzes with activity. Phones ring. Detectives move between desks.
@@ -404,7 +405,7 @@ He holds up the tablet. Rosa leans in, expression hardening.
   {
     id: 's7', number: 7, intExt: 'INT', dayNight: 'DAY',
     location: "JAMES'S OFFICE - TECH STARTUP HQ",
-    storyDay: 'Day 3', timeInfo: '2:00 PM',
+    storyDay: 'Day 3', storyDayConfidence: 'explicit', timeInfo: '2:00 PM',
     characterIds: ['c4'],
     synopsis: 'James alone in his office, making a suspicious phone call.',
     scriptContent: `A sleek, modern office. Floor-to-ceiling windows. The city sprawls below.
@@ -432,7 +433,7 @@ He hangs up. Stares at his reflection in the glass. For a moment, the mask slips
   {
     id: 's8', number: 8, intExt: 'EXT', dayNight: 'NIGHT',
     location: 'ALLEY - BEHIND THE COFFEE SHOP',
-    storyDay: 'Day 3', timeInfo: '10:00 PM',
+    storyDay: 'Day 3', storyDayConfidence: 'explicit', timeInfo: '10:00 PM',
     characterIds: ['c1', 'c4'],
     synopsis: 'Sarah confronts James in the alley. A dangerous encounter.',
     scriptContent: `A narrow alley, poorly lit. Dumpsters line one wall. A single streetlight flickers at the far end.
@@ -466,7 +467,7 @@ A SOUND from deeper in the alley. Both freeze.
   {
     id: 's9', number: 9, intExt: 'INT', dayNight: 'DAY',
     location: 'HOSPITAL - WAITING ROOM',
-    storyDay: 'Day 4', timeInfo: '6:00 AM',
+    storyDay: 'Day 4', storyDayConfidence: 'explicit', timeInfo: '6:00 AM',
     characterIds: ['c1', 'c2', 'c5'],
     synopsis: 'After the alley incident. Sarah has minor injuries. Marcus and Elena wait.',
     scriptContent: `Harsh hospital lighting. The smell of antiseptic. A TV murmurs in the corner.
@@ -496,7 +497,7 @@ Elena looks at Marcus. He nods.`,
   {
     id: 's10', number: 10, intExt: 'EXT', dayNight: 'NIGHT',
     location: 'ROOFTOP - DOWNTOWN BUILDING',
-    storyDay: 'Day 5', timeInfo: '9:00 PM',
+    storyDay: 'Day 5', storyDayConfidence: 'explicit', timeInfo: '9:00 PM',
     characterIds: ['c1', 'c3'],
     synopsis: 'Sarah and Rosa surveil from a rooftop. Rosa shares a personal revelation.',
     scriptContent: `City lights spread to the horizon. Wind whips across the rooftop.
@@ -531,7 +532,7 @@ A long silence. Rosa lowers her binoculars.
   {
     id: 's11', number: 11, intExt: 'INT', dayNight: 'DAY',
     location: 'COURTHOUSE - HALLWAY',
-    storyDay: 'Day 8', timeInfo: '10:00 AM',
+    storyDay: 'Day 8', storyDayConfidence: 'explicit', timeInfo: '10:00 AM',
     characterIds: ['c1', 'c2', 'c3', 'c4', 'c5'],
     synopsis: 'All characters converge at the courthouse. Tensions run high before the hearing.',
     scriptContent: `A wide marble hallway. Footsteps echo. Lawyers in suits pass in both directions.
@@ -566,7 +567,7 @@ Everyone turns to look at her.`,
   {
     id: 's12', number: 12, intExt: 'EXT', dayNight: 'DAY',
     location: 'CEMETERY',
-    storyDay: 'Day 10', timeInfo: '3:00 PM',
+    storyDay: 'Day 10', storyDayConfidence: 'explicit', timeInfo: '3:00 PM',
     characterIds: ['c1', 'c2'],
     synopsis: "Sarah and Marcus visit the victims' graves. Quiet resolution.",
     scriptContent: `An overcast day. A hillside cemetery overlooking the city. Three fresh graves in a row.
@@ -1218,6 +1219,7 @@ export interface ParsedSceneData {
   dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
   location: string;
   storyDay: string;
+  storyDayConfidence: 'explicit' | 'inferred' | 'inherited';
   timeInfo: string;
   characterIds: string[];
   synopsis: string;

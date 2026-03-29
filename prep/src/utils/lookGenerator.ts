@@ -107,15 +107,13 @@ export function generateLooksFromScript(
     resultBySceneId.set(scenes[i].id, storyDayResults[i]);
   }
 
-  // Step 2: Assign storyDay label to each scene.
-  // Append " (?)" to the label when the day was inferred or inherited,
-  // so the user can see at a glance which story days may need manual review.
+  // Step 2: Assign storyDay label and confidence to each scene.
   const updatedScenes = scenes.map((scene, i) => {
     const result = storyDayResults[i];
-    const needsReview = result.confidence === 'inferred' || result.confidence === 'inherited';
     return {
       ...scene,
-      storyDay: needsReview ? `${result.label} (?)` : result.label,
+      storyDay: result.label,
+      storyDayConfidence: result.confidence,
     };
   });
 

@@ -1028,6 +1028,7 @@ export function dbToScene(
     dayNight: (row.time_of_day as string) || 'DAY',
     location: (row.location as string) || '',
     storyDay: row.story_day ? `Day ${row.story_day}` : '',
+    storyDayConfidence: 'inherited' as const,
     timeInfo: '',
     characterIds: sceneCharacterIds,
     synopsis: (row.synopsis as string) || '',

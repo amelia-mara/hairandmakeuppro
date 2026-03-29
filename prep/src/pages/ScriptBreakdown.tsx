@@ -1876,6 +1876,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           dayNight,
           location: isPreamble ? 'PREAMBLE' : ps.location,
           storyDay: '',
+          storyDayConfidence: 'inherited' as const,
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
