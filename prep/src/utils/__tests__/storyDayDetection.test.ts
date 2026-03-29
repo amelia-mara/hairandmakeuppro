@@ -4,6 +4,7 @@ import {
   actionLinesIndicateNonPresent,
   actionLinesIndicateEndFlashback,
   extractLocation,
+  detectDialogueTimeCues,
   parseSlugline,
   buildStoryDayMap,
   type ParsedScene,
@@ -378,5 +379,171 @@ describe('buildStoryDayMap concurrent-thread detection', () => {
     expect(results[0]).toMatchObject({ storyDay: 1 });
     expect(results[1]).toMatchObject({ storyDay: 2 });
     expect(results[2]).toMatchObject({ storyDay: 2 });  // stays on Day 2, not Day 3
+  });
+});
+
+/* ━━━ detectDialogueTimeCues ━━━ */
+
+describe('detectDialogueTimeCues', () => {
+  // ── Countdown / forward-reference phrases — MUST match ──
+
+  it('matches "twenty-three days left"', () => {
+    const result = detectDialogueTimeCues(['We have twenty-three days left.']);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/TWENTY.THREE DAYS LEFT/i);
+  });
+
+  it('matches "only five more days"', () => {
+    const result = detectDialogueTimeCues(['Only five more days.']);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/ONLY FIVE MORE DAYS/i);
+  });
+
+  it('matches "see you on Friday"', () => {
+    const result = detectDialogueTimeCues(["I'll see you on Friday."]);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/SEE YOU ON FRIDAY/i);
+  });
+
+  it('matches "the funeral is tomorrow"', () => {
+    const result = detectDialogueTimeCues(['The funeral is tomorrow.']);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/THE FUNERAL IS TOMORROW/i);
+  });
+
+  it('matches "see you tomorrow"', () => {
+    const result = detectDialogueTimeCues(['See you tomorrow!']);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/SEE YOU TOMORROW/i);
+  });
+
+  it('matches "tomorrow morning"', () => {
+    const result = detectDialogueTimeCues(["We leave tomorrow morning."]);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/TOMORROW MORNING/i);
+  });
+
+  it('matches "3 days remaining"', () => {
+    const result = detectDialogueTimeCues(['3 days remaining.']);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/3 DAYS REMAINING/i);
+  });
+
+  it('matches "the trial is on Monday"', () => {
+    const result = detectDialogueTimeCues(['The trial is on Monday.']);
+    expect(result).not.toBe('');
+    expect(result).toMatch(/THE TRIAL IS ON MONDAY/i);
+  });
+
+  // ── Backward-looking / elapsed-time phrases — must NOT match ──
+
+  it('does NOT match "it\'s been three weeks since my dad died"', () => {
+    expect(detectDialogueTimeCues(["It's been three weeks since my dad died."])).toBe('');
+  });
+
+  it('does NOT match "we\'ve been here two weeks"', () => {
+    expect(detectDialogueTimeCues(["We've been here two weeks."])).toBe('');
+  });
+
+  it('does NOT match "two years ago we were happy"', () => {
+    expect(detectDialogueTimeCues(['Two years ago we were happy.'])).toBe('');
+  });
+
+  it('does NOT match "back when you were a kid"', () => {
+    expect(detectDialogueTimeCues(['Back when you were a kid.'])).toBe('');
+  });
+
+  it('does NOT match "it\'s been X days"', () => {
+    expect(detectDialogueTimeCues(["It's been 5 days."])).toBe('');
+  });
+
+  it('does NOT match "been here X days"', () => {
+    expect(detectDialogueTimeCues(["I've been here 3 days now."])).toBe('');
+  });
+
+  it('does NOT match "X days ago"', () => {
+    expect(detectDialogueTimeCues(['10 days ago something happened.'])).toBe('');
+  });
+
+  it('does NOT match "X weeks ago"', () => {
+    expect(detectDialogueTimeCues(['Three weeks ago I left.'])).toBe('');
+  });
+
+  it('does NOT match "I remember when"', () => {
+    expect(detectDialogueTimeCues(['I remember when we had five days left.'])).toBe('');
+  });
+
+  // ── No cues present ──
+
+  it('returns empty string when no cues present', () => {
+    expect(detectDialogueTimeCues(['Hello John.', 'How are you?'])).toBe('');
+  });
+});
+
+/* ━━━ buildStoryDayMap: dialogueTimeCue + needsReview wiring ━━━ */
+
+describe('buildStoryDayMap dialogueTimeCue wiring', () => {
+  it('sets needsReview and dialogueTimeCue when countdown phrase is in action lines', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'INT. KITCHEN - NIGHT', ['Only 5 days left.']),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[1].needsReview).toBe(true);
+    expect(results[1].dialogueTimeCue).toMatch(/5 DAYS LEFT/i);
+  });
+
+  it('does not set needsReview when no cues present', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'INT. KITCHEN - NIGHT', ['She picks up the phone.']),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[1].needsReview).toBe(false);
+    expect(results[1].dialogueTimeCue).toBe('');
+  });
+
+  it('does not change storyDay when dialogueTimeCue is detected', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'INT. KITCHEN - DAY', ['See you tomorrow!']),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    // Both scenes should be Day 1 — same day, same TOD different location (concurrent)
+    expect(results[0].storyDay).toBe(1);
+    expect(results[1].storyDay).toBe(1);
+    // But needsReview should be flagged
+    expect(results[1].needsReview).toBe(true);
+  });
+
+  it('does not change confidence when dialogueTimeCue is detected', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'EXT. PARK - DAY', ['Only 3 days remaining.']),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    // Confidence should be 'inherited' (no day change signal), not affected by the cue
+    expect(results[1].confidence).toBe('inherited');
+    expect(results[1].needsReview).toBe(true);
+  });
+
+  it('does not flag backward-looking dialogue in buildStoryDayMap', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'INT. KITCHEN - NIGHT', ["It's been two weeks since he left."]),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[1].needsReview).toBe(false);
+    expect(results[1].dialogueTimeCue).toBe('');
   });
 });

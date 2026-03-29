@@ -366,6 +366,93 @@ export function extractLocation(slugline: string): string {
   return parts.join(' - ').trim();
 }
 
+// ─── Dialogue time-cue detection ��───────────────────────────────────────────
+
+/** Cardinal number word pattern for dialogue matching */
+const DIALOGUE_NUMBER_RE = '(?:\\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY(?:[- ](?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE))?|THIRTY(?:[- ](?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE))?|FORTY(?:[- ](?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE))?|FIFTY)';
+
+/** Day-of-week pattern */
+const DAY_OF_WEEK_RE = '(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)';
+
+/**
+ * Detect timeline-position cues in dialogue lines.
+ *
+ * These phrases indicate a countable position within an active story timeline
+ * and are evidence that a time jump may have occurred before this scene that
+ * the parser did not detect. They must be flagged for human review.
+ *
+ * Only matches forward-looking / countdown phrases. Backward-looking phrases
+ * ("it's been X days", "X days ago", "back when") are explicitly excluded
+ * because they describe elapsed time, not the current position in the story.
+ *
+ * Returns the first matched phrase, or empty string if none found.
+ */
+export function detectDialogueTimeCues(dialogueLines: string[]): string {
+  const text = dialogueLines.join(' ');
+  const t = text.toUpperCase();
+
+  // ── Exclusion: backward-looking / elapsed-time phrases ──
+  // If the text contains these contextual words, the entire text is
+  // treated as backward-looking and excluded.
+  // Blanket exclusions — always backward-looking regardless of position:
+  if (/\bAGO\b/.test(t)) return '';
+  if (/\bSINCE\b/.test(t)) return '';
+  if (/\bBACK\s+WHEN\b/.test(t)) return '';
+  if (/\bI\s+REMEMBER\s+WHEN\b/.test(t)) return '';
+  if (/\bIT'?S\s+BEEN\b/.test(t)) return '';
+  if (/\bBEEN\s+HERE\b/.test(t)) return '';
+  if (/\bWE'?VE\s+BEEN\b/.test(t)) return '';
+  // Positional exclusions — only exclude when they PRECEDE a time quantity
+  // (i.e. the time reference follows the exclusion word).
+  // "until five days" = excluded, but "five days until the trial" = allowed.
+  const timeQtyRe = `(?:${DIALOGUE_NUMBER_RE})\\s+(?:DAYS?|WEEKS?|MONTHS?|YEARS?)`;
+  if (new RegExp(`\\b(?:BEFORE|AFTER|UNTIL|BACK)\\s+${timeQtyRe}\\b`).test(t)) return '';
+
+  // ── COUNTDOWN TO A FIXED STORY ENDPOINT ──
+  let m: RegExpMatchArray | null;
+
+  // "X days left", "only X days left"
+  const daysLeftRe = new RegExp(`\\b(?:ONLY\\s+)?(${DIALOGUE_NUMBER_RE})\\s+DAYS?\\s+LEFT\\b`);
+  m = t.match(daysLeftRe);
+  if (m) return m[0].trim();
+
+  // "X more days"
+  const moreDaysRe = new RegExp(`\\b(?:ONLY\\s+)?(${DIALOGUE_NUMBER_RE})\\s+MORE\\s+DAYS?\\b`);
+  m = t.match(moreDaysRe);
+  if (m) return m[0].trim();
+
+  // "X days remaining"
+  const daysRemainingRe = new RegExp(`\\b(${DIALOGUE_NUMBER_RE})\\s+DAYS?\\s+REMAINING\\b`);
+  m = t.match(daysRemainingRe);
+  if (m) return m[0].trim();
+
+  // ── FORWARD REFERENCES TO A SPECIFIC UPCOMING MOMENT ──
+
+  // "see you tomorrow"
+  m = t.match(/\bSEE\s+YOU\s+TOMORROW\b/);
+  if (m) return m[0].trim();
+
+  // "tomorrow morning"
+  m = t.match(/\bTOMORROW\s+MORNING\b/);
+  if (m) return m[0].trim();
+
+  // "see you on [day of week]"
+  const seeYouOnRe = new RegExp(`\\bSEE\\s+YOU\\s+ON\\s+${DAY_OF_WEEK_RE}\\b`);
+  m = t.match(seeYouOnRe);
+  if (m) return m[0].trim();
+
+  // "the [any word] is tomorrow"
+  m = t.match(/\bTHE\s+\w+\s+IS\s+TOMORROW\b/);
+  if (m) return m[0].trim();
+
+  // "the [any word] is on [day of week]"
+  const theXIsOnRe = new RegExp(`\\bTHE\\s+\\w+\\s+IS\\s+ON\\s+${DAY_OF_WEEK_RE}\\b`);
+  m = t.match(theXIsOnRe);
+  if (m) return m[0].trim();
+
+  return '';
+}
+
 // ─── Core story day builder ───────────────────────────────────────────────────
 
 /** How the story day was determined. */
@@ -385,6 +472,18 @@ export interface StoryDayResult {
    *  - 'inherited': no signal — carrying forward previous day (may need manual review)
    */
   confidence: StoryDayConfidence;
+  /**
+   * Dialogue time cue detected in this scene's lines, e.g. "5 DAYS LEFT".
+   * Non-empty when a countdown or forward-reference phrase is found.
+   * Empty string when no cue is detected.
+   */
+  dialogueTimeCue: string;
+  /**
+   * True when a dialogue time cue suggests a time jump may have occurred
+   * before this scene that the parser did not catch. A human reviewer
+   * should check the scene boundary immediately preceding this scene.
+   */
+  needsReview: boolean;
 }
 
 /**
@@ -519,6 +618,10 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       if (increment === 0) increment = 1;
     }
 
+    // Dialogue time-cue detection
+    const dialogueTimeCue = detectDialogueTimeCues(scene.actionLines);
+    const needsReview = dialogueTimeCue !== '';
+
     if (nonPresent) {
       if (increment > 0) { nonPresentDayLocTod.clear(); }
       nonPresentDay += increment;
@@ -531,6 +634,8 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         timeline: 'non-present',
         label: `Day ${nonPresentDay} (Flashback)`,
         confidence,
+        dialogueTimeCue,
+        needsReview,
       });
     } else {
       if (increment > 0) { presentDayLocTod.clear(); }
@@ -544,6 +649,8 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         timeline: 'present',
         label: `Day ${presentDay}`,
         confidence,
+        dialogueTimeCue,
+        needsReview,
       });
     }
 
