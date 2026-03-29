@@ -46,6 +46,7 @@ export type Database = {
           created_by: string
           created_at: string
           pending_deletion_at: string | null
+          has_prep_access: boolean
         }
         Insert: {
           id?: string
@@ -57,6 +58,7 @@ export type Database = {
           created_by: string
           created_at?: string
           pending_deletion_at?: string | null
+          has_prep_access?: boolean
         }
         Update: {
           id?: string
@@ -68,6 +70,7 @@ export type Database = {
           created_by?: string
           created_at?: string
           pending_deletion_at?: string | null
+          has_prep_access?: boolean
         }
       }
       project_members: {
@@ -105,6 +108,7 @@ export type Database = {
           initials: string
           avatar_colour: string
           base_look_description: string | null
+          metadata: Json
           created_at: string
         }
         Insert: {
@@ -115,6 +119,7 @@ export type Database = {
           initials: string
           avatar_colour: string
           base_look_description?: string | null
+          metadata?: Json
           created_at?: string
         }
         Update: {
@@ -125,6 +130,7 @@ export type Database = {
           initials?: string
           avatar_colour?: string
           base_look_description?: string | null
+          metadata?: Json
           created_at?: string
         }
       }

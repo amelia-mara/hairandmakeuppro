@@ -20,6 +20,7 @@ import type {
   Look,
   ProductionSchedule,
   CallSheet,
+  PrepSceneBreakdown,
 } from '@/types';
 
 export interface ProjectLoadResult {
@@ -78,21 +79,74 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
         supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
       ]);
 
-      const scenes = dbScenes || [];
-      const characters = dbCharacters || [];
+      let scenes: Record<string, unknown>[] = dbScenes || [];
+      let characters: Record<string, unknown>[] = dbCharacters || [];
       const looks = dbLooks || [];
+
+      // Fallback: if scenes table is empty but script_uploads has parsed_data,
+      // restore scenes/characters from there (handles prep upload where the
+      // debounced save to scenes table failed or hasn't completed yet).
+      let restoredFromParsedData = false;
+      const restoredSceneCharacters: Record<string, unknown>[] = [];
+      if (scenes.length === 0 && characters.length === 0 && dbScriptUpload && dbScriptUpload.length > 0) {
+        const parsedData = dbScriptUpload[0].parsed_data as {
+          scenes?: any[]; characters?: any[]; looks?: any[];
+        } | null;
+        if (parsedData?.scenes && parsedData.scenes.length > 0) {
+          console.log(`[ProjectLoader] Restoring from script_uploads.parsed_data — scenes: ${parsedData.scenes.length}`);
+          restoredFromParsedData = true;
+          scenes = parsedData.scenes.map((ps: any, idx: number) => ({
+            id: ps.id || `ps-${idx + 1}`,
+            scene_number: String(ps.number ?? ps.sceneNumber ?? idx + 1),
+            int_ext: ps.intExt || 'INT',
+            location: ps.location || 'UNKNOWN',
+            time_of_day: ps.dayNight || ps.timeOfDay || 'DAY',
+            synopsis: ps.synopsis || null,
+            script_content: ps.scriptContent || ps.content || null,
+            shooting_day: ps.shootingDay || null,
+            is_complete: ps.isComplete || false,
+            completed_at: null,
+            filming_status: null,
+            filming_notes: null,
+            project_id: projectId,
+          }));
+          // Build scene_characters from parsed_data characterIds
+          for (const ps of parsedData.scenes) {
+            const sceneId = ps.id || `ps-${parsedData.scenes.indexOf(ps) + 1}`;
+            const charIds: string[] = ps.characterIds || [];
+            for (const charId of charIds) {
+              restoredSceneCharacters.push({ scene_id: sceneId, character_id: charId });
+            }
+          }
+          if (parsedData.characters) {
+            characters = parsedData.characters.map((pc: any, idx: number) => ({
+              id: pc.id || `char-${idx + 1}`,
+              name: pc.name || '',
+              initials: pc.initials || (pc.name || '').split(' ').map((w: string) => w[0]).join('').substring(0, 3),
+              avatar_colour: pc.avatarColour || '#6366f1',
+              project_id: projectId,
+              metadata: pc.category ? { category: pc.category, billing: pc.billing } : null,
+            }));
+          }
+        }
+      }
 
       // 3. Junction tables
       let sceneCharacters: Record<string, unknown>[] = [];
       let lookScenes: Record<string, unknown>[] = [];
 
       if (scenes.length > 0) {
-        const sceneIds = scenes.map((s: Record<string, unknown>) => s.id as string);
-        const { data: scData } = await supabase
-          .from('scene_characters')
-          .select('*')
-          .in('scene_id', sceneIds);
-        sceneCharacters = scData || [];
+        if (restoredFromParsedData) {
+          // Use scene_characters built from parsed_data (not in DB yet)
+          sceneCharacters = restoredSceneCharacters;
+        } else {
+          const sceneIds = scenes.map((s: Record<string, unknown>) => s.id as string);
+          const { data: scData } = await supabase
+            .from('scene_characters')
+            .select('*')
+            .in('scene_id', sceneIds);
+          sceneCharacters = scData || [];
+        }
       }
 
       if (looks.length > 0) {
@@ -187,21 +241,46 @@ function mapScenes(
     scMap.get(sceneId)!.push(charId);
   }
 
-  return dbScenes.map(row => ({
-    id: row.id as string,
-    sceneNumber: (row.scene_number as string) || '0',
-    slugline: `${row.int_ext || 'INT'}. ${row.location || 'UNKNOWN'} - ${row.time_of_day || 'DAY'}`,
-    intExt: (row.int_ext as 'INT' | 'EXT') || 'INT',
-    timeOfDay: ((row.time_of_day as string) || 'DAY') as Scene['timeOfDay'],
-    synopsis: (row.synopsis as string) || '',
-    scriptContent: (row.script_content as string) || '',
-    characters: scMap.get(row.id as string) || [],
-    isComplete: (row.is_complete as boolean) || false,
-    completedAt: row.completed_at ? new Date(row.completed_at as string) : undefined,
-    filmingStatus: (row.filming_status as Scene['filmingStatus']) || undefined,
-    filmingNotes: (row.filming_notes as string) || undefined,
-    shootingDay: (row.shooting_day as number) || undefined,
-  }));
+  return dbScenes.map(row => {
+    const charIds = scMap.get(row.id as string) || [];
+
+    // Parse prep breakdown from filming_notes JSON
+    let prepBreakdown: PrepSceneBreakdown | undefined;
+    if (row.filming_notes) {
+      try {
+        const parsed = typeof row.filming_notes === 'string'
+          ? JSON.parse(row.filming_notes as string)
+          : row.filming_notes;
+        // Validate it looks like a prep breakdown (has characters array)
+        if (parsed && Array.isArray(parsed.characters)) {
+          prepBreakdown = parsed as PrepSceneBreakdown;
+        }
+      } catch {
+        // Not valid JSON — treat as plain filming notes string
+      }
+    }
+
+    return {
+      id: row.id as string,
+      sceneNumber: (row.scene_number as string) || '0',
+      slugline: `${row.int_ext || 'INT'}. ${row.location || 'UNKNOWN'} - ${row.time_of_day || 'DAY'}`,
+      intExt: (row.int_ext as 'INT' | 'EXT') || 'INT',
+      timeOfDay: ((row.time_of_day as string) || 'DAY') as Scene['timeOfDay'],
+      synopsis: (row.synopsis as string) || '',
+      scriptContent: (row.script_content as string) || '',
+      characters: charIds,
+      isComplete: (row.is_complete as boolean) || false,
+      completedAt: row.completed_at ? new Date(row.completed_at as string) : undefined,
+      filmingStatus: (row.filming_status as Scene['filmingStatus']) || undefined,
+      filmingNotes: prepBreakdown ? undefined : ((row.filming_notes as string) || undefined),
+      prepBreakdown,
+      shootingDay: (row.shooting_day as number) || undefined,
+      // Auto-confirm scenes that have characters from the server (e.g. confirmed in Prep)
+      characterConfirmationStatus: (charIds.length > 0 || !row.script_content)
+        ? 'confirmed' as const
+        : 'pending' as const,
+    };
+  });
 }
 
 function mapCharacters(dbCharacters: Record<string, unknown>[]): Character[] {
@@ -210,7 +289,7 @@ function mapCharacters(dbCharacters: Record<string, unknown>[]): Character[] {
     return {
       id: row.id as string,
       name: (row.name as string) || '',
-      initials: (row.initials as string) || '',
+      initials: (row.initials as string) || ((row.name as string) || '').split(' ').map(w => w[0]).join('').substring(0, 3),
       avatarColour: (row.avatar_colour as string) || undefined,
       actorNumber: (meta.billing as number) || undefined,
       role: ((meta.category as string) === 'supporting_artist' ? 'background' : 'lead') as 'lead' | 'supporting' | 'background',
