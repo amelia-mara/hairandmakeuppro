@@ -17,6 +17,8 @@ import {
   extractTOD,
   classifyTOD,
   isNonPresent,
+  actionLinesIndicateNonPresent,
+  actionLinesIndicateEndFlashback,
   type ParsedScene,
   type StoryDayResult,
 } from '@/utils/storyDayDetection';
@@ -206,12 +208,17 @@ function buildStoryDayMap(
       }
     }
 
+    // "End flashback" markers override heading-level flashback flags
+    const nonPresent = actionLinesIndicateEndFlashback(actionLines)
+      ? false
+      : (isNonPresent(slugline, rawTOD) || actionLinesIndicateNonPresent(actionLines));
+
     return {
       sceneNumber: sceneNum,
       slugline,
       rawTOD,
       tod: classifyTOD(rawTOD),
-      isNonPresent: isNonPresent(slugline, rawTOD),
+      isNonPresent: nonPresent,
       actionLines,
     };
   });

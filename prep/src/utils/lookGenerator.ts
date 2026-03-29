@@ -19,6 +19,8 @@ import {
   classifyTOD,
   extractTOD,
   isNonPresent,
+  actionLinesIndicateNonPresent,
+  actionLinesIndicateEndFlashback,
   type ParsedScene,
   type StoryDayResult,
 } from './storyDayDetection';
@@ -41,9 +43,8 @@ function sceneToParsedScene(scene: Scene): ParsedScene {
     : extractTOD(sluglike) || scene.dayNight;
 
   const tod = classifyTOD(rawTOD);
-  const nonPresent = isNonPresent(sluglike, rawTOD);
 
-  // Extract first 3 action lines from scriptContent
+  // Extract first 3 action lines from scriptContent (needed before nonPresent check)
   const actionLines: string[] = [];
   if (scene.scriptContent) {
     const lines = scene.scriptContent.split('\n');
@@ -56,6 +57,11 @@ function sceneToParsedScene(scene: Scene): ParsedScene {
       }
     }
   }
+
+  // "End flashback" markers override heading-level flashback flags
+  const nonPresent = actionLinesIndicateEndFlashback(actionLines)
+    ? false
+    : (isNonPresent(sluglike, rawTOD) || actionLinesIndicateNonPresent(actionLines));
 
   return {
     sceneNumber: String(scene.number),
