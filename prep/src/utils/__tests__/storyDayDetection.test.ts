@@ -277,6 +277,84 @@ describe('extractLocation', () => {
   });
 });
 
+/* ━━━ buildStoryDayMap: DAY/NIGHT asymmetry rule ━━━ */
+
+describe('buildStoryDayMap DAY/NIGHT asymmetry', () => {
+  it('DAY → NIGHT does NOT increment (same story day, TOD label change only)', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'INT. OFFICE - NIGHT'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 1, dayChangeReason: 'none' });
+  });
+
+  it('NIGHT → DAY DOES increment (new story day, inferred)', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - NIGHT'),
+      scene('2', 'INT. OFFICE - DAY'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 2, confidence: 'inferred', dayChangeReason: 'tod_regression', needsReview: true });
+  });
+
+  it('DAY → DAY does NOT increment without an explicit marker', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'EXT. PARK - DAY'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 1 });
+  });
+
+  it('MORNING → EVENING does NOT increment (forward progression within same day)', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - MORNING'),
+      scene('2', 'EXT. PARK - EVENING'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 1 });
+  });
+
+  it('EVENING → MORNING DOES increment (regression = new day)', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - EVENING'),
+      scene('2', 'INT. OFFICE - MORNING'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 2, confidence: 'inferred' });
+  });
+
+  it('full D1 N1 D2 sequence: DAY→NIGHT same day, NIGHT→DAY new day', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'INT. BAR - NIGHT'),
+      scene('3', 'EXT. STREET - DAY'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });  // D1
+    expect(results[1]).toMatchObject({ storyDay: 1 });  // N1 — same day
+    expect(results[2]).toMatchObject({ storyDay: 2, confidence: 'inferred' });  // D2 — new day
+  });
+});
+
 /* ━━━ buildStoryDayMap: concurrent-thread detection ━━━ */
 
 describe('buildStoryDayMap concurrent-thread detection', () => {
