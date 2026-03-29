@@ -342,6 +342,30 @@ function parseJumpDaysFromText(t: string): number {
   return 1;
 }
 
+// ─── Location extraction (for concurrent-thread detection) ──────────────────
+
+/**
+ * Extract the normalised location string from a slugline.
+ * Strips scene numbers, INT/EXT prefixes, and time-of-day suffixes so that
+ * "14 INT. COFFEE SHOP - NIGHT 14" and "INT. COFFEE SHOP - DAY" both yield
+ * "COFFEE SHOP".
+ */
+export function extractLocation(slugline: string): string {
+  let s = slugline.trim().toUpperCase();
+  // Strip leading scene number: "14 INT..." → "INT..."
+  s = s.replace(/^\d+[A-Z]{0,4}\s+/, '');
+  // Strip trailing scene number (Killa Bee style): "... NIGHT 14" → "... NIGHT"
+  s = s.replace(/\s+\d+[A-Z]{0,4}\s*$/, '');
+  // Strip INT/EXT prefix
+  s = s.replace(/^(INT\.?\s*\/\s*EXT\.?|EXT\.?\s*\/\s*INT\.?|I\s*\/\s*E\.?|INT\.?|EXT\.?)\s*\.?\s*/, '');
+  // Strip leading dash/dot after prefix
+  s = s.replace(/^[\.\-–—]\s*/, '');
+  // Split on dash — last segment is TOD, everything before is location
+  const parts = s.split(/\s*[-–—]\s*/);
+  if (parts.length > 1) parts.pop();
+  return parts.join(' - ').trim();
+}
+
 // ─── Core story day builder ───────────────────────────────────────────────────
 
 /** How the story day was determined. */
@@ -395,11 +419,18 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
   let savedPrevPresentOrder = -1;
   let inFlashbackSequence = false;
 
+  // Concurrent-thread tracking: locations seen per story day, keyed by
+  // "location\0tod" so we can detect cuts back to an earlier location.
+  let prevLocation = '';
+  const presentDayLocTod = new Set<string>();
+  const nonPresentDayLocTod = new Set<string>();
+
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
     const { tod, isNonPresent: nonPresent, rawTOD } = scene;
     const timeOrder = TIME_ORDER[tod];
     const isContinuous = tod === 'CONTINUOUS' || tod === 'LATER';
+    const location = extractLocation(scene.slugline);
 
     // Flashback entry: first non-present scene after present scenes
     if (nonPresent && !inFlashbackSequence) {
@@ -431,22 +462,50 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         newDay = true;
         confidence = 'explicit';
       }
-      // Priority 3: NIGHT/MIDNIGHT/EVENING → MORNING/DAWN/PRE_DAWN/DAY regression (overnight)
-      else if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
-            && prevOrder >= TIME_ORDER.NIGHT && timeOrder <= TIME_ORDER.DAY) {
-        newDay = true;
-        confidence = 'inferred';
-      }
-      // Priority 4: Calendar/named date title cards in action lines
-      else if (actionLinesIndicateCalendarDate(scene.actionLines)) {
-        newDay = true;
-        confidence = 'explicit';
-      }
-      // Priority 5: General TOD regression (time went backwards without CONTINUOUS)
-      else if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
-            && timeOrder < prevOrder) {
-        newDay = true;
-        confidence = 'inferred';
+      // ── Concurrent-thread detection (before Priority 3 & 5 regressions) ──
+      // When the script cross-cuts between simultaneous storylines in
+      // different locations, the TOD may appear to regress even though
+      // the story day has not changed. Detect this and suppress the
+      // regression. Guiding principle: when in doubt, do NOT increment.
+      //
+      // A scene is concurrent when:
+      //  (a) P1 and P2 did not fire, AND
+      //  (b) TOD is identical to the preceding scene AND location differs, OR
+      //  (c) This location+TOD combination already appeared earlier in the
+      //      current story day.
+      else {
+        const dayLocTod = nonPresent ? nonPresentDayLocTod : presentDayLocTod;
+        const locTodKey = location + '\0' + tod;
+        const sameTodAsPrev = timeOrder !== -1 && timeOrder === prevOrder;
+        const differentLocation = location !== prevLocation;
+        const locationSeenThisDay = dayLocTod.has(locTodKey);
+        const concurrent = (sameTodAsPrev && differentLocation) || locationSeenThisDay;
+
+        if (!concurrent) {
+          // Priority 3: NIGHT/MIDNIGHT/EVENING → MORNING/DAWN/PRE_DAWN/DAY regression (overnight)
+          if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
+                && prevOrder >= TIME_ORDER.NIGHT && timeOrder <= TIME_ORDER.DAY) {
+            newDay = true;
+            confidence = 'inferred';
+          }
+          // Priority 4: Calendar/named date title cards in action lines
+          else if (actionLinesIndicateCalendarDate(scene.actionLines)) {
+            newDay = true;
+            confidence = 'explicit';
+          }
+          // Priority 5: General TOD regression (time went backwards without CONTINUOUS)
+          else if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
+                && timeOrder < prevOrder) {
+            newDay = true;
+            confidence = 'inferred';
+          }
+        } else {
+          // Concurrent — still check Priority 4 (calendar dates are explicit, not regression)
+          if (actionLinesIndicateCalendarDate(scene.actionLines)) {
+            newDay = true;
+            confidence = 'explicit';
+          }
+        }
       }
     }
 
@@ -461,8 +520,10 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     }
 
     if (nonPresent) {
+      if (increment > 0) { nonPresentDayLocTod.clear(); }
       nonPresentDay += increment;
       if (!isContinuous && timeOrder !== -1) prevNonPresentOrder = timeOrder;
+      nonPresentDayLocTod.add(location + '\0' + tod);
 
       results.push({
         sceneNumber: scene.sceneNumber,
@@ -472,8 +533,10 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         confidence,
       });
     } else {
+      if (increment > 0) { presentDayLocTod.clear(); }
       presentDay += increment;
       if (!isContinuous && timeOrder !== -1) prevPresentOrder = timeOrder;
+      presentDayLocTod.add(location + '\0' + tod);
 
       results.push({
         sceneNumber: scene.sceneNumber,
@@ -483,6 +546,8 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         confidence,
       });
     }
+
+    prevLocation = location;
   }
 
   return results;

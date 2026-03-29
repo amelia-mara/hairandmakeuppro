@@ -3,6 +3,7 @@ import {
   isNonPresent,
   actionLinesIndicateNonPresent,
   actionLinesIndicateEndFlashback,
+  extractLocation,
   parseSlugline,
   buildStoryDayMap,
   type ParsedScene,
@@ -248,5 +249,134 @@ describe('buildStoryDayMap flashback resume', () => {
 
     // None should be non-present
     expect(results.every(r => r.timeline === 'present')).toBe(true);
+  });
+});
+
+/* ━━━ extractLocation helper ━━━ */
+
+describe('extractLocation', () => {
+  it('extracts location from standard slugline', () => {
+    expect(extractLocation('INT. COFFEE SHOP - DAY')).toBe('COFFEE SHOP');
+  });
+
+  it('extracts location from numbered slugline', () => {
+    expect(extractLocation('14 INT. COFFEE SHOP - NIGHT 14')).toBe('COFFEE SHOP');
+  });
+
+  it('handles EXT prefix', () => {
+    expect(extractLocation('EXT. PARK - MORNING')).toBe('PARK');
+  });
+
+  it('handles INT/EXT prefix', () => {
+    expect(extractLocation('INT./EXT. CAR - DAY')).toBe('CAR');
+  });
+
+  it('handles multi-segment location', () => {
+    expect(extractLocation('INT. HOUSE - KITCHEN - NIGHT')).toBe('HOUSE - KITCHEN');
+  });
+});
+
+/* ━━━ buildStoryDayMap: concurrent-thread detection ━━━ */
+
+describe('buildStoryDayMap concurrent-thread detection', () => {
+  it('does NOT increment for consecutive scenes in different locations with identical TOD', () => {
+    // Cross-cutting: OFFICE and PARK both at NIGHT on the same day
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - NIGHT'),
+      scene('2', 'EXT. PARK - NIGHT'),
+      scene('3', 'INT. WAREHOUSE - NIGHT'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 1 });
+    expect(results[2]).toMatchObject({ storyDay: 1 });
+  });
+
+  it('does NOT increment when cutting back to a location seen earlier in the same day with same TOD', () => {
+    // OFFICE at DAY → PARK at DAY → OFFICE at DAY (cut back)
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'EXT. PARK - DAY'),
+      scene('3', 'INT. OFFICE - DAY'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 1 });
+    expect(results[2]).toMatchObject({ storyDay: 1 });
+  });
+
+  it('DOES increment for NIGHT→DAY regression in different locations (genuine new day)', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - NIGHT'),
+      scene('2', 'EXT. PARK - DAY'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 2 });
+  });
+
+  it('DOES increment for TOD regression in the SAME location', () => {
+    // Same location, EVENING → DAY = time went backwards = new day
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - EVENING'),
+      scene('2', 'INT. OFFICE - DAY'),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 2 });
+  });
+
+  it('DOES increment when Priority 1 fires even with different location (explicit marker)', () => {
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'EXT. PARK - DAY', ['The next day,']),
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 2, confidence: 'explicit' });
+  });
+
+  it('does NOT increment for cross-cutting with general TOD regression', () => {
+    // OFFICE at EVENING → PARK at DAY → OFFICE at EVENING
+    // The PARK at DAY looks like a regression from EVENING, but OFFICE at DAY
+    // was seen earlier this day, so it's concurrent.
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'EXT. PARK - EVENING'),
+      scene('3', 'INT. OFFICE - DAY'),   // cut back to OFFICE+DAY — seen earlier this day
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 1 });
+    expect(results[2]).toMatchObject({ storyDay: 1 });  // concurrent, not regression
+  });
+
+  it('resets location tracking when day increments', () => {
+    // Day 1: OFFICE at DAY. Day 2 (explicit): PARK at DAY.
+    // Then OFFICE at DAY — this should NOT be treated as concurrent with Day 1,
+    // because the day already advanced. It should stay on Day 2.
+    const scenes: ParsedScene[] = [
+      scene('1', 'INT. OFFICE - DAY'),
+      scene('2', 'EXT. PARK - DAY', ['The next day,']),     // Day 2
+      scene('3', 'INT. OFFICE - DAY'),                       // same TOD, diff location → concurrent on Day 2
+    ];
+
+    const results = buildStoryDayMap(scenes);
+
+    expect(results[0]).toMatchObject({ storyDay: 1 });
+    expect(results[1]).toMatchObject({ storyDay: 2 });
+    expect(results[2]).toMatchObject({ storyDay: 2 });  // stays on Day 2, not Day 3
   });
 });
