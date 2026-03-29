@@ -458,6 +458,14 @@ export function detectDialogueTimeCues(dialogueLines: string[]): string {
 /** How the story day was determined. */
 export type StoryDayConfidence = 'explicit' | 'inferred' | 'inherited';
 
+/** Why the story day changed (or didn't) at this scene boundary. */
+export type DayChangeReason =
+  | 'none'              // no day change — same day carried forward
+  | 'explicit_marker'   // action line or TOD phrase (Priority 1 or 2)
+  | 'tod_regression'    // time-of-day went backwards (Priority 3 or 5)
+  | 'calendar_date'     // calendar/named date title card (Priority 4)
+  | 'first_scene';      // the very first scene — no prior scene to compare
+
 export interface StoryDayResult {
   sceneNumber: string;
   storyDay: number;
@@ -472,6 +480,12 @@ export interface StoryDayResult {
    *  - 'inherited': no signal — carrying forward previous day (may need manual review)
    */
   confidence: StoryDayConfidence;
+  /** Why the story day changed at this scene boundary. */
+  dayChangeReason: DayChangeReason;
+  /** True if this scene is part of a flashback / memory / dream sequence. */
+  isFlashback: boolean;
+  /** True if this scene was detected as concurrent cross-cutting (regression suppressed). */
+  isConcurrent: boolean;
   /**
    * Dialogue time cue detected in this scene's lines, e.g. "5 DAYS LEFT".
    * Non-empty when a countdown or forward-reference phrase is found.
@@ -480,8 +494,9 @@ export interface StoryDayResult {
   dialogueTimeCue: string;
   /**
    * True when a dialogue time cue suggests a time jump may have occurred
-   * before this scene that the parser did not catch. A human reviewer
-   * should check the scene boundary immediately preceding this scene.
+   * before this scene that the parser did not catch, OR when the day was
+   * inferred from a TOD regression (which may be a false positive).
+   * A human reviewer should check the scene boundary.
    */
   needsReview: boolean;
 }
@@ -548,6 +563,8 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     // Determine: is this a new day? And how confident are we?
     let newDay = false;
     let confidence: StoryDayConfidence = 'inherited';
+    let dayChangeReason: DayChangeReason = i === 0 ? 'first_scene' : 'none';
+    let isConcurrent = false;
     const prevOrder = nonPresent ? prevNonPresentOrder : prevPresentOrder;
 
     if (i > 0) {
@@ -555,11 +572,13 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       if (actionLinesIndicateTimeJump(scene.actionLines)) {
         newDay = true;
         confidence = 'explicit';
+        dayChangeReason = 'explicit_marker';
       }
       // Priority 2: Explicit TOD phrases in slugline
       else if (todIsExplicitNewDay(rawTOD)) {
         newDay = true;
         confidence = 'explicit';
+        dayChangeReason = 'explicit_marker';
       }
       // ── Concurrent-thread detection (before Priority 3 & 5 regressions) ──
       // When the script cross-cuts between simultaneous storylines in
@@ -579,6 +598,7 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         const differentLocation = location !== prevLocation;
         const locationSeenThisDay = dayLocTod.has(locTodKey);
         const concurrent = (sameTodAsPrev && differentLocation) || locationSeenThisDay;
+        isConcurrent = concurrent;
 
         if (!concurrent) {
           // Priority 3: NIGHT/MIDNIGHT/EVENING → MORNING/DAWN/PRE_DAWN/DAY regression (overnight)
@@ -586,23 +606,28 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
                 && prevOrder >= TIME_ORDER.NIGHT && timeOrder <= TIME_ORDER.DAY) {
             newDay = true;
             confidence = 'inferred';
+            dayChangeReason = 'tod_regression';
           }
           // Priority 4: Calendar/named date title cards in action lines
           else if (actionLinesIndicateCalendarDate(scene.actionLines)) {
             newDay = true;
             confidence = 'explicit';
+            dayChangeReason = 'calendar_date';
           }
           // Priority 5: General TOD regression (time went backwards without CONTINUOUS)
           else if (!isContinuous && timeOrder !== -1 && prevOrder !== -1
                 && timeOrder < prevOrder) {
             newDay = true;
             confidence = 'inferred';
+            dayChangeReason = 'tod_regression';
           }
         } else {
           // Concurrent — still check Priority 4 (calendar dates are explicit, not regression)
           if (actionLinesIndicateCalendarDate(scene.actionLines)) {
             newDay = true;
             confidence = 'explicit';
+            dayChangeReason = 'calendar_date';
+            isConcurrent = false; // calendar date overrides concurrent
           }
         }
       }
@@ -620,7 +645,8 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
 
     // Dialogue time-cue detection
     const dialogueTimeCue = detectDialogueTimeCues(scene.actionLines);
-    const needsReview = dialogueTimeCue !== '';
+    // needsReview: dialogue cue found OR day was inferred from TOD regression
+    const needsReview = dialogueTimeCue !== '' || dayChangeReason === 'tod_regression';
 
     if (nonPresent) {
       if (increment > 0) { nonPresentDayLocTod.clear(); }
@@ -634,6 +660,9 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         timeline: 'non-present',
         label: `Day ${nonPresentDay} (Flashback)`,
         confidence,
+        dayChangeReason,
+        isFlashback: true,
+        isConcurrent,
         dialogueTimeCue,
         needsReview,
       });
@@ -649,6 +678,9 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         timeline: 'present',
         label: `Day ${presentDay}`,
         confidence,
+        dayChangeReason,
+        isFlashback: false,
+        isConcurrent,
         dialogueTimeCue,
         needsReview,
       });
