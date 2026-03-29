@@ -568,13 +568,72 @@ export function ProjectHubScreen() {
         scheduleData, callSheetData, scriptData, error,
       } = await supabaseProjects.getProjectData(membership.projectId);
 
-      const hasSceneData = !error && scenes.length > 0;
+      let hasSceneData = !error && scenes.length > 0;
       const hasContinuity = continuityEvents.length > 0;
       const hasDocuments = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
 
       console.log(`[ProjectOpen] Server data — scenes: ${scenes.length}, characters: ${characters.length}, looks: ${looks.length}, ` +
         `scripts: ${scriptData.length}, schedules: ${scheduleData.length}, callSheets: ${callSheetData.length}, ` +
         `captures: ${continuityEvents.length}${error ? `, error: ${error.message}` : ''}`);
+
+      // Fallback: if scenes table is empty but script_uploads has parsed_data,
+      // restore scenes/characters from there. This handles the case where
+      // Prep uploaded a script (creating a script_uploads row with parsed_data)
+      // but the debounced save to the scenes table failed or hasn't completed.
+      if (scenes.length === 0 && characters.length === 0 && scriptData.length > 0) {
+        const parsedData = scriptData[0].parsed_data as {
+          scenes?: any[]; characters?: any[]; looks?: any[];
+          filename?: string; parsedAt?: string;
+        } | null;
+        if (parsedData?.scenes && parsedData.scenes.length > 0) {
+          console.log(`[ProjectOpen] Restoring from script_uploads.parsed_data — scenes: ${parsedData.scenes.length}, characters: ${parsedData.characters?.length ?? 0}`);
+          // Map prep's parsed scene format to DB row format so the existing mapping code works
+          for (const ps of parsedData.scenes) {
+            scenes.push({
+              id: ps.id || `ps-${scenes.length + 1}`,
+              scene_number: String(ps.number ?? ps.sceneNumber ?? scenes.length + 1),
+              int_ext: ps.intExt || 'INT',
+              location: ps.location || 'UNKNOWN',
+              time_of_day: ps.dayNight || ps.timeOfDay || 'DAY',
+              synopsis: ps.synopsis || null,
+              script_content: ps.scriptContent || ps.content || null,
+              shooting_day: ps.shootingDay || null,
+              is_complete: ps.isComplete || false,
+              completed_at: null,
+              filming_status: null,
+              filming_notes: null,
+              project_id: membership.projectId,
+              created_at: new Date().toISOString(),
+            } as any);
+          }
+          // Map prep's parsed characters
+          if (parsedData.characters) {
+            for (const pc of parsedData.characters) {
+              characters.push({
+                id: pc.id || `char-${characters.length + 1}`,
+                name: pc.name || '',
+                initials: pc.initials || (pc.name || '').split(' ').map((w: string) => w[0]).join('').substring(0, 3),
+                avatar_colour: pc.avatarColour || '#6366f1',
+                project_id: membership.projectId,
+                created_at: new Date().toISOString(),
+                actor_name: null,
+                base_look_description: null,
+                metadata: pc.category ? { category: pc.category, billing: pc.billing } : null,
+              } as any);
+            }
+          }
+          // Also populate scene_characters junction from parsed data
+          for (const ps of parsedData.scenes) {
+            const sceneId = ps.id || `ps-${parsedData.scenes.indexOf(ps) + 1}`;
+            const charIds: string[] = ps.characterIds || [];
+            for (const charId of charIds) {
+              sceneCharacters.push({ scene_id: sceneId, character_id: charId });
+            }
+          }
+          hasSceneData = scenes.length > 0;
+          console.log(`[ProjectOpen] Restored ${scenes.length} scenes, ${characters.length} characters from parsed_data`);
+        }
+      }
 
       // Check if local saved data has richer content (scenes/characters)
       // that the server is missing — this happens when saveInitialProjectData
@@ -743,6 +802,9 @@ export function ProjectHubScreen() {
           scenes: localScenes,
           characters: localCharacters,
           looks: localLooks,
+          ...(scriptData.length > 0 && scriptData[0].file_name
+            ? { scriptFilename: scriptData[0].file_name as string }
+            : {}),
         };
 
         // Set flag so loading from server doesn't mark as pending changes

@@ -79,21 +79,74 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
         supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
       ]);
 
-      const scenes = dbScenes || [];
-      const characters = dbCharacters || [];
+      let scenes: Record<string, unknown>[] = dbScenes || [];
+      let characters: Record<string, unknown>[] = dbCharacters || [];
       const looks = dbLooks || [];
+
+      // Fallback: if scenes table is empty but script_uploads has parsed_data,
+      // restore scenes/characters from there (handles prep upload where the
+      // debounced save to scenes table failed or hasn't completed yet).
+      let restoredFromParsedData = false;
+      const restoredSceneCharacters: Record<string, unknown>[] = [];
+      if (scenes.length === 0 && characters.length === 0 && dbScriptUpload && dbScriptUpload.length > 0) {
+        const parsedData = dbScriptUpload[0].parsed_data as {
+          scenes?: any[]; characters?: any[]; looks?: any[];
+        } | null;
+        if (parsedData?.scenes && parsedData.scenes.length > 0) {
+          console.log(`[ProjectLoader] Restoring from script_uploads.parsed_data — scenes: ${parsedData.scenes.length}`);
+          restoredFromParsedData = true;
+          scenes = parsedData.scenes.map((ps: any, idx: number) => ({
+            id: ps.id || `ps-${idx + 1}`,
+            scene_number: String(ps.number ?? ps.sceneNumber ?? idx + 1),
+            int_ext: ps.intExt || 'INT',
+            location: ps.location || 'UNKNOWN',
+            time_of_day: ps.dayNight || ps.timeOfDay || 'DAY',
+            synopsis: ps.synopsis || null,
+            script_content: ps.scriptContent || ps.content || null,
+            shooting_day: ps.shootingDay || null,
+            is_complete: ps.isComplete || false,
+            completed_at: null,
+            filming_status: null,
+            filming_notes: null,
+            project_id: projectId,
+          }));
+          // Build scene_characters from parsed_data characterIds
+          for (const ps of parsedData.scenes) {
+            const sceneId = ps.id || `ps-${parsedData.scenes.indexOf(ps) + 1}`;
+            const charIds: string[] = ps.characterIds || [];
+            for (const charId of charIds) {
+              restoredSceneCharacters.push({ scene_id: sceneId, character_id: charId });
+            }
+          }
+          if (parsedData.characters) {
+            characters = parsedData.characters.map((pc: any, idx: number) => ({
+              id: pc.id || `char-${idx + 1}`,
+              name: pc.name || '',
+              initials: pc.initials || (pc.name || '').split(' ').map((w: string) => w[0]).join('').substring(0, 3),
+              avatar_colour: pc.avatarColour || '#6366f1',
+              project_id: projectId,
+              metadata: pc.category ? { category: pc.category, billing: pc.billing } : null,
+            }));
+          }
+        }
+      }
 
       // 3. Junction tables
       let sceneCharacters: Record<string, unknown>[] = [];
       let lookScenes: Record<string, unknown>[] = [];
 
       if (scenes.length > 0) {
-        const sceneIds = scenes.map((s: Record<string, unknown>) => s.id as string);
-        const { data: scData } = await supabase
-          .from('scene_characters')
-          .select('*')
-          .in('scene_id', sceneIds);
-        sceneCharacters = scData || [];
+        if (restoredFromParsedData) {
+          // Use scene_characters built from parsed_data (not in DB yet)
+          sceneCharacters = restoredSceneCharacters;
+        } else {
+          const sceneIds = scenes.map((s: Record<string, unknown>) => s.id as string);
+          const { data: scData } = await supabase
+            .from('scene_characters')
+            .select('*')
+            .in('scene_id', sceneIds);
+          sceneCharacters = scData || [];
+        }
       }
 
       if (looks.length > 0) {
