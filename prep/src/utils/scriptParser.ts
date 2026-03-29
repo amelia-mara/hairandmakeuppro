@@ -702,13 +702,12 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   }
 
   if (!timeMatch && workingLine.length > 0) {
-    // Scene headings should always end after the time-of-day marker (DAY/NIGHT/etc).
-    // If no time marker was found at the end, this line likely has action text
-    // merged after the heading (PDF extraction artifact).
-    // Only accept as a valid heading if the remaining text is short and looks
-    // like a bare location (e.g. "INT. OFFICE") — reject anything with
-    // character intro patterns (comma + digits) or excessive length.
-    if (workingLine.length > 50 || /,\s*\d/.test(workingLine) || /[a-z]/.test(workingLine)) {
+    // No time-of-day marker found.  Accept the heading if it looks like a bare
+    // location (e.g. "INT. OFFICE") but reject lines that clearly have action
+    // text merged after the heading (PDF extraction artifact).
+    // Reject only when the line has a character intro pattern (comma + digits)
+    // which is a strong signal of merged action text.
+    if (/,\s*\d/.test(workingLine)) {
       return invalidResult;
     }
     location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
@@ -1235,6 +1234,27 @@ export function parseScriptText(text: string): ParsedScript {
 
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
+
+  /* ── Validation: compare scene headings found in input vs ParsedScene output ── */
+  const headingLineRe = /^(\d+[A-Z]{0,4}\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/im;
+  const inputHeadingNumbers: string[] = [];
+  let inputFallback = 0;
+  for (const rawLine of lines) {
+    if (headingLineRe.test(rawLine.trim())) {
+      inputFallback++;
+      const numMatch = rawLine.trim().match(/^(\d+[A-Z]{0,4})\s+/i);
+      inputHeadingNumbers.push(numMatch ? numMatch[1].toUpperCase() : String(inputFallback));
+    }
+  }
+  const outputSceneNumbers = new Set(scenes.map(s => s.sceneNumber));
+  const missingScenes = inputHeadingNumbers.filter(n => !outputSceneNumbers.has(n));
+  if (missingScenes.length > 0) {
+    console.warn(
+      `[scriptParser] Scene heading mismatch: ${inputHeadingNumbers.length} headings found in input, ` +
+      `${scenes.length} ParsedScene objects produced. ` +
+      `Missing scene numbers: ${missingScenes.join(', ')}`
+    );
+  }
 
   return { title, scenes, characters, rawText: text };
 }
