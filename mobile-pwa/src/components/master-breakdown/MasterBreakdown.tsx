@@ -397,13 +397,7 @@ function ByCharacterView({ characters, characterSceneMap, expandedCharacters, to
                       </span>
                       <span className="text-xs text-text-muted truncate">{scene.slugline}</span>
                     </div>
-                    {prepEntry ? (
-                      <PrepBreakdownSummary entry={prepEntry} />
-                    ) : look ? (
-                      <LookSummary look={look} />
-                    ) : (
-                      <p className="text-xs text-text-light italic">No look assigned</p>
-                    )}
+                    <FullBreakdownSummary prepBreakdown={prepEntry} look={look} />
                   </div>
                 ))}
               </div>
@@ -429,82 +423,42 @@ function CharacterBreakdownCard({ character, look, prepBreakdown }: CharacterBre
       <div className="flex items-center gap-2 mb-2">
         <CharacterAvatar character={character} size="sm" />
         <span className="text-sm font-medium text-foreground">{character.name}</span>
-        {look && (
-          <span className="ml-auto text-xs text-gold font-medium">{look.name}</span>
-        )}
       </div>
-      {prepBreakdown ? (
-        <PrepBreakdownSummary entry={prepBreakdown} />
-      ) : look ? (
-        <LookSummary look={look} />
-      ) : (
-        <p className="text-xs text-text-light italic ml-8">No look assigned for this scene</p>
-      )}
+      <FullBreakdownSummary prepBreakdown={prepBreakdown} look={look} />
     </div>
   );
 }
 
-/* ─── Prep Breakdown Summary ─── */
+/* ─── Full Breakdown Summary (matches prep categories) ─── */
 
-function PrepBreakdownSummary({ entry }: { entry: PrepCharacterBreakdown }) {
-  const hair = entry.entersWith?.hair;
-  const makeup = entry.entersWith?.makeup;
-  const wardrobe = entry.entersWith?.wardrobe;
-  const sfx = entry.sfx;
-  const environmental = entry.environmental;
-  const action = entry.action;
-  const notes = entry.notes;
+function FullBreakdownSummary({ prepBreakdown, look }: { prepBreakdown: PrepCharacterBreakdown | undefined; look: Look | undefined }) {
+  // Resolve values: prep breakdown manual entry → look defaults → empty
+  const lookName = look?.name || '';
+  const hair = prepBreakdown?.entersWith?.hair || (look ? buildHairSummary(look.hair) : '');
+  const makeup = prepBreakdown?.entersWith?.makeup || (look ? buildMakeupSummary(look.makeup) : '');
+  const wardrobe = prepBreakdown?.entersWith?.wardrobe || '';
+  const sfx = prepBreakdown?.sfx || (look?.sfxDetails?.sfxRequired && look.sfxDetails.sfxTypes.length > 0 ? look.sfxDetails.sfxTypes.join(', ') : '');
+  const environmental = prepBreakdown?.environmental || '';
+  const action = prepBreakdown?.action || '';
+  const notes = prepBreakdown?.notes || look?.notes || '';
 
-  if (!hair && !makeup && !wardrobe && !sfx && !environmental && !action && !notes) {
-    return <p className="text-xs text-text-light italic ml-8">No breakdown details yet</p>;
+  // Build continuity notes from change info
+  const continuityParts: string[] = [];
+  if (prepBreakdown?.changeType === 'change' && prepBreakdown.changeNotes) {
+    continuityParts.push(prepBreakdown.changeNotes);
   }
+  const continuityNotes = continuityParts.join('; ');
 
   return (
     <div className="space-y-1.5 ml-8">
-      {hair && <DetailRow label="Hair" value={hair} color="text-amber-400" />}
-      {makeup && <DetailRow label="Makeup" value={makeup} color="text-pink-400" />}
-      {wardrobe && <DetailRow label="Wardrobe" value={wardrobe} color="text-purple-400" />}
-      {sfx && <DetailRow label="SFX" value={sfx} color="text-red-400" />}
-      {environmental && <DetailRow label="Env." value={environmental} color="text-sky-400" />}
-      {action && <DetailRow label="Action" value={action} color="text-violet-400" />}
-      {notes && <DetailRow label="Notes" value={notes} color="text-text-muted" />}
-    </div>
-  );
-}
-
-/* ─── Look Summary ─── */
-
-interface LookSummaryProps {
-  look: Look;
-}
-
-function LookSummary({ look }: LookSummaryProps) {
-  const hairSummary = buildHairSummary(look.hair);
-  const makeupSummary = buildMakeupSummary(look.makeup);
-  const hasSfx = look.sfxDetails?.sfxRequired;
-
-  if (!hairSummary && !makeupSummary && !hasSfx && !look.notes) {
-    return <p className="text-xs text-text-light italic">No details entered yet</p>;
-  }
-
-  return (
-    <div className="space-y-1.5 ml-8">
-      {hairSummary && (
-        <DetailRow label="Hair" value={hairSummary} color="text-amber-400" />
-      )}
-      {makeupSummary && (
-        <DetailRow label="Makeup" value={makeupSummary} color="text-pink-400" />
-      )}
-      {hasSfx && look.sfxDetails && (
-        <DetailRow
-          label="SFX"
-          value={look.sfxDetails.sfxTypes.join(', ')}
-          color="text-red-400"
-        />
-      )}
-      {look.notes && (
-        <DetailRow label="Notes" value={look.notes} color="text-text-muted" />
-      )}
+      <DetailRow label="Look" value={lookName} color="text-gold" />
+      <DetailRow label="Hair" value={hair} color="text-amber-400" />
+      <DetailRow label="Makeup" value={makeup} color="text-pink-400" />
+      <DetailRow label="Wardrobe" value={wardrobe} color="text-purple-400" />
+      <DetailRow label="SFX" value={sfx} color="text-red-400" />
+      <DetailRow label="Env." value={environmental} color="text-sky-400" />
+      <DetailRow label="Action" value={action} color="text-violet-400" />
+      <DetailRow label="Notes" value={notes || continuityNotes} color="text-text-muted" />
     </div>
   );
 }
@@ -513,7 +467,11 @@ function DetailRow({ label, value, color }: { label: string; value: string; colo
   return (
     <div className="flex items-start gap-2 text-xs">
       <span className={clsx('font-semibold flex-shrink-0 w-14', color)}>{label}</span>
-      <span className="text-text-muted">{value}</span>
+      {value ? (
+        <span className="text-text-muted">{value}</span>
+      ) : (
+        <span className="text-text-light">—</span>
+      )}
     </div>
   );
 }
