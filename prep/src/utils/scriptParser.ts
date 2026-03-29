@@ -702,19 +702,23 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   }
 
   if (!timeMatch && workingLine.length > 0) {
-    // Scene headings should always end after the time-of-day marker (DAY/NIGHT/etc).
-    // If no time marker was found at the end, this line likely has action text
-    // merged after the heading (PDF extraction artifact).
-    // Only accept as a valid heading if the remaining text is short and looks
-    // like a bare location (e.g. "INT. OFFICE") — reject anything with
-    // character intro patterns (comma + digits) or excessive length.
-    if (workingLine.length > 50 || /,\s*\d/.test(workingLine) || /[a-z]/.test(workingLine)) {
-      return invalidResult;
+    // No time-of-day marker found. Still accept the heading — every line with a
+    // valid INT./EXT. prefix must produce a scene. If action text appears to be
+    // merged after the location (lowercase chars or comma+digit patterns), extract
+    // just the ALL CAPS location prefix; otherwise use the full text as location.
+    if (/,\s*\d/.test(workingLine) || /[a-z]/.test(workingLine)) {
+      const capsLocMatch = workingLine.match(/^([A-Z][A-Z\s\-–—'.\/&#]+?)(?=\s+[a-z]|\s*,\s*\d)/);
+      if (capsLocMatch && capsLocMatch[1].trim().length >= 2) {
+        location = capsLocMatch[1].replace(/[\s\-–—\.,]+$/, '').trim();
+      } else {
+        location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
+      }
+    } else {
+      location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
     }
-    location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
   }
 
-  if (!location || location.length < 2) return invalidResult;
+  if (!location || location.length < 2) location = workingLine.trim() || 'UNKNOWN';
 
   return { sceneNumber, intExt, location, timeOfDay, rawSlugline: trimmed, isValid: true };
 }
@@ -1235,6 +1239,29 @@ export function parseScriptText(text: string): ParsedScript {
 
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
+
+  /* ── Validation: compare scene headings found in input vs output ── */
+  const headingDetectRe = /^(?:\d+[A-Z]{0,4}\s+)?(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i;
+  const inputHeadingLines: string[] = [];
+  for (const rawLine of lines) {
+    const cleaned = normalizeSceneWordPrefix(rawLine.trim()).replace(/\s*\*+\s*$/, '').trim();
+    if (cleaned.length >= 5 && headingDetectRe.test(cleaned)) {
+      inputHeadingLines.push(rawLine.trim());
+    }
+  }
+  const outputSceneCount = scenes.filter(s => s.slugline !== 'PREAMBLE').length;
+  if (inputHeadingLines.length > outputSceneCount) {
+    const outputSluglines = new Set(scenes.map(s => s.slugline));
+    const missing = inputHeadingLines.filter(h => !outputSluglines.has(h));
+    if (missing.length > 0) {
+      console.warn(
+        `[scriptParser] Scene count mismatch: ${inputHeadingLines.length} headings detected in input, ` +
+        `${outputSceneCount} ParsedScene objects produced. ` +
+        `Missing (${missing.length}):` +
+        missing.map((h, i) => `\n  ${i + 1}. "${h}"`).join('')
+      );
+    }
+  }
 
   return { title, scenes, characters, rawText: text };
 }
