@@ -163,7 +163,7 @@ function dbToScene(
   return {
     id: db.id,
     sceneNumber: db.scene_number,
-    slugline: db.location || '',
+    slugline: `${db.int_ext || 'INT'}. ${db.location || 'UNKNOWN'} - ${db.time_of_day || 'DAY'}`,
     intExt: (db.int_ext as Scene['intExt']) || 'INT',
     timeOfDay: (db.time_of_day as Scene['timeOfDay']) || 'DAY',
     synopsis: db.synopsis || undefined,
@@ -176,7 +176,10 @@ function dbToScene(
     // Server wins for script content, fall back to local
     scriptContent: db.script_content || existingScene?.scriptContent,
     hasScheduleDiscrepancy: existingScene?.hasScheduleDiscrepancy,
-    characterConfirmationStatus: existingScene?.characterConfirmationStatus,
+    // Auto-confirm scenes that have characters from the server (e.g. confirmed in Prep)
+    characterConfirmationStatus: characterIds.length > 0
+      ? 'confirmed' as const
+      : (existingScene?.characterConfirmationStatus || 'pending' as const),
     suggestedCharacters: existingScene?.suggestedCharacters,
     amendmentStatus: existingScene?.amendmentStatus,
     previousScriptContent: existingScene?.previousScriptContent,
@@ -186,14 +189,17 @@ function dbToScene(
 }
 
 function dbToCharacter(db: DbCharacter, existingChar?: Character): Character {
+  const meta = (db as any).metadata as Record<string, unknown> | undefined;
   return {
     id: db.id,
     name: db.name,
-    initials: db.initials,
+    initials: db.initials || db.name.split(' ').map((w: string) => w[0]).join('').substring(0, 3),
     avatarColour: db.avatar_colour,
-    // Preserve local-only fields
-    actorNumber: existingChar?.actorNumber,
-    role: existingChar?.role,
+    // Extract role/billing from metadata (set by Prep), fall back to local
+    actorNumber: (meta?.billing as number) || existingChar?.actorNumber,
+    role: meta?.category
+      ? ((meta.category as string) === 'supporting_artist' ? 'background' : 'lead') as 'lead' | 'supporting' | 'background'
+      : existingChar?.role,
   };
 }
 

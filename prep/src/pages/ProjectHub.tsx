@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
-import { Film, Tv, Clapperboard, Music, Video, Plus, FileText, DollarSign, Eye } from 'lucide-react';
+import { deleteProjectFromSupabase } from '@/services/projectService';
+import { Film, Tv, Clapperboard, Music, Video, Plus, FileText, DollarSign, Eye, Trash2 } from 'lucide-react';
 import type { ProjectType } from '@/types';
 
 const TYPE_ICONS: Record<ProjectType, typeof Film> = {
@@ -19,7 +21,27 @@ interface ProjectHubProps {
 
 export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth }: ProjectHubProps) {
   const projects = useProjectStore((s) => s.projects);
+  const deleteProject = useProjectStore((s) => s.deleteProject);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string, title: string) => {
+    e.stopPropagation();
+    setDeleteConfirm({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    const { error } = await deleteProjectFromSupabase(deleteConfirm.id);
+    if (error) {
+      console.error('Failed to delete from Supabase:', error);
+    }
+    deleteProject(deleteConfirm.id);
+    setDeleting(false);
+    setDeleteConfirm(null);
+  };
 
   // If authenticated and projects exist, show project cards instead of hero
   if (isAuthenticated && projects.length > 0) {
@@ -42,6 +64,20 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
             </div>
 
             <div className="hub-projects-grid">
+            {/* New project card — first */}
+            <button className="new-project-card" onClick={onCreateProject}>
+              <div className="icon-circle">
+                <Plus size={22} style={{ color: '#fff' }} />
+              </div>
+              <span style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+              }}>
+                New Project
+              </span>
+            </button>
+
             {projects.map((project) => {
               const Icon = TYPE_ICONS[project.type as ProjectType] || Film;
               return (
@@ -50,6 +86,17 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
                   className="project-card"
                   onClick={() => onSelectProject(project.id)}
                 >
+                  {/* Delete button */}
+                  <div
+                    className="project-card-delete"
+                    onClick={(e) => handleDeleteClick(e, project.id, project.title)}
+                    role="button"
+                    tabIndex={0}
+                    title="Delete project"
+                  >
+                    <Trash2 size={14} />
+                  </div>
+
                   <div className="project-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <div className="project-card-icon">
@@ -96,23 +143,55 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
                 </button>
               );
             })}
-
-            {/* New project card */}
-            <button className="new-project-card" onClick={onCreateProject}>
-              <div className="icon-circle">
-                <Plus size={22} style={{ color: '#fff' }} />
-              </div>
-              <span style={{
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-              }}>
-                New Project
-              </span>
-            </button>
           </div>
           </div>
         </div>
+
+        {/* Delete confirmation modal */}
+        {deleteConfirm && (
+          <div className="modal-backdrop" onClick={() => !deleting && setDeleteConfirm(null)}>
+            <div className="modal-glass" onClick={(e) => e.stopPropagation()} style={{ padding: '28px 32px' }}>
+              <h3 style={{
+                margin: '0 0 12px',
+                fontSize: '1.125rem',
+                fontWeight: 700,
+                color: 'var(--text-heading)',
+              }}>
+                Delete Project
+              </h3>
+              <p style={{
+                margin: '0 0 24px',
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+              }}>
+                Are you sure you want to delete <strong>{deleteConfirm.title}</strong>? This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  className="btn-ghost"
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-action-danger"
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  style={{
+                    background: 'var(--brand-terracotta, #C4522A)',
+                    color: '#fff',
+                    borderColor: 'var(--brand-terracotta, #C4522A)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

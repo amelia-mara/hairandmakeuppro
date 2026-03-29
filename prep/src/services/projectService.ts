@@ -56,6 +56,33 @@ export async function createProjectInSupabase(
   }
 }
 
+// ---------- Delete ----------
+
+export async function deleteProjectFromSupabase(
+  projectId: string,
+): Promise<{ error: Error | null }> {
+  try {
+    // Remove project membership first (RLS may block direct project delete)
+    const { error: memberError } = await supabase
+      .from('project_members')
+      .delete()
+      .eq('project_id', projectId);
+    if (memberError) console.warn('[ProjectService] member cleanup:', memberError);
+
+    // Delete the project itself
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId);
+    if (error) throw error;
+
+    return { error: null };
+  } catch (err) {
+    console.error('[ProjectService] delete failed:', err);
+    return { error: err as Error };
+  }
+}
+
 // ---------- Load user projects ----------
 
 export async function loadUserProjects(

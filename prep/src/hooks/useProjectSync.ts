@@ -61,6 +61,39 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
+/**
+ * Build a lookId → sceneNumber[] map from the breakdown store.
+ * Each scene breakdown tracks which lookId is assigned to each character,
+ * so we invert that to get: for each look, which scenes use it.
+ */
+function buildLookSceneMap(projectId: string): Record<string, string[]> {
+  const breakdowns = useBreakdownStore.getState().breakdowns;
+  const parsed = useParsedScriptStore.getState().getParsedData(projectId);
+  if (!parsed) return {};
+
+  // Build scene ID → scene number map
+  const sceneNumById = new Map<string, string>();
+  for (const s of parsed.scenes) {
+    sceneNumById.set(s.id, String(s.number));
+  }
+
+  const map: Record<string, string[]> = {};
+  for (const [sceneId, bd] of Object.entries(breakdowns)) {
+    if (!bd || !bd.characters) continue;
+    const sceneNum = sceneNumById.get(sceneId);
+    if (!sceneNum) continue;
+    for (const cb of bd.characters) {
+      if (cb.lookId) {
+        if (!map[cb.lookId]) map[cb.lookId] = [];
+        if (!map[cb.lookId].includes(sceneNum)) {
+          map[cb.lookId].push(sceneNum);
+        }
+      }
+    }
+  }
+  return map;
+}
+
 interface ProjectSyncState {
   loading: boolean;
   error: string | null;
@@ -347,7 +380,8 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           // If there were local-only looks not yet in Supabase, save them now
           if (localOnlyLooks.length > 0) {
             console.log(`[useProjectSync] Syncing ${localOnlyLooks.length} local-only look(s) to Supabase`);
-            saveLooks(projectId!, looks as any);
+            const lookSceneMap = buildLookSceneMap(projectId!);
+            saveLooks(projectId!, looks as any, lookSceneMap);
           }
         }
 
@@ -428,7 +462,8 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 saveCharacters(projectId!, sp.characters as any);
               }
               if (sp.looks && sp.looks.length > 0) {
-                saveLooks(projectId!, sp.looks as any);
+                const lookSceneMap = buildLookSceneMap(projectId!);
+                saveLooks(projectId!, sp.looks as any, lookSceneMap);
               }
             } finally {
               setReceivingFromRealtime(false);
@@ -467,7 +502,8 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             saveCharacters(projectId!, mergedChars as any);
 
             if (localParsed.looks.length > 0) {
-              saveLooks(projectId!, localParsed.looks as any);
+              const lookSceneMap = buildLookSceneMap(projectId!);
+              saveLooks(projectId!, localParsed.looks as any, lookSceneMap);
             }
 
             // Sync breakdowns
@@ -636,9 +672,10 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
         saveCharacters(projectId, mergedChars as any);
       }
 
-      // Save looks
+      // Save looks (include scene assignments from breakdown store)
       if (curr.looks !== prev?.looks && curr.looks.length > 0) {
-        saveLooks(projectId, curr.looks as any);
+        const lookSceneMap = buildLookSceneMap(projectId);
+        saveLooks(projectId, curr.looks as any, lookSceneMap);
       }
     });
 
@@ -656,6 +693,15 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
       for (const sceneId of Object.keys(state.breakdowns)) {
         if (state.breakdowns[sceneId] !== prevState.breakdowns[sceneId]) {
           saveBreakdown(projectId, sceneId, state.breakdowns[sceneId] as any);
+        }
+      }
+
+      // Re-sync look_scenes when breakdown changes (look assignments live here)
+      const parsed = useParsedScriptStore.getState().getParsedData(projectId);
+      if (parsed && parsed.looks.length > 0) {
+        const lookSceneMap = buildLookSceneMap(projectId);
+        if (Object.keys(lookSceneMap).length > 0) {
+          saveLooks(projectId, parsed.looks as any, lookSceneMap);
         }
       }
     });

@@ -238,7 +238,8 @@ function MoreMenu({ onNavigate, onNavigateToTab, canManage }: MoreMenuProps) {
       case 'schedule': return 'Shooting schedule day-by-day';
       case 'callsheets': return 'Upload and manage call sheets';
       case 'today': return 'Today\'s shooting schedule';
-      case 'breakdown': return 'Scene breakdown by character';
+      case 'scenes': return 'Scene list with filters and filming status';
+      case 'breakdown': return 'Master breakdown from pre-production';
       case 'hours': return 'Timesheet and earnings';
       case 'budget': return 'Expenses overview, scan receipts';
       default: return '';
