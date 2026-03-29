@@ -172,14 +172,6 @@ const WRITTEN_NUMBER_RE = '(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|E
 /** Pre-compiled regex: written-out number + time unit + LATER */
 const WRITTEN_TIME_JUMP_RE = new RegExp(`\\b${WRITTEN_NUMBER_RE}\\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\\s+LATER\\b`);
 
-/** Map written-out cardinal words to numeric values for multi-day jump parsing */
-const WRITTEN_TO_NUMBER: Record<string, number> = {
-  ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5, SIX: 6, SEVEN: 7, EIGHT: 8,
-  NINE: 9, TEN: 10, ELEVEN: 11, TWELVE: 12, THIRTEEN: 13, FOURTEEN: 14,
-  FIFTEEN: 15, SIXTEEN: 16, SEVENTEEN: 17, EIGHTEEN: 18, NINETEEN: 19,
-  TWENTY: 20, THIRTY: 30, FORTY: 40, FIFTY: 50,
-};
-
 /**
  * Same-day phrases that must never trigger a day increment.
  * Checked before any jump detection to prevent false positives.
@@ -242,12 +234,7 @@ export function actionLinesIndicateCalendarDate(lines: string[]): boolean {
       || /\bVALENTINE.S\s+DAY\b/.test(t);
 }
 
-// ─── Multi-day jump parsing ─────────────────────────────────────────────────
-
-/** Parse a written-out number word to its numeric value. Returns 0 if unrecognised. */
-function writtenToNumber(word: string): number {
-  return WRITTEN_TO_NUMBER[word.toUpperCase()] ?? 0;
-}
+// ─── Jump day parsing ───────────────────────────────────────────────────────
 
 /**
  * Parse the number of story days to advance from action line text.
