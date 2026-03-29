@@ -284,7 +284,7 @@ export function saveScenes(
       .upsert(dbScenes, { onConflict: 'id' });
     if (error) throw error;
 
-    // Sync scene_characters junction
+    // Sync scene_characters junction (non-fatal — data still saved above)
     const sceneIds = scenes.map(s => s.id);
     const entries: { scene_id: string; character_id: string }[] = [];
     for (const scene of scenes) {
@@ -293,10 +293,24 @@ export function saveScenes(
       }
     }
     if (sceneIds.length > 0) {
-      await supabase.rpc('sync_scene_characters', {
-        p_scene_ids: sceneIds,
-        p_entries: entries,
-      });
+      try {
+        await supabase.rpc('sync_scene_characters', {
+          p_scene_ids: sceneIds,
+          p_entries: entries,
+        });
+      } catch (rpcErr) {
+        console.warn('[PrepSync] sync_scene_characters RPC failed, using fallback:', rpcErr);
+        // Fallback: delete + insert directly
+        await supabase
+          .from('scene_characters')
+          .delete()
+          .in('scene_id', sceneIds);
+        if (entries.length > 0) {
+          await supabase
+            .from('scene_characters')
+            .upsert(entries, { onConflict: 'scene_id,character_id' });
+        }
+      }
     }
     console.log('[PrepSync] Scenes saved');
   });
@@ -386,7 +400,7 @@ export function saveLooks(
       .upsert(dbLooks, { onConflict: 'id' });
     if (error) throw error;
 
-    // Sync look_scenes junction if provided
+    // Sync look_scenes junction if provided (non-fatal)
     if (lookSceneMap) {
       const lookIds = looks.map(l => l.id);
       const entries: { look_id: string; scene_number: string }[] = [];
@@ -397,10 +411,23 @@ export function saveLooks(
         }
       }
       if (lookIds.length > 0) {
-        await supabase.rpc('sync_look_scenes', {
-          p_look_ids: lookIds,
-          p_entries: entries,
-        });
+        try {
+          await supabase.rpc('sync_look_scenes', {
+            p_look_ids: lookIds,
+            p_entries: entries,
+          });
+        } catch (rpcErr) {
+          console.warn('[PrepSync] sync_look_scenes RPC failed, using fallback:', rpcErr);
+          await supabase
+            .from('look_scenes')
+            .delete()
+            .in('look_id', lookIds);
+          if (entries.length > 0) {
+            await supabase
+              .from('look_scenes')
+              .upsert(entries, { onConflict: 'look_id,scene_number' });
+          }
+        }
       }
     }
     console.log('[PrepSync] Looks saved');
