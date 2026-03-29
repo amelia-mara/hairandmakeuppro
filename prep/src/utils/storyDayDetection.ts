@@ -132,6 +132,27 @@ const WRITTEN_NUMBER_RE = '(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|E
 /** Pre-compiled regex: written-out number + time unit + LATER */
 const WRITTEN_TIME_JUMP_RE = new RegExp(`\\b${WRITTEN_NUMBER_RE}\\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\\s+LATER\\b`);
 
+/** Map written-out cardinal words to numeric values for multi-day jump parsing */
+const WRITTEN_TO_NUMBER: Record<string, number> = {
+  ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5, SIX: 6, SEVEN: 7, EIGHT: 8,
+  NINE: 9, TEN: 10, ELEVEN: 11, TWELVE: 12, THIRTEEN: 13, FOURTEEN: 14,
+  FIFTEEN: 15, SIXTEEN: 16, SEVENTEEN: 17, EIGHTEEN: 18, NINETEEN: 19,
+  TWENTY: 20, THIRTY: 30, FORTY: 40, FIFTY: 50,
+};
+
+/**
+ * Same-day phrases that must never trigger a day increment.
+ * Checked before any jump detection to prevent false positives.
+ */
+function isSameDayPhrase(t: string): boolean {
+  return /\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING|AFTERNOON)\b/.test(t)
+      || /\bMOMENTS?\s+LATER\b/.test(t)
+      || /\bSECONDS?\s+LATER\b/.test(t)
+      || /\bMEANWHILE\b/.test(t)
+      || /\bIMMEDIATELY\b/.test(t)
+      || /\bCONTINUOUS\b/.test(t);
+}
+
 // ─── Transition detection (split by priority) ───────────────────────────────
 
 /**
@@ -142,13 +163,12 @@ const WRITTEN_TIME_JUMP_RE = new RegExp(`\\b${WRITTEN_NUMBER_RE}\\s+(DAYS?|WEEKS
 export function actionLinesIndicateTimeJump(lines: string[]): boolean {
   const text = lines.slice(0, 2).join(' ');
   const t = text.toUpperCase();
-  return /\bNEXT\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)
-      || /\bTHE\s+NEXT\s+(DAY|MORNING|NIGHT)\b/.test(t)
-      || /\bFOLLOWING\s+(DAY|MORNING|NIGHT)\b/.test(t)
+  // Same-day phrases must be excluded first
+  if (isSameDayPhrase(t)) return false;
+  return /\b(?:THE\s+)?(?:NEXT|FOLLOWING)\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)
       || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
+      || /\bA\s+(WEEK|MONTH)\s+LATER\b/.test(t)
       || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
-      || /\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)
-      || /\b\d{1,2}\s+(YEARS?|MONTHS?|WEEKS?|HOURS?)\s+LATER\b/.test(t)
       || WRITTEN_TIME_JUMP_RE.test(t);
 }
 
@@ -158,10 +178,11 @@ export function actionLinesIndicateTimeJump(lines: string[]): boolean {
  */
 export function todIsExplicitNewDay(tod: string): boolean {
   const t = tod.toUpperCase();
-  return /\bNEXT\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)
-      || /\bFOLLOWING\s+(DAY|MORNING)\b/.test(t)
-      || /\bTHE\s+NEXT\s+(DAY|MORNING)\b/.test(t)
+  // Same-day phrases must be excluded first
+  if (isSameDayPhrase(t)) return false;
+  return /\b(?:THE\s+)?(?:NEXT|FOLLOWING)\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)
       || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
+      || /\bA\s+(WEEK|MONTH)\s+LATER\b/.test(t)
       || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
       || WRITTEN_TIME_JUMP_RE.test(t);
 }
@@ -179,6 +200,106 @@ export function actionLinesIndicateCalendarDate(lines: string[]): boolean {
       || /\bCHRISTMAS\s+(DAY|MORNING|NIGHT|EVE)\b/.test(t)
       || /\bNEW\s+YEAR(S?\s+DAY|S?\s+EVE)?\b/.test(t)
       || /\bVALENTINE.S\s+DAY\b/.test(t);
+}
+
+// ─── Multi-day jump parsing ─────────────────────────────────────────────────
+
+/** Parse a written-out number word to its numeric value. Returns 0 if unrecognised. */
+function writtenToNumber(word: string): number {
+  return WRITTEN_TO_NUMBER[word.toUpperCase()] ?? 0;
+}
+
+/**
+ * Parse the number of story days to advance from action line text.
+ * Returns 0 if no jump detected, 1+ for the day increment.
+ * "a month later" returns 1 with a console warning (large jump, no exact days).
+ */
+export function parseActionLineJumpDays(lines: string[]): number {
+  const text = lines.slice(0, 2).join(' ');
+  const t = text.toUpperCase();
+  if (isSameDayPhrase(t)) return 0;
+  if (!actionLinesIndicateTimeJump(lines)) return 0;
+  return parseJumpDaysFromText(t);
+}
+
+/**
+ * Parse the number of story days to advance from a TOD field.
+ * Returns 0 if no jump detected, 1+ for the day increment.
+ */
+export function parseTodJumpDays(tod: string): number {
+  const t = tod.toUpperCase();
+  if (isSameDayPhrase(t)) return 0;
+  if (!todIsExplicitNewDay(tod)) return 0;
+  return parseJumpDaysFromText(t);
+}
+
+/** Shared logic: extract the numeric day increment from uppercased text. */
+function parseJumpDaysFromText(t: string): number {
+  // "next day/morning/evening" or "following day/morning/evening" → +1
+  if (/\b(?:THE\s+)?(?:NEXT|FOLLOWING)\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)) return 1;
+
+  // "a few days later" → +3
+  if (/\bA\s+FEW\s+DAYS?\s+LATER\b/.test(t)) return 3;
+  // "a couple of days later" / "a couple days later" → +2
+  if (/\bA\s+COUPLE\s+(?:OF\s+)?DAYS?\s+LATER\b/.test(t)) return 2;
+  // "several days later" → +5
+  if (/\bSEVERAL\s+DAYS?\s+LATER\b/.test(t)) return 5;
+
+  // "a week later" → +7
+  if (/\bA\s+WEEK\s+LATER\b/.test(t)) return 7;
+
+  // "a month later" → flag as large jump, increment by 1
+  if (/\bA\s+MONTH\s+LATER\b/.test(t)) {
+    console.warn('[storyDayDetection] "a month later" detected — large jump, exact days not calculated');
+    return 1;
+  }
+
+  // Numeric: "3 days later", "2 weeks later", "6 months later", "12 years later"
+  let m = t.match(/\b(\d+)\s+DAYS?\s+LATER\b/);
+  if (m) return parseInt(m[1], 10);
+
+  m = t.match(/\b(\d+)\s+WEEKS?\s+LATER\b/);
+  if (m) return parseInt(m[1], 10) * 7;
+
+  m = t.match(/\b(\d+)\s+MONTHS?\s+LATER\b/);
+  if (m) {
+    console.warn(`[storyDayDetection] "${m[0]}" detected — large jump, exact days not calculated`);
+    return 1;
+  }
+
+  m = t.match(/\b(\d+)\s+YEARS?\s+LATER\b/);
+  if (m) {
+    console.warn(`[storyDayDetection] "${m[0]}" detected — large jump, exact days not calculated`);
+    return 1;
+  }
+
+  // Written-out number + days: "THREE DAYS LATER"
+  const writtenDaysRe = new RegExp(`\\b(${Object.keys(WRITTEN_TO_NUMBER).join('|')})\\s+DAYS?\\s+LATER\\b`);
+  m = t.match(writtenDaysRe);
+  if (m) return writtenToNumber(m[1]) || 1;
+
+  // Written-out number + weeks: "TWO WEEKS LATER"
+  const writtenWeeksRe = new RegExp(`\\b(${Object.keys(WRITTEN_TO_NUMBER).join('|')})\\s+WEEKS?\\s+LATER\\b`);
+  m = t.match(writtenWeeksRe);
+  if (m) return (writtenToNumber(m[1]) || 1) * 7;
+
+  // Written-out number + months/years: flag as large jump
+  const writtenLargeRe = new RegExp(`\\b(${Object.keys(WRITTEN_TO_NUMBER).join('|')})\\s+(MONTHS?|YEARS?)\\s+LATER\\b`);
+  m = t.match(writtenLargeRe);
+  if (m) {
+    console.warn(`[storyDayDetection] "${m[0]}" detected — large jump, exact days not calculated`);
+    return 1;
+  }
+
+  // Vague quantities + time units: "some weeks later", "many months later"
+  if (/\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?)\s+LATER\b/.test(t)) return 3;
+  if (/\b(SEVERAL|FEW|MANY|SOME)\s+(WEEKS?|MONTHS?)\s+LATER\b/.test(t)) {
+    console.warn('[storyDayDetection] Vague large time jump detected — exact days not calculated');
+    return 1;
+  }
+
+  // Fallback: something matched the boolean check but we couldn't parse a number
+  return 1;
 }
 
 // ─── Core story day builder ───────────────────────────────────────────────────
@@ -268,8 +389,18 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       }
     }
 
+    // Compute multi-day increment when a jump is detected
+    let increment = 0;
+    if (newDay) {
+      // Try action lines first (Priority 1), then TOD field (Priority 2)
+      increment = parseActionLineJumpDays(scene.actionLines);
+      if (increment === 0) increment = parseTodJumpDays(rawTOD);
+      // Priorities 3-5 (regressions, calendar dates) are always +1
+      if (increment === 0) increment = 1;
+    }
+
     if (nonPresent) {
-      if (newDay) nonPresentDay++;
+      nonPresentDay += increment;
       if (!isContinuous && timeOrder !== -1) prevNonPresentOrder = timeOrder;
 
       results.push({
@@ -280,7 +411,7 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         confidence,
       });
     } else {
-      if (newDay) presentDay++;
+      presentDay += increment;
       if (!isContinuous && timeOrder !== -1) prevPresentOrder = timeOrder;
 
       results.push({
