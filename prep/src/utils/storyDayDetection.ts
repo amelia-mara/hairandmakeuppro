@@ -71,7 +71,11 @@ export function classifyTOD(raw: string): TimeOfDay {
   // Qualifiers that mean "same continuous scene" - never a new day
   if (/\bCONTINUOUS\b/.test(t))                    return 'CONTINUOUS';
   if (/\bMOMENTS?\s+LATER\b/.test(t))               return 'CONTINUOUS';
+  if (/\bSECONDS?\s+LATER\b/.test(t))               return 'CONTINUOUS';
   if (/\bA\s+LITTLE\s+LATER\b/.test(t))             return 'CONTINUOUS';
+  if (/\bMEANWHILE\b/.test(t))                      return 'CONTINUOUS';
+  if (/\bIMMEDIATELY\b/.test(t))                    return 'CONTINUOUS';
+  if (/\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)) return 'CONTINUOUS';
   // Explicit "LATER" without other TOD - treat as same day, unknown order
   if (/^\s*LATER\s*$/.test(t))                      return 'LATER';
   if (/\bPRE[-\s]?DAWN\b/.test(t))                  return 'PRE_DAWN';
@@ -142,12 +146,21 @@ const WRITTEN_TIME_JUMP_RE = new RegExp(`\\b${WRITTEN_NUMBER_RE}\\s+(DAYS?|WEEKS
 export function actionLinesIndicateTimeJump(lines: string[]): boolean {
   const text = lines.slice(0, 2).join(' ');
   const t = text.toUpperCase();
+  // Same-day phrases — must never trigger a day increment
+  if (/\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)) return false;
+  if (/\bMOMENTS?\s+LATER\b/.test(t)) return false;
+  if (/\bSECONDS?\s+LATER\b/.test(t)) return false;
+  if (/\bMEANWHILE\b/.test(t)) return false;
+  if (/\bIMMEDIATELY\b/.test(t)) return false;
+  if (/\bCONTINUOUS\b/.test(t)) return false;
+
   return /\bNEXT\s+(DAY|MORNING|NIGHT|EVENING|AFTERNOON)\b/.test(t)
-      || /\bTHE\s+NEXT\s+(DAY|MORNING|NIGHT)\b/.test(t)
-      || /\bFOLLOWING\s+(DAY|MORNING|NIGHT)\b/.test(t)
+      || /\bTHE\s+NEXT\s+(DAY|MORNING|NIGHT|EVENING)\b/.test(t)
+      || /\bFOLLOWING\s+(DAY|MORNING|NIGHT|EVENING)\b/.test(t)
+      || /\bTHE\s+FOLLOWING\s+(DAY|MORNING|NIGHT|EVENING)\b/.test(t)
       || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
       || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
-      || /\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)
+      || /\bA\s+(DAY|WEEK|MONTH|YEAR)\s+LATER\b/.test(t)
       || /\b\d{1,2}\s+(YEARS?|MONTHS?|WEEKS?|HOURS?)\s+LATER\b/.test(t)
       || WRITTEN_TIME_JUMP_RE.test(t);
 }
@@ -158,11 +171,20 @@ export function actionLinesIndicateTimeJump(lines: string[]): boolean {
  */
 export function todIsExplicitNewDay(tod: string): boolean {
   const t = tod.toUpperCase();
+  // Same-day phrases — must never trigger a day increment
+  if (/\bLATER\s+THAT\s+(DAY|NIGHT|EVENING|MORNING)\b/.test(t)) return false;
+  if (/\bMOMENTS?\s+LATER\b/.test(t)) return false;
+  if (/\bSECONDS?\s+LATER\b/.test(t)) return false;
+  if (/\bMEANWHILE\b/.test(t)) return false;
+  if (/\bIMMEDIATELY\b/.test(t)) return false;
+
   return /\bNEXT\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)
-      || /\bFOLLOWING\s+(DAY|MORNING)\b/.test(t)
-      || /\bTHE\s+NEXT\s+(DAY|MORNING)\b/.test(t)
+      || /\bFOLLOWING\s+(DAY|MORNING|NIGHT|EVENING)\b/.test(t)
+      || /\bTHE\s+NEXT\s+(DAY|MORNING|NIGHT|EVENING)\b/.test(t)
+      || /\bTHE\s+FOLLOWING\s+(DAY|MORNING|NIGHT|EVENING)\b/.test(t)
       || /\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)
       || /\b(SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?)\s+LATER\b/.test(t)
+      || /\bA\s+(DAY|WEEK|MONTH|YEAR)\s+LATER\b/.test(t)
       || WRITTEN_TIME_JUMP_RE.test(t);
 }
 
