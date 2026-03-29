@@ -30,6 +30,26 @@ export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'c
 // Scene amendment status for tracking script revisions
 export type SceneAmendmentStatus = 'unchanged' | 'modified' | 'new' | 'deleted';
 
+// Prep breakdown data — populated from the prep app's breakdown editor
+export interface PrepCharacterBreakdown {
+  characterId: string;
+  lookId: string;
+  entersWith: { hair: string; makeup: string; wardrobe: string };
+  sfx: string;
+  environmental: string;
+  action: string;
+  changeType: 'no-change' | 'change';
+  changeNotes: string;
+  exitsWith: { hair: string; makeup: string; wardrobe: string };
+  notes: string;
+}
+
+export interface PrepSceneBreakdown {
+  sceneId: string;
+  timeline: { day: string; dayConfirmed?: boolean; time: string; type: string; note: string };
+  characters: PrepCharacterBreakdown[];
+}
+
 export interface Scene {
   id: string;
   sceneNumber: string; // Can be "4A", "4B", etc. for alphanumeric scene numbers
@@ -45,6 +65,7 @@ export interface Scene {
   filmingNotes?: string; // Reason for not filmed/partial
   shootingDay?: number; // Which production day this scene is scheduled
   hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
+  prepBreakdown?: PrepSceneBreakdown; // Breakdown data from prep app
 
   // Character confirmation state (for progressive workflow)
   characterConfirmationStatus?: CharacterConfirmationStatus;

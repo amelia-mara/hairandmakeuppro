@@ -192,6 +192,21 @@ function handleSceneChange(payload: ChangePayload) {
         );
       }
 
+      // Parse prep breakdown from filming_notes if it's valid JSON with characters array
+      let prepBreakdown = existingScene.prepBreakdown;
+      if (updated.filming_notes !== undefined) {
+        try {
+          const parsed = typeof updated.filming_notes === 'string'
+            ? JSON.parse(updated.filming_notes as string)
+            : updated.filming_notes;
+          if (parsed && Array.isArray(parsed.characters)) {
+            prepBreakdown = parsed;
+          }
+        } catch {
+          // Not valid breakdown JSON — ignore
+        }
+      }
+
       // For other fields, use mergeServerData to update the scene in place
       const updatedScenes = project.scenes.map(s => {
         if (s.id !== sceneId) return s;
@@ -200,6 +215,7 @@ function handleSceneChange(payload: ChangePayload) {
           scriptContent: (updated.script_content as string) ?? s.scriptContent,
           isComplete: (updated.is_complete as boolean) ?? s.isComplete,
           shootingDay: (updated.shooting_day as number) ?? s.shootingDay,
+          prepBreakdown,
         };
       });
       store.mergeServerData({ scenes: updatedScenes });
