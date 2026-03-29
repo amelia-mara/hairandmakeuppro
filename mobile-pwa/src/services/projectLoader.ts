@@ -20,6 +20,7 @@ import type {
   Look,
   ProductionSchedule,
   CallSheet,
+  PrepSceneBreakdown,
 } from '@/types';
 
 export interface ProjectLoadResult {
@@ -189,6 +190,23 @@ function mapScenes(
 
   return dbScenes.map(row => {
     const charIds = scMap.get(row.id as string) || [];
+
+    // Parse prep breakdown from filming_notes JSON
+    let prepBreakdown: PrepSceneBreakdown | undefined;
+    if (row.filming_notes) {
+      try {
+        const parsed = typeof row.filming_notes === 'string'
+          ? JSON.parse(row.filming_notes as string)
+          : row.filming_notes;
+        // Validate it looks like a prep breakdown (has characters array)
+        if (parsed && Array.isArray(parsed.characters)) {
+          prepBreakdown = parsed as PrepSceneBreakdown;
+        }
+      } catch {
+        // Not valid JSON — treat as plain filming notes string
+      }
+    }
+
     return {
       id: row.id as string,
       sceneNumber: (row.scene_number as string) || '0',
@@ -201,7 +219,8 @@ function mapScenes(
       isComplete: (row.is_complete as boolean) || false,
       completedAt: row.completed_at ? new Date(row.completed_at as string) : undefined,
       filmingStatus: (row.filming_status as Scene['filmingStatus']) || undefined,
-      filmingNotes: (row.filming_notes as string) || undefined,
+      filmingNotes: prepBreakdown ? undefined : ((row.filming_notes as string) || undefined),
+      prepBreakdown,
       shootingDay: (row.shooting_day as number) || undefined,
       // Auto-confirm scenes that have characters from the server (e.g. confirmed in Prep)
       characterConfirmationStatus: (charIds.length > 0 || !row.script_content)

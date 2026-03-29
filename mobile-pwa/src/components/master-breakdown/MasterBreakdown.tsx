@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
-import type { Scene, Character, Look } from '@/types';
+import type { Scene, Character, Look, PrepCharacterBreakdown } from '@/types';
 import { clsx } from 'clsx';
 
 type ViewMode = 'by-scene' | 'by-character';
@@ -10,6 +10,7 @@ interface SceneCharacterEntry {
   scene: Scene;
   character: Character;
   look: Look | undefined;
+  prepBreakdown: PrepCharacterBreakdown | undefined;
 }
 
 export function MasterBreakdown() {
@@ -78,6 +79,9 @@ export function MasterBreakdown() {
             scene,
             character: char,
             look: findLookForScene(char.id, scene.sceneNumber),
+            prepBreakdown: scene.prepBreakdown?.characters?.find(
+              c => c.characterId === char.id
+            ),
           });
         }
       });
@@ -302,11 +306,15 @@ function BySceneView({ scenes, characterMap, findLookForScene, expandedScenes, t
                 ) : (
                   sceneCharacters.map(char => {
                     const look = findLookForScene(char.id, scene.sceneNumber);
+                    const prepEntry = scene.prepBreakdown?.characters?.find(
+                      c => c.characterId === char.id
+                    );
                     return (
                       <CharacterBreakdownCard
                         key={char.id}
                         character={char}
                         look={look}
+                        prepBreakdown={prepEntry}
                       />
                     );
                   })
@@ -378,7 +386,7 @@ function ByCharacterView({ characters, characterSceneMap, expandedCharacters, to
             {/* Expanded: scenes list */}
             {isExpanded && (
               <div className="border-t border-border divide-y divide-border">
-                {entries.map(({ scene, look }) => (
+                {entries.map(({ scene, look, prepBreakdown: prepEntry }) => (
                   <div key={scene.id} className="px-4 py-3">
                     <div className="flex items-center gap-2 mb-2">
                       <span className={clsx(
@@ -389,7 +397,9 @@ function ByCharacterView({ characters, characterSceneMap, expandedCharacters, to
                       </span>
                       <span className="text-xs text-text-muted truncate">{scene.slugline}</span>
                     </div>
-                    {look ? (
+                    {prepEntry ? (
+                      <PrepBreakdownSummary entry={prepEntry} />
+                    ) : look ? (
                       <LookSummary look={look} />
                     ) : (
                       <p className="text-xs text-text-light italic">No look assigned</p>
@@ -410,9 +420,10 @@ function ByCharacterView({ characters, characterSceneMap, expandedCharacters, to
 interface CharacterBreakdownCardProps {
   character: Character;
   look: Look | undefined;
+  prepBreakdown: PrepCharacterBreakdown | undefined;
 }
 
-function CharacterBreakdownCard({ character, look }: CharacterBreakdownCardProps) {
+function CharacterBreakdownCard({ character, look, prepBreakdown }: CharacterBreakdownCardProps) {
   return (
     <div className="px-4 py-3 border-b border-border last:border-b-0">
       <div className="flex items-center gap-2 mb-2">
@@ -422,11 +433,41 @@ function CharacterBreakdownCard({ character, look }: CharacterBreakdownCardProps
           <span className="ml-auto text-xs text-gold font-medium">{look.name}</span>
         )}
       </div>
-      {look ? (
+      {prepBreakdown ? (
+        <PrepBreakdownSummary entry={prepBreakdown} />
+      ) : look ? (
         <LookSummary look={look} />
       ) : (
         <p className="text-xs text-text-light italic ml-8">No look assigned for this scene</p>
       )}
+    </div>
+  );
+}
+
+/* ─── Prep Breakdown Summary ─── */
+
+function PrepBreakdownSummary({ entry }: { entry: PrepCharacterBreakdown }) {
+  const hair = entry.entersWith?.hair;
+  const makeup = entry.entersWith?.makeup;
+  const wardrobe = entry.entersWith?.wardrobe;
+  const sfx = entry.sfx;
+  const environmental = entry.environmental;
+  const action = entry.action;
+  const notes = entry.notes;
+
+  if (!hair && !makeup && !wardrobe && !sfx && !environmental && !action && !notes) {
+    return <p className="text-xs text-text-light italic ml-8">No breakdown details yet</p>;
+  }
+
+  return (
+    <div className="space-y-1.5 ml-8">
+      {hair && <DetailRow label="Hair" value={hair} color="text-amber-400" />}
+      {makeup && <DetailRow label="Makeup" value={makeup} color="text-pink-400" />}
+      {wardrobe && <DetailRow label="Wardrobe" value={wardrobe} color="text-purple-400" />}
+      {sfx && <DetailRow label="SFX" value={sfx} color="text-red-400" />}
+      {environmental && <DetailRow label="Env." value={environmental} color="text-sky-400" />}
+      {action && <DetailRow label="Action" value={action} color="text-violet-400" />}
+      {notes && <DetailRow label="Notes" value={notes} color="text-text-muted" />}
     </div>
   );
 }
