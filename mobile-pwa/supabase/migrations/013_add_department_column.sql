@@ -77,7 +77,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 3. Update join_project_by_invite_code RPC to return department
-CREATE OR REPLACE FUNCTION join_project_by_invite_code(
+CREATE OR REPLACE FUNCTION public.join_project_by_invite_code(
   invite_code_input TEXT,
   role_input TEXT DEFAULT 'floor'
 )
@@ -93,7 +93,7 @@ BEGIN
 
   -- Find project by invite code
   SELECT * INTO project_record
-  FROM projects
+  FROM public.projects
   WHERE invite_code = UPPER(invite_code_input);
 
   IF NOT FOUND THEN
@@ -102,7 +102,7 @@ BEGIN
 
   -- Check if already a member
   SELECT * INTO existing_member
-  FROM project_members
+  FROM public.project_members
   WHERE project_id = project_record.id
   AND user_id = auth.uid();
 
@@ -120,7 +120,7 @@ BEGIN
   END IF;
 
   -- Add as member
-  INSERT INTO project_members (project_id, user_id, role, is_owner)
+  INSERT INTO public.project_members (project_id, user_id, role, is_owner)
   VALUES (project_record.id, auth.uid(), role_input, false);
 
   RETURN json_build_object(
@@ -133,4 +133,4 @@ BEGIN
     'already_member', false
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
