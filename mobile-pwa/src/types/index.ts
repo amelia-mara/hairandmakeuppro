@@ -22,6 +22,15 @@ export interface Project {
   scriptPdfData?: string;
   // Original filename of the uploaded script (for revision colour/date display)
   scriptFilename?: string;
+
+  /**
+   * Production phase determines which fields are editable:
+   *  - 'prep': Lookbook fields editable by Designer, floor fields hidden
+   *  - 'shoot': Lookbook fields locked (visible but read-only), floor notes
+   *    and deviation logging enabled for floor team
+   * Defaults to 'prep' if not set.
+   */
+  productionPhase?: 'prep' | 'shoot';
 }
 
 // Character confirmation status for progressive scene-by-scene workflow
@@ -76,6 +85,11 @@ export interface Scene {
   previousScriptContent?: string; // Content before amendment (for comparison)
   amendmentDate?: string; // ISO date when scene was last amended
   amendmentNotes?: string; // Auto-generated summary of what changed
+
+  // Deviation flag — true when any SceneCapture for this scene has a deviation logged.
+  // Computed and set by the store when deviations are logged/cleared.
+  // Visible in scene list view without opening the card.
+  hasDeviation?: boolean;
 }
 
 export type CharacterRole = 'lead' | 'supporting' | 'background';
@@ -250,6 +264,8 @@ export interface SceneCapture {
   applicationTime?: number;
   // Costume continuity data (used when department === 'costume')
   costumeContinuity?: import('@/config/department').CostumeContinuityData;
+  /** Deviation from lookbook logged by floor team. Null when no deviation. */
+  deviation?: DeviationRecord;
 }
 
 export interface Photo {
@@ -261,6 +277,27 @@ export interface Photo {
 }
 
 export type PhotoAngle = 'front' | 'left' | 'right' | 'back' | 'additional';
+
+/* ━━━ Deviation tracking (floor team during shoot) ━━━ */
+
+/**
+ * A deviation record logged by the floor team when something differs
+ * from the lookbook on the day. Self-contained — no Designer sign-off required.
+ */
+export interface DeviationRecord {
+  id: string;
+  /** Free-text explanation of what changed and why */
+  note: string;
+  /** Dedicated deviation photos — separate from the hero continuity photos */
+  photos: Photo[];
+  /** When the deviation was logged */
+  loggedAt: Date;
+}
+
+/** Factory for an empty deviation record */
+export function createEmptyDeviation(): DeviationRecord {
+  return { id: '', note: '', photos: [], loggedAt: new Date() };
+}
 
 export interface ContinuityFlags {
   sweat: boolean;

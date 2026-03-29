@@ -1,4 +1,4 @@
-import type { SceneCapture, Photo, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
+import type { SceneCapture, Photo, ContinuityFlags, ContinuityEvent, SFXDetails, DeviationRecord } from '@/types';
 import {
   createEmptyContinuityFlags,
   createEmptySFXDetails,
@@ -256,5 +256,124 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
 
   getSceneCapture: (sceneId: string, characterId: string) => {
     return get().sceneCaptures[`${sceneId}-${characterId}`];
+  },
+
+  // ── Deviation tracking (floor team during shoot) ──
+
+  /**
+   * Log a deviation on a scene capture. Automatically sets hasDeviation
+   * on the parent Scene so it's visible in the scene list.
+   */
+  logDeviation: (captureId: string, deviation: DeviationRecord) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture) return state;
+
+      const updatedCaptures = {
+        ...state.sceneCaptures,
+        [captureId]: { ...capture, deviation },
+      };
+
+      // Auto-flag the parent scene
+      const updatedScenes = state.currentProject?.scenes.map(s =>
+        s.id === capture.sceneId ? { ...s, hasDeviation: true } : s
+      );
+
+      return {
+        sceneCaptures: updatedCaptures,
+        ...(state.currentProject && updatedScenes ? {
+          currentProject: { ...state.currentProject, scenes: updatedScenes },
+        } : {}),
+      };
+    });
+  },
+
+  /**
+   * Add a photo to an existing deviation record.
+   */
+  addDeviationPhoto: (captureId: string, photo: Photo) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture?.deviation) return state;
+
+      return {
+        sceneCaptures: {
+          ...state.sceneCaptures,
+          [captureId]: {
+            ...capture,
+            deviation: {
+              ...capture.deviation,
+              photos: [...capture.deviation.photos, photo],
+            },
+          },
+        },
+      };
+    });
+  },
+
+  /**
+   * Remove a photo from a deviation record.
+   */
+  removeDeviationPhoto: (captureId: string, photoId: string) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture?.deviation) return state;
+
+      return {
+        sceneCaptures: {
+          ...state.sceneCaptures,
+          [captureId]: {
+            ...capture,
+            deviation: {
+              ...capture.deviation,
+              photos: capture.deviation.photos.filter(p => p.id !== photoId),
+            },
+          },
+        },
+      };
+    });
+  },
+
+  /**
+   * Clear a deviation from a scene capture. Recomputes hasDeviation on
+   * the parent Scene (may still be true if other captures have deviations).
+   */
+  clearDeviation: (captureId: string) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture) return state;
+
+      const updatedCaptures = {
+        ...state.sceneCaptures,
+        [captureId]: { ...capture, deviation: undefined },
+      };
+
+      // Recompute: does any OTHER capture for this scene still have a deviation?
+      const sceneId = capture.sceneId;
+      const stillHasDeviation = Object.values(updatedCaptures).some(
+        c => c.sceneId === sceneId && c.deviation != null
+      );
+
+      const updatedScenes = state.currentProject?.scenes.map(s =>
+        s.id === sceneId ? { ...s, hasDeviation: stillHasDeviation } : s
+      );
+
+      return {
+        sceneCaptures: updatedCaptures,
+        ...(state.currentProject && updatedScenes ? {
+          currentProject: { ...state.currentProject, scenes: updatedScenes },
+        } : {}),
+      };
+    });
+  },
+
+  /**
+   * Check if any capture for a given scene has a deviation logged.
+   * Use this for computing the flag without relying on the cached scene field.
+   */
+  sceneHasDeviation: (sceneId: string): boolean => {
+    return Object.values(get().sceneCaptures).some(
+      c => c.sceneId === sceneId && c.deviation != null
+    );
   },
 });

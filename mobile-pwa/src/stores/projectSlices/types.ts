@@ -8,6 +8,7 @@ import type {
   Photo,
   ContinuityFlags,
   ContinuityEvent,
+  DeviationRecord,
   NavTab,
   SceneFilter,
   ProjectLifecycle,
@@ -98,6 +99,13 @@ export interface ProjectState {
   updateSFXDetails: (captureId: string, sfx: SFXDetails) => void;
   addSFXPhoto: (captureId: string, photo: Photo) => void;
   removeSFXPhoto: (captureId: string, photoId: string) => void;
+
+  // Actions - Deviation tracking (floor team during shoot)
+  logDeviation: (captureId: string, deviation: DeviationRecord) => void;
+  addDeviationPhoto: (captureId: string, photo: Photo) => void;
+  removeDeviationPhoto: (captureId: string, photoId: string) => void;
+  clearDeviation: (captureId: string) => void;
+  sceneHasDeviation: (sceneId: string) => boolean;
 
   // Actions - Scene Management
   addScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => Scene;
