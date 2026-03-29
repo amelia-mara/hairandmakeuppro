@@ -165,7 +165,7 @@ function normalizeScriptText(text: string): string {
   // join them into a single line.
   // e.g. "...on foot. JASPER\nMONTGOMERY, 70, he looks..." → single line
   normalized = normalized.replace(
-    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*,\s*(?:\d{1,3}\b|[a-z]))/g,
+    /([^\n]+\s[A-Z][A-Z'-]{2,})\s*\n\s*([A-Z][A-Z'-]{2,}(?:\s+[A-Z][A-Z'-]+){0,2}\s*,\s*(?:\d{1,2}\b|[a-z]))/g,
     '$1 $2',
   );
 
@@ -403,7 +403,7 @@ function extractCharactersFromActionLine(line: string): string[] {
   /* Character introduction pattern: ALL CAPS NAME followed by comma, age, or
      parenthetical — e.g. "LENNON BOWIE, 28" or "DEDRA MONTGOMERY 29, an icy beauty"
      This is the standard screenplay way to introduce a character in action lines. */
-  const introPattern = /^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(\s]\s*\d{1,3}\b/;
+  const introPattern = /^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(\s]\s*\d{1,2}\b/;
   const introMatch = trimmed.match(introPattern);
   if (introMatch) {
     const name = introMatch[1].trim();
@@ -423,13 +423,27 @@ function extractCharactersFromActionLine(line: string): string[] {
     }
   }
 
-  /* Mid-line character introduction: ALL CAPS NAME (2+ words) after a sentence break
-     or mid-sentence, followed by comma + age or comma + lowercase description.
+  /* Mid-line character introduction: ALL CAPS NAME (2+ words) followed by comma + age
+     anywhere in the line. The combination of 2+ ALL CAPS words + comma + age number
+     is a reliable character introduction signal regardless of preceding context.
      e.g. "...on foot. JASPER MONTGOMERY, 70, he looks like..."
+     e.g. "...on foot JASPER MONTGOMERY, 70, he looks like..."
+     Also match comma + lowercase for non-age intros after punctuation/comma.
      e.g. "Her husband, ARCHIBALD CHRISTIE, dashing, holds her hand."
      e.g. "...the door for NAN WATTS, a prim-looking woman" */
-  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
-  while ((match = midLineIntroRe.exec(trimmed)) !== null) {
+  const midLineAgeRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*\d{1,2}\b/g;
+  while ((match = midLineAgeRe.exec(trimmed)) !== null) {
+    const name = match[1].trim();
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET|SHE|HER|HIS|THE)\b/.test(name)) {
+      characters.push(name);
+    }
+  }
+
+  /* Mid-line intro without age: after punctuation or comma, ALL CAPS NAME + comma + lowercase.
+     e.g. "Her husband, ARCHIBALD CHRISTIE, dashing, holds her hand."
+     e.g. "...the door for NAN WATTS, a prim-looking woman" */
+  const midLineDescRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*,\s*[a-z]/g;
+  while ((match = midLineDescRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
     if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
       characters.push(name);
@@ -763,16 +777,23 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
     // text for character intros (PDF sometimes merges heading + action on one line)
     if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
 
-    // Pattern 1: ALL CAPS name + comma/space + age digits (anywhere in line)
-    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" (even mid-sentence)
-    const ageIntroRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(]\s*\d{1,3}\b/g;
+    // Pattern 1: ALL CAPS name (2+ words) + comma/space + age digits (anywhere in line)
+    // "LENNON BOWIE, 28" or "JASPER MONTGOMERY, 70" (even mid-sentence without punctuation)
+    const ageIntroRegex = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*\d{1,2}\b/g;
     let m;
     while ((m = ageIntroRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
 
+    // Pattern 1b: Single ALL CAPS word + comma + age at start of line
+    // "LENNON, 28" — only at start to avoid false positives
+    const singleAgeIntro = trimmed.match(/^([A-Z][A-Z'-]+)\s*[,(]\s*\d{1,2}\b/);
+    if (singleAgeIntro) {
+      addName(singleAgeIntro[1].trim());
+    }
+
     // Pattern 2: ALL CAPS name + parenthetical age — "LIZZY BENNET (20s)"
-    const parenAgeRegex = /(?:^|[.!?]\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*\(\d{1,3}[s']?\)/g;
+    const parenAgeRegex = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*\(\d{1,2}[s']?\)/g;
     while ((m = parenAgeRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
@@ -793,7 +814,7 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
 
     // Pattern 5: Mid-line character intro after period/sentence break
     // "She sees Lennon on foot. JASPER MONTGOMERY, 70, he looks like..."
-    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,3}\b|[a-z])/g;
+    const midLineRegex = /[.!?]\s+([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*[,(]\s*(?:\d{1,2}\b|[a-z])/g;
     while ((m = midLineRegex.exec(trimmed)) !== null) {
       addName(m[1].trim());
     }
