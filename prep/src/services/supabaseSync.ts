@@ -279,10 +279,27 @@ export function saveScenes(
       story_day: s.storyDay ? parseInt(s.storyDay.replace(/\D/g, ''), 10) || null : null,
     }));
 
+    // Try the fast path first: upsert on id (works when IDs already match Supabase)
     const { error } = await supabase
       .from('scenes')
       .upsert(dbScenes, { onConflict: 'id' });
-    if (error) throw error;
+
+    if (error) {
+      // Likely a UNIQUE(project_id, scene_number) conflict because local IDs
+      // are fresh UUIDs that don't match existing rows.  Fall back to
+      // delete-then-insert so the new IDs take effect cleanly.
+      console.warn('[PrepSync] Scene upsert conflict, replacing scenes:', error.message);
+      const { error: delErr } = await supabase
+        .from('scenes')
+        .delete()
+        .eq('project_id', projectId);
+      if (delErr) throw delErr;
+
+      const { error: insErr } = await supabase
+        .from('scenes')
+        .insert(dbScenes);
+      if (insErr) throw insErr;
+    }
 
     // Sync scene_characters junction (non-fatal — data still saved above)
     const sceneIds = scenes.map(s => s.id);
