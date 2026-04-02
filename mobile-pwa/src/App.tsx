@@ -331,6 +331,76 @@ function AppContent() {
   // Handle navigation to user profile from project header (goes back to project, not menu)
   const [showUserProfile, setShowUserProfile] = useState(false);
 
+  // Browser back button support — intercept popstate to navigate within the app
+  // instead of leaving the SPA entirely.
+  const showHomeRef = useRef(showHome);
+  const showExportRef = useRef(showExport);
+  const showUserProfileRef = useRef(showUserProfile);
+  showHomeRef.current = showHome;
+  showExportRef.current = showExport;
+  showUserProfileRef.current = showUserProfile;
+
+  useEffect(() => {
+    // Seed browser history so the first back press stays in the app
+    window.history.pushState({ app: 'checks-happy' }, '');
+
+    const handlePopState = () => {
+      // Re-push immediately so there's always an entry to go "back" to
+      window.history.pushState({ app: 'checks-happy' }, '');
+
+      const auth = useAuthStore.getState();
+      const project = useProjectStore.getState();
+
+      // 1. Auth / onboarding flow
+      if (!auth.hasCompletedOnboarding) {
+        auth.goBack();
+        return;
+      }
+
+      // 2. Authenticated but on the project-hub flow (no project loaded)
+      if (auth.isAuthenticated && !project.currentProject && !showHomeRef.current) {
+        auth.goBack();
+        return;
+      }
+
+      // 3. Export screen
+      if (showExportRef.current) {
+        setShowExport(false);
+        return;
+      }
+
+      // 4. User profile overlay
+      if (showUserProfileRef.current) {
+        setShowUserProfile(false);
+        return;
+      }
+
+      // 5. Home / setup screen
+      if (showHomeRef.current || project.needsSetup) {
+        setShowHome(false);
+        project.clearNeedsSetup();
+        auth.goBack();
+        return;
+      }
+
+      // 6. Scene detail view → back to list
+      if (project.currentSceneId) {
+        project.setCurrentScene(null);
+        project.setCurrentCharacter(null);
+        return;
+      }
+
+      // 7. Look detail view → back to list
+      if (project.currentLookId) {
+        project.setCurrentLook(null);
+        return;
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // intentionally empty — reads live state via refs and getState()
+
   // Handle navigation from More menu to a specific tab
   const handleNavigateToTab = (tab: NavTab) => {
     handleTabChange(tab);
