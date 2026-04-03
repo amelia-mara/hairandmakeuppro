@@ -65,7 +65,7 @@ function extractActionLines(content: string): {
     if (
       !titleCard &&
       actionLines.length === 0 &&
-      /^[A-Z][A-Z\s,.:'\-!0-9]+$/.test(line) &&
+      /^[A-Z0-9][A-Z\s,.:'\-!0-9]+$/.test(line) &&
       line.length > 4 &&
       /\b(FLASHBACK|LATER|AGO|EARLIER|EPISODE|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
     ) {

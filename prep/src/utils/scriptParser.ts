@@ -917,11 +917,11 @@ function extractTitleCardFromInterstitial(text: string): string | null {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
     if (
-      /^[A-Z][A-Z\s,.:'\-!0-9]+$/.test(line) &&
+      /^[A-Z0-9][A-Z\s,.:'\-!0-9]+$/.test(line) &&
       line.length > 4 &&
       line.length < 80 &&
       /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|CHRISTMAS|VALENTINE|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(line) &&
-      !/^(INT|EXT|EPISODE)/.test(line)
+      !/^(INT|EXT|EPISODE)\b/.test(line)
     ) {
       return line;
     }
