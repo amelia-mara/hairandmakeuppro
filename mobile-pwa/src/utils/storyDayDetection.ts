@@ -74,7 +74,7 @@ export function classifyTOD(raw: string): TOD {
 // ─── TIER 1: ACTION LINE PATTERNS ───────────────────────────────────────────
 
 interface Tier1Match {
-  type: 'new-day' | 'same-day' | 'flashback' | 'large-jump';
+  type: 'new-day' | 'same-day' | 'flashback' | 'large-jump' | 'inferred-new-day';
   signal: string;
   gapNote?: string;
 }
@@ -108,6 +108,11 @@ export function matchTier1(actionLines: string[]): Tier1Match | null {
   for (const [pattern, signal] of newDay) {
     const m = text.match(pattern);
     if (m) return { type: 'new-day', signal, gapNote: m[0] };
+  }
+
+  // Inferred new-day patterns (lower confidence — shown with review flag)
+  if (/\b(wakes?\s+up|waking\s+up|woke\s+up)\b/i.test(text)) {
+    return { type: 'inferred-new-day', signal: '"Wakes up" — morning scene' };
   }
 
   // Same-day patterns
@@ -242,6 +247,14 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       dayCounter++;
       if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
       results.push(make(scene, dayCounter, 'present', 'explicit',
+        tier1.signal, tier1.gapNote ?? null));
+      continue;
+    }
+
+    if (tier1?.type === 'inferred-new-day') {
+      dayCounter++;
+      if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
+      results.push(make(scene, dayCounter, 'present', 'inferred',
         tier1.signal, tier1.gapNote ?? null));
       continue;
     }
