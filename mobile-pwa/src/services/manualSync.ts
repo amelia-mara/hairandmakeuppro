@@ -73,7 +73,9 @@ export function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'creat
     story_day: null,
     shooting_day: scene.shootingDay || null,
     filming_status: scene.filmingStatus || null,
-    filming_notes: scene.filmingNotes || null,
+    filming_notes: scene.prepBreakdown
+      ? JSON.stringify(scene.prepBreakdown)
+      : (scene.filmingNotes || null),
     is_complete: scene.isComplete,
     completed_at: scene.completedAt ? new Date(scene.completedAt).toISOString() : null,
     script_content: scene.scriptContent || null,

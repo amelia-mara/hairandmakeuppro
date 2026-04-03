@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { ProjectHub } from '@/pages/ProjectHub';
 import { CreateProjectModal } from '@/pages/CreateProject';
@@ -72,6 +72,40 @@ function App() {
       setShowBetaCode(false);
     }
   }, [showAuth, showBetaCode, isAuthenticated]);
+
+  // Browser back button support — intercept popstate to navigate within the app
+  const showAuthRef = useRef(showAuth);
+  const showBetaCodeRef = useRef(showBetaCode);
+  const selectedProjectIdRef = useRef(selectedProjectId);
+  showAuthRef.current = showAuth;
+  showBetaCodeRef.current = showBetaCode;
+  selectedProjectIdRef.current = selectedProjectId;
+
+  useEffect(() => {
+    window.history.pushState({ app: 'prep-happy' }, '');
+
+    const handlePopState = () => {
+      window.history.pushState({ app: 'prep-happy' }, '');
+
+      if (showAuthRef.current) {
+        setShowAuth(false);
+        return;
+      }
+
+      if (showBetaCodeRef.current) {
+        setShowBetaCode(false);
+        return;
+      }
+
+      if (selectedProjectIdRef.current) {
+        setSelectedProjectId(null);
+        return;
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // When user signs out, return to the landing page (project hub)
   useEffect(() => {

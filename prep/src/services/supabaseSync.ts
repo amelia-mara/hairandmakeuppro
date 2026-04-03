@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { useBreakdownStore, useTagStore } from '@/stores/breakdownStore';
 import type { Json } from '@/types';
 
 // ============================================================================
@@ -267,22 +268,78 @@ export function saveScenes(
 ) {
   if (receivingFromRealtime) return;
   debounced(`scenes:${projectId}`, async () => {
-    const dbScenes = scenes.map(s => ({
-      id: s.id,
-      project_id: projectId,
-      scene_number: String(s.number),
-      int_ext: s.intExt,
-      time_of_day: s.dayNight,
-      location: s.location,
-      synopsis: s.synopsis,
-      script_content: s.scriptContent,
-      story_day: s.storyDay ? parseInt(s.storyDay.replace(/\D/g, ''), 10) || null : null,
-    }));
+    // Include filming_notes from the breakdown store so breakdown data
+    // survives the delete-then-insert fallback and isn't lost during
+    // parallel flush on sign-out.
+    const breakdownState = useBreakdownStore.getState();
+    const allTags = useTagStore.getState().tags;
 
+    const dbScenes = scenes.map(s => {
+      const bd = breakdownState.getBreakdown(s.id);
+      let filmingNotes: string | null = null;
+      if (bd && bd.characters && bd.characters.length > 0) {
+        // Resolve tag text into empty fields (same as breakdown save)
+        const sceneTags = allTags.filter(t => t.sceneId === s.id);
+        const resolved = {
+          ...bd,
+          characters: bd.characters.map(cb => {
+            const charTags = sceneTags.filter(t => t.characterId === cb.characterId && !t.dismissed);
+            const resolve = (manual: string, catId: string) => {
+              if (manual) return manual;
+              const m = charTags.filter(t => t.categoryId === catId);
+              return m.length > 0 ? m.map(t => t.text).join(', ') : '';
+            };
+            return {
+              ...cb,
+              entersWith: {
+                hair: resolve(cb.entersWith.hair, 'hair'),
+                makeup: resolve(cb.entersWith.makeup, 'makeup'),
+                wardrobe: resolve(cb.entersWith.wardrobe, 'wardrobe'),
+              },
+              sfx: resolve(cb.sfx, 'sfx'),
+              environmental: resolve(cb.environmental, 'environmental'),
+              action: resolve(cb.action, 'action'),
+              notes: resolve(cb.notes, 'notes'),
+            };
+          }),
+        };
+        filmingNotes = JSON.stringify(resolved);
+      }
+      return {
+        id: s.id,
+        project_id: projectId,
+        scene_number: String(s.number),
+        int_ext: s.intExt,
+        time_of_day: s.dayNight,
+        location: s.location,
+        synopsis: s.synopsis,
+        script_content: s.scriptContent,
+        story_day: s.storyDay ? parseInt(s.storyDay.replace(/\D/g, ''), 10) || null : null,
+        filming_notes: filmingNotes,
+      };
+    });
+
+    // Try the fast path first: upsert on id (works when IDs already match Supabase)
     const { error } = await supabase
       .from('scenes')
       .upsert(dbScenes, { onConflict: 'id' });
-    if (error) throw error;
+
+    if (error) {
+      // Likely a UNIQUE(project_id, scene_number) conflict because local IDs
+      // are fresh UUIDs that don't match existing rows.  Fall back to
+      // delete-then-insert so the new IDs take effect cleanly.
+      console.warn('[PrepSync] Scene upsert conflict, replacing scenes:', error.message);
+      const { error: delErr } = await supabase
+        .from('scenes')
+        .delete()
+        .eq('project_id', projectId);
+      if (delErr) throw delErr;
+
+      const { error: insErr } = await supabase
+        .from('scenes')
+        .insert(dbScenes);
+      if (insErr) throw insErr;
+    }
 
     // Sync scene_characters junction (non-fatal — data still saved above)
     const sceneIds = scenes.map(s => s.id);
@@ -359,9 +416,13 @@ export function saveCharacters(
       } as unknown as Json,
     }));
 
+    // Delete existing characters for this project first, then insert.
+    // On script re-upload, new UUIDs are generated for all characters.
+    // Without deleting first, old character rows accumulate as orphans.
+    await supabase.from('characters').delete().eq('project_id', projectId);
     const { error } = await supabase
       .from('characters')
-      .upsert(dbChars, { onConflict: 'id' });
+      .insert(dbChars);
     if (error) throw error;
     console.log('[PrepSync] Characters saved');
   });
@@ -395,9 +456,12 @@ export function saveLooks(
       makeup_details: { notes: l.makeup, _wardrobe: l.wardrobe } as unknown as Json,
     }));
 
+    // Delete existing looks for this project first, then insert.
+    // On script re-upload, new UUIDs are generated for all looks.
+    await supabase.from('looks').delete().eq('project_id', projectId);
     const { error } = await supabase
       .from('looks')
-      .upsert(dbLooks, { onConflict: 'id' });
+      .insert(dbLooks);
     if (error) throw error;
 
     // Sync look_scenes junction if provided (non-fatal)

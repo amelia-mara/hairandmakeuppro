@@ -176,7 +176,7 @@ export function ContinuityTracker({ projectId }: Props) {
   ];
 
   const fileToPhoto = (file: File): ContinuityPhoto => ({
-    id: `photo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: crypto.randomUUID(),
     url: URL.createObjectURL(file),
     filename: file.name,
     addedAt: new Date().toISOString(),
@@ -209,7 +209,7 @@ export function ContinuityTracker({ projectId }: Props) {
   const handleAddEvent = (data: Omit<ContinuityEvent, 'id'>) => {
     breakdownStore.addContinuityEvent(selectedSceneId, {
       ...data,
-      id: `ce-${Date.now()}`,
+      id: crypto.randomUUID(),
     });
     setAddEventOpen(false);
   };
