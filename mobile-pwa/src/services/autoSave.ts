@@ -66,7 +66,11 @@ function debounced(key: string, fn: () => Promise<void>): void {
       _consecutiveFailures = 0; // reset on success
     } catch (err) {
       _consecutiveFailures++;
-      _lastFailureMessage = err instanceof Error ? err.message : String(err);
+      _lastFailureMessage = err instanceof Error
+        ? err.message
+        : (typeof err === 'object' && err !== null && 'message' in err)
+          ? (err as any).message
+          : String(err);
       console.error(`[AutoSave] ${key} failed (failure #${_consecutiveFailures}):`, err);
     }
   }, DEBOUNCE_MS);

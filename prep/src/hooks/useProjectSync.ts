@@ -50,6 +50,8 @@ import {
   useScriptUploadStore,
   useTagStore,
   useRevisedScenesStore,
+  type SceneBreakdown,
+  type ScriptTag,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
@@ -92,6 +94,46 @@ function buildLookSceneMap(projectId: string): Record<string, string[]> {
     }
   }
   return map;
+}
+
+/**
+ * Resolve a breakdown for Supabase sync by merging script tag text into any
+ * empty breakdown fields.  This ensures the mobile app (which only reads
+ * `filming_notes`) sees the same data that Prep's BreakdownSheet displays.
+ */
+function resolveBreakdownForSync(
+  bd: SceneBreakdown,
+  sceneTags: ScriptTag[],
+): SceneBreakdown {
+  const resolved = {
+    ...bd,
+    characters: bd.characters.map((cb) => {
+      const charTags = sceneTags.filter((t) => t.characterId === cb.characterId && !t.dismissed);
+
+      const resolveField = (
+        manual: string,
+        categoryId: string,
+      ): string => {
+        if (manual) return manual;
+        const matching = charTags.filter((t) => t.categoryId === categoryId);
+        return matching.length > 0 ? matching.map((t) => t.text).join(', ') : '';
+      };
+
+      return {
+        ...cb,
+        entersWith: {
+          hair: resolveField(cb.entersWith.hair, 'hair'),
+          makeup: resolveField(cb.entersWith.makeup, 'makeup'),
+          wardrobe: resolveField(cb.entersWith.wardrobe, 'wardrobe'),
+        },
+        sfx: resolveField(cb.sfx, 'sfx'),
+        environmental: resolveField(cb.environmental, 'environmental'),
+        action: resolveField(cb.action, 'action'),
+        notes: resolveField(cb.notes, 'notes'),
+      };
+    }),
+  };
+  return resolved;
 }
 
 interface ProjectSyncState {
@@ -421,7 +463,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
         // If Supabase scene/character tables are empty but script_uploads has
         // parsed_data, restore from there so the script displays on load.
-        if (scenes.length === 0 && characters.length === 0 && data.scriptUpload) {
+        if (scenes.length === 0 && data.scriptUpload) {
           const sp = data.scriptUpload.parsed_data as {
             scenes?: any[]; characters?: any[]; looks?: any[];
             filename?: string; parsedAt?: string;
@@ -506,19 +548,22 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               saveLooks(projectId!, localParsed.looks as any, lookSceneMap);
             }
 
-            // Sync breakdowns
+            // Sync tags first so resolved breakdowns include tag data
+            const localTags = useTagStore.getState().tags;
+            if (localTags.length > 0 && !data.tags) {
+              saveTags(projectId!, localTags);
+            }
+
+            // Sync breakdowns (resolve tag text into empty fields for mobile)
+            const allTags = useTagStore.getState().tags;
             const breakdowns = useBreakdownStore.getState().breakdowns;
             for (const [sceneId, bd] of Object.entries(breakdowns)) {
               // Skip mock breakdown IDs (s1, s2, etc.)
               if (localParsed.scenes.some(s => s.id === sceneId)) {
-                saveBreakdown(projectId!, sceneId, bd as any);
+                const sceneTags = allTags.filter((t) => t.sceneId === sceneId);
+                const resolved = resolveBreakdownForSync(bd, sceneTags);
+                saveBreakdown(projectId!, sceneId, resolved as any);
               }
-            }
-
-            // Sync tags if localStorage has them but Supabase doesn't
-            const localTags = useTagStore.getState().tags;
-            if (localTags.length > 0 && !data.tags) {
-              saveTags(projectId!, localTags);
             }
 
             // Sync continuity tracker entries
@@ -689,10 +734,15 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
     const unsub = useBreakdownStore.subscribe((state, prevState) => {
       if (state.breakdowns === prevState.breakdowns) return;
 
+      // Resolve tag text into empty fields before saving so mobile sees complete data
+      const tags = useTagStore.getState().tags;
+
       // Find which breakdowns changed and save each one
       for (const sceneId of Object.keys(state.breakdowns)) {
         if (state.breakdowns[sceneId] !== prevState.breakdowns[sceneId]) {
-          saveBreakdown(projectId, sceneId, state.breakdowns[sceneId] as any);
+          const sceneTags = tags.filter((t) => t.sceneId === sceneId);
+          const resolved = resolveBreakdownForSync(state.breakdowns[sceneId], sceneTags);
+          saveBreakdown(projectId, sceneId, resolved as any);
         }
       }
 
@@ -865,13 +915,35 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
     return unsub;
   }, [projectId, hasPrepAccess]);
 
-  // Watch tags store → save to Supabase
+  // Watch tags store → save to Supabase AND re-save affected breakdowns
+  // so mobile gets resolved tag text in filming_notes
   useEffect(() => {
     if (!projectId || !hasPrepAccess) return;
 
     const unsub = useTagStore.subscribe((state, prevState) => {
       if (state.tags === prevState.tags) return;
       saveTags(projectId, state.tags);
+
+      // Find which scenes had tag changes and re-save their breakdowns
+      const changedSceneIds = new Set<string>();
+      for (const tag of state.tags) {
+        const prev = prevState.tags.find((t) => t.id === tag.id);
+        if (!prev || prev !== tag) changedSceneIds.add(tag.sceneId);
+      }
+      // Also check removed tags
+      for (const tag of prevState.tags) {
+        if (!state.tags.find((t) => t.id === tag.id)) changedSceneIds.add(tag.sceneId);
+      }
+
+      const breakdowns = useBreakdownStore.getState().breakdowns;
+      for (const sceneId of changedSceneIds) {
+        const bd = breakdowns[sceneId];
+        if (bd) {
+          const sceneTags = state.tags.filter((t) => t.sceneId === sceneId);
+          const resolved = resolveBreakdownForSync(bd, sceneTags);
+          saveBreakdown(projectId, sceneId, resolved as any);
+        }
+      }
     });
 
     return unsub;

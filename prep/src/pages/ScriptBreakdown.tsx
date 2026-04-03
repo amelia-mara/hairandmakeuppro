@@ -592,23 +592,61 @@ export function ScriptBreakdown({ projectId }: Props) {
                     if (!cat) return;
 
                     if (cat.group === 'breakdown') {
+                      /* Ensure a breakdown entry exists for this scene so the
+                         field update is always persisted (and synced to mobile). */
+                      let bd = store.getBreakdown(sceneId);
+                      if (!bd) {
+                        const tagScene = ALL_SCENES.find((s) => s.id === sceneId);
+                        bd = {
+                          sceneId,
+                          timeline: {
+                            day: tagScene?.storyDay || '',
+                            time: tagScene ? (tagScene.dayNight === 'DAY' ? 'Day' : tagScene.dayNight === 'NIGHT' ? 'Night' : tagScene.dayNight === 'DAWN' ? 'Dawn' : tagScene.dayNight === 'DUSK' ? 'Dusk' : '') : '',
+                            type: '', note: '',
+                          },
+                          characters: (tagScene?.characterIds || []).map((cid) => ({
+                            characterId: cid, lookId: '',
+                            entersWith: { hair: '', makeup: '', wardrobe: '' },
+                            sfx: '', environmental: '', action: '',
+                            changeType: 'no-change' as const, changeNotes: '',
+                            exitsWith: { hair: '', makeup: '', wardrobe: '' },
+                            notes: '',
+                          })),
+                          continuityEvents: [],
+                        };
+                        store.setBreakdown(sceneId, bd);
+                      }
+
+                      /* Ensure the character has an entry in this breakdown */
+                      let cb = bd.characters.find((c) => c.characterId === characterId);
+                      if (!cb) {
+                        cb = {
+                          characterId, lookId: '',
+                          entersWith: { hair: '', makeup: '', wardrobe: '' },
+                          sfx: '', environmental: '', action: '',
+                          changeType: 'no-change', changeNotes: '',
+                          exitsWith: { hair: '', makeup: '', wardrobe: '' },
+                          notes: '',
+                        };
+                        store.setBreakdown(sceneId, {
+                          ...bd,
+                          characters: [...bd.characters, cb],
+                        });
+                      }
+
                       /* Auto-fill scene breakdown fields */
-                      const bd = store.getBreakdown(sceneId);
-                      const cb = bd?.characters.find((c) => c.characterId === characterId);
-                      if (cb) {
-                        if (cat.field.startsWith('entersWith.')) {
-                          const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
-                          const existing = cb.entersWith[key];
-                          store.updateCharacterBreakdown(sceneId, characterId, {
-                            entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${text}` : text },
-                          });
-                        } else {
-                          const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
-                          const existing = cb[field] || '';
-                          store.updateCharacterBreakdown(sceneId, characterId, {
-                            [field]: existing ? `${existing}, ${text}` : text,
-                          });
-                        }
+                      if (cat.field.startsWith('entersWith.')) {
+                        const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
+                        const existing = cb.entersWith[key];
+                        store.updateCharacterBreakdown(sceneId, characterId, {
+                          entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${text}` : text },
+                        });
+                      } else {
+                        const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
+                        const existing = cb[field] || '';
+                        store.updateCharacterBreakdown(sceneId, characterId, {
+                          [field]: existing ? `${existing}, ${text}` : text,
+                        });
                       }
                     } else if (cat.group === 'profile') {
                       /* Auto-fill character profile fields */
@@ -806,7 +844,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                 triggerSave();
               }}
               onAddLook={(characterId, name) => {
-                const newId = `look-${Date.now()}`;
+                const newId = crypto.randomUUID();
                 parsedScriptStore.addLook(projectId, {
                   id: newId, characterId, name, description: '', hair: '', makeup: '', wardrobe: '',
                 });
@@ -1140,7 +1178,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
     if (!popup) return;
     const pd = parsedScriptStore.getParsedData(projectId);
     if (!pd) return;
-    const newId = `char-${Date.now()}`;
+    const newId = crypto.randomUUID();
     const newChar: ParsedCharacterData = {
       id: newId,
       name: popup.text.trim().toUpperCase(),
@@ -1828,7 +1866,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
       // Build character ID mapping
       const charIdMap = new Map<string, string>();
       const characters: Character[] = parsed.characters.map((pc, idx) => {
-        const id = `pc-${idx + 1}`;
+        const id = crypto.randomUUID();
         charIdMap.set(pc.normalizedName, id);
         return {
           id,
@@ -1870,7 +1908,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
         const parsedNum = parseInt(sceneNum, 10);
         const isPreamble = ps.location === 'PREAMBLE';
         return {
-          id: `ps-${idx + 1}`,
+          id: crypto.randomUUID(),
           number: isNaN(parsedNum) ? idx + 1 : parsedNum,
           intExt: ps.intExt,
           dayNight,
@@ -2525,7 +2563,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
                 allScenes={allScenes}
                 allCharacters={allCharacters}
                 onAddCharEvent={(charId) => onAddEvent({
-                  id: `ce-${Date.now()}`, type: 'Wound', characterId: charId,
+                  id: crypto.randomUUID(), type: 'Wound', characterId: charId,
                   description: '', sceneRange: `${scene.number}-${scene.number}`,
                 })}
                 onUpdateEvent={onUpdateEvent}
@@ -2542,7 +2580,7 @@ function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, s
           <div className="fp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Scene Continuity Events</span>
             <button className="fp-add-btn" onClick={() => onAddEvent({
-              id: `ce-${Date.now()}`, type: 'Wound', characterId: '',
+              id: crypto.randomUUID(), type: 'Wound', characterId: '',
               description: '', sceneRange: `${scene.number}-${scene.number}`,
             })}>+ Add</button>
           </div>

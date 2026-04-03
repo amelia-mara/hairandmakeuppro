@@ -69,10 +69,8 @@ function sceneToParsedScene(scene: Scene): ParsedScene {
 
 /* ━━━ Look generation ━━━ */
 
-let lookIdCounter = 0;
 function generateLookId(): string {
-  lookIdCounter++;
-  return `look-${Date.now()}-${lookIdCounter}`;
+  return crypto.randomUUID();
 }
 
 /**
