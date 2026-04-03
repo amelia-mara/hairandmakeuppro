@@ -185,24 +185,33 @@ function normalizeScriptText(text: string): string {
   // e.g. "1 EXT. FARM LAND – DAY LENNON BOWIE, 28, IS A COWBOY..."
   //    → "1 EXT. FARM LAND – DAY\nLENNON BOWIE, 28, IS A COWBOY..."
   normalized = normalized.split('\n').map(line => {
-    // Only process lines that look like scene headings
-    if (!/^(\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(line)) return line;
-
-    // Find "- DAY", "– NIGHT", etc. followed by remaining text
-    const timeSplitRe = /(\s+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b)([\s].+)/i;
-    const m = line.match(timeSplitRe);
-    if (m && m.index != null) {
-      const headingEnd = m.index + m[1].length;
-      const overflow = line.slice(headingEnd);
-      const trimmedOverflow = overflow.trim();
-      // Only split if overflow has substantial content and isn't a heading suffix
-      // like "(FLASHBACK)", "CONT'D", trailing scene numbers, etc.
-      if (trimmedOverflow.length > 3 &&
-          !/^\(?(?:FLASHBACK|PRESENT|CONT'?D?|STOCK|ESTABLISHING)\)?$/i.test(trimmedOverflow) &&
-          !/^\d+[A-Z]?\s*$/.test(trimmedOverflow)) {
-        return line.slice(0, headingEnd) + '\n' + trimmedOverflow;
+    // Case 1: heading at START of line, followed by action text after the TOD
+    if (/^(\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(line)) {
+      const timeSplitRe = /(\s+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b)([\s].+)/i;
+      const m = line.match(timeSplitRe);
+      if (m && m.index != null) {
+        const headingEnd = m.index + m[1].length;
+        const overflow = line.slice(headingEnd);
+        const trimmedOverflow = overflow.trim();
+        if (trimmedOverflow.length > 3 &&
+            !/^\(?(?:FLASHBACK|PRESENT|CONT'?D?|STOCK|ESTABLISHING)\)?$/i.test(trimmedOverflow) &&
+            !/^\d+[A-Z]?\s*$/.test(trimmedOverflow)) {
+          return line.slice(0, headingEnd) + '\n' + trimmedOverflow;
+        }
       }
+      return line;
     }
+
+    // Case 2: action text from previous scene merged with a heading in the MIDDLE.
+    // PDF extraction can merge adjacent lines when y-coordinates are close.
+    // e.g. "He walks away. 6 EXT. GARDEN TERRACE - DAY 6"
+    //    → "He walks away.\n6 EXT. GARDEN TERRACE - DAY 6"
+    const midHeadingRe = /(.+?)\s+(\d+[A-Z]?\s+(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s.+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b.*)/i;
+    const mid = line.match(midHeadingRe);
+    if (mid) {
+      return mid[1] + '\n' + mid[2];
+    }
+
     return line;
   }).join('\n');
 
