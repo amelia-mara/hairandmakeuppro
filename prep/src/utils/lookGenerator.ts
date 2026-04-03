@@ -148,6 +148,8 @@ export function generateLooksFromScript(
     return {
       ...scene,
       storyDay: needsReview ? `${result.label} (?)` : result.label,
+      storyDaySignal: result.signal,
+      storyDayGapNote: result.gapNote,
     };
   });
 
