@@ -463,7 +463,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
         // If Supabase scene/character tables are empty but script_uploads has
         // parsed_data, restore from there so the script displays on load.
-        if (scenes.length === 0 && characters.length === 0 && data.scriptUpload) {
+        if (scenes.length === 0 && data.scriptUpload) {
           const sp = data.scriptUpload.parsed_data as {
             scenes?: any[]; characters?: any[]; looks?: any[];
             filename?: string; parsedAt?: string;

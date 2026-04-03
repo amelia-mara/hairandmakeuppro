@@ -580,7 +580,7 @@ export function ProjectHubScreen() {
       // restore scenes/characters from there. This handles the case where
       // Prep uploaded a script (creating a script_uploads row with parsed_data)
       // but the debounced save to the scenes table failed or hasn't completed.
-      if (scenes.length === 0 && characters.length === 0 && scriptData.length > 0) {
+      if (scenes.length === 0 && scriptData.length > 0) {
         const parsedData = scriptData[0].parsed_data as {
           scenes?: any[]; characters?: any[]; looks?: any[];
           filename?: string; parsedAt?: string;

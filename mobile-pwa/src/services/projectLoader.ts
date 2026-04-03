@@ -88,7 +88,7 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
       // debounced save to scenes table failed or hasn't completed yet).
       let restoredFromParsedData = false;
       const restoredSceneCharacters: Record<string, unknown>[] = [];
-      if (scenes.length === 0 && characters.length === 0 && dbScriptUpload && dbScriptUpload.length > 0) {
+      if (scenes.length === 0 && dbScriptUpload && dbScriptUpload.length > 0) {
         const parsedData = dbScriptUpload[0].parsed_data as {
           scenes?: any[]; characters?: any[]; looks?: any[];
         } | null;
