@@ -136,17 +136,19 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
   if (!raw) return null;
   const t = raw.trim().toUpperCase();
 
-  const largeJump = t.match(
-    /^(\d+|SIX|THREE|TWO|ONE|FIVE|TEN|TWENTY)\s+(MONTHS?|YEARS?)\s+LATER/
+  // Time jumps: "6 MONTHS LATER", "TWO WEEKS AGO", "3 DAYS LATER", etc.
+  const timeJump = t.match(
+    /\b(\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(LATER|AGO|EARLIER)\b/
   );
-  if (largeJump) {
+  if (timeJump) {
     return {
       type: 'large-jump',
-      signal: `Title card: "${largeJump[0]}"`,
-      gapNote: largeJump[0].toLowerCase(),
+      signal: `Title card: "${timeJump[0]}"`,
+      gapNote: timeJump[0].toLowerCase(),
     };
   }
 
+  // Calendar dates
   if (
     /\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\b/.test(t) ||
     /\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(t) ||
@@ -155,7 +157,16 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
     return { type: 'new-day', signal: `Calendar title card: "${raw.trim()}"`, gapNote: raw.trim() };
   }
 
-  if (/^FLASHBACK\s*[:–\-]/.test(t) || /^FLASH\s+BACK\s*[:–\-]/.test(t)) {
+  // Return to present markers — must check BEFORE general flashback
+  // so "END FLASHBACK" isn't caught by the \bFLASHBACK\b pattern
+  if (/\b(BACK\s+TO\s+PRESENT|RETURN\s+TO\s+PRESENT|END\s+FLASHBACK)\b/.test(t)) {
+    return { type: 'same-day', signal: `Return to present: "${raw.trim()}"` };
+  }
+
+  // Flashback markers (with or without time info)
+  // "FLASHBACK: 2 WEEKS AGO" — the time jump was already caught above, but
+  // standalone "FLASHBACK:", "FLASH BACK -", etc. still need handling
+  if (/\bFLASHBACK\b/.test(t) || /\bFLASH\s+BACK\b/.test(t)) {
     return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"` };
   }
 
