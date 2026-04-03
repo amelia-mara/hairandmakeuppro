@@ -499,7 +499,7 @@ function extractCharactersFromActionLine(line: string): string[] {
   const catchAllIntroRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
   while ((match = catchAllIntroRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
-    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET|FARM|SCENE)\b/.test(name)) {
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
       characters.push(name);
     }
   }
@@ -1180,7 +1180,7 @@ export function parseScriptText(text: string): ParsedScript {
   const introSafetyRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
   const introExcludeFirstWord = new Set([
     'INT', 'EXT', 'CUT', 'FADE', 'SCENE', 'THE', 'AND', 'BUT', 'FOR', 'NOR',
-    'YET', 'FARM', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
+    'YET', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
     'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'SAME', 'ANGLE', 'CLOSE',
     'WIDE', 'SHOT', 'FADE', 'TITLE', 'SUPER', 'CHAPTER', 'EPISODE',
   ]);
@@ -1295,6 +1295,43 @@ export function parseScriptText(text: string): ParsedScript {
   // Deduplicate scene character lists
   for (const scene of scenes) {
     scene.characters = [...new Set(scene.characters)];
+  }
+
+  /* ── Location-based false positive removal ──
+     Reject any "character" whose name matches a location extracted from a scene
+     heading. This catches false positives like "FARM LAND", "STREET CORNER",
+     "OFFICE BUILDING" that get picked up by the catch-all intro patterns.
+     Only applies to multi-word names — single-word names like "LENNON" are
+     never locations (locations are always multi-segment in scene headings). */
+  const sceneLocations = new Set<string>();
+  for (const scene of scenes) {
+    const loc = scene.location.toUpperCase().trim();
+    if (loc && loc !== 'PREAMBLE') {
+      sceneLocations.add(loc);
+      // Also add individual segments for compound locations:
+      // "FARMHOUSE - KITCHEN" → "FARMHOUSE", "KITCHEN", "FARMHOUSE - KITCHEN"
+      for (const segment of loc.split(/\s*[-–—\/]\s*/)) {
+        const seg = segment.trim();
+        if (seg.length >= 3) sceneLocations.add(seg);
+      }
+    }
+  }
+
+  const locationFalsePositives = new Set<string>();
+  for (const [name] of characterMap) {
+    // Only check multi-word names (single words like "LENNON" are never locations)
+    if (!name.includes(' ')) continue;
+    if (sceneLocations.has(name)) {
+      locationFalsePositives.add(name);
+    }
+  }
+
+  for (const name of locationFalsePositives) {
+    characterMap.delete(name);
+    for (const scene of scenes) {
+      const idx = scene.characters.indexOf(name);
+      if (idx !== -1) scene.characters.splice(idx, 1);
+    }
   }
 
   const characters = Array.from(characterMap.values())
