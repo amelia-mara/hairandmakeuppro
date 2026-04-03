@@ -918,6 +918,27 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
 }
 
 /**
+ * Check if a line is a temporal prefix marker that should be attached to the
+ * FOLLOWING scene rather than the preceding scene. These appear on the line
+ * immediately before an INT./EXT. heading.
+ *
+ * Matches: FLASHBACK, FLASH FORWARD, BACK TO PRESENT, END FLASHBACK,
+ * and time-jump patterns like "6 MONTHS LATER", "TWO WEEKS AGO", etc.
+ */
+function isTemporalPrefixMarker(line: string): boolean {
+  if (!line || line.length < 4) return false;
+  const t = line.toUpperCase();
+  // Don't match scene headings themselves
+  if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT|I\/E)/i.test(line)) return false;
+  return /\bFLASHBACK\b/.test(t)
+      || /\bFLASH\s+FORWARD\b/.test(t)
+      || /\bBACK\s+TO\s+PRESENT\b/.test(t)
+      || /\bRETURN\s+TO\s+PRESENT\b/.test(t)
+      || /\bEND\s+FLASHBACK\b/.test(t)
+      || /\b(\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|SEVERAL|FEW|MANY|SOME|A\s+FEW)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(LATER|AGO|EARLIER)\b/.test(t);
+}
+
+/**
  * Scan interstitial text (between two sluglines) for a title card line.
  * Title cards are standalone ALL-CAPS lines like "6 MONTHS LATER",
  * "FRIDAY, DECEMBER 3, 1926", "FLASHBACK - 1985", etc.
@@ -1013,12 +1034,31 @@ export function parseScriptText(text: string): ParsedScript {
         });
       }
 
-      // Scan accumulated content for a title card before finalizing previous scene
+      // Check the line immediately preceding this heading for a temporal marker.
+      // Temporal markers (e.g. "FLASHBACK: 2 WEEKS AGO", "6 MONTHS LATER")
+      // appear on the line directly before an INT./EXT. heading and describe
+      // the FOLLOWING scene, not the preceding one.
       let titleCardBefore: string | null = null;
       if (currentScene) {
-        // Title cards appear at the tail of the previous scene's content
-        // (text between the previous scene's body and this new slugline)
-        titleCardBefore = extractTitleCardFromInterstitial(currentSceneContent);
+        const contentLines = currentSceneContent.split('\n');
+        // Find last non-empty line in accumulated content
+        let lastNonEmptyIdx = contentLines.length - 1;
+        while (lastNonEmptyIdx >= 0 && !contentLines[lastNonEmptyIdx].trim()) {
+          lastNonEmptyIdx--;
+        }
+        if (lastNonEmptyIdx >= 0) {
+          const lastLine = contentLines[lastNonEmptyIdx].trim();
+          if (isTemporalPrefixMarker(lastLine)) {
+            titleCardBefore = lastLine;
+            // Remove the marker from the previous scene's content
+            contentLines.splice(lastNonEmptyIdx, 1);
+            currentSceneContent = contentLines.join('\n');
+          }
+        }
+        // Fall back to broader interstitial scan if no prefix marker found
+        if (!titleCardBefore) {
+          titleCardBefore = extractTitleCardFromInterstitial(currentSceneContent);
+        }
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
       } else if (preambleContent.trim()) {
