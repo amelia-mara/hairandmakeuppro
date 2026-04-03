@@ -10,6 +10,8 @@ export interface Scene {
   dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
   location: string;
   storyDay: string;
+  storyDaySignal?: string;
+  storyDayGapNote?: string | null;
   timeInfo: string;
   characterIds: string[];
   synopsis: string;
@@ -1218,6 +1220,8 @@ export interface ParsedSceneData {
   dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
   location: string;
   storyDay: string;
+  storyDaySignal?: string;
+  storyDayGapNote?: string | null;
   timeInfo: string;
   characterIds: string[];
   synopsis: string;
