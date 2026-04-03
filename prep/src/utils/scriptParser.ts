@@ -1022,19 +1022,25 @@ export function parseScriptText(text: string): ParsedScript {
       continue;
     }
 
-    // Check if this line is an interstitial between scenes (ALL-CAPS, non-blank,
-    // not a scene heading, appears after a scene has ended or before the first).
-    // We detect this when the current scene's content has "ended" — i.e. we've
-    // seen transition cues like CUT TO, FADE, or the previous scene looked complete.
-    // Simpler heuristic: collect ALL-CAPS non-empty lines that appear in the gap.
-    if (currentScene && trimmed && /^[A-Z0-9\s,.''\-\u2013\u2014:]+$/.test(trimmed) && trimmed.length > 3) {
-      // Could be an interstitial title card (e.g. "6 MONTHS LATER, LONDON SKYLINE")
-      // or episode header. Only collect if it looks structural (not dialogue/action).
-      const isTransition = /^(CUT TO|FADE|DISSOLVE|SMASH CUT|END OF)/i.test(trimmed);
-      const isEpisodeOrCard = /^(EPISODE|CHAPTER)\s+\d/i.test(trimmed) ||
-        /\b(LATER|MONTHS?|YEARS?|WEEKS?|DAYS?|MORNING|SKYLINE|TITLE)\b/i.test(trimmed);
-      if (isEpisodeOrCard && !isTransition) {
-        pendingInterstitial.push(trimmed);
+    // Check if this line is an interstitial between scenes — a standalone
+    // structural line like "EPISODE 56", "6 MONTHS LATER, LONDON SKYLINE",
+    // or "FLASHBACK: TWO WEEKS AGO". These sit between the end of one scene
+    // and the start of the next. Collect them so they can be attached to the
+    // next scene as titleCardBefore.
+    if (trimmed && trimmed.length > 2) {
+      const upper = trimmed.toUpperCase();
+      const isAllCapsOrNumbered = upper === trimmed || /^\d/.test(trimmed);
+      if (isAllCapsOrNumbered) {
+        const isEpisodeHeader = /^(EPISODE|CHAPTER|PART|ACT)\s+\d/i.test(trimmed);
+        const isTimeCard = /\b(LATER|MONTHS?\s+LATER|YEARS?\s+LATER|WEEKS?\s+LATER|DAYS?\s+LATER|MORNING|SKYLINE)\b/i.test(trimmed);
+        const isTitleCard = /^(TITLE\s*CARD|SUPER|CHYRON)\s*:/i.test(trimmed);
+        const isFlashbackCard = /^(FLASHBACK|FLASH\s+BACK)\b/i.test(trimmed);
+        const isDateCard = /\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY|JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\b/i.test(trimmed);
+        const isTransition = /^(CUT TO|FADE|DISSOLVE|SMASH CUT|END OF|MATCH CUT)/i.test(trimmed);
+
+        if (!isTransition && (isEpisodeHeader || isTimeCard || isTitleCard || isFlashbackCard || isDateCard)) {
+          pendingInterstitial.push(trimmed);
+        }
       }
     }
 

@@ -327,6 +327,13 @@ const TIER1A_PATTERNS: Array<{
     type: 'new-day', confidence: 'high',
     note: () => 'Some time later',
   },
+  // Wake-up scene — strong hint of a new morning, but medium confidence
+  // because "wakes up" could occasionally be mid-day nap. Flagged for review.
+  {
+    regex: /\b(wakes?\s+up|waking\s+up|woke\s+up)\b/i,
+    type: 'new-day', confidence: 'medium',
+    note: m => `"${m[0]}" \u2014 morning scene`,
+  },
   // Same-day markers
   {
     regex: /\bthat\s+(same\s+)?(morning|afternoon|evening|night)\b/i,
