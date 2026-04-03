@@ -1914,6 +1914,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           dayNight,
           location: isPreamble ? 'PREAMBLE' : ps.location,
           storyDay: '',
+          titleCardBefore: ps.titleCardBefore ?? null,
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',

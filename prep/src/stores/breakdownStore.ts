@@ -12,6 +12,7 @@ export interface Scene {
   storyDay: string;
   storyDaySignal?: string;
   storyDayGapNote?: string | null;
+  titleCardBefore?: string | null;
   timeInfo: string;
   characterIds: string[];
   synopsis: string;
@@ -1222,6 +1223,7 @@ export interface ParsedSceneData {
   storyDay: string;
   storyDaySignal?: string;
   storyDayGapNote?: string | null;
+  titleCardBefore?: string | null;
   timeInfo: string;
   characterIds: string[];
   synopsis: string;

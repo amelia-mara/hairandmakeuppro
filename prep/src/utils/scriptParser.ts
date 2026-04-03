@@ -21,6 +21,7 @@ export interface ParsedScene {
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
   characters: string[]; // Character names appearing in scene
   content: string;
+  titleCardBefore?: string | null; // ALL-CAPS title card found before this scene's slug
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -907,6 +908,27 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
   return resolveMap;
 }
 
+/**
+ * Scan interstitial text (between two sluglines) for a title card line.
+ * Title cards are standalone ALL-CAPS lines like "6 MONTHS LATER",
+ * "FRIDAY, DECEMBER 3, 1926", "FLASHBACK - 1985", etc.
+ */
+function extractTitleCardFromInterstitial(text: string): string | null {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    if (
+      /^[A-Z][A-Z\s,.:'\-!0-9]+$/.test(line) &&
+      line.length > 4 &&
+      line.length < 80 &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|CHRISTMAS|VALENTINE|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(line) &&
+      !/^(INT|EXT|EPISODE)/.test(line)
+    ) {
+      return line;
+    }
+  }
+  return null;
+}
+
 /* ━━━ Main parser ━━━ */
 
 export function parseScriptText(text: string): ParsedScript {
@@ -982,9 +1004,17 @@ export function parseScriptText(text: string): ParsedScript {
         });
       }
 
+      // Scan accumulated content for a title card before finalizing previous scene
+      let titleCardBefore: string | null = null;
       if (currentScene) {
+        // Title cards appear at the tail of the previous scene's content
+        // (text between the previous scene's body and this new slugline)
+        titleCardBefore = extractTitleCardFromInterstitial(currentSceneContent);
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
+      } else if (preambleContent.trim()) {
+        // Also check preamble for title cards before the first scene
+        titleCardBefore = extractTitleCardFromInterstitial(preambleContent);
       }
 
       fallbackSceneNumber++;
@@ -999,6 +1029,7 @@ export function parseScriptText(text: string): ParsedScript {
         timeOfDay: normalizedTime,
         characters: [],
         content: '',
+        titleCardBefore,
       };
       currentSceneContent = trimmed + '\n';
       lastLineWasCharacter = false;
