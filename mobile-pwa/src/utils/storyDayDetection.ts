@@ -136,7 +136,21 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
   if (!raw) return null;
   const t = raw.trim().toUpperCase();
 
+  // Return to present markers — check first so "END FLASHBACK" isn't
+  // caught by the general \bFLASHBACK\b pattern below
+  if (/\b(BACK\s+TO\s+PRESENT|RETURN\s+TO\s+PRESENT|END\s+FLASHBACK)\b/.test(t)) {
+    return { type: 'same-day', signal: `Return to present: "${raw.trim()}"` };
+  }
+
+  // Non-present markers: FLASHBACK, FLASH BACK, FLASH FORWARD, DREAM, MEMORY
+  // Must check BEFORE time jumps — "FLASHBACK: 2 WEEKS AGO" is a flashback,
+  // not a present-timeline time jump
+  if (/\b(FLASHBACK|FLASH\s*BACK|FLASH\s+FORWARD|DREAM|MEMORY|NIGHTMARE)\b/.test(t)) {
+    return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"` };
+  }
+
   // Time jumps: "6 MONTHS LATER", "TWO WEEKS AGO", "3 DAYS LATER", etc.
+  // Only fires if NOT a flashback (checked above)
   const timeJump = t.match(
     /\b(\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(LATER|AGO|EARLIER)\b/
   );
@@ -155,19 +169,6 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
     /\b(CHRISTMAS|VALENTINE|HALLOWEEN|NEW YEAR)\b/.test(t)
   ) {
     return { type: 'new-day', signal: `Calendar title card: "${raw.trim()}"`, gapNote: raw.trim() };
-  }
-
-  // Return to present markers — must check BEFORE general flashback
-  // so "END FLASHBACK" isn't caught by the \bFLASHBACK\b pattern
-  if (/\b(BACK\s+TO\s+PRESENT|RETURN\s+TO\s+PRESENT|END\s+FLASHBACK)\b/.test(t)) {
-    return { type: 'same-day', signal: `Return to present: "${raw.trim()}"` };
-  }
-
-  // Flashback markers (with or without time info)
-  // "FLASHBACK: 2 WEEKS AGO" — the time jump was already caught above, but
-  // standalone "FLASHBACK:", "FLASH BACK -", etc. still need handling
-  if (/\bFLASHBACK\b/.test(t) || /\bFLASH\s+BACK\b/.test(t)) {
-    return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"` };
   }
 
   return null;
@@ -263,6 +264,13 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     }
     if (titleCardMatch?.type === 'flashback') {
       results.push(makeFlashback(scene, dayCounter));
+      continue;
+    }
+    if (titleCardMatch?.type === 'same-day') {
+      // "END FLASHBACK", "BACK TO PRESENT" — return to present timeline, same day
+      if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
+      results.push(make(scene, dayCounter || 1, 'present', 'explicit',
+        titleCardMatch.signal, null));
       continue;
     }
 
