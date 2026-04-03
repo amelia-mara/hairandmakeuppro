@@ -1,3 +1,7 @@
+// NOTE: This file is duplicated in prep/src/utils/ and mobile-pwa/src/utils/.
+// If you change detection logic, update BOTH copies.
+// Long-term fix: move to a shared packages/utils workspace package.
+
 // storyDayDetection.ts — v3
 // Detection logic verified against Kaya Moore's official breakdown
 // for Cowboy After Dark (94 scenes, 25 story days D1–D25).
