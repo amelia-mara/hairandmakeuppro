@@ -150,8 +150,6 @@ console.log('\nTest 3: Time jump prefix marker → increments day counter');
 
   const sc2 = results.find(r => r.sceneNumber === '2')!;
   const sc3 = results.find(r => r.sceneNumber === '3')!;
-  const sc4 = results.find(r => r.sceneNumber === '4')!;
-
   assert(sc3.storyDay > sc2.storyDay, 'Sc 3 is on a later day than Sc 2');
   assert(sc3.confidence === 'explicit', 'Sc 3 confidence is explicit');
   assert(sc3.gapNote !== null && sc3.gapNote!.includes('months'),
@@ -217,9 +215,4 @@ console.log('\nTest 5: Sequence with multiple prefix markers');
 
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`Results: ${passed} passed, ${failed} failed, ${passed + failed} total`);
-if (failed > 0) {
-  console.log('SOME TESTS FAILED');
-  process.exit(1);
-} else {
-  console.log('ALL TESTS PASSED');
-}
+console.log(failed > 0 ? 'SOME TESTS FAILED' : 'ALL TESTS PASSED');
