@@ -21,6 +21,9 @@ export interface ParsedScene {
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
   characters: string[]; // Character names appearing in scene
   content: string;
+  /** ALL-CAPS interstitial line(s) between the previous scene and this slugline
+   *  (e.g. "6 MONTHS LATER, LONDON SKYLINE", "EPISODE 4"). Used by story day detection. */
+  titleCardBefore?: string;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -961,6 +964,10 @@ export function parseScriptText(text: string): ParsedScript {
   let preambleContent = ''; // Text before the first scene heading
   let lastLineWasCharacter = false;
   let dialogueCount = 0;
+  // Track interstitial ALL-CAPS lines between scenes for title card detection.
+  // Lines like "EPISODE 56" and "6 MONTHS LATER, LONDON SKYLINE" sit between
+  // scenes and must be attached to the NEXT scene as titleCardBefore.
+  let pendingInterstitial: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -991,6 +998,15 @@ export function parseScriptText(text: string): ParsedScript {
       const sceneNum = parsedHeading.sceneNumber || String(fallbackSceneNumber);
       const normalizedTime = normalizeTimeOfDay(parsedHeading.timeOfDay);
 
+      // Build titleCardBefore from any interstitial lines collected between scenes.
+      // Filter out pure episode headers ("EPISODE 56") — keep meaningful cards
+      // like "6 MONTHS LATER, LONDON SKYLINE".
+      const titleCardLines = pendingInterstitial.filter(
+        l => !/^(EPISODE|CHAPTER|PART|ACT)\s+\d+[A-Z]?\s*$/i.test(l)
+      );
+      const titleCard = titleCardLines.length > 0 ? titleCardLines.join('\n') : undefined;
+      pendingInterstitial = [];
+
       currentScene = {
         sceneNumber: sceneNum,
         slugline: trimmed,
@@ -999,10 +1015,27 @@ export function parseScriptText(text: string): ParsedScript {
         timeOfDay: normalizedTime,
         characters: [],
         content: '',
+        titleCardBefore: titleCard,
       };
       currentSceneContent = trimmed + '\n';
       lastLineWasCharacter = false;
       continue;
+    }
+
+    // Check if this line is an interstitial between scenes (ALL-CAPS, non-blank,
+    // not a scene heading, appears after a scene has ended or before the first).
+    // We detect this when the current scene's content has "ended" — i.e. we've
+    // seen transition cues like CUT TO, FADE, or the previous scene looked complete.
+    // Simpler heuristic: collect ALL-CAPS non-empty lines that appear in the gap.
+    if (currentScene && trimmed && /^[A-Z0-9\s,.''\-\u2013\u2014:]+$/.test(trimmed) && trimmed.length > 3) {
+      // Could be an interstitial title card (e.g. "6 MONTHS LATER, LONDON SKYLINE")
+      // or episode header. Only collect if it looks structural (not dialogue/action).
+      const isTransition = /^(CUT TO|FADE|DISSOLVE|SMASH CUT|END OF)/i.test(trimmed);
+      const isEpisodeOrCard = /^(EPISODE|CHAPTER)\s+\d/i.test(trimmed) ||
+        /\b(LATER|MONTHS?|YEARS?|WEEKS?|DAYS?|MORNING|SKYLINE|TITLE)\b/i.test(trimmed);
+      if (isEpisodeOrCard && !isTransition) {
+        pendingInterstitial.push(trimmed);
+      }
     }
 
     if (currentScene) {

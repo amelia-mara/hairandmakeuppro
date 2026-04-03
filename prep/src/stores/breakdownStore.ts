@@ -14,6 +14,9 @@ export interface Scene {
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  /** Interstitial title card line(s) that appeared before this scene's slugline
+   *  (e.g. "6 MONTHS LATER, LONDON SKYLINE"). Used by story day detection. */
+  titleCardBefore?: string;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';

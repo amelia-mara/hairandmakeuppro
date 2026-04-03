@@ -45,7 +45,15 @@ function sceneToParsedScene(scene: Scene, index: number): ParsedScene {
     }
   }
 
-  return parseSlugline(sluglike, actionLines, index);
+  const parsed = parseSlugline(sluglike, actionLines, index);
+
+  // If the scene has a title card before it (e.g. "6 MONTHS LATER"),
+  // attach it as fullText so the story day detector can scan it.
+  if (scene.titleCardBefore) {
+    parsed.fullText = scene.titleCardBefore + '\n' + parsed.actionLines.join('\n');
+  }
+
+  return parsed;
 }
 
 /* ━━━ Look generation ━━━ */

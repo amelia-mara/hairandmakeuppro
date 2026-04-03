@@ -1918,6 +1918,7 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
           characterIds: charIds,
           synopsis: '',
           scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
+          titleCardBefore: ps.titleCardBefore,
         };
       });
 
