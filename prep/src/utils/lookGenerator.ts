@@ -2,23 +2,21 @@
  * Look Generator
  *
  * Auto-generates looks per character from parsed script data by detecting
- * story day transitions using v2 detection (action lines, flashback tracking,
- * CONTINUOUS handling, calendar dates).
+ * story day transitions using v3 detection (action lines, flashback tracking,
+ * CONTINUOUS handling, concurrent threads, TOD regression).
  *
- * 1. Convert scenes to ParsedScene format for the v2 detector
- * 2. Build a story day map with present/non-present timeline support
+ * 1. Convert scenes to ParsedScene format for the v3 detector
+ * 2. Build a story day map with timeline support
  * 3. For each character, group their scenes by story day
- * 4. Create one Look per story day ("Day 1", "Day 2", etc.)
+ * 4. Create one Look per story day ("D1", "D2", etc.)
  *
  * No schedule upload required — works purely from parsed script scenes.
  */
 
 import type { Scene, Character, Look } from '@/stores/breakdownStore';
 import {
+  parseSlugline,
   buildStoryDayMap,
-  classifyTOD,
-  extractTOD,
-  isNonPresent,
   type ParsedScene,
   type StoryDayResult,
 } from './storyDayDetection';
@@ -26,45 +24,28 @@ import {
 /* ━━━ Scene conversion ━━━ */
 
 /**
- * Convert a prep Scene to a ParsedScene for the v2 story day detector.
+ * Convert a prep Scene to a ParsedScene for the v3 story day detector.
  * Extracts action lines from scriptContent (first 3 non-empty lines after
  * stripping the slugline).
  */
-function sceneToParsedScene(scene: Scene): ParsedScene {
-  // Build a slugline-like string from scene fields for TOD extraction
+function sceneToParsedScene(scene: Scene, index: number): ParsedScene {
+  // Build a slugline string from scene fields
   const sluglike = `${scene.intExt}. ${scene.location} - ${scene.dayNight}${scene.timeInfo ? ' ' + scene.timeInfo : ''}`;
 
-  // Extract raw TOD — use timeInfo if available (may contain "NEXT MORNING" etc.)
-  // otherwise fall back to the dayNight field
-  const rawTOD = scene.timeInfo
-    ? scene.timeInfo.trim()
-    : extractTOD(sluglike) || scene.dayNight;
-
-  const tod = classifyTOD(rawTOD);
-  const nonPresent = isNonPresent(sluglike, rawTOD);
-
-  // Extract first 3 action lines from scriptContent
+  // Extract first 3 action lines from scriptContent (skipping heading)
   const actionLines: string[] = [];
   if (scene.scriptContent) {
     const lines = scene.scriptContent.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed && actionLines.length < 3) {
-        // Skip the scene heading line itself
         if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
         actionLines.push(trimmed);
       }
     }
   }
 
-  return {
-    sceneNumber: String(scene.number),
-    slugline: sluglike,
-    rawTOD,
-    tod,
-    isNonPresent: nonPresent,
-    actionLines,
-  };
+  return parseSlugline(sluglike, actionLines, index);
 }
 
 /* ━━━ Look generation ━━━ */
@@ -79,7 +60,7 @@ function generateLookId(): string {
  * For each character:
  * - Find all scenes they appear in
  * - Group those scenes by story day
- * - Create one Look per story day ("Day 1", "Day 2", etc.)
+ * - Create one Look per story day ("D1", "D2", etc.)
  *
  * Also assigns storyDay labels to scenes as a side effect.
  *
@@ -89,31 +70,24 @@ export function generateLooksFromScript(
   scenes: Scene[],
   characters: Character[],
 ): { looks: Look[]; scenes: Scene[] } {
-  // Step 1: Convert scenes to ParsedScene format and run v2 detection
-  const parsedScenes = scenes.map(sceneToParsedScene);
+  // Step 1: Convert scenes to ParsedScene format and run v3 detection
+  const parsedScenes = scenes.map((s, i) => sceneToParsedScene(s, i));
   const storyDayResults = buildStoryDayMap(parsedScenes);
 
-  // Build lookup maps: scene number -> StoryDayResult
-  const resultBySceneNum = new Map<string, StoryDayResult>();
-  for (const r of storyDayResults) {
-    resultBySceneNum.set(r.sceneNumber, r);
-  }
-
-  // Also build scene id -> StoryDayResult (using index correspondence)
+  // Build lookup: scene id -> StoryDayResult (using index correspondence)
   const resultBySceneId = new Map<string, StoryDayResult>();
   for (let i = 0; i < scenes.length; i++) {
     resultBySceneId.set(scenes[i].id, storyDayResults[i]);
   }
 
   // Step 2: Assign storyDay label to each scene.
-  // Append " (?)" to the label when the day was inferred or inherited,
-  // so the user can see at a glance which story days may need manual review.
+  // Append " (?)" when confidence is low or assumed for manual review.
   const updatedScenes = scenes.map((scene, i) => {
     const result = storyDayResults[i];
-    const needsReview = result.confidence === 'inferred' || result.confidence === 'inherited';
+    const needsReview = result.requiresReview;
     return {
       ...scene,
-      storyDay: needsReview ? `${result.label} (?)` : result.label,
+      storyDay: needsReview ? `${result.storyDayLabel} (?)` : result.storyDayLabel,
     };
   });
 
@@ -121,13 +95,11 @@ export function generateLooksFromScript(
   const looks: Look[] = [];
 
   for (const character of characters) {
-    // Find all scenes where this character appears
     const characterScenes = updatedScenes.filter((s) =>
       s.characterIds.includes(character.id),
     );
 
     if (characterScenes.length === 0) {
-      // Create a single empty "Day 1" look even if no scenes
       looks.push({
         id: generateLookId(),
         characterId: character.id,
@@ -140,11 +112,11 @@ export function generateLooksFromScript(
       continue;
     }
 
-    // Group scenes by story day label (preserves flashback separation)
+    // Group scenes by story day label
     const dayGroups = new Map<string, Scene[]>();
     for (const scene of characterScenes) {
       const result = resultBySceneId.get(scene.id);
-      const label = result?.label || 'Day 1';
+      const label = result?.storyDayLabel || 'D1';
       if (!dayGroups.has(label)) {
         dayGroups.set(label, []);
       }
@@ -156,8 +128,8 @@ export function generateLooksFromScript(
       const numA = parseInt(a.match(/\d+/)?.[0] || '0');
       const numB = parseInt(b.match(/\d+/)?.[0] || '0');
       if (numA !== numB) return numA - numB;
-      // Flashbacks sort after present
-      return a.includes('Flashback') ? 1 : -1;
+      // Night labels sort after day labels of same number
+      return a.startsWith('N') ? 1 : -1;
     });
 
     for (const label of sortedLabels) {

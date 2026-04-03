@@ -13,10 +13,8 @@ import type {
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  buildStoryDayMap as buildStoryDayMapV2,
-  extractTOD,
-  classifyTOD,
-  isNonPresent,
+  parseSlugline,
+  buildStoryDayMap as buildStoryDayMapV3,
   type ParsedScene,
   type StoryDayResult,
 } from '@/utils/storyDayDetection';
@@ -128,12 +126,12 @@ function createCharacterFromName(
 }
 
 /**
- * Build a map of scene number -> story day number using v2 detection.
+ * Build a map of scene number -> story day number using v3 detection.
  *
  * Strategy:
  *  1. Check for explicit D1/D2/N1 notation in schedule — use directly if found.
- *  2. Otherwise, convert scenes to ParsedScene format and run v2 detection
- *     which handles action lines, flashbacks, CONTINUOUS, calendar dates, etc.
+ *  2. Otherwise, convert scenes to ParsedScene format and run v3 detection
+ *     which handles action lines, flashbacks, CONTINUOUS, concurrent threads, etc.
  */
 function buildStoryDayMap(
   schedule: ProductionSchedule,
@@ -166,15 +164,13 @@ function buildStoryDayMap(
     return storyDayMap;
   }
 
-  // Strategy 2: Convert to ParsedScene format and use v2 detection
-  // Build scene list in story order (by scene number)
+  // Strategy 2: Convert to ParsedScene format and use v3 detection
   const scenesByNum = new Map<string, Scene>();
   for (const scene of scenes) {
     const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
     scenesByNum.set(normalized, scene);
   }
 
-  // Merge schedule entries with project scenes, sorted by scene number
   const allSceneNums = new Set<string>();
   for (const key of scheduleTimeMap.keys()) allSceneNums.add(key);
   for (const scene of scenes) {
@@ -184,14 +180,10 @@ function buildStoryDayMap(
     a.localeCompare(b, undefined, { numeric: true })
   );
 
-  // Convert to ParsedScene[]
-  const parsedScenes: ParsedScene[] = sortedNums.map((sceneNum) => {
+  // Convert to ParsedScene[] using v3 parseSlugline
+  const parsedScenes: ParsedScene[] = sortedNums.map((sceneNum, i) => {
     const scene = scenesByNum.get(sceneNum);
-    const scheduleTime = scheduleTimeMap.get(sceneNum) || '';
-    const slugline = scene?.slugline || '';
-    const rawTOD = slugline
-      ? extractTOD(slugline) || scheduleTime || (scene?.timeOfDay ?? '')
-      : scheduleTime || '';
+    const slugline = scene?.slugline || `INT. UNKNOWN - ${scheduleTimeMap.get(sceneNum) || 'DAY'}`;
 
     // Extract action lines from scriptContent
     const actionLines: string[] = [];
@@ -206,18 +198,11 @@ function buildStoryDayMap(
       }
     }
 
-    return {
-      sceneNumber: sceneNum,
-      slugline,
-      rawTOD,
-      tod: classifyTOD(rawTOD),
-      isNonPresent: isNonPresent(slugline, rawTOD),
-      actionLines,
-    };
+    return parseSlugline(slugline, actionLines, i);
   });
 
-  // Run v2 detection
-  const results: StoryDayResult[] = buildStoryDayMapV2(parsedScenes);
+  // Run v3 detection
+  const results: StoryDayResult[] = buildStoryDayMapV3(parsedScenes);
 
   for (const r of results) {
     storyDayMap.set(r.sceneNumber, r.storyDay);
