@@ -376,9 +376,13 @@ export function saveCharacters(
       } as unknown as Json,
     }));
 
+    // Delete existing characters for this project first, then insert.
+    // On script re-upload, new UUIDs are generated for all characters.
+    // Without deleting first, old character rows accumulate as orphans.
+    await supabase.from('characters').delete().eq('project_id', projectId);
     const { error } = await supabase
       .from('characters')
-      .upsert(dbChars, { onConflict: 'id' });
+      .insert(dbChars);
     if (error) throw error;
     console.log('[PrepSync] Characters saved');
   });
@@ -412,9 +416,12 @@ export function saveLooks(
       makeup_details: { notes: l.makeup, _wardrobe: l.wardrobe } as unknown as Json,
     }));
 
+    // Delete existing looks for this project first, then insert.
+    // On script re-upload, new UUIDs are generated for all looks.
+    await supabase.from('looks').delete().eq('project_id', projectId);
     const { error } = await supabase
       .from('looks')
-      .upsert(dbLooks, { onConflict: 'id' });
+      .insert(dbLooks);
     if (error) throw error;
 
     // Sync look_scenes junction if provided (non-fatal)
