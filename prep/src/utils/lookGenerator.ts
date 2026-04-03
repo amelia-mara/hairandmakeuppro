@@ -23,7 +23,7 @@ import {
 
 /* ━━━ Scene conversion ━━━ */
 
-function sceneToParsedScene(scene: Scene, index: number): ParsedScene {
+function sceneToParsedScene(scene: Scene, _index: number): ParsedScene {
   // Reconstruct slugline from existing fields
   const slugline = `${scene.intExt}. ${scene.location} - ${scene.dayNight}`;
 
