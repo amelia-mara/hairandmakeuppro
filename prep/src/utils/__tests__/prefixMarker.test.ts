@@ -44,8 +44,8 @@ function assert(condition: boolean, message: string) {
 console.log('\nTest 1: matchTitleCard pattern matching');
 
 // Flashback markers
-assert(matchTitleCard('FLASHBACK: 2 WEEKS AGO')?.type === 'large-jump',
-  '"FLASHBACK: 2 WEEKS AGO" → large-jump (time jump takes priority)');
+assert(matchTitleCard('FLASHBACK: 2 WEEKS AGO')?.type === 'flashback',
+  '"FLASHBACK: 2 WEEKS AGO" → flashback (flashback takes priority over time jump)');
 
 assert(matchTitleCard('FLASHBACK:')?.type === 'flashback',
   '"FLASHBACK:" → flashback');
@@ -110,9 +110,8 @@ console.log('\nTest 2: Flashback prefix marker → isFlashback in buildStoryDayM
   const results = buildStoryDayMap(scenes);
 
   const sc3 = results.find(r => r.sceneNumber === '3')!;
-  // "FLASHBACK: 2 WEEKS AGO" has a time jump, so it should be large-jump, not flashback
-  // The time jump takes priority in matchTitleCard
-  assert(sc3.storyDay > 1, 'Sc 3 with "FLASHBACK: 2 WEEKS AGO" starts a new day (time jump)');
+  // "FLASHBACK: 2 WEEKS AGO" — flashback takes priority over time jump
+  assert(sc3.timeline === 'non-present', 'Sc 3 with "FLASHBACK: 2 WEEKS AGO" is non-present (flashback)');
   assert(sc3.confidence === 'explicit', 'Sc 3 confidence is explicit');
 
   // Preceding scene should NOT have the marker
