@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { useBreakdownStore, useTagStore } from '@/stores/breakdownStore';
 import type { Json } from '@/types';
 
 // ============================================================================
@@ -267,17 +268,56 @@ export function saveScenes(
 ) {
   if (receivingFromRealtime) return;
   debounced(`scenes:${projectId}`, async () => {
-    const dbScenes = scenes.map(s => ({
-      id: s.id,
-      project_id: projectId,
-      scene_number: String(s.number),
-      int_ext: s.intExt,
-      time_of_day: s.dayNight,
-      location: s.location,
-      synopsis: s.synopsis,
-      script_content: s.scriptContent,
-      story_day: s.storyDay ? parseInt(s.storyDay.replace(/\D/g, ''), 10) || null : null,
-    }));
+    // Include filming_notes from the breakdown store so breakdown data
+    // survives the delete-then-insert fallback and isn't lost during
+    // parallel flush on sign-out.
+    const breakdownState = useBreakdownStore.getState();
+    const allTags = useTagStore.getState().tags;
+
+    const dbScenes = scenes.map(s => {
+      const bd = breakdownState.getBreakdown(s.id);
+      let filmingNotes: string | null = null;
+      if (bd && bd.characters && bd.characters.length > 0) {
+        // Resolve tag text into empty fields (same as breakdown save)
+        const sceneTags = allTags.filter(t => t.sceneId === s.id);
+        const resolved = {
+          ...bd,
+          characters: bd.characters.map(cb => {
+            const charTags = sceneTags.filter(t => t.characterId === cb.characterId && !t.dismissed);
+            const resolve = (manual: string, catId: string) => {
+              if (manual) return manual;
+              const m = charTags.filter(t => t.categoryId === catId);
+              return m.length > 0 ? m.map(t => t.text).join(', ') : '';
+            };
+            return {
+              ...cb,
+              entersWith: {
+                hair: resolve(cb.entersWith.hair, 'hair'),
+                makeup: resolve(cb.entersWith.makeup, 'makeup'),
+                wardrobe: resolve(cb.entersWith.wardrobe, 'wardrobe'),
+              },
+              sfx: resolve(cb.sfx, 'sfx'),
+              environmental: resolve(cb.environmental, 'environmental'),
+              action: resolve(cb.action, 'action'),
+              notes: resolve(cb.notes, 'notes'),
+            };
+          }),
+        };
+        filmingNotes = JSON.stringify(resolved);
+      }
+      return {
+        id: s.id,
+        project_id: projectId,
+        scene_number: String(s.number),
+        int_ext: s.intExt,
+        time_of_day: s.dayNight,
+        location: s.location,
+        synopsis: s.synopsis,
+        script_content: s.scriptContent,
+        story_day: s.storyDay ? parseInt(s.storyDay.replace(/\D/g, ''), 10) || null : null,
+        filming_notes: filmingNotes,
+      };
+    });
 
     // Try the fast path first: upsert on id (works when IDs already match Supabase)
     const { error } = await supabase
