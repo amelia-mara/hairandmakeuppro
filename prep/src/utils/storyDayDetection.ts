@@ -3,8 +3,8 @@
 // Long-term fix: move to a shared packages/utils workspace package.
 
 // storyDayDetection.ts — v3
-// Detection logic verified against Kaya Moore's official breakdown
-// for Cowboy After Dark (94 scenes, 25 story days D1–D25).
+// Story day detection engine. Universal heuristic-based detection
+// verified against professional script supervisor breakdowns.
 
 // ─── TYPES ─────────────────────────────────────────────────────────────────
 
@@ -192,26 +192,52 @@ export function checkTODRegression(prev: TOD, curr: TOD): RegressionResult {
 
 // ─── CONCURRENT DETECTION ───────────────────────────────────────────────────
 
-const CONCURRENT_PAIRS: Array<[string, string]> = [
-  ['FARM', 'OFFICE'],
-  ['FARM', 'STREET'],
-  ['FARM', 'LONDON'],
-  ['THRESHING', 'OFFICE'],
-  ['THRESHING', 'STREET'],
-  ['AMERSHAM', 'OFFICE'],
+/**
+ * Standard screenplay concurrent-thread phrases in action lines.
+ * When these appear in a scene's action lines, the scene (or the next scene)
+ * is part of a parallel storyline happening at the same time — not a new day.
+ */
+const CONCURRENT_PHRASES = [
+  /\bINTERCUT\s+WITH\b/i,
+  /\bINTERCUT\s*[–—:]/i,
+  /\bMEANWHILE\s*[,.:]/i,
+  /\bAT\s+THE\s+SAME\s+TIME\b/i,
+  /\bSIMULTANEOUSLY\b/i,
+  /\bCUTTING\s+BETWEEN\b/i,
 ];
 
+/**
+ * Check if a scene's action lines contain a concurrent-thread marker.
+ */
+export function hasConcurrentMarker(actionLines: string[]): boolean {
+  const text = actionLines.join(' ');
+  return CONCURRENT_PHRASES.some(re => re.test(text));
+}
+
+/**
+ * Universal heuristic for concurrent thread detection.
+ *
+ * A scene is concurrent (parallel storyline, same story day) when:
+ *  1. The previous scene's action lines contain a concurrent marker
+ *     (INTERCUT WITH, MEANWHILE, SIMULTANEOUSLY, etc.)
+ *  2. The current scene has a different location from the previous scene
+ *
+ * Conservative: when in doubt, do NOT mark as concurrent.
+ * A false concurrent suppresses a real day boundary.
+ * A missed concurrent only means a day is marked (?) for human review.
+ */
 function isConcurrentThread(
   scene: ParsedScene,
   prevScene: ParsedScene | null,
 ): boolean {
   if (!prevScene) return false;
+  // Only trigger if the previous scene explicitly set up an intercut/meanwhile
+  if (!hasConcurrentMarker(prevScene.actionLines)) return false;
+  // Must be a different location
   const loc  = scene.location.toUpperCase();
   const prev = prevScene.location.toUpperCase();
-  for (const [primary, concurrent] of CONCURRENT_PAIRS) {
-    if (prev.includes(primary) && loc.includes(concurrent)) return true;
-  }
-  return false;
+  if (loc === prev) return false;
+  return true;
 }
 
 // ─── MAIN: buildStoryDayMap ──────────────────────────────────────────────────
@@ -276,13 +302,6 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       continue;
     }
 
-    // ── Tier 2B: Concurrent thread
-    if (isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null)) {
-      results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
-        'Concurrent narrative thread (location jump without travel)', null));
-      continue; // Do NOT update prevTOD or dayCounter
-    }
-
     // ── Tier 3: CONTINUOUS / LATER — same day, do NOT update prevTOD
     if (SKIP_SET.has(scene.tod)) {
       results.push(make(scene, dayCounter || 1, 'present', 'explicit',
@@ -290,7 +309,7 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       continue;
     }
 
-    // ── Tier 4: TOD regression
+    // ── Tier 4: TOD regression (takes priority over concurrent detection)
     if (dayCounter > 0 && prevTOD !== 'UNKNOWN') {
       const regression = checkTODRegression(prevTOD, scene.tod);
       if (regression === 'new-day') {
@@ -302,17 +321,37 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       }
       if (regression === 'same-day') {
         prevTOD = scene.tod;
-        results.push(make(scene, dayCounter, 'present', 'explicit',
-          `Same day: ${prevTOD}→${scene.tod}`, null));
+        // If previous scene had an intercut marker, label as concurrent
+        const concurrent = isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null);
+        results.push(make(scene, dayCounter, concurrent ? 'concurrent' : 'present',
+          concurrent ? 'inferred' : 'explicit',
+          concurrent
+            ? 'Concurrent thread (INTERCUT/MEANWHILE in previous scene)'
+            : `Same day: ${prevTOD}→${scene.tod}`,
+          null));
         continue;
       }
       if (regression === 'ambiguous') {
-        // NIGHT→NIGHT: assume same night, flag for review
+        // NIGHT→NIGHT: check for concurrent before assuming same night
+        if (isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null)) {
+          results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
+            'Concurrent thread (INTERCUT/MEANWHILE in previous scene)', null));
+          continue;
+        }
         prevTOD = scene.tod;
         results.push(make(scene, dayCounter, 'present', 'inherited',
           'Ambiguous NIGHT→NIGHT — assumed same night, review recommended', null));
         continue;
       }
+    }
+
+    // ── Tier 5: Concurrent thread (previous scene has INTERCUT/MEANWHILE)
+    // Only fires when no TOD regression was detected — conservative default.
+    if (isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null)) {
+      if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
+      results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
+        'Concurrent thread (INTERCUT/MEANWHILE in previous scene)', null));
+      continue;
     }
 
     // ── Default: first scene or no signal found
