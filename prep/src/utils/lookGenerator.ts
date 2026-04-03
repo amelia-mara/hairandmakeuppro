@@ -38,7 +38,7 @@ function sceneToParsedScene(scene: Scene, _index: number): ParsedScene {
     intExt: scene.intExt as 'INT' | 'EXT' | 'INT/EXT' | 'UNKNOWN',
     location: scene.location,
     actionLines,
-    titleCardBefore: titleCard,
+    titleCardBefore: scene.titleCardBefore ?? titleCard,
     isEpisodeMarker: false,
   };
 }
