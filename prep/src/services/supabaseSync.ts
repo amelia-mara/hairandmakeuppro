@@ -319,8 +319,52 @@ export function saveScenes(
         };
         filmingNotes = JSON.stringify(resolved);
       } else {
-        // Preserve existing filming_notes from DB if local breakdown is empty
-        filmingNotes = existingFilmingNotes.get(s.id) ?? null;
+        // No breakdown in local store — check if there are tags for this scene
+        // that should be resolved into a breakdown for mobile consumption
+        const sceneTags = allTags.filter(t => t.sceneId === s.id && !t.dismissed);
+        if (sceneTags.length > 0 && s.characterIds && s.characterIds.length > 0) {
+          const tagBreakdown = {
+            sceneId: s.id,
+            timeline: { day: s.storyDay || '', time: '', type: '', note: '' },
+            characters: s.characterIds.map((cid: string) => {
+              const charTags = sceneTags.filter(t => t.characterId === cid);
+              const resolveTag = (catId: string) => {
+                const m = charTags.filter(t => t.categoryId === catId);
+                return m.length > 0 ? m.map(t => t.text).join(', ') : '';
+              };
+              return {
+                characterId: cid,
+                lookId: '',
+                entersWith: {
+                  hair: resolveTag('hair'),
+                  makeup: resolveTag('makeup'),
+                  wardrobe: resolveTag('wardrobe'),
+                },
+                sfx: resolveTag('sfx'),
+                environmental: resolveTag('environmental'),
+                action: resolveTag('action'),
+                changeType: 'no-change',
+                changeNotes: '',
+                exitsWith: { hair: '', makeup: '', wardrobe: '' },
+                notes: resolveTag('notes'),
+              };
+            }),
+            continuityEvents: [],
+          };
+          // Only save if at least one character has non-empty tag data
+          const hasData = tagBreakdown.characters.some(c =>
+            c.entersWith.hair || c.entersWith.makeup || c.entersWith.wardrobe ||
+            c.sfx || c.environmental || c.action || c.notes
+          );
+          if (hasData) {
+            filmingNotes = JSON.stringify(tagBreakdown);
+          } else {
+            filmingNotes = existingFilmingNotes.get(s.id) ?? null;
+          }
+        } else {
+          // Preserve existing filming_notes from DB if local has nothing
+          filmingNotes = existingFilmingNotes.get(s.id) ?? null;
+        }
       }
       return {
         id: s.id,
