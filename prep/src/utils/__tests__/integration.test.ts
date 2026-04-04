@@ -11,14 +11,8 @@
 import {
   buildStoryDayMap,
   classifyTOD,
-  hasConcurrentMarker,
-  matchHeadingTimeJump,
-  matchTitleCard,
-  matchTier1,
   type ParsedScene,
   type StoryDayResult,
-  type StoryDayConfidence,
-  type Timeline,
 } from '../storyDayDetection';
 
 let passed = 0;
@@ -350,7 +344,7 @@ console.log('\n── dialogueTimeCue ──');
 {
   // dialogueTimeCue is not yet implemented in StoryDayResult.
   // Verify the field doesn't exist to avoid false expectations.
-  const sampleResult = results[0] as Record<string, unknown>;
+  const sampleResult = results[0] as unknown as Record<string, unknown>;
   assert(!('dialogueTimeCue' in sampleResult),
     'dialogueTimeCue not yet implemented (field absent)');
 }
