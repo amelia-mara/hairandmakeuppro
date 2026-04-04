@@ -1353,6 +1353,34 @@ export function parseScriptText(text: string): ParsedScript {
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
 
+  /* ── Validation: check for dropped scenes ──
+     Independently count all lines that look like scene headings and compare
+     to the number of ParsedScene objects produced. If they differ, some
+     headings were not recognised by parseSceneHeadingLine — log a warning
+     with the specific missing scene numbers so they can be investigated. */
+  const headingRe = /^(\d+[A-Z]{0,4}\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i;
+  const detectedHeadings: Array<{ lineNum: number; text: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (headingRe.test(t) && t.length >= 5) {
+      detectedHeadings.push({ lineNum: i + 1, text: t });
+    }
+  }
+
+  // Filter out PREAMBLE scene from comparison
+  const outputScenes = scenes.filter(s => s.location !== 'PREAMBLE');
+  if (detectedHeadings.length !== outputScenes.length) {
+    const outputSlugs = new Set(outputScenes.map(s => s.slugline));
+    const missing = detectedHeadings.filter(h => !outputSlugs.has(h.text));
+    if (missing.length > 0) {
+      console.warn(
+        `[scriptParser] Scene count mismatch: ${detectedHeadings.length} headings detected, ` +
+        `${outputScenes.length} scenes produced. Missing headings:\n` +
+        missing.map(m => `  Line ${m.lineNum}: ${m.text}`).join('\n')
+      );
+    }
+  }
+
   return { title, scenes, characters, rawText: text };
 }
 
