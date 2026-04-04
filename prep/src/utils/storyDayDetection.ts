@@ -36,6 +36,15 @@ export interface ParsedScene {
   isEpisodeMarker?: boolean;
 }
 
+// TODO: dialogueTimeCue — not yet implemented.
+// Requires dialogue lines to be passed through
+// ParsedScene alongside actionLines. When implemented,
+// scan dialogue for countdown phrases ("X days left",
+// "X more days") and forward references ("see you
+// tomorrow") and populate a dialogueTimeCue field
+// on StoryDayResult. Must not change storyDay value —
+// flagging only. See Prompt 6 spec for full details.
+
 export interface StoryDayResult {
   sceneNumber: string;
   storyDay: number;               // Sequential integer: 1, 2, 3…
