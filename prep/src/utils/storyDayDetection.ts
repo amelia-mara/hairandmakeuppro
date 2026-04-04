@@ -54,6 +54,11 @@ const SKIP_SET  = new Set<TOD>(['CONTINUOUS', 'LATER', 'MOMENTS_LATER', 'UNKNOWN
 
 // ─── TOD CLASSIFIER ─────────────────────────────────────────────────────────
 
+/** Determine D/N prefix from a TOD value */
+function todPrefix(tod: TOD): 'D' | 'N' {
+  return NIGHT_SET.has(tod) ? 'N' : 'D';
+}
+
 export function classifyTOD(raw: string): TOD {
   const t = (raw ?? '').toUpperCase().trim();
   if (!t) return 'UNKNOWN';
@@ -127,6 +132,32 @@ export function matchTier1(actionLines: string[]): Tier1Match | null {
     if (pattern.test(text)) return { type: 'same-day', signal };
   }
 
+  return null;
+}
+
+// ─── TIER 1A: HEADING / SLUGLINE TIME JUMP ──────────────────────────────────
+
+/**
+ * Detect time jumps embedded in the scene heading text itself.
+ * e.g. "INT. OFFICE - 6 MONTHS LATER" or heading containing "ONE YEAR LATER"
+ * Flashback keywords in headings are handled separately by Tier 2A.
+ */
+export function matchHeadingTimeJump(slugline: string): Tier1Match | null {
+  const t = slugline.toUpperCase();
+  // Check for flashback first — if present, this is not a time jump
+  if (/\b(FLASHBACK|FLASH\s*BACK|FLASH\s+FORWARD|DREAM|MEMORY|NIGHTMARE)\b/.test(t)) {
+    return null; // Let Tier 2A handle this
+  }
+  const timeJump = t.match(
+    /\b(\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|SEVERAL|FEW|MANY|SOME)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(LATER|AGO|EARLIER)\b/
+  );
+  if (timeJump) {
+    return {
+      type: 'large-jump',
+      signal: `Heading time jump: "${timeJump[0]}"`,
+      gapNote: timeJump[0].toLowerCase(),
+    };
+  }
   return null;
 }
 
@@ -247,42 +278,65 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
   const results: StoryDayResult[] = [];
   let dayCounter = 0;
   let prevTOD: TOD = 'UNKNOWN';
+  // Issue 3: after a large time jump, subsequent scenes with no explicit
+  // marker get 'inferred' confidence until the next explicit signal.
+  let postLargeJump = false;
+
+  /** Helper: push result and clear postLargeJump when an explicit signal fires */
+  function pushExplicit(scene: ParsedScene, day: number, timeline: Timeline,
+    signal: string, gapNote: string | null, isLargeJump = false) {
+    postLargeJump = isLargeJump;
+    if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
+    results.push(make(scene, day, timeline, 'explicit', signal, gapNote));
+  }
 
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
 
     if (scene.isEpisodeMarker) continue;
 
-    // ── Tier 1B: Title card before this scene
+    // ── Tier 1B: Title card (prefixMarker) before this scene
     const titleCardMatch = matchTitleCard(scene.titleCardBefore);
     if (titleCardMatch && (titleCardMatch.type === 'new-day' || titleCardMatch.type === 'large-jump')) {
       dayCounter++;
-      if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
-      results.push(make(scene, dayCounter, 'present', 'explicit',
-        titleCardMatch.signal, titleCardMatch.gapNote ?? null));
+      pushExplicit(scene, dayCounter, 'present',
+        titleCardMatch.signal, titleCardMatch.gapNote ?? null,
+        titleCardMatch.type === 'large-jump');
       continue;
     }
     if (titleCardMatch?.type === 'flashback') {
+      postLargeJump = false;
       results.push(makeFlashback(scene, dayCounter));
       continue;
     }
     if (titleCardMatch?.type === 'same-day') {
-      // "END FLASHBACK", "BACK TO PRESENT" — return to present timeline, same day
+      postLargeJump = false;
       if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
       results.push(make(scene, dayCounter || 1, 'present', 'explicit',
         titleCardMatch.signal, null));
       continue;
     }
 
-    // ── Tier 2A: Flashback detection
+    // ── Tier 2A: Flashback detection (slugline or action lines)
     const isFlashback =
       /\bFLASHBACK\b/i.test(scene.slugline) ||
       /\b(MEMORY|DREAM|NIGHTMARE|FLASH\s*BACK)\b/i.test(scene.slugline) ||
       scene.actionLines.some(l => /\bFLASHBACK\s*[:–\-]/i.test(l));
 
     if (isFlashback) {
+      postLargeJump = false;
       results.push(makeFlashback(scene, dayCounter));
-      continue; // Do NOT update prevTOD or dayCounter
+      continue;
+    }
+
+    // ── Tier 1A: Time jump in heading/slugline (Issue 2)
+    const headingJump = matchHeadingTimeJump(scene.slugline);
+    if (headingJump && (headingJump.type === 'large-jump' || headingJump.type === 'new-day')) {
+      dayCounter++;
+      pushExplicit(scene, dayCounter, 'present',
+        headingJump.signal, headingJump.gapNote ?? null,
+        headingJump.type === 'large-jump');
+      continue;
     }
 
     // ── Tier 1: Action line explicit markers
@@ -290,14 +344,15 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
 
     if (tier1?.type === 'new-day' || tier1?.type === 'large-jump') {
       dayCounter++;
-      if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
-      results.push(make(scene, dayCounter, 'present', 'explicit',
-        tier1.signal, tier1.gapNote ?? null));
+      pushExplicit(scene, dayCounter, 'present',
+        tier1.signal, tier1.gapNote ?? null,
+        tier1.type === 'large-jump');
       continue;
     }
 
     if (tier1?.type === 'inferred-new-day') {
       dayCounter++;
+      postLargeJump = false;
       if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
       results.push(make(scene, dayCounter, 'present', 'inferred',
         tier1.signal, tier1.gapNote ?? null));
@@ -305,6 +360,7 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     }
 
     if (tier1?.type === 'same-day') {
+      postLargeJump = false;
       if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
       results.push(make(scene, dayCounter || 1, 'present', 'explicit', tier1.signal, null));
       continue;
@@ -312,7 +368,8 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
 
     // ── Tier 3: CONTINUOUS / LATER — same day, do NOT update prevTOD
     if (SKIP_SET.has(scene.tod)) {
-      results.push(make(scene, dayCounter || 1, 'present', 'explicit',
+      const conf: StoryDayConfidence = postLargeJump ? 'inferred' : 'explicit';
+      results.push(make(scene, dayCounter || 1, 'present', conf,
         `CONTINUOUS — "${scene.rawTOD}"`, null));
       continue;
     }
@@ -322,6 +379,7 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       const regression = checkTODRegression(prevTOD, scene.tod);
       if (regression === 'new-day') {
         dayCounter++;
+        postLargeJump = false;
         prevTOD = scene.tod;
         results.push(make(scene, dayCounter, 'present', 'explicit',
           `TOD regression: ${prevTOD}→${scene.tod}`, null));
@@ -329,10 +387,11 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
       }
       if (regression === 'same-day') {
         prevTOD = scene.tod;
-        // If previous scene had an intercut marker, label as concurrent
         const concurrent = isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null);
+        const conf: StoryDayConfidence = concurrent ? 'inferred'
+          : postLargeJump ? 'inferred' : 'explicit';
         results.push(make(scene, dayCounter, concurrent ? 'concurrent' : 'present',
-          concurrent ? 'inferred' : 'explicit',
+          conf,
           concurrent
             ? 'Concurrent thread (INTERCUT/MEANWHILE in previous scene)'
             : `Same day: ${prevTOD}→${scene.tod}`,
@@ -340,7 +399,6 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
         continue;
       }
       if (regression === 'ambiguous') {
-        // NIGHT→NIGHT: check for concurrent before assuming same night
         if (isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null)) {
           results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
             'Concurrent thread (INTERCUT/MEANWHILE in previous scene)', null));
@@ -354,7 +412,6 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     }
 
     // ── Tier 5: Concurrent thread (previous scene has INTERCUT/MEANWHILE)
-    // Only fires when no TOD regression was detected — conservative default.
     if (isConcurrentThread(scene, i > 0 ? scenes[i - 1] : null)) {
       if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
       results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
@@ -366,9 +423,12 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     if (dayCounter === 0) dayCounter = 1;
     const isFirst = i === 0;
     if (!SKIP_SET.has(scene.tod)) prevTOD = scene.tod;
+    const conf: StoryDayConfidence = isFirst ? 'explicit' : postLargeJump ? 'inferred' : 'inherited';
     results.push(make(scene, dayCounter, 'present',
-      isFirst ? 'explicit' : 'inherited',
-      isFirst ? 'First scene — Day 1' : 'No signal found — assumed same day',
+      conf,
+      isFirst ? 'First scene' : postLargeJump
+        ? 'No explicit marker after time jump — review recommended'
+        : 'No signal found — assumed same day',
       null));
   }
 
@@ -386,11 +446,12 @@ function make(
   gapNote: string | null,
 ): StoryDayResult {
   const isFlashback = timeline === 'non-present';
+  const prefix = SKIP_SET.has(scene.tod) ? 'D' : todPrefix(scene.tod);
   return {
     sceneNumber: scene.sceneNumber,
     storyDay: dayNum,
     timeline,
-    label: isFlashback ? `Day ${dayNum} (Flashback)` : `Day ${dayNum}`,
+    label: isFlashback ? `${prefix}${dayNum} (Flashback)` : `${prefix}${dayNum}`,
     confidence,
     signal,
     gapNote,
@@ -398,11 +459,12 @@ function make(
 }
 
 function makeFlashback(scene: ParsedScene, currentDay: number): StoryDayResult {
+  const prefix = SKIP_SET.has(scene.tod) ? 'D' : todPrefix(scene.tod);
   return {
     sceneNumber: scene.sceneNumber,
     storyDay: currentDay || 1,
     timeline: 'non-present',
-    label: `Day ${currentDay || 1} (Flashback)`,
+    label: `${prefix}${currentDay || 1} (Flashback)`,
     confidence: 'explicit',
     signal: 'Flashback detected',
     gapNote: null,
