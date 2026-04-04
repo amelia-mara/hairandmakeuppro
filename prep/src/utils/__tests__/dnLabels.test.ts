@@ -275,7 +275,7 @@ console.log('\nTest 15: Scenes after "6 MONTHS LATER" get inferred');
   assert(sc3.confidence === 'inferred', `Sc 3 (post-jump) is inferred: "${sc3.confidence}"`);
   assert(sc4.confidence === 'inferred', `Sc 4 (post-jump) is inferred: "${sc4.confidence}"`);
   assert(sc5.confidence === 'explicit', `Sc 5 (explicit marker) is explicit: "${sc5.confidence}"`);
-  assert(sc6.confidence !== 'inferred' || sc6.confidence === 'inherited',
+  assert(sc6.confidence !== 'inferred',
     `Sc 6 (after explicit) is not inferred: "${sc6.confidence}"`);
 }
 

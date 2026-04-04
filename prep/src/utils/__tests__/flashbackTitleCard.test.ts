@@ -76,7 +76,6 @@ console.log('\nTest 2: Scene with "FLASHBACK: 2 WEEKS AGO" prefix marker');
   ];
   const results = buildStoryDayMap(scenes);
 
-  const sc1 = results.find(r => r.sceneNumber === '1')!;
   const sc3 = results.find(r => r.sceneNumber === '3')!;
   const sc4 = results.find(r => r.sceneNumber === '4')!;
 
