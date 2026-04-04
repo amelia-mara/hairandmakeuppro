@@ -274,6 +274,20 @@ export function saveScenes(
     const breakdownState = useBreakdownStore.getState();
     const allTags = useTagStore.getState().tags;
 
+    // Fetch existing filming_notes from DB so we don't overwrite breakdown
+    // data that was saved by saveBreakdown() but isn't in the local store
+    // (e.g. after page reload or scene ID change).
+    const existingFilmingNotes = new Map<string, string | null>();
+    const { data: existingRows } = await supabase
+      .from('scenes')
+      .select('id, filming_notes')
+      .eq('project_id', projectId);
+    if (existingRows) {
+      for (const row of existingRows) {
+        existingFilmingNotes.set(row.id as string, row.filming_notes as string | null);
+      }
+    }
+
     const dbScenes = scenes.map(s => {
       const bd = breakdownState.getBreakdown(s.id);
       let filmingNotes: string | null = null;
@@ -304,6 +318,9 @@ export function saveScenes(
           }),
         };
         filmingNotes = JSON.stringify(resolved);
+      } else {
+        // Preserve existing filming_notes from DB if local breakdown is empty
+        filmingNotes = existingFilmingNotes.get(s.id) ?? null;
       }
       return {
         id: s.id,
