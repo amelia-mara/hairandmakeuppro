@@ -815,8 +815,33 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
   if (!isSupabaseConfigured) return;
 
   debouncedPush('scenes', async () => {
+    // Preserve prep-authored filming_notes for any scene whose local
+    // prepBreakdown is undefined. Without this, sceneToDb writes
+    // filming_notes: null and wipes out the prep-written breakdown.
+    const existingFilmingNotes = new Map<string, string | null>();
+    const sceneIdsToCheck = scenes
+      .filter(s => !s.prepBreakdown && !s.filmingNotes)
+      .map(s => s.id);
+    if (sceneIdsToCheck.length > 0) {
+      const { data: existingRows } = await supabase
+        .from('scenes')
+        .select('id, filming_notes')
+        .in('id', sceneIdsToCheck);
+      if (existingRows) {
+        for (const row of existingRows) {
+          existingFilmingNotes.set(row.id as string, row.filming_notes as string | null);
+        }
+      }
+    }
+
     // Upsert scenes
-    const dbScenes = scenes.map(s => sceneToDb(s, projectId));
+    const dbScenes = scenes.map(s => {
+      const row = sceneToDb(s, projectId);
+      if (!s.prepBreakdown && !s.filmingNotes && existingFilmingNotes.has(s.id)) {
+        row.filming_notes = existingFilmingNotes.get(s.id) ?? null;
+      }
+      return row;
+    });
     const { error } = await supabase
       .from('scenes')
       .upsert(dbScenes, { onConflict: 'id' });
