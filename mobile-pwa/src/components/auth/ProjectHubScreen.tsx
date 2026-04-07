@@ -10,7 +10,7 @@ import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { flushAutoSave } from '@/services/autoSave';
 import { useSyncStore } from '@/stores/syncStore';
-import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
+import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails, PrepSceneBreakdown } from '@/types';
 import { savePhotoBlob } from '@/db';
 import { detectCharactersForScene } from '@/utils/scriptParser';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
@@ -662,6 +662,24 @@ export function ProjectHubScreen() {
           const intExt = (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT';
           const timeOfDay = (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
           const location = s.location || 'UNKNOWN';
+
+          // Parse prep breakdown from filming_notes JSON so the mobile
+          // Master Breakdown can display Hair/Makeup/Wardrobe/SFX/Env/Action
+          // populated from the Prep app.
+          let prepBreakdown: PrepSceneBreakdown | undefined;
+          if (s.filming_notes) {
+            try {
+              const parsed = typeof s.filming_notes === 'string'
+                ? JSON.parse(s.filming_notes)
+                : s.filming_notes;
+              if (parsed && Array.isArray((parsed as any).characters)) {
+                prepBreakdown = parsed as PrepSceneBreakdown;
+              }
+            } catch {
+              // Not valid JSON — treat as plain filming notes string
+            }
+          }
+
           return {
             id: s.id,
             sceneNumber: s.scene_number,
@@ -674,7 +692,8 @@ export function ProjectHubScreen() {
             isComplete: s.is_complete,
             completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
             filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
-            filmingNotes: s.filming_notes || undefined,
+            filmingNotes: prepBreakdown ? undefined : (s.filming_notes || undefined),
+            prepBreakdown,
             shootingDay: s.shooting_day || undefined,
             characterConfirmationStatus: ((sceneCharMap.get(s.id) || []).length > 0 || !s.script_content)
               ? 'confirmed' as const
