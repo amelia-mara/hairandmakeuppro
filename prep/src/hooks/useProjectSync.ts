@@ -936,12 +936,43 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
       }
 
       const breakdowns = useBreakdownStore.getState().breakdowns;
+      const parsed = useParsedScriptStore.getState().getParsedData(projectId);
       for (const sceneId of changedSceneIds) {
         const bd = breakdowns[sceneId];
         if (bd) {
           const sceneTags = state.tags.filter((t) => t.sceneId === sceneId);
           const resolved = resolveBreakdownForSync(bd, sceneTags);
           saveBreakdown(projectId, sceneId, resolved as any);
+        } else {
+          // No breakdown in store, but tags exist — build a minimal breakdown
+          // from tags so mobile can display the data
+          const sceneTags = state.tags.filter((t) => t.sceneId === sceneId && !t.dismissed);
+          if (sceneTags.length > 0) {
+            const scene = parsed?.scenes?.find((s: any) => s.id === sceneId);
+            const charIds: string[] = scene?.characterIds || [];
+            const tagBreakdown = {
+              sceneId,
+              timeline: { day: '', time: '', type: '', note: '' },
+              characters: charIds.map((cid: string) => {
+                const charTags = sceneTags.filter(t => t.characterId === cid);
+                const resolveTag = (catId: string) => {
+                  const m = charTags.filter(t => t.categoryId === catId);
+                  return m.length > 0 ? m.map(t => t.text).join(', ') : '';
+                };
+                return {
+                  characterId: cid, lookId: '',
+                  entersWith: { hair: resolveTag('hair'), makeup: resolveTag('makeup'), wardrobe: resolveTag('wardrobe') },
+                  sfx: resolveTag('sfx'), environmental: resolveTag('environmental'),
+                  action: resolveTag('action'),
+                  changeType: 'no-change', changeNotes: '',
+                  exitsWith: { hair: '', makeup: '', wardrobe: '' },
+                  notes: resolveTag('notes'),
+                };
+              }),
+              continuityEvents: [],
+            };
+            saveBreakdown(projectId, sceneId, tagBreakdown as any);
+          }
         }
       }
     });

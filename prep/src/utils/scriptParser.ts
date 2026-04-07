@@ -21,6 +21,7 @@ export interface ParsedScene {
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
   characters: string[]; // Character names appearing in scene
   content: string;
+  titleCardBefore?: string | null; // ALL-CAPS title card found before this scene's slug
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -184,24 +185,33 @@ function normalizeScriptText(text: string): string {
   // e.g. "1 EXT. FARM LAND – DAY LENNON BOWIE, 28, IS A COWBOY..."
   //    → "1 EXT. FARM LAND – DAY\nLENNON BOWIE, 28, IS A COWBOY..."
   normalized = normalized.split('\n').map(line => {
-    // Only process lines that look like scene headings
-    if (!/^(\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(line)) return line;
-
-    // Find "- DAY", "– NIGHT", etc. followed by remaining text
-    const timeSplitRe = /(\s+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b)([\s].+)/i;
-    const m = line.match(timeSplitRe);
-    if (m && m.index != null) {
-      const headingEnd = m.index + m[1].length;
-      const overflow = line.slice(headingEnd);
-      const trimmedOverflow = overflow.trim();
-      // Only split if overflow has substantial content and isn't a heading suffix
-      // like "(FLASHBACK)", "CONT'D", trailing scene numbers, etc.
-      if (trimmedOverflow.length > 3 &&
-          !/^\(?(?:FLASHBACK|PRESENT|CONT'?D?|STOCK|ESTABLISHING)\)?$/i.test(trimmedOverflow) &&
-          !/^\d+[A-Z]?\s*$/.test(trimmedOverflow)) {
-        return line.slice(0, headingEnd) + '\n' + trimmedOverflow;
+    // Case 1: heading at START of line, followed by action text after the TOD
+    if (/^(\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(line)) {
+      const timeSplitRe = /(\s+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b)([\s].+)/i;
+      const m = line.match(timeSplitRe);
+      if (m && m.index != null) {
+        const headingEnd = m.index + m[1].length;
+        const overflow = line.slice(headingEnd);
+        const trimmedOverflow = overflow.trim();
+        if (trimmedOverflow.length > 3 &&
+            !/^\(?(?:FLASHBACK|PRESENT|CONT'?D?|STOCK|ESTABLISHING)\)?$/i.test(trimmedOverflow) &&
+            !/^\d+[A-Z]?\s*$/.test(trimmedOverflow)) {
+          return line.slice(0, headingEnd) + '\n' + trimmedOverflow;
+        }
       }
+      return line;
     }
+
+    // Case 2: action text from previous scene merged with a heading in the MIDDLE.
+    // PDF extraction can merge adjacent lines when y-coordinates are close.
+    // e.g. "He walks away. 6 EXT. GARDEN TERRACE - DAY 6"
+    //    → "He walks away.\n6 EXT. GARDEN TERRACE - DAY 6"
+    const midHeadingRe = /(.+?)\s+(\d+[A-Z]?\s+(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s.+[-–—]\s*(?:DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME)\b.*)/i;
+    const mid = line.match(midHeadingRe);
+    if (mid) {
+      return mid[1] + '\n' + mid[2];
+    }
+
     return line;
   }).join('\n');
 
@@ -489,7 +499,7 @@ function extractCharactersFromActionLine(line: string): string[] {
   const catchAllIntroRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
   while ((match = catchAllIntroRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
-    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET|FARM|SCENE)\b/.test(name)) {
+    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
       characters.push(name);
     }
   }
@@ -907,6 +917,48 @@ function prescanCharacterIntros(lines: string[]): Map<string, string> {
   return resolveMap;
 }
 
+/**
+ * Check if a line is a temporal prefix marker that should be attached to the
+ * FOLLOWING scene rather than the preceding scene. These appear on the line
+ * immediately before an INT./EXT. heading.
+ *
+ * Matches: FLASHBACK, FLASH FORWARD, BACK TO PRESENT, END FLASHBACK,
+ * and time-jump patterns like "6 MONTHS LATER", "TWO WEEKS AGO", etc.
+ */
+function isTemporalPrefixMarker(line: string): boolean {
+  if (!line || line.length < 4) return false;
+  const t = line.toUpperCase();
+  // Don't match scene headings themselves
+  if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT|I\/E)/i.test(line)) return false;
+  return /\bFLASHBACK\b/.test(t)
+      || /\bFLASH\s+FORWARD\b/.test(t)
+      || /\bBACK\s+TO\s+PRESENT\b/.test(t)
+      || /\bRETURN\s+TO\s+PRESENT\b/.test(t)
+      || /\bEND\s+FLASHBACK\b/.test(t)
+      || /\b(\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|SEVERAL|FEW|MANY|SOME|A\s+FEW)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(LATER|AGO|EARLIER)\b/.test(t);
+}
+
+/**
+ * Scan interstitial text (between two sluglines) for a title card line.
+ * Title cards are standalone ALL-CAPS lines like "6 MONTHS LATER",
+ * "FRIDAY, DECEMBER 3, 1926", "FLASHBACK - 1985", etc.
+ */
+function extractTitleCardFromInterstitial(text: string): string | null {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    if (
+      /^[A-Z0-9][A-Z\s,.:'\-!0-9]+$/.test(line) &&
+      line.length > 4 &&
+      line.length < 80 &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|CHRISTMAS|VALENTINE|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(line) &&
+      !/^(INT|EXT|EPISODE)\b/.test(line)
+    ) {
+      return line;
+    }
+  }
+  return null;
+}
+
 /* ━━━ Main parser ━━━ */
 
 export function parseScriptText(text: string): ParsedScript {
@@ -982,9 +1034,36 @@ export function parseScriptText(text: string): ParsedScript {
         });
       }
 
+      // Check the line immediately preceding this heading for a temporal marker.
+      // Temporal markers (e.g. "FLASHBACK: 2 WEEKS AGO", "6 MONTHS LATER")
+      // appear on the line directly before an INT./EXT. heading and describe
+      // the FOLLOWING scene, not the preceding one.
+      let titleCardBefore: string | null = null;
       if (currentScene) {
+        const contentLines = currentSceneContent.split('\n');
+        // Find last non-empty line in accumulated content
+        let lastNonEmptyIdx = contentLines.length - 1;
+        while (lastNonEmptyIdx >= 0 && !contentLines[lastNonEmptyIdx].trim()) {
+          lastNonEmptyIdx--;
+        }
+        if (lastNonEmptyIdx >= 0) {
+          const lastLine = contentLines[lastNonEmptyIdx].trim();
+          if (isTemporalPrefixMarker(lastLine)) {
+            titleCardBefore = lastLine;
+            // Remove the marker from the previous scene's content
+            contentLines.splice(lastNonEmptyIdx, 1);
+            currentSceneContent = contentLines.join('\n');
+          }
+        }
+        // Fall back to broader interstitial scan if no prefix marker found
+        if (!titleCardBefore) {
+          titleCardBefore = extractTitleCardFromInterstitial(currentSceneContent);
+        }
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
+      } else if (preambleContent.trim()) {
+        // Also check preamble for title cards before the first scene
+        titleCardBefore = extractTitleCardFromInterstitial(preambleContent);
       }
 
       fallbackSceneNumber++;
@@ -999,6 +1078,7 @@ export function parseScriptText(text: string): ParsedScript {
         timeOfDay: normalizedTime,
         characters: [],
         content: '',
+        titleCardBefore,
       };
       currentSceneContent = trimmed + '\n';
       lastLineWasCharacter = false;
@@ -1100,7 +1180,7 @@ export function parseScriptText(text: string): ParsedScript {
   const introSafetyRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
   const introExcludeFirstWord = new Set([
     'INT', 'EXT', 'CUT', 'FADE', 'SCENE', 'THE', 'AND', 'BUT', 'FOR', 'NOR',
-    'YET', 'FARM', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
+    'YET', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
     'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'SAME', 'ANGLE', 'CLOSE',
     'WIDE', 'SHOT', 'FADE', 'TITLE', 'SUPER', 'CHAPTER', 'EPISODE',
   ]);
@@ -1217,6 +1297,43 @@ export function parseScriptText(text: string): ParsedScript {
     scene.characters = [...new Set(scene.characters)];
   }
 
+  /* ── Location-based false positive removal ──
+     Reject any "character" whose name matches a location extracted from a scene
+     heading. This catches false positives like "FARM LAND", "STREET CORNER",
+     "OFFICE BUILDING" that get picked up by the catch-all intro patterns.
+     Only applies to multi-word names — single-word names like "LENNON" are
+     never locations (locations are always multi-segment in scene headings). */
+  const sceneLocations = new Set<string>();
+  for (const scene of scenes) {
+    const loc = scene.location.toUpperCase().trim();
+    if (loc && loc !== 'PREAMBLE') {
+      sceneLocations.add(loc);
+      // Also add individual segments for compound locations:
+      // "FARMHOUSE - KITCHEN" → "FARMHOUSE", "KITCHEN", "FARMHOUSE - KITCHEN"
+      for (const segment of loc.split(/\s*[-–—\/]\s*/)) {
+        const seg = segment.trim();
+        if (seg.length >= 3) sceneLocations.add(seg);
+      }
+    }
+  }
+
+  const locationFalsePositives = new Set<string>();
+  for (const [name] of characterMap) {
+    // Only check multi-word names (single words like "LENNON" are never locations)
+    if (!name.includes(' ')) continue;
+    if (sceneLocations.has(name)) {
+      locationFalsePositives.add(name);
+    }
+  }
+
+  for (const name of locationFalsePositives) {
+    characterMap.delete(name);
+    for (const scene of scenes) {
+      const idx = scene.characters.indexOf(name);
+      if (idx !== -1) scene.characters.splice(idx, 1);
+    }
+  }
+
   const characters = Array.from(characterMap.values())
     .filter(c => c.sceneCount >= 1)
     .sort((a, b) => b.sceneCount - a.sceneCount);
@@ -1235,6 +1352,34 @@ export function parseScriptText(text: string): ParsedScript {
 
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
+
+  /* ── Validation: check for dropped scenes ──
+     Independently count all lines that look like scene headings and compare
+     to the number of ParsedScene objects produced. If they differ, some
+     headings were not recognised by parseSceneHeadingLine — log a warning
+     with the specific missing scene numbers so they can be investigated. */
+  const headingRe = /^(\d+[A-Z]{0,4}\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i;
+  const detectedHeadings: Array<{ lineNum: number; text: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (headingRe.test(t) && t.length >= 5) {
+      detectedHeadings.push({ lineNum: i + 1, text: t });
+    }
+  }
+
+  // Filter out PREAMBLE scene from comparison
+  const outputScenes = scenes.filter(s => s.location !== 'PREAMBLE');
+  if (detectedHeadings.length !== outputScenes.length) {
+    const outputSlugs = new Set(outputScenes.map(s => s.slugline));
+    const missing = detectedHeadings.filter(h => !outputSlugs.has(h.text));
+    if (missing.length > 0) {
+      console.warn(
+        `[scriptParser] Scene count mismatch: ${detectedHeadings.length} headings detected, ` +
+        `${outputScenes.length} scenes produced. Missing headings:\n` +
+        missing.map(m => `  Line ${m.lineNum}: ${m.text}`).join('\n')
+      );
+    }
+  }
 
   return { title, scenes, characters, rawText: text };
 }

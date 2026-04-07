@@ -17,54 +17,88 @@ import type { Scene, Character, Look } from '@/stores/breakdownStore';
 import {
   buildStoryDayMap,
   classifyTOD,
-  extractTOD,
-  isNonPresent,
   type ParsedScene,
   type StoryDayResult,
 } from './storyDayDetection';
 
 /* ━━━ Scene conversion ━━━ */
 
-/**
- * Convert a prep Scene to a ParsedScene for the v2 story day detector.
- * Extracts action lines from scriptContent (first 3 non-empty lines after
- * stripping the slugline).
- */
-function sceneToParsedScene(scene: Scene): ParsedScene {
-  // Build a slugline-like string from scene fields for TOD extraction
-  const sluglike = `${scene.intExt}. ${scene.location} - ${scene.dayNight}${scene.timeInfo ? ' ' + scene.timeInfo : ''}`;
+function sceneToParsedScene(scene: Scene, _index: number): ParsedScene {
+  // Reconstruct slugline from existing fields
+  const slugline = `${scene.intExt}. ${scene.location} - ${scene.dayNight}`;
 
-  // Extract raw TOD — use timeInfo if available (may contain "NEXT MORNING" etc.)
-  // otherwise fall back to the dayNight field
-  const rawTOD = scene.timeInfo
-    ? scene.timeInfo.trim()
-    : extractTOD(sluglike) || scene.dayNight;
-
-  const tod = classifyTOD(rawTOD);
-  const nonPresent = isNonPresent(sluglike, rawTOD);
-
-  // Extract first 3 action lines from scriptContent
-  const actionLines: string[] = [];
-  if (scene.scriptContent) {
-    const lines = scene.scriptContent.split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed && actionLines.length < 3) {
-        // Skip the scene heading line itself
-        if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
-        actionLines.push(trimmed);
-      }
-    }
-  }
+  // Extract action lines and title card from scriptContent
+  const { actionLines, titleCard } = extractActionLines(scene.scriptContent ?? '');
 
   return {
     sceneNumber: String(scene.number),
-    slugline: sluglike,
-    rawTOD,
-    tod,
-    isNonPresent: nonPresent,
+    slugline,
+    rawTOD: scene.dayNight,
+    tod: classifyTOD(scene.dayNight),
+    intExt: scene.intExt as 'INT' | 'EXT' | 'INT/EXT' | 'UNKNOWN',
+    location: scene.location,
     actionLines,
+    titleCardBefore: scene.titleCardBefore ?? titleCard,
+    isEpisodeMarker: false,
   };
+}
+
+/**
+ * Extract the first 1-3 action lines from raw scene body text,
+ * stripping dialogue and detecting title cards.
+ */
+function extractActionLines(content: string): {
+  actionLines: string[];
+  titleCard: string | null;
+} {
+  const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+  const actionLines: string[] = [];
+  let titleCard: string | null = null;
+  let skipNext = false;
+
+  for (const line of lines) {
+    if (actionLines.length >= 3) break;
+
+    // Title card: ALL-CAPS line that appears before any action text,
+    // is not a character cue (character cues are followed by dialogue),
+    // and contains known title-card patterns
+    if (
+      !titleCard &&
+      actionLines.length === 0 &&
+      /^[A-Z0-9][A-Z\s,.:'\-!0-9]+$/.test(line) &&
+      line.length > 4 &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|EPISODE|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
+    ) {
+      titleCard = line;
+      continue;
+    }
+
+    // Character cue: short ALL-CAPS line (name only, possibly with V.O./O.S.)
+    if (
+      /^[A-Z][A-Z\s\-.()]{0,35}$/.test(line) &&
+      line.length < 40 &&
+      !/\b(INT|EXT|DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\b/.test(line)
+    ) {
+      skipNext = true;
+      continue;
+    }
+
+    // Dialogue line (indented or follows character cue)
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+
+    // Parenthetical: (whispers), (beat) etc.
+    if (/^\(.*\)$/.test(line)) continue;
+
+    // Page numbers, scene numbers, header noise
+    if (/^\d+\.?$/.test(line)) continue;
+
+    actionLines.push(line);
+  }
+
+  return { actionLines, titleCard };
 }
 
 /* ━━━ Look generation ━━━ */
@@ -89,8 +123,8 @@ export function generateLooksFromScript(
   scenes: Scene[],
   characters: Character[],
 ): { looks: Look[]; scenes: Scene[] } {
-  // Step 1: Convert scenes to ParsedScene format and run v2 detection
-  const parsedScenes = scenes.map(sceneToParsedScene);
+  // Step 1: Convert scenes to ParsedScene format and run v3 detection
+  const parsedScenes = scenes.map((s, i) => sceneToParsedScene(s, i));
   const storyDayResults = buildStoryDayMap(parsedScenes);
 
   // Build lookup maps: scene number -> StoryDayResult
@@ -114,6 +148,8 @@ export function generateLooksFromScript(
     return {
       ...scene,
       storyDay: needsReview ? `${result.label} (?)` : result.label,
+      storyDaySignal: result.signal,
+      storyDayGapNote: result.gapNote,
     };
   });
 

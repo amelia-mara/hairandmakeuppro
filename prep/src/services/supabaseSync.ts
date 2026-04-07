@@ -274,6 +274,20 @@ export function saveScenes(
     const breakdownState = useBreakdownStore.getState();
     const allTags = useTagStore.getState().tags;
 
+    // Fetch existing filming_notes from DB so we don't overwrite breakdown
+    // data that was saved by saveBreakdown() but isn't in the local store
+    // (e.g. after page reload or scene ID change).
+    const existingFilmingNotes = new Map<string, string | null>();
+    const { data: existingRows } = await supabase
+      .from('scenes')
+      .select('id, filming_notes')
+      .eq('project_id', projectId);
+    if (existingRows) {
+      for (const row of existingRows) {
+        existingFilmingNotes.set(row.id as string, row.filming_notes as string | null);
+      }
+    }
+
     const dbScenes = scenes.map(s => {
       const bd = breakdownState.getBreakdown(s.id);
       let filmingNotes: string | null = null;
@@ -304,6 +318,53 @@ export function saveScenes(
           }),
         };
         filmingNotes = JSON.stringify(resolved);
+      } else {
+        // No breakdown in local store — check if there are tags for this scene
+        // that should be resolved into a breakdown for mobile consumption
+        const sceneTags = allTags.filter(t => t.sceneId === s.id && !t.dismissed);
+        if (sceneTags.length > 0 && s.characterIds && s.characterIds.length > 0) {
+          const tagBreakdown = {
+            sceneId: s.id,
+            timeline: { day: s.storyDay || '', time: '', type: '', note: '' },
+            characters: s.characterIds.map((cid: string) => {
+              const charTags = sceneTags.filter(t => t.characterId === cid);
+              const resolveTag = (catId: string) => {
+                const m = charTags.filter(t => t.categoryId === catId);
+                return m.length > 0 ? m.map(t => t.text).join(', ') : '';
+              };
+              return {
+                characterId: cid,
+                lookId: '',
+                entersWith: {
+                  hair: resolveTag('hair'),
+                  makeup: resolveTag('makeup'),
+                  wardrobe: resolveTag('wardrobe'),
+                },
+                sfx: resolveTag('sfx'),
+                environmental: resolveTag('environmental'),
+                action: resolveTag('action'),
+                changeType: 'no-change',
+                changeNotes: '',
+                exitsWith: { hair: '', makeup: '', wardrobe: '' },
+                notes: resolveTag('notes'),
+              };
+            }),
+            continuityEvents: [],
+          };
+          // Only save if at least one character has non-empty tag data
+          const hasData = tagBreakdown.characters.some(c =>
+            c.entersWith.hair || c.entersWith.makeup || c.entersWith.wardrobe ||
+            c.sfx || c.environmental || c.action || c.notes
+          );
+          if (hasData) {
+            filmingNotes = JSON.stringify(tagBreakdown);
+          } else {
+            filmingNotes = existingFilmingNotes.get(s.id) ?? null;
+          }
+        } else {
+          // Preserve existing filming_notes from DB if local has nothing
+          filmingNotes = existingFilmingNotes.get(s.id) ?? null;
+        }
       }
       return {
         id: s.id,
