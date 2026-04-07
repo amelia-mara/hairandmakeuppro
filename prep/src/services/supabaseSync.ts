@@ -11,7 +11,8 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { useBreakdownStore, useTagStore } from '@/stores/breakdownStore';
+import { useBreakdownStore, useTagStore, useParsedScriptStore } from '@/stores/breakdownStore';
+import { resolveBreakdownForSync } from '@/utils/resolveBreakdownForSync';
 import type { Json } from '@/types';
 
 // ============================================================================
@@ -273,6 +274,7 @@ export function saveScenes(
     // parallel flush on sign-out.
     const breakdownState = useBreakdownStore.getState();
     const allTags = useTagStore.getState().tags;
+    const allLooks = useParsedScriptStore.getState().getParsedData(projectId)?.looks ?? [];
 
     // Fetch existing filming_notes from DB so we don't overwrite breakdown
     // data that was saved by saveBreakdown() but isn't in the local store
@@ -292,31 +294,10 @@ export function saveScenes(
       const bd = breakdownState.getBreakdown(s.id);
       let filmingNotes: string | null = null;
       if (bd && bd.characters && bd.characters.length > 0) {
-        // Resolve tag text into empty fields (same as breakdown save)
+        // Resolve manual + tag text + look defaults so mobile sees what
+        // prep's BreakdownSheet displays at render time.
         const sceneTags = allTags.filter(t => t.sceneId === s.id);
-        const resolved = {
-          ...bd,
-          characters: bd.characters.map(cb => {
-            const charTags = sceneTags.filter(t => t.characterId === cb.characterId && !t.dismissed);
-            const resolve = (manual: string, catId: string) => {
-              if (manual) return manual;
-              const m = charTags.filter(t => t.categoryId === catId);
-              return m.length > 0 ? m.map(t => t.text).join(', ') : '';
-            };
-            return {
-              ...cb,
-              entersWith: {
-                hair: resolve(cb.entersWith.hair, 'hair'),
-                makeup: resolve(cb.entersWith.makeup, 'makeup'),
-                wardrobe: resolve(cb.entersWith.wardrobe, 'wardrobe'),
-              },
-              sfx: resolve(cb.sfx, 'sfx'),
-              environmental: resolve(cb.environmental, 'environmental'),
-              action: resolve(cb.action, 'action'),
-              notes: resolve(cb.notes, 'notes'),
-            };
-          }),
-        };
+        const resolved = resolveBreakdownForSync(bd, sceneTags, allLooks);
         filmingNotes = JSON.stringify(resolved);
       } else {
         // No breakdown in local store — check if there are tags for this scene
