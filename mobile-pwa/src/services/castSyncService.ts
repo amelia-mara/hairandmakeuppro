@@ -13,12 +13,9 @@ import type {
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  buildStoryDayMap as buildStoryDayMapV2,
-  extractTOD,
+  buildStoryDayMap as buildStoryDayMapV3,
   classifyTOD,
-  isNonPresent,
   type ParsedScene,
-  type StoryDayResult,
 } from '@/utils/storyDayDetection';
 
 // Result of syncing cast data
@@ -128,18 +125,23 @@ function createCharacterFromName(
 }
 
 /**
- * Build a map of scene number -> story day number using v2 detection.
+ * Build a map of scene number -> story day number using v3 detection.
  *
  * Strategy:
  *  1. Check for explicit D1/D2/N1 notation in schedule — use directly if found.
- *  2. Otherwise, convert scenes to ParsedScene format and run v2 detection
- *     which handles action lines, flashbacks, CONTINUOUS, calendar dates, etc.
+ *  2. Otherwise, convert scenes to ParsedScene format and run v3 detection
+ *     which handles action lines, flashbacks, CONTINUOUS, calendar dates,
+ *     title cards, concurrent threads, etc.
  */
 function buildStoryDayMap(
   schedule: ProductionSchedule,
-  scenes: Scene[]
+  scenes: Scene[],
 ): Map<string, number> {
-  const storyDayMap = new Map<string, number>();
+  // Strategy 1: explicit D1/N1/D2 markers in the schedule dayNight field.
+  // These come from the production schedule, not the script parser, so they
+  // remain authoritative when present.
+  const explicitMap = new Map<string, number>();
+  let hasExplicit = false;
 
   // Build sceneNumber -> raw time of day from schedule entries
   const scheduleTimeMap = new Map<string, string>();
@@ -147,26 +149,21 @@ function buildStoryDayMap(
     for (const entry of day.scenes) {
       const normalized = entry.sceneNumber.replace(/\s+/g, '').toUpperCase();
       scheduleTimeMap.set(normalized, entry.dayNight);
+      const explicit = entry.dayNight.match(/^[DN](\d+)/i);
+      if (explicit) {
+        explicitMap.set(normalized, parseInt(explicit[1], 10));
+        hasExplicit = true;
+      }
     }
   }
 
-  // Strategy 1: Check for explicit story day markers (D1, D2, N1, N2)
-  const dayNightPattern = /^[DN](\d+)/i;
-  let hasExplicitDays = false;
-
-  for (const [sceneNum, timeOfDay] of scheduleTimeMap) {
-    const match = timeOfDay.match(dayNightPattern);
-    if (match) {
-      hasExplicitDays = true;
-      storyDayMap.set(sceneNum, parseInt(match[1], 10));
-    }
+  if (hasExplicit && explicitMap.size > 0) {
+    return explicitMap;
   }
 
-  if (hasExplicitDays && storyDayMap.size > 0) {
-    return storyDayMap;
-  }
+  // Strategy 2: v3 script-based detection.
+  // Build ParsedScene[] from the Scene objects and run the full tiered detector.
 
-  // Strategy 2: Convert to ParsedScene format and use v2 detection
   // Build scene list in story order (by scene number)
   const scenesByNum = new Map<string, Scene>();
   for (const scene of scenes) {
@@ -184,46 +181,83 @@ function buildStoryDayMap(
     a.localeCompare(b, undefined, { numeric: true })
   );
 
-  // Convert to ParsedScene[]
   const parsedScenes: ParsedScene[] = sortedNums.map((sceneNum) => {
     const scene = scenesByNum.get(sceneNum);
     const scheduleTime = scheduleTimeMap.get(sceneNum) || '';
-    const slugline = scene?.slugline || '';
-    const rawTOD = slugline
-      ? extractTOD(slugline) || scheduleTime || (scene?.timeOfDay ?? '')
-      : scheduleTime || '';
-
-    // Extract action lines from scriptContent
-    const actionLines: string[] = [];
-    if (scene?.scriptContent) {
-      const lines = scene.scriptContent.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed && actionLines.length < 3) {
-          if (/^(\d+[A-Z]?\s+)?(INT\.|EXT\.|INT\/EXT)/i.test(trimmed)) continue;
-          actionLines.push(trimmed);
-        }
-      }
-    }
+    const content = (scene as any)?.scriptContent ?? '';
+    const { actionLines, titleCard } = extractActionLinesFromContent(content);
+    const rawTOD = scheduleTime || (scene?.timeOfDay ?? 'DAY');
+    const slugline = scene?.slugline || `INT. - ${rawTOD}`;
 
     return {
       sceneNumber: sceneNum,
       slugline,
       rawTOD,
       tod: classifyTOD(rawTOD),
-      isNonPresent: isNonPresent(slugline, rawTOD),
+      intExt: (scene?.intExt ?? 'INT') as 'INT' | 'EXT' | 'INT/EXT' | 'UNKNOWN',
+      location: (scene as any)?.location ?? '',
       actionLines,
+      titleCardBefore: titleCard,
+      isEpisodeMarker: false,
     };
   });
 
-  // Run v2 detection
-  const results: StoryDayResult[] = buildStoryDayMapV2(parsedScenes);
+  // Run v3 detection
+  const results = buildStoryDayMapV3(parsedScenes);
 
+  const resultMap = new Map<string, number>();
   for (const r of results) {
-    storyDayMap.set(r.sceneNumber, r.storyDay);
+    resultMap.set(r.sceneNumber, r.storyDay);
+  }
+  return resultMap;
+}
+
+/**
+ * Shared action-line extractor — mirrors the logic in lookGenerator.ts
+ * so both surfaces use identical extraction without duplicating the function.
+ *
+ * If lookGenerator.ts ever exports extractActionLines, import it instead.
+ */
+function extractActionLinesFromContent(content: string): {
+  actionLines: string[];
+  titleCard: string | null;
+} {
+  const lines = content.split('\n').map((l: string) => l.trim()).filter(Boolean);
+  const actionLines: string[] = [];
+  let titleCard: string | null = null;
+  let skipNext = false;
+
+  for (const line of lines) {
+    if (actionLines.length >= 3) break;
+
+    if (
+      !titleCard &&
+      actionLines.length === 0 &&
+      /^[A-Z][A-Z\s,.:'\-!0-9]+$/.test(line) &&
+      line.length > 4 &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|EPISODE|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
+    ) {
+      titleCard = line;
+      continue;
+    }
+
+    if (
+      /^[A-Z][A-Z\s\-.()]{0,35}$/.test(line) &&
+      line.length < 40 &&
+      !/\b(INT|EXT|DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\b/.test(line)
+    ) {
+      skipNext = true;
+      continue;
+    }
+
+    if (skipNext) { skipNext = false; continue; }
+    if (/^\(.*\)$/.test(line)) continue;
+    if (/^\d+\.?$/.test(line)) continue;
+
+    actionLines.push(line);
   }
 
-  return storyDayMap;
+  return { actionLines, titleCard };
 }
 
 /**

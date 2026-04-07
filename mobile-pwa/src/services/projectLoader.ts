@@ -86,6 +86,8 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
       // Fallback: if scenes table is empty but script_uploads has parsed_data,
       // restore scenes/characters from there (handles prep upload where the
       // debounced save to scenes table failed or hasn't completed yet).
+      // Also try to merge filming_notes from any existing scene rows so
+      // prep breakdown data isn't lost.
       let restoredFromParsedData = false;
       const restoredSceneCharacters: Record<string, unknown>[] = [];
       if (scenes.length === 0 && dbScriptUpload && dbScriptUpload.length > 0) {
