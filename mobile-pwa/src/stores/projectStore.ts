@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
 import { useScheduleStore } from './scheduleStore';
 import { useCallSheetStore } from './callSheetStore';
-import { createDefaultLifecycle } from '@/types';
+import { createDefaultLifecycle, type Project } from '@/types';
 import {
   createSceneSlice,
   createCaptureSlice,
@@ -12,7 +12,18 @@ import {
   createAmendmentSlice,
   createLifecycleSlice,
 } from './projectSlices';
+import { dedupeScenesByNumber } from './projectSlices/sceneDedupe';
 import type { ProjectState } from './projectSlices';
+
+/** Apply scene dedupe to a project. Returns the project unchanged if there
+ *  are no duplicate sceneNumbers, otherwise returns a new project object
+ *  with the duplicates merged. */
+function withDedupedScenes(project: Project | null): Project | null {
+  if (!project) return project;
+  const deduped = dedupeScenesByNumber(project.scenes);
+  if (deduped.length === project.scenes.length) return project;
+  return { ...project, scenes: deduped };
+}
 
 // Re-export for consumers that import ProjectState from this module
 export type { ProjectState } from './projectSlices';
@@ -41,7 +52,7 @@ export const useProjectStore = create<ProjectState>()(
       // ── Project CRUD ──────────────────────────────────────────
 
       setProject: (project) => set({
-        currentProject: project,
+        currentProject: withDedupedScenes(project),
         needsSetup: false,
         lifecycle: createDefaultLifecycle(),
         showWrapPopup: false,
@@ -49,7 +60,7 @@ export const useProjectStore = create<ProjectState>()(
       }),
 
       setProjectNeedsSetup: (project) => set({
-        currentProject: project,
+        currentProject: withDedupedScenes(project),
         needsSetup: true,
         lifecycle: createDefaultLifecycle(),
         showWrapPopup: false,
@@ -66,7 +77,7 @@ export const useProjectStore = create<ProjectState>()(
 
       mergeServerData: (updates) => set((state) => ({
         currentProject: state.currentProject
-          ? { ...state.currentProject, ...updates }
+          ? withDedupedScenes({ ...state.currentProject, ...updates })
           : null,
       })),
 
@@ -148,7 +159,7 @@ export const useProjectStore = create<ProjectState>()(
         useCallSheetStore.getState().restoreCallSheetsForProject(projectId);
 
         set({
-          currentProject: savedData.project,
+          currentProject: withDedupedScenes(savedData.project),
           sceneCaptures: savedData.sceneCaptures,
           lifecycle: savedData.lifecycle,
           needsSetup: savedData.needsSetup,
@@ -204,6 +215,24 @@ export const useProjectStore = create<ProjectState>()(
         archivedProjects: state.archivedProjects,
         needsSetup: state.needsSetup,
       }),
+      // Clean up any duplicate scenes already present in persisted state
+      // (legacy data from a realtime-sync regression that re-added scenes
+      // with empty characters). Runs once after rehydration.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        if (state.currentProject) {
+          state.currentProject = withDedupedScenes(state.currentProject);
+        }
+        if (state.savedProjects) {
+          for (const key of Object.keys(state.savedProjects)) {
+            const saved = state.savedProjects[key];
+            const cleaned = withDedupedScenes(saved.project);
+            if (cleaned && cleaned !== saved.project) {
+              state.savedProjects[key] = { ...saved, project: cleaned };
+            }
+          }
+        }
+      },
     }
   )
 );
