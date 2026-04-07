@@ -59,27 +59,6 @@ export function addHoursToTime(time: string, hours: number): string {
   return minutesToTime(mins);
 }
 
-/**
- * Check if time1 is before time2
- */
-export function timeIsBefore(time1: string, time2: string): boolean {
-  return timeToMinutes(time1) < timeToMinutes(time2);
-}
-
-/**
- * Check if time1 is after time2
- */
-export function timeIsAfter(time1: string, time2: string): boolean {
-  return timeToMinutes(time1) > timeToMinutes(time2);
-}
-
-/**
- * Check if two times are equal
- */
-export function timeEquals(time1: string, time2: string): boolean {
-  return timeToMinutes(time1) === timeToMinutes(time2);
-}
-
 // ============================================
 // BASE CONTRACTS & DAY TYPES
 // ============================================

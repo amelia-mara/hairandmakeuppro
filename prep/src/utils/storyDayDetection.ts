@@ -1,6 +1,7 @@
-// NOTE: This file is duplicated in prep/src/utils/ and mobile-pwa/src/utils/.
-// If you change detection logic, update BOTH copies.
-// Long-term fix: move to a shared packages/utils workspace package.
+// SYNC REQUIRED: This file is an exact duplicate of
+// mobile-pwa/src/utils/storyDayDetection.ts
+// Any changes must be applied to both files.
+// See prep-happy issue backlog for shared package extraction task.
 
 // storyDayDetection.ts — v3
 // Story day detection engine. Universal heuristic-based detection
