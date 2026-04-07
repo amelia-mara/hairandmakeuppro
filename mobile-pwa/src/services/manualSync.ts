@@ -54,7 +54,7 @@ type DbScriptUpload = Database['public']['Tables']['script_uploads']['Row'];
 // Data Mappers: Local → Supabase
 // ============================================================================
 
-export function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'> {
+export function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at' | 'filming_notes'> & { filming_notes?: string } {
   // Extract raw location from slugline (strip INT/EXT prefix and time-of-day suffix)
   let location = scene.slugline || '';
   const locMatch = location.match(/^(?:INT|EXT)\.\s*(.+?)\s*-\s*(?:DAY|NIGHT|MORNING|EVENING|CONTINUOUS|DAWN|DUSK)$/i);

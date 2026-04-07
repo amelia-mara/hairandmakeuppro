@@ -80,7 +80,7 @@ export let receivingFromServer = false;
 // Data Mappers: Local → Supabase
 // ============================================================================
 
-function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'> {
+function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at' | 'filming_notes'> & { filming_notes?: string } {
   return {
     id: scene.id,
     project_id: projectId,
