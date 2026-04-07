@@ -569,18 +569,27 @@ export function saveBreakdown(
 ) {
   if (receivingFromRealtime) return;
   debounced(`breakdown:${sceneId}`, async () => {
-    // Store breakdown data in a JSONB column or as part of existing scene data
-    // Since there's no dedicated breakdown table, we'll store in scene's metadata
-    // by updating the scene record with breakdown info in a way both apps understand
-    const { error } = await supabase
+    const payload = JSON.stringify(breakdown);
+    // Update the existing scene row.  If no row matches (saveScenes hasn't
+    // flushed yet, or the row was wiped by the delete-then-insert fallback),
+    // the update silently affects 0 rows and the breakdown is lost — so we
+    // verify by reading back, and if it's missing we log loudly so we can
+    // diagnose.  We intentionally use update (not upsert) because the
+    // scenes table has many NOT NULL columns we don't have here.
+    const { data, error } = await supabase
       .from('scenes')
-      .update({
-        // Store breakdown data as part of the scene — mobile reads script_content + synopsis
-        // Prep-specific breakdown data goes alongside
-        filming_notes: JSON.stringify(breakdown),
-      })
-      .eq('id', sceneId);
+      .update({ filming_notes: payload })
+      .eq('id', sceneId)
+      .select('id');
     if (error) throw error;
+    if (!data || data.length === 0) {
+      console.warn(
+        '[PrepSync] saveBreakdown: scene row missing, breakdown will be ' +
+        'persisted by next saveScenes flush',
+        sceneId,
+      );
+      return;
+    }
     console.log('[PrepSync] Breakdown saved for scene', sceneId);
   });
 }

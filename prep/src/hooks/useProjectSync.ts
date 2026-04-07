@@ -738,11 +738,38 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
       const tags = useTagStore.getState().tags;
 
       // Find which breakdowns changed and save each one
+      let anyChanged = false;
       for (const sceneId of Object.keys(state.breakdowns)) {
         if (state.breakdowns[sceneId] !== prevState.breakdowns[sceneId]) {
+          anyChanged = true;
           const sceneTags = tags.filter((t) => t.sceneId === sceneId);
           const resolved = resolveBreakdownForSync(state.breakdowns[sceneId], sceneTags);
           saveBreakdown(projectId, sceneId, resolved as any);
+        }
+      }
+
+      // Also re-trigger saveScenes — supabaseSync.saveScenes reads the
+      // breakdown store inline and writes filming_notes alongside the
+      // scene row.  This guarantees the breakdown JSON survives even when
+      // the dedicated saveBreakdown update hits 0 rows (e.g. the row was
+      // wiped by the upsert→delete-then-insert fallback path).
+      if (anyChanged) {
+        const parsedData = useParsedScriptStore.getState().getParsedData(projectId);
+        if (parsedData && parsedData.scenes.length > 0) {
+          const synopses = useSynopsisStore.getState().synopses;
+          const metaOverrides = useSceneMetaStore.getState().overrides;
+          const mergedScenes = parsedData.scenes.map(s => {
+            const synOvr = synopses[s.id];
+            const metaOvr = metaOverrides[s.id];
+            return {
+              ...s,
+              synopsis: synOvr !== undefined ? synOvr : s.synopsis,
+              intExt: metaOvr?.intExt ?? s.intExt,
+              dayNight: metaOvr?.dayNight ?? s.dayNight,
+              location: metaOvr?.location ?? s.location,
+            };
+          });
+          saveScenes(projectId, mergedScenes as any);
         }
       }
 
