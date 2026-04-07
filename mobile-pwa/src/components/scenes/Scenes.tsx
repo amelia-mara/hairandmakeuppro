@@ -1,0 +1,1094 @@
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useProjectStore } from '@/stores/projectStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
+import { generateSceneBreakdownCSV, generateSceneBreakdownXLSX } from '@/utils/exportUtils';
+import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
+import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
+import {
+  SceneCharacterConfirmation,
+  CharacterConfirmationProgress,
+} from '@/components/scenes/SceneCharacterConfirmation';
+import { AmendmentBadge } from '@/components/scenes/AmendmentReviewModal';
+import type { Scene, Character, Look, BreakdownFilters, SceneFilmingStatus } from '@/types';
+import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
+import { clsx } from 'clsx';
+
+type SortMode = 'scene-number' | 'shooting-order';
+
+// Filming Status Dropdown Component - allows changing status directly from Breakdown
+interface FilmingStatusDropdownProps {
+  scene: Scene;
+  onStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
+  onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
+}
+
+function FilmingStatusDropdown({ scene, onStatusChange, onNotesModalOpen }: FilmingStatusDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const currentConfig = scene.filmingStatus
+    ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
+    : null;
+
+  const handleStatusSelect = (status: SceneFilmingStatus) => {
+    setIsOpen(false);
+    if (status === 'complete') {
+      // Complete doesn't need notes
+      onStatusChange(scene.sceneNumber, status);
+    } else {
+      // Partial and not-filmed need notes modal
+      onNotesModalOpen(scene.sceneNumber, status);
+    }
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className={clsx(
+          'flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold rounded-lg flex-shrink-0 border transition-colors',
+          currentConfig ? [
+            currentConfig.bgClass,
+            currentConfig.textClass,
+            scene.filmingStatus === 'complete' && 'border-green-200',
+            scene.filmingStatus === 'partial' && 'border-amber-200',
+            scene.filmingStatus === 'not-filmed' && 'border-red-200'
+          ] : 'bg-gray-100 text-text-muted border-gray-200 hover:border-gray-300'
+        )}
+      >
+        {currentConfig ? (
+          <>
+            <span className={clsx(
+              'w-2 h-2 rounded-full',
+              scene.filmingStatus === 'complete' && 'bg-green-500',
+              scene.filmingStatus === 'partial' && 'bg-amber-500',
+              scene.filmingStatus === 'not-filmed' && 'bg-red-500'
+            )} />
+            {currentConfig.shortLabel}
+          </>
+        ) : (
+          <>
+            <span className="w-2 h-2 rounded-full bg-gray-400" />
+            Set Status
+          </>
+        )}
+        <svg className={clsx('w-3 h-3 transition-transform', isOpen && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown menu */}
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg shadow-lg border border-border overflow-hidden min-w-[140px]">
+          {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+            const config = SCENE_FILMING_STATUS_CONFIG[status];
+            const isSelected = scene.filmingStatus === status;
+            return (
+              <button
+                key={status}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusSelect(status);
+                }}
+                className={clsx(
+                  'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors text-left',
+                  isSelected ? `${config.bgClass} ${config.textClass}` : 'hover:bg-gray-50 text-text-primary'
+                )}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: config.color }}
+                />
+                {config.label}
+                {isSelected && (
+                  <svg className="w-3.5 h-3.5 ml-auto text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Filming Notes Modal - for adding notes when marking partial or incomplete
+interface FilmingNotesModalProps {
+  sceneNumber: string;
+  status: 'partial' | 'not-filmed';
+  onConfirm: (notes: string) => void;
+  onClose: () => void;
+}
+
+function FilmingNotesModal({ sceneNumber, status, onConfirm, onClose }: FilmingNotesModalProps) {
+  const [notes, setNotes] = useState('');
+  const config = SCENE_FILMING_STATUS_CONFIG[status];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: config.color }}
+            />
+            <h2 className="text-lg font-semibold text-text-primary">
+              Scene {sceneNumber} - {config.label}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 -mr-2 text-text-muted hover:text-text-primary transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              {status === 'partial' ? 'What still needs to be filmed?' : 'Why wasn\'t this scene filmed?'}
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g., Ran out of time, weather issues, actor unavailable..."
+              className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-card text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
+              rows={4}
+              autoFocus
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-button border border-border text-text-muted text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onConfirm(notes)}
+              className={clsx(
+                'flex-1 py-2.5 rounded-button text-white text-sm font-medium',
+                status === 'partial' ? 'bg-amber-500' : 'bg-red-500'
+              )}
+            >
+              Mark as {config.label}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ScenesProps {
+  onSceneSelect: (sceneId: string) => void;
+}
+
+export function Scenes({ onSceneSelect }: ScenesProps) {
+  const { currentProject, sceneCaptures, updateSceneFilmingStatus, clearSingleSceneAmendment } = useProjectStore();
+  const schedule = useScheduleStore((s) => s.schedule);
+  const [sortMode, setSortMode] = useState<SortMode>('scene-number');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<BreakdownFilters>({
+    characters: [],
+    location: null,
+    completionStatus: 'all',
+    filmingStatus: 'all',
+    lookId: null,
+  });
+  const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
+  const [characterConfirmSceneId, setCharacterConfirmSceneId] = useState<string | null>(null);
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const downloadFile = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleExportCSV = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setIsExporting(true);
+    setShowExportMenu(false);
+    try {
+      const csvContent = generateSceneBreakdownCSV(currentProject, sceneCaptures);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      downloadFile(blob, `${currentProject.name}_Scene_Breakdown.csv`);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [currentProject, sceneCaptures, isExporting, downloadFile]);
+
+  const handleExportXLSX = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setIsExporting(true);
+    setShowExportMenu(false);
+    try {
+      const buf = generateSceneBreakdownXLSX(currentProject, sceneCaptures);
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      downloadFile(blob, `${currentProject.name}_Scene_Breakdown.xlsx`);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [currentProject, sceneCaptures, isExporting, downloadFile]);
+
+  const handleExportBreakdown = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setShowExportMenu(prev => !prev);
+  }, [currentProject, isExporting]);
+
+  // Filming status notes modal state
+  const [notesModalState, setNotesModalState] = useState<{
+    sceneNumber: string;
+    status: 'partial' | 'not-filmed';
+  } | null>(null);
+
+  // Handle filming status change
+  const handleFilmingStatusChange = (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => {
+    updateSceneFilmingStatus(sceneNumber, status, notes);
+  };
+
+  // Open notes modal for partial/incomplete status
+  const handleNotesModalOpen = (sceneNumber: string, status: 'partial' | 'not-filmed') => {
+    setNotesModalState({ sceneNumber, status });
+  };
+
+  // Confirm status with notes
+  const handleNotesConfirm = (notes: string) => {
+    if (notesModalState) {
+      updateSceneFilmingStatus(notesModalState.sceneNumber, notesModalState.status, notes);
+      setNotesModalState(null);
+    }
+  };
+
+  // Get scene for script modal
+  const scriptModalScene = useMemo(() => {
+    if (!scriptModalSceneId || !currentProject) return null;
+    return currentProject.scenes.find(s => s.id === scriptModalSceneId) || null;
+  }, [scriptModalSceneId, currentProject]);
+
+  // Get scene for character confirmation modal
+  const characterConfirmScene = useMemo(() => {
+    if (!characterConfirmSceneId || !currentProject) return null;
+    return currentProject.scenes.find(s => s.id === characterConfirmSceneId) || null;
+  }, [characterConfirmSceneId, currentProject]);
+
+  // Character confirmation progress
+  const confirmationProgress = useMemo(() => {
+    if (!currentProject) return { total: 0, confirmed: 0 };
+    const total = currentProject.scenes.length;
+    const confirmed = currentProject.scenes.filter(
+      s => s.characterConfirmationStatus === 'confirmed'
+    ).length;
+    return { total, confirmed };
+  }, [currentProject]);
+
+  // Get unique locations from scenes
+  const locations = useMemo(() => {
+    if (!currentProject) return [];
+    const locs = new Set<string>();
+    currentProject.scenes.forEach(scene => {
+      // Extract location from slugline (e.g., "INT. COFFEE SHOP - DAY" → "COFFEE SHOP")
+      const match = scene.slugline.match(/^(?:INT|EXT)\.\s*(.+?)\s*-/);
+      if (match) locs.add(match[1].trim());
+    });
+    return Array.from(locs).sort();
+  }, [currentProject]);
+
+  // Filter scenes
+  const filteredScenes = useMemo(() => {
+    if (!currentProject) return [];
+
+    let scenes = [...currentProject.scenes];
+
+    // Filter by character
+    if (filters.characters.length > 0) {
+      scenes = scenes.filter(scene =>
+        filters.characters.some(charId => scene.characters.includes(charId))
+      );
+    }
+
+    // Filter by completion status (continuity capture)
+    if (filters.completionStatus === 'complete') {
+      scenes = scenes.filter(scene => scene.isComplete);
+    } else if (filters.completionStatus === 'incomplete') {
+      scenes = scenes.filter(scene => !scene.isComplete);
+    }
+
+    // Filter by filming status
+    if (filters.filmingStatus !== 'all') {
+      scenes = scenes.filter(scene => scene.filmingStatus === filters.filmingStatus);
+    }
+
+    // Filter by location
+    if (filters.location) {
+      scenes = scenes.filter(scene =>
+        scene.slugline.toLowerCase().includes(filters.location!.toLowerCase())
+      );
+    }
+
+    // Filter by look
+    if (filters.lookId) {
+      const look = currentProject.looks.find(l => l.id === filters.lookId);
+      if (look) {
+        scenes = scenes.filter(scene => look.scenes.includes(scene.sceneNumber));
+      }
+    }
+
+    // Sort by scene number or shooting order
+    if (sortMode === 'shooting-order' && schedule?.days && schedule.days.length > 0) {
+      // Build a map of sceneNumber -> { dayNumber, shootOrder } for sorting
+      const shootingOrderMap = new Map<string, { day: number; order: number }>();
+      for (const day of schedule.days) {
+        for (const entry of day.scenes) {
+          const key = entry.sceneNumber.replace(/\s+/g, '').toUpperCase();
+          shootingOrderMap.set(key, { day: day.dayNumber, order: entry.shootOrder });
+        }
+      }
+      return scenes.sort((a, b) => {
+        const aKey = a.sceneNumber.replace(/\s+/g, '').toUpperCase();
+        const bKey = b.sceneNumber.replace(/\s+/g, '').toUpperCase();
+        const aOrder = shootingOrderMap.get(aKey);
+        const bOrder = shootingOrderMap.get(bKey);
+        // Scenes not in schedule go to the end
+        if (!aOrder && !bOrder) return a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true });
+        if (!aOrder) return 1;
+        if (!bOrder) return -1;
+        // Sort by day first, then by shoot order within the day
+        if (aOrder.day !== bOrder.day) return aOrder.day - bOrder.day;
+        return aOrder.order - bOrder.order;
+      });
+    }
+
+    return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
+  }, [currentProject, filters, sortMode, schedule]);
+
+  // Pre-compute data maps for efficient lookups (avoids repeated .find() calls in render loops)
+
+  // Map: characterId -> Character
+  const characterMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Character>();
+    return new Map(currentProject.characters.map(c => [c.id, c]));
+  }, [currentProject?.characters]);
+
+  // Map: sceneId -> Character[] (pre-computed character list for each scene)
+  const sceneCharactersMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Character[]>();
+    const map = new Map<string, Character[]>();
+    for (const scene of currentProject.scenes) {
+      const characters = scene.characters
+        .map(charId => characterMap.get(charId))
+        .filter((c): c is Character => c !== undefined);
+      map.set(scene.id, characters);
+    }
+    return map;
+  }, [currentProject?.scenes, characterMap]);
+
+  // Map: sceneId -> { captured: number, total: number } (pre-computed progress)
+  const sceneProgressMap = useMemo(() => {
+    if (!currentProject) return new Map<string, { captured: number; total: number }>();
+    const map = new Map<string, { captured: number; total: number }>();
+    for (const scene of currentProject.scenes) {
+      const total = scene.characters.length;
+      let captured = 0;
+      scene.characters.forEach(charId => {
+        const captureKey = `${scene.id}-${charId}`;
+        const capture = sceneCaptures[captureKey];
+        if (capture && Object.keys(capture.photos).length > 0) {
+          captured++;
+        }
+      });
+      map.set(scene.id, { captured, total });
+    }
+    return map;
+  }, [currentProject?.scenes, sceneCaptures]);
+
+  // Fast lookup functions using pre-computed maps
+  const getSceneProgress = (scene: Scene) => {
+    return sceneProgressMap.get(scene.id) || { captured: 0, total: 0 };
+  };
+
+  const getCharactersForScene = (scene: Scene): Character[] => {
+    return sceneCharactersMap.get(scene.id) || [];
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      characters: [],
+      location: null,
+      completionStatus: 'all',
+      filmingStatus: 'all',
+      lookId: null,
+    });
+  };
+
+  const hasActiveFilters = filters.characters.length > 0 ||
+    filters.location !== null ||
+    filters.completionStatus !== 'all' ||
+    filters.filmingStatus !== 'all' ||
+    filters.lookId !== null;
+
+  // Check if schedule has breakdown data for shooting order sorting
+  const hasShootingOrder = !!(schedule?.days && schedule.days.length > 0);
+
+  if (!currentProject) {
+    return <EmptyState />;
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-safe-bottom">
+      {/* Header */}
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
+        <div className="mobile-container">
+          <div className="h-14 px-4 flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-text-primary">Breakdown</h1>
+
+            <div className="flex items-center gap-2">
+              {/* Shooting order toggle - only when schedule has breakdown data */}
+              {hasShootingOrder && (
+                <button
+                  onClick={() => setSortMode(sortMode === 'scene-number' ? 'shooting-order' : 'scene-number')}
+                  className={clsx(
+                    'p-2 rounded-lg transition-colors touch-manipulation',
+                    sortMode === 'shooting-order' ? 'text-gold bg-gold-100/50' : 'text-text-muted hover:text-gold'
+                  )}
+                  title={sortMode === 'shooting-order' ? 'Sorted by shooting order' : 'Sort by shooting order'}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-3L16.5 18m0 0L12 13.5M16.5 18V4.5" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Export button with dropdown */}
+              <div className="relative">
+                <button
+                  onClick={handleExportBreakdown}
+                  disabled={isExporting}
+                  className="p-2 rounded-lg transition-colors touch-manipulation text-text-muted hover:text-gold disabled:opacity-50"
+                  title="Export Scene Breakdown"
+                >
+                  {isExporting ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                  )}
+                </button>
+
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[180px]">
+                      <button
+                        onClick={handleExportXLSX}
+                        className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-background flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M10.875 12c-.621 0-1.125.504-1.125 1.125M12 12c.621 0 1.125.504 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 0v1.5c0 .621-.504 1.125-1.125 1.125M12 15.375c.621 0 1.125-.504 1.125-1.125" />
+                        </svg>
+                        Excel (.xlsx)
+                      </button>
+                      <button
+                        onClick={handleExportCSV}
+                        className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-background flex items-center gap-2 border-t border-border"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        CSV (.csv)
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Filter button */}
+              <button
+                onClick={() => setShowFilters(true)}
+                className={clsx(
+                  'p-2 rounded-lg transition-colors touch-manipulation relative',
+                  hasActiveFilters ? 'text-gold bg-gold-100/50' : 'text-text-muted hover:text-gold'
+                )}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                </svg>
+                {hasActiveFilters && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-gold" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scene count bar */}
+      <div className="mobile-container px-4 py-3 flex items-center justify-between">
+        <span className="text-xs text-text-muted">
+          {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''}
+          {hasActiveFilters && ' (filtered)'}
+        </span>
+        {sortMode === 'shooting-order' && (
+          <span className="text-xs text-gold font-medium">Shooting Order</span>
+        )}
+      </div>
+
+      {/* Character confirmation progress */}
+      {confirmationProgress.total > 0 && confirmationProgress.confirmed < confirmationProgress.total && (
+        <div className="mobile-container">
+          <CharacterConfirmationProgress
+            totalScenes={confirmationProgress.total}
+            confirmedScenes={confirmationProgress.confirmed}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="mobile-container px-4 pb-4">
+        {filteredScenes.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-text-muted">No scenes match your filters</p>
+            <button
+              onClick={clearFilters}
+              className="mt-3 text-sm text-gold font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          <BreakdownListView
+            scenes={filteredScenes}
+            onSceneSelect={onSceneSelect}
+            onSynopsisClick={(sceneId) => setScriptModalSceneId(sceneId)}
+            getCharactersForScene={getCharactersForScene}
+            getSceneProgress={getSceneProgress}
+            onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
+            onFilmingStatusChange={handleFilmingStatusChange}
+            onNotesModalOpen={handleNotesModalOpen}
+            onDismissAmendment={(sceneId) => clearSingleSceneAmendment(sceneId)}
+          />
+        )}
+      </div>
+
+      {/* Filter Drawer */}
+      {showFilters && (
+        <FilterDrawer
+          filters={filters}
+          characters={currentProject.characters}
+          locations={locations}
+          looks={currentProject.looks}
+          onFiltersChange={setFilters}
+          onClose={() => setShowFilters(false)}
+          onClear={clearFilters}
+        />
+      )}
+
+      {/* Scene Script Modal */}
+      {scriptModalScene && (
+        <SceneScriptModal
+          scene={scriptModalScene}
+          onClose={() => setScriptModalSceneId(null)}
+        />
+      )}
+
+      {/* Character Confirmation Modal */}
+      {characterConfirmScene && (
+        <SceneCharacterConfirmation
+          scene={characterConfirmScene}
+          onClose={() => setCharacterConfirmSceneId(null)}
+          onConfirm={() => setCharacterConfirmSceneId(null)}
+        />
+      )}
+
+      {/* Filming Notes Modal */}
+      {notesModalState && (
+        <FilmingNotesModal
+          sceneNumber={notesModalState.sceneNumber}
+          status={notesModalState.status}
+          onConfirm={handleNotesConfirm}
+          onClose={() => setNotesModalState(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// List View Component
+interface BreakdownListViewProps {
+  scenes: Scene[];
+  onSceneSelect: (id: string) => void;
+  onSynopsisClick: (sceneId: string) => void;
+  getCharactersForScene: (scene: Scene) => Character[];
+  getSceneProgress: (scene: Scene) => { captured: number; total: number };
+  onCharacterConfirm: (sceneId: string) => void;
+  onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
+  onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
+  onDismissAmendment: (sceneId: string) => void;
+}
+
+// Get glass overlay class based on filming status
+const getGlassOverlayClass = (filmingStatus?: string | null) => {
+  if (!filmingStatus) return null;
+  switch (filmingStatus) {
+    case 'complete':
+      return 'scene-glass-complete';
+    case 'partial':
+      return 'scene-glass-partial';
+    case 'not-filmed':
+      return 'scene-glass-incomplete';
+    default:
+      return null;
+  }
+};
+
+function BreakdownListView({
+  scenes,
+  onSceneSelect,
+  onSynopsisClick,
+  getCharactersForScene,
+  getSceneProgress,
+  onCharacterConfirm,
+  onFilmingStatusChange,
+  onNotesModalOpen,
+  onDismissAmendment,
+}: BreakdownListViewProps) {
+  return (
+    <div className="space-y-2">
+      {scenes.map((scene) => {
+        const characters = getCharactersForScene(scene);
+        const progress = getSceneProgress(scene);
+        const isComplete = progress.total > 0 && progress.captured === progress.total;
+
+        const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
+
+        // Get accent bar class based on filming status
+        const getAccentBarClass = () => {
+          if (!scene.filmingStatus) return 'accent-bar-neutral';
+          switch (scene.filmingStatus) {
+            case 'complete': return 'accent-bar-complete';
+            case 'partial': return 'accent-bar-partial';
+            case 'not-filmed': return 'accent-bar-incomplete';
+            default: return 'accent-bar-neutral';
+          }
+        };
+
+        return (
+          <div
+            key={scene.id}
+            className="card overflow-hidden relative"
+          >
+            {/* Glass overlay - inside card to cover entire pill */}
+            {glassOverlayClass && (
+              <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
+            )}
+            {/* Left accent bar */}
+            <div className={clsx('absolute left-0 top-0 bottom-0 w-1 rounded-l-card', getAccentBarClass())} />
+            {/* Row header - tap to open continuity tracking */}
+            <button
+              onClick={() => onSceneSelect(scene.id)}
+              className="w-full flex items-center gap-3 p-3 text-left touch-manipulation"
+            >
+              {/* Scene number + Amendment badge */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-bold text-text-primary min-w-[2rem]">
+                  {scene.sceneNumber}
+                </span>
+                {scene.amendmentStatus && scene.amendmentStatus !== 'unchanged' && (
+                  <AmendmentBadge
+                    status={scene.amendmentStatus}
+                    notes={scene.amendmentNotes}
+                    onDismiss={() => onDismissAmendment(scene.id)}
+                  />
+                )}
+              </div>
+
+              {/* INT/EXT badge */}
+              <span className={clsx(
+                'px-1.5 py-0.5 text-[10px] font-bold rounded flex-shrink-0',
+                scene.intExt === 'INT' ? 'bg-slate-100 text-slate-600' : 'bg-stone-100 text-stone-600'
+              )}>
+                {scene.intExt}
+              </span>
+
+              {/* Location (truncated) */}
+              <span className="flex-1 text-sm text-text-secondary truncate">
+                {scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')}
+              </span>
+
+              {/* Character count */}
+              <span className="flex-shrink-0 flex items-center -space-x-1.5">
+                {characters.slice(0, 3).map((char) => (
+                  <CharacterAvatar key={char.id} character={char} size="xs" />
+                ))}
+                {characters.length > 3 && (
+                  <span className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[9px] font-bold text-text-muted">
+                    +{characters.length - 3}
+                  </span>
+                )}
+              </span>
+
+              {/* Filming status dropdown - allows changing status */}
+              <FilmingStatusDropdown
+                scene={scene}
+                onStatusChange={onFilmingStatusChange}
+                onNotesModalOpen={onNotesModalOpen}
+              />
+
+              {/* Checkmark icon when complete - like Today page */}
+              {isComplete && (
+                <span className="text-green-500 flex-shrink-0">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </span>
+              )}
+
+              {/* Partial progress indicator */}
+              {!isComplete && progress.captured > 0 && (
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gold" />
+              )}
+
+              {/* Forward chevron - indicates tappable */}
+              <svg
+                className="w-4 h-4 text-text-light flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Scene heading and synopsis - always visible */}
+            <div className="px-3 pb-3 pt-1 border-t border-border/50">
+              {/* Full slugline */}
+              <p className="text-sm font-medium text-text-primary">{scene.slugline}</p>
+
+              {/* Synopsis and/or View full scene link - show when synopsis or scriptContent exists */}
+              {(scene.synopsis || scene.scriptContent) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSynopsisClick(scene.id);
+                  }}
+                  className="w-full text-left group mt-1.5"
+                >
+                  {/* Show synopsis text if available */}
+                  {scene.synopsis && (
+                    <p className="text-xs text-text-muted italic line-clamp-2 group-hover:text-gold transition-colors">
+                      {scene.synopsis}
+                    </p>
+                  )}
+                  {/* Show "Tap to view full scene" when scriptContent exists */}
+                  {scene.scriptContent && (
+                    <span className="text-[10px] text-gold flex items-center gap-1 mt-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Tap to view full scene
+                    </span>
+                  )}
+                </button>
+              )}
+
+              {/* Add/Edit characters button - always shown */}
+              <div className="mt-2 pt-2 border-t border-border/30">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCharacterConfirm(scene.id);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-gold font-medium"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  {characters.length > 0 ? 'Edit characters' : 'Add characters'}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Filter Drawer Component
+interface FilterDrawerProps {
+  filters: BreakdownFilters;
+  characters: Character[];
+  locations: string[];
+  looks: Look[];
+  onFiltersChange: (filters: BreakdownFilters) => void;
+  onClose: () => void;
+  onClear: () => void;
+}
+
+function FilterDrawer({
+  filters,
+  characters,
+  locations,
+  looks,
+  onFiltersChange,
+  onClose,
+  onClear,
+}: FilterDrawerProps) {
+  const toggleCharacter = (charId: string) => {
+    const newChars = filters.characters.includes(charId)
+      ? filters.characters.filter(id => id !== charId)
+      : [...filters.characters, charId];
+    onFiltersChange({ ...filters, characters: newChars });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="absolute right-0 top-0 bottom-0 w-80 max-w-full bg-card shadow-xl overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-text-primary">Filters</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-text-muted hover:text-text-primary"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-4 space-y-5">
+          {/* Filming Status */}
+          <div>
+            <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+              FILMING STATUS
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => onFiltersChange({ ...filters, filmingStatus: 'all' })}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-medium rounded-full transition-colors',
+                  filters.filmingStatus === 'all'
+                    ? 'bg-gold text-white'
+                    : 'bg-gray-100 text-text-muted'
+                )}
+              >
+                All
+              </button>
+              {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+                const config = SCENE_FILMING_STATUS_CONFIG[status];
+                return (
+                  <button
+                    key={status}
+                    onClick={() => onFiltersChange({ ...filters, filmingStatus: status })}
+                    className={clsx(
+                      'px-3 py-1.5 text-xs font-medium rounded-full transition-colors flex items-center gap-1.5',
+                      filters.filmingStatus === status
+                        ? `${config.bgClass} ${config.textClass}`
+                        : 'bg-gray-100 text-text-muted'
+                    )}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: config.color }}
+                    />
+                    {config.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Continuity Status */}
+          <div>
+            <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+              CONTINUITY STATUS
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'complete', 'incomplete'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => onFiltersChange({ ...filters, completionStatus: status })}
+                  className={clsx(
+                    'px-3 py-1.5 text-xs font-medium rounded-full transition-colors',
+                    filters.completionStatus === status
+                      ? 'bg-gold text-white'
+                      : 'bg-gray-100 text-text-muted'
+                  )}
+                >
+                  {status === 'all' ? 'All' : status === 'complete' ? 'Captured' : 'Not Captured'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Characters */}
+          <div>
+            <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+              CHARACTERS
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {characters.map((char) => (
+                <button
+                  key={char.id}
+                  onClick={() => toggleCharacter(char.id)}
+                  className={clsx(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors',
+                    filters.characters.includes(char.id)
+                      ? 'bg-gold text-white'
+                      : 'bg-gray-100 text-text-muted'
+                  )}
+                >
+                  <CharacterAvatar character={char} size="xs" />
+                  {char.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Location */}
+          {locations.length > 0 && (
+            <div>
+              <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+                LOCATION
+              </h3>
+              <select
+                value={filters.location || ''}
+                onChange={(e) => onFiltersChange({ ...filters, location: e.target.value || null })}
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
+              >
+                <option value="">All Locations</option>
+                {locations.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Look */}
+          {looks.length > 0 && (
+            <div>
+              <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+                LOOK
+              </h3>
+              <select
+                value={filters.lookId || ''}
+                onChange={(e) => onFiltersChange({ ...filters, lookId: e.target.value || null })}
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
+              >
+                <option value="">All Looks</option>
+                {looks.map((look) => {
+                  const char = characters.find(c => c.id === look.characterId);
+                  return (
+                    <option key={look.id} value={look.id}>
+                      {char?.name.split(' ')[0]} - {look.name}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-card border-t border-border p-4 flex gap-3">
+          <button
+            onClick={onClear}
+            className="flex-1 py-2.5 rounded-button border border-border text-text-muted text-sm font-medium"
+          >
+            Clear All
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-button gold-gradient text-white text-sm font-medium"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Empty State Component
+function EmptyState() {
+  return (
+    <div className="min-h-screen bg-background pb-safe-bottom">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
+        <div className="mobile-container">
+          <div className="h-14 px-4 flex items-center">
+            <h1 className="text-lg font-semibold text-text-primary">Breakdown</h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center justify-center py-16 px-6">
+        <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-text-primary mb-1">No Breakdown Data</h3>
+        <p className="text-sm text-text-muted text-center mb-6">
+          Sync from desktop or upload a script to generate scenes
+        </p>
+        <div className="flex gap-3">
+          <button className="px-4 py-2.5 rounded-button border border-gold text-gold text-sm font-medium active:scale-95 transition-transform">
+            Sync Now
+          </button>
+          <button className="px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
+            Upload Script
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
