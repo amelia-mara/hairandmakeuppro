@@ -191,6 +191,17 @@ function dbToScene(
   characterIds: string[],
   existingScene?: Scene
 ): Scene {
+  let prepBreakdown: Scene['prepBreakdown'];
+  if (db.filming_notes) {
+    try {
+      const parsed = typeof db.filming_notes === 'string'
+        ? JSON.parse(db.filming_notes)
+        : db.filming_notes;
+      if (parsed && Array.isArray((parsed as any).characters)) {
+        prepBreakdown = parsed as Scene['prepBreakdown'];
+      }
+    } catch { /* plain string */ }
+  }
   return {
     id: db.id,
     sceneNumber: db.scene_number,
@@ -202,7 +213,8 @@ function dbToScene(
     isComplete: db.is_complete,
     completedAt: db.completed_at ? new Date(db.completed_at) : undefined,
     filmingStatus: db.filming_status as Scene['filmingStatus'] || undefined,
-    filmingNotes: db.filming_notes || undefined,
+    filmingNotes: prepBreakdown ? undefined : (db.filming_notes || undefined),
+    prepBreakdown,
     shootingDay: db.shooting_day || undefined,
     scriptContent: db.script_content || existingScene?.scriptContent,
     hasScheduleDiscrepancy: existingScene?.hasScheduleDiscrepancy,

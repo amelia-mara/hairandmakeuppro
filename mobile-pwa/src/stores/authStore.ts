@@ -592,22 +592,36 @@ export const useAuthStore = create<AuthState>()(
               lookSceneMap.set(ls.look_id, existing);
             }
 
-            const localScenes = scenes.map((s: any) => ({
-              id: s.id,
-              sceneNumber: s.scene_number,
-              slugline: s.location || `Scene ${s.scene_number}`,
-              intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
-              timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
-              synopsis: s.synopsis || undefined,
-              scriptContent: s.script_content || undefined,
-              characters: sceneCharMap.get(s.id) || [],
-              isComplete: s.is_complete,
-              completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
-              filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
-              filmingNotes: s.filming_notes || undefined,
-              shootingDay: s.shooting_day || undefined,
-              characterConfirmationStatus: 'confirmed' as const,
-            }));
+            const localScenes = scenes.map((s: any) => {
+              let prepBreakdown: any;
+              if (s.filming_notes) {
+                try {
+                  const parsed = typeof s.filming_notes === 'string'
+                    ? JSON.parse(s.filming_notes)
+                    : s.filming_notes;
+                  if (parsed && Array.isArray(parsed.characters)) {
+                    prepBreakdown = parsed;
+                  }
+                } catch { /* plain string */ }
+              }
+              return {
+                id: s.id,
+                sceneNumber: s.scene_number,
+                slugline: s.location || `Scene ${s.scene_number}`,
+                intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
+                timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
+                synopsis: s.synopsis || undefined,
+                scriptContent: s.script_content || undefined,
+                characters: sceneCharMap.get(s.id) || [],
+                isComplete: s.is_complete,
+                completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
+                filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
+                filmingNotes: prepBreakdown ? undefined : (s.filming_notes || undefined),
+                prepBreakdown,
+                shootingDay: s.shooting_day || undefined,
+                characterConfirmationStatus: 'confirmed' as const,
+              };
+            });
 
             const localCharacters = characters.map((c: any) => ({
               id: c.id,
