@@ -1,16 +1,4 @@
-import type { Scene, SceneCapture, ContinuityFlags } from '@/types';
-
-/**
- * Format a date for display
- */
-export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+import type { Scene, SceneCapture } from '@/types';
 
 /**
  * Format a time for display
@@ -22,13 +10,6 @@ export function formatTime(date: Date | string): string {
     minute: '2-digit',
     hour12: true,
   });
-}
-
-/**
- * Format a date and time for display
- */
-export function formatDateTime(date: Date | string): string {
-  return `${formatDate(date)} at ${formatTime(date)}`;
 }
 
 /**
@@ -49,13 +30,6 @@ export function getCaptureStatus(capture?: SceneCapture): CaptureStatus {
   if (capture.photos.front) return 'complete';
 
   return 'in-progress';
-}
-
-/**
- * Count active continuity flags
- */
-export function countActiveFlags(flags: ContinuityFlags): number {
-  return Object.values(flags).filter(Boolean).length;
 }
 
 /**
@@ -145,61 +119,6 @@ export function getSceneStatusIcon(scene: Scene, captures: Record<string, SceneC
 }
 
 /**
- * Debounce function for text inputs
- */
-export function debounce<T extends (...args: Parameters<T>) => void>(
-  fn: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
-
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
-  };
-}
-
-/**
- * Truncate text with ellipsis
- */
-export function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 3) + '...';
-}
-
-/**
- * Generate a random avatar color
- */
-export function generateAvatarColor(): string {
-  const colors = [
-    '#D4943A', // Gold (brand)
-    '#4ABFB0', // Teal (brand)
-    '#E8621A', // Orange Primary (brand)
-    '#F0882A', // Orange Warm (brand)
-    '#F5A623', // Amber (brand)
-    '#F2C4A0', // Peach (brand)
-    '#5A3E28', // Text Mid (brand)
-    '#3D2B1A', // Text Dark (brand)
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-/**
- * Check if device is iOS
- */
-export function isIOS(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
-
-/**
- * Check if app is running as installed PWA
- */
-export function isPWA(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-         (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-}
-
-/**
  * Format estimated time for display
  */
 export function formatEstimatedTime(minutes: number): string {
@@ -215,15 +134,6 @@ export function formatEstimatedTime(minutes: number): string {
 }
 
 /**
- * Get ordinal suffix for number
- */
-export function getOrdinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
-/**
  * Format date as short format: "Mon 15 Jan"
  * Used for calendar/schedule displays
  */
@@ -234,65 +144,3 @@ export function formatShortDate(date: Date | string): string {
   return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
 }
 
-// ============================================
-// SCENE NUMBER MATCHING UTILITIES
-// ============================================
-
-/**
- * Extract base scene number from any scene format
- * Examples: "4" -> "4", "4A" -> "4", "4B" -> "4", "18B" -> "18",
- * "4 PT1" -> "4", "4PT1" -> "4", "4-A" -> "4", "4.1" -> "4"
- */
-export function getBaseSceneNumber(sceneNumber: string): string {
-  const trimmed = sceneNumber.trim();
-  const match = trimmed.match(/^(\d+)/);
-  return match ? match[1] : trimmed;
-}
-
-/**
- * Check if a scene exists in a set, considering all variants
- * Scenes with the same base number are considered matching
- * E.g., "4" matches "4A", "4B"; "4A" matches "4", "4B"; "18B" matches "18"
- */
-export function sceneExistsInSet(sceneSet: Set<string>, sceneNumber: string): boolean {
-  // First check exact match
-  if (sceneSet.has(sceneNumber)) return true;
-
-  // Get base scene number for comparison
-  const baseScene = getBaseSceneNumber(sceneNumber);
-
-  // Check if any scene in the set has the same base number
-  for (const s of sceneSet) {
-    if (getBaseSceneNumber(s) === baseScene) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/**
- * Find matching scene data from a map, considering variants
- * Prioritizes exact match, then any variant with same base number
- */
-export function findMatchingSceneData<T>(
-  sceneMap: Map<string, T>,
-  sceneNumber: string
-): T | undefined {
-  // First check exact match
-  if (sceneMap.has(sceneNumber)) {
-    return sceneMap.get(sceneNumber);
-  }
-
-  // Get base scene number for comparison
-  const baseScene = getBaseSceneNumber(sceneNumber);
-
-  // Find any scene with the same base number
-  for (const [key, value] of sceneMap) {
-    if (getBaseSceneNumber(key) === baseScene) {
-      return value;
-    }
-  }
-
-  return undefined;
-}
