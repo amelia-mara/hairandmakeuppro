@@ -93,9 +93,13 @@ function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'>
     story_day: scene.shootingDay ? null : null, // story_day not tracked locally
     shooting_day: scene.shootingDay || null,
     filming_status: scene.filmingStatus || null,
-    filming_notes: scene.prepBreakdown
-      ? JSON.stringify(scene.prepBreakdown)
-      : (scene.filmingNotes || null),
+    // Only write filming_notes if we have actual data — otherwise omit so we
+    // don't overwrite Prep's breakdown JSON (which lives in this column).
+    ...(scene.prepBreakdown
+      ? { filming_notes: JSON.stringify(scene.prepBreakdown) }
+      : scene.filmingNotes
+        ? { filming_notes: scene.filmingNotes }
+        : {}),
     is_complete: scene.isComplete,
     completed_at: scene.completedAt ? new Date(scene.completedAt).toISOString() : null,
     script_content: scene.scriptContent || null,
