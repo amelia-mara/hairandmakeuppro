@@ -400,6 +400,28 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           }
         }
 
+        // ── Re-resolve and re-save existing breakdowns ──
+        // After tags + looks are populated in their stores, re-run the
+        // resolver over every loaded breakdown and write the merged result
+        // back to filming_notes. This upgrades any data written by older
+        // versions of prep that didn't merge tag text + look defaults into
+        // the synced payload, so the mobile Breakdown tab sees exactly what
+        // prep's BreakdownSheet displays without needing the user to
+        // manually edit each scene first.
+        {
+          const allLoadedBreakdowns = useBreakdownStore.getState().breakdowns;
+          const allLoadedTags = useTagStore.getState().tags;
+          const allLoadedLooks = useParsedScriptStore.getState().getParsedData(projectId!)?.looks ?? [];
+          for (const [sceneId, bd] of Object.entries(allLoadedBreakdowns)) {
+            // Skip mock breakdown ids and scenes not in the current parsed set
+            if (!scenes.some((s: any) => s.id === sceneId)) continue;
+            if (!bd || !bd.characters || bd.characters.length === 0) continue;
+            const sceneTags = allLoadedTags.filter((t) => t.sceneId === sceneId);
+            const resolved = resolveBreakdownForSync(bd, sceneTags, allLoadedLooks);
+            saveBreakdown(projectId!, sceneId, resolved as any);
+          }
+        }
+
         // ── Populate revised scenes store (always, regardless of scene data) ──
         if (data.revision) {
           const changes = (data.revision.changes as any[]) || [];
