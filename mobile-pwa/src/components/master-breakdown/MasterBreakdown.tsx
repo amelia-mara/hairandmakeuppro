@@ -1,130 +1,179 @@
-import { useState, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
-import type { Scene, Character, Look, PrepCharacterBreakdown } from '@/types';
+import type {
+  Scene,
+  Character,
+  Look,
+  HairDetails,
+  MakeupDetails,
+  PrepCharacterBreakdown,
+} from '@/types';
 import { clsx } from 'clsx';
 
-type ViewMode = 'by-scene' | 'by-character';
-
-interface SceneCharacterEntry {
-  scene: Scene;
-  character: Character;
-  look: Look | undefined;
-  prepBreakdown: PrepCharacterBreakdown | undefined;
-}
-
 export function MasterBreakdown() {
-  const currentProject = useProjectStore(s => s.currentProject);
-  const [viewMode, setViewMode] = useState<ViewMode>('by-scene');
-  const [expandedScenes, setExpandedScenes] = useState<Set<string>>(new Set());
-  const [expandedCharacters, setExpandedCharacters] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
+  const currentProject = useProjectStore((s) => s.currentProject);
+  const [filterChar, setFilterChar] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
   const scenes = currentProject?.scenes ?? [];
   const characters = currentProject?.characters ?? [];
   const looks = currentProject?.looks ?? [];
 
-  // Build lookup maps
+  /* ─── Lookups ─── */
+
   const characterMap = useMemo(() => {
     const map = new Map<string, Character>();
-    characters.forEach(c => map.set(c.id, c));
+    characters.forEach((c) => map.set(c.id, c));
     return map;
   }, [characters]);
 
+  const looksById = useMemo(() => {
+    const map = new Map<string, Look>();
+    looks.forEach((l) => map.set(l.id, l));
+    return map;
+  }, [looks]);
+
   const looksByCharacter = useMemo(() => {
     const map = new Map<string, Look[]>();
-    looks.forEach(l => {
-      const existing = map.get(l.characterId) ?? [];
-      existing.push(l);
-      map.set(l.characterId, existing);
+    looks.forEach((l) => {
+      const list = map.get(l.characterId) ?? [];
+      list.push(l);
+      map.set(l.characterId, list);
     });
     return map;
   }, [looks]);
 
-  // Find the look assigned to a character for a given scene
-  const findLookForScene = (characterId: string, sceneNumber: string): Look | undefined => {
-    const charLooks = looksByCharacter.get(characterId) ?? [];
-    return charLooks.find(l => l.scenes.includes(sceneNumber));
-  };
+  /** Resolve a character's look for a scene: prep lookId → scene-tagged look */
+  const resolveLook = useCallback(
+    (cb: PrepCharacterBreakdown | undefined, characterId: string, sceneNumber: string): Look | undefined => {
+      if (cb?.lookId) {
+        const byId = looksById.get(cb.lookId);
+        if (byId) return byId;
+      }
+      const charLooks = looksByCharacter.get(characterId) ?? [];
+      return charLooks.find((l) => l.scenes.includes(sceneNumber));
+    },
+    [looksById, looksByCharacter],
+  );
 
-  // Sort scenes by scene number
+  /* ─── Sort scenes by scene number (alphanumeric-aware) ─── */
+
   const sortedScenes = useMemo(() => {
-    return [...scenes].sort((a, b) => {
-      const numA = parseInt(a.sceneNumber);
-      const numB = parseInt(b.sceneNumber);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return a.sceneNumber.localeCompare(b.sceneNumber);
-    });
+    return [...scenes].sort((a, b) =>
+      a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }),
+    );
   }, [scenes]);
 
-  // Filter scenes by search
-  const filteredScenes = useMemo(() => {
-    if (!searchQuery.trim()) return sortedScenes;
-    const q = searchQuery.toLowerCase();
-    return sortedScenes.filter(s =>
-      s.sceneNumber.toLowerCase().includes(q) ||
-      s.slugline.toLowerCase().includes(q) ||
-      s.characters.some(cId => characterMap.get(cId)?.name.toLowerCase().includes(q))
-    );
-  }, [sortedScenes, searchQuery, characterMap]);
+  /* ─── Detect time jumps: scenes where story day differs from prior ─── */
 
-  // Build character-centric view data
-  const characterSceneMap = useMemo(() => {
-    const map = new Map<string, SceneCharacterEntry[]>();
-    characters.forEach(char => {
-      const entries: SceneCharacterEntry[] = [];
-      sortedScenes.forEach(scene => {
-        if (scene.characters.includes(char.id)) {
-          entries.push({
-            scene,
-            character: char,
-            look: findLookForScene(char.id, scene.sceneNumber),
-            prepBreakdown: scene.prepBreakdown?.characters?.find(
-              c => c.characterId === char.id
-            ),
-          });
-        }
-      });
-      if (entries.length > 0) {
-        map.set(char.id, entries);
+  const timeJumpSceneIds = useMemo(() => {
+    const jumps = new Set<string>();
+    let prevDay = '';
+    for (const s of sortedScenes) {
+      const day = s.prepBreakdown?.timeline?.day || '';
+      if (prevDay && day && day !== prevDay) jumps.add(s.id);
+      if (day) prevDay = day;
+    }
+    return jumps;
+  }, [sortedScenes]);
+
+  /* ─── Filtered scenes (only those with characters) ─── */
+
+  const scenesWithCast = useMemo(() => {
+    return sortedScenes.filter((s) => {
+      if (s.characters.length === 0) return false;
+      if (filterChar && !s.characters.includes(filterChar)) return false;
+      return true;
+    });
+  }, [sortedScenes, filterChar]);
+
+  /* ─── Find prior scene where a character appeared (for "Same as Sc N") ─── */
+
+  const findPrevScene = useCallback(
+    (charId: string, currentIdx: number): string | null => {
+      for (let i = currentIdx - 1; i >= 0; i--) {
+        if (sortedScenes[i].characters.includes(charId)) return sortedScenes[i].sceneNumber;
       }
-    });
-    return map;
-  }, [characters, sortedScenes, looksByCharacter]);
+      return null;
+    },
+    [sortedScenes],
+  );
 
-  const toggleScene = (sceneId: string) => {
-    setExpandedScenes(prev => {
-      const next = new Set(prev);
-      if (next.has(sceneId)) next.delete(sceneId);
-      else next.add(sceneId);
-      return next;
-    });
-  };
+  /* ─── Export rows (used by Copy and CSV) ─── */
 
-  const toggleCharacter = (charId: string) => {
-    setExpandedCharacters(prev => {
-      const next = new Set(prev);
-      if (next.has(charId)) next.delete(charId);
-      else next.add(charId);
-      return next;
-    });
-  };
-
-  const expandAll = () => {
-    if (viewMode === 'by-scene') {
-      setExpandedScenes(new Set(filteredScenes.map(s => s.id)));
-    } else {
-      setExpandedCharacters(new Set(Array.from(characterSceneMap.keys())));
+  const buildExportRows = useCallback((): string[][] => {
+    const headers = [
+      'Scene',
+      'Day',
+      'Character',
+      'Look',
+      'Hair',
+      'Makeup',
+      'Wardrobe',
+      'SFX',
+      'Environmental',
+      'Action',
+      'Continuity Notes',
+    ];
+    const rows: string[][] = [headers];
+    for (let idx = 0; idx < sortedScenes.length; idx++) {
+      const scene = sortedScenes[idx];
+      const bd = scene.prepBreakdown;
+      const charIds = filterChar
+        ? scene.characters.filter((c) => c === filterChar)
+        : scene.characters;
+      const storyDay = bd?.timeline?.day || '';
+      for (const cid of charIds) {
+        const ch = characterMap.get(cid);
+        if (!ch) continue;
+        const cb = bd?.characters?.find((c) => c.characterId === cid);
+        const look = resolveLook(cb, cid, scene.sceneNumber);
+        const resolved = resolveCharacterFields(cb, look);
+        const continuity = buildContinuityNotes(cb, cid, idx, findPrevScene, resolved);
+        rows.push([
+          scene.sceneNumber,
+          storyDay,
+          ch.name,
+          look?.name || '',
+          resolved.hair,
+          resolved.makeup,
+          resolved.wardrobe,
+          resolved.sfx,
+          resolved.environmental,
+          resolved.action,
+          continuity,
+        ]);
+      }
     }
-  };
+    return rows;
+  }, [sortedScenes, characterMap, resolveLook, filterChar, findPrevScene]);
 
-  const collapseAll = () => {
-    if (viewMode === 'by-scene') {
-      setExpandedScenes(new Set());
-    } else {
-      setExpandedCharacters(new Set());
-    }
-  };
+  const handleCopy = useCallback(() => {
+    const rows = buildExportRows();
+    const tsv = rows.map((r) => r.join('\t')).join('\n');
+    navigator.clipboard.writeText(tsv);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [buildExportRows]);
+
+  const handleExportCSV = useCallback(() => {
+    const rows = buildExportRows();
+    const esc = (v: string) =>
+      v.includes(',') || v.includes('"') || v.includes('\n')
+        ? `"${v.replace(/"/g, '""')}"`
+        : v;
+    const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'breakdown.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [buildExportRows]);
+
+  /* ─── Empty states ─── */
 
   if (!currentProject) {
     return (
@@ -140,15 +189,16 @@ export function MasterBreakdown() {
     return (
       <div className="min-h-screen bg-background pb-safe-bottom">
         <div className="p-6 text-center">
-          <div className="text-4xl mb-3">📋</div>
           <h2 className="text-lg font-semibold text-foreground mb-2">No Breakdown Available</h2>
           <p className="text-sm text-text-muted max-w-xs mx-auto">
-            The master breakdown will appear here once scenes and characters have been set up in pre-production.
+            The breakdown will appear here once scenes and characters have been set up in pre-production.
           </p>
         </div>
       </div>
     );
   }
+
+  /* ─── Render ─── */
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -159,326 +209,388 @@ export function MasterBreakdown() {
             <h1 className="text-lg font-semibold text-foreground">Breakdown</h1>
             <div className="flex items-center gap-2">
               <button
-                onClick={expandAll}
-                className="text-xs text-gold font-medium px-2 py-1"
+                onClick={handleCopy}
+                className="text-xs text-text-muted font-medium px-2 py-1 rounded-md border border-border"
               >
-                Expand All
+                {copied ? 'Copied!' : 'Copy'}
               </button>
               <button
-                onClick={collapseAll}
-                className="text-xs text-text-muted font-medium px-2 py-1"
+                onClick={handleExportCSV}
+                className="text-xs text-gold font-medium px-2 py-1 rounded-md border border-gold/40"
               >
-                Collapse
+                Export CSV
               </button>
             </div>
           </div>
 
-          {/* View mode toggle */}
-          <div className="flex gap-1 bg-muted rounded-lg p-1 mb-3">
-            <button
-              onClick={() => setViewMode('by-scene')}
-              className={clsx(
-                'flex-1 text-xs font-medium py-1.5 rounded-md transition-colors',
-                viewMode === 'by-scene'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-text-muted'
-              )}
-            >
-              By Scene
-            </button>
-            <button
-              onClick={() => setViewMode('by-character')}
-              className={clsx(
-                'flex-1 text-xs font-medium py-1.5 rounded-md transition-colors',
-                viewMode === 'by-character'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-text-muted'
-              )}
-            >
-              By Character
-            </button>
-          </div>
-
-          {/* Search */}
+          {/* Character filter */}
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <select
+              value={filterChar}
+              onChange={(e) => setFilterChar(e.target.value)}
+              className="w-full pl-3 pr-9 py-2 bg-muted rounded-lg text-sm text-foreground border-none outline-none focus:ring-1 focus:ring-gold/50 appearance-none"
+            >
+              <option value="">All Characters</option>
+              {characters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light pointer-events-none"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
-            <input
-              type="text"
-              placeholder="Search scenes or characters..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-muted rounded-lg text-sm text-foreground placeholder:text-text-light border-none outline-none focus:ring-1 focus:ring-gold/50"
-            />
           </div>
         </div>
 
         {/* Stats bar */}
         <div className="px-4 py-2 bg-muted/50 border-t border-border flex items-center gap-4 text-xs text-text-muted">
-          <span>{scenes.length} scenes</span>
-          <span>{characters.length} characters</span>
-          <span>{looks.length} looks</span>
+          <span>
+            {scenesWithCast.length} scene{scenesWithCast.length !== 1 ? 's' : ''}
+          </span>
+          <span>
+            {characters.length} character{characters.length !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-3 space-y-2">
-        {viewMode === 'by-scene' ? (
-          <BySceneView
-            scenes={filteredScenes}
-            characterMap={characterMap}
-            findLookForScene={findLookForScene}
-            expandedScenes={expandedScenes}
-            toggleScene={toggleScene}
-          />
+      {/* Scene blocks */}
+      <div className="px-4 py-3 space-y-3">
+        {scenesWithCast.length === 0 ? (
+          <p className="text-sm text-text-muted text-center py-8">
+            No scenes with characters{filterChar ? ' for this character' : ''}.
+          </p>
         ) : (
-          <ByCharacterView
-            characters={characters}
-            characterSceneMap={characterSceneMap}
-            expandedCharacters={expandedCharacters}
-            toggleCharacter={toggleCharacter}
-            searchQuery={searchQuery}
-          />
+          scenesWithCast.map((scene) => {
+            const globalIdx = sortedScenes.indexOf(scene);
+            const bd = scene.prepBreakdown;
+            const charIds = filterChar
+              ? scene.characters.filter((c) => c === filterChar)
+              : scene.characters;
+            const storyDay = bd?.timeline?.day || '';
+            const timelineType = bd?.timeline?.type || '';
+            const showBadge = Boolean(timelineType) && timelineType !== 'Normal';
+            const isTimeJump = timeJumpSceneIds.has(scene.id);
+
+            return (
+              <SceneBlock
+                key={scene.id}
+                scene={scene}
+                charIds={charIds}
+                characterMap={characterMap}
+                resolveLook={resolveLook}
+                bd={bd}
+                storyDay={storyDay}
+                timelineType={timelineType}
+                showBadge={showBadge}
+                isTimeJump={isTimeJump}
+                globalIdx={globalIdx}
+                findPrevScene={findPrevScene}
+              />
+            );
+          })
         )}
       </div>
     </div>
   );
 }
 
-/* ─── By Scene View ─── */
+/* ─── Scene Block ─── */
 
-interface BySceneViewProps {
-  scenes: Scene[];
+interface SceneBlockProps {
+  scene: Scene;
+  charIds: string[];
   characterMap: Map<string, Character>;
-  findLookForScene: (characterId: string, sceneNumber: string) => Look | undefined;
-  expandedScenes: Set<string>;
-  toggleScene: (sceneId: string) => void;
+  resolveLook: (
+    cb: PrepCharacterBreakdown | undefined,
+    characterId: string,
+    sceneNumber: string,
+  ) => Look | undefined;
+  bd: Scene['prepBreakdown'];
+  storyDay: string;
+  timelineType: string;
+  showBadge: boolean;
+  isTimeJump: boolean;
+  globalIdx: number;
+  findPrevScene: (charId: string, currentIdx: number) => string | null;
 }
 
-function BySceneView({ scenes, characterMap, findLookForScene, expandedScenes, toggleScene }: BySceneViewProps) {
-  if (scenes.length === 0) {
-    return <p className="text-sm text-text-muted text-center py-8">No scenes match your search</p>;
-  }
-
+function SceneBlock({
+  scene,
+  charIds,
+  characterMap,
+  resolveLook,
+  bd,
+  storyDay,
+  timelineType,
+  showBadge,
+  isTimeJump,
+  globalIdx,
+  findPrevScene,
+}: SceneBlockProps) {
   return (
-    <>
-      {scenes.map(scene => {
-        const isExpanded = expandedScenes.has(scene.id);
-        const sceneCharacters = scene.characters
-          .map(cId => characterMap.get(cId))
-          .filter(Boolean) as Character[];
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      {/* Time jump banner */}
+      {isTimeJump && (
+        <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-[11px] font-semibold text-amber-400 flex items-center gap-1.5">
+          <span>&#9203;</span>
+          TIME JUMP — {storyDay}
+          {bd?.timeline?.note && <span className="font-normal opacity-80"> &middot; {bd.timeline.note}</span>}
+        </div>
+      )}
 
-        return (
-          <div key={scene.id} className="bg-card rounded-xl border border-border overflow-hidden">
-            {/* Scene header */}
-            <button
-              onClick={() => toggleScene(scene.id)}
-              className="w-full px-4 py-3 flex items-center gap-3 text-left"
-            >
-              <div className={clsx(
-                'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold',
-                scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
-              )}>
-                {scene.sceneNumber}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {scene.slugline || `Scene ${scene.sceneNumber}`}
-                </div>
-                <div className="text-xs text-text-muted mt-0.5">
-                  {scene.intExt} &middot; {scene.timeOfDay} &middot; {sceneCharacters.length} character{sceneCharacters.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-              <svg
-                className={clsx('w-5 h-5 text-text-light transition-transform', isExpanded && 'rotate-180')}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Expanded: character breakdown */}
-            {isExpanded && (
-              <div className="border-t border-border">
-                {sceneCharacters.length === 0 ? (
-                  <p className="px-4 py-3 text-xs text-text-muted">No characters confirmed for this scene</p>
-                ) : (
-                  sceneCharacters.map(char => {
-                    const look = findLookForScene(char.id, scene.sceneNumber);
-                    const prepEntry = scene.prepBreakdown?.characters?.find(
-                      c => c.characterId === char.id
-                    );
-                    return (
-                      <CharacterBreakdownCard
-                        key={char.id}
-                        character={char}
-                        look={look}
-                        prepBreakdown={prepEntry}
-                      />
-                    );
-                  })
-                )}
-              </div>
+      {/* Scene header */}
+      <div className="px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span
+            className={clsx(
+              'flex-shrink-0 px-2 py-0.5 rounded text-xs font-bold',
+              scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400',
             )}
-          </div>
-        );
-      })}
-    </>
+          >
+            SC {scene.sceneNumber}
+          </span>
+          {storyDay && (
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">
+              {storyDay}
+            </span>
+          )}
+          {showBadge && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 uppercase tracking-wide">
+              {timelineType}
+            </span>
+          )}
+        </div>
+        <div className="text-sm font-medium text-foreground">
+          {scene.intExt}. {scene.slugline} — {scene.timeOfDay}
+        </div>
+        {bd?.timeline?.note && !isTimeJump && (
+          <div className="text-xs text-text-muted mt-1 italic">{bd.timeline.note}</div>
+        )}
+        {scene.synopsis && (
+          <div className="text-xs text-text-muted mt-1.5 leading-relaxed">{scene.synopsis}</div>
+        )}
+      </div>
+
+      {/* Characters */}
+      <div className="divide-y divide-border">
+        {charIds.length === 0 ? (
+          <p className="px-4 py-3 text-xs text-text-muted">
+            No characters confirmed for this scene
+          </p>
+        ) : (
+          charIds.map((cid) => {
+            const ch = characterMap.get(cid);
+            if (!ch) return null;
+            const cb = bd?.characters?.find((c) => c.characterId === cid);
+            const look = resolveLook(cb, cid, scene.sceneNumber);
+            const resolved = resolveCharacterFields(cb, look);
+            const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved);
+            const hasChange = cb?.changeType === 'change';
+
+            return (
+              <CharacterRow
+                key={cid}
+                character={ch}
+                look={look}
+                cb={cb}
+                resolved={resolved}
+                continuity={continuity}
+                hasChange={hasChange}
+              />
+            );
+          })
+        )}
+      </div>
+    </div>
   );
 }
 
-/* ─── By Character View ─── */
+/* ─── Character Row ─── */
 
-interface ByCharacterViewProps {
-  characters: Character[];
-  characterSceneMap: Map<string, SceneCharacterEntry[]>;
-  expandedCharacters: Set<string>;
-  toggleCharacter: (charId: string) => void;
-  searchQuery: string;
+interface ResolvedFields {
+  hair: string;
+  makeup: string;
+  wardrobe: string;
+  sfx: string;
+  environmental: string;
+  action: string;
 }
 
-function ByCharacterView({ characters, characterSceneMap, expandedCharacters, toggleCharacter, searchQuery }: ByCharacterViewProps) {
-  const filteredCharacters = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return characters.filter(c => {
-      const entries = characterSceneMap.get(c.id);
-      if (!entries || entries.length === 0) return false;
-      if (!q) return true;
-      return c.name.toLowerCase().includes(q) ||
-        entries.some(e => e.scene.sceneNumber.toLowerCase().includes(q) || e.scene.slugline.toLowerCase().includes(q));
-    });
-  }, [characters, characterSceneMap, searchQuery]);
-
-  if (filteredCharacters.length === 0) {
-    return <p className="text-sm text-text-muted text-center py-8">No characters match your search</p>;
-  }
-
-  return (
-    <>
-      {filteredCharacters.map(char => {
-        const isExpanded = expandedCharacters.has(char.id);
-        const entries = characterSceneMap.get(char.id) ?? [];
-        const uniqueLooks = new Set(entries.map(e => e.look?.id).filter(Boolean));
-
-        return (
-          <div key={char.id} className="bg-card rounded-xl border border-border overflow-hidden">
-            {/* Character header */}
-            <button
-              onClick={() => toggleCharacter(char.id)}
-              className="w-full px-4 py-3 flex items-center gap-3 text-left"
-            >
-              <CharacterAvatar character={char} size="md" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-foreground">{char.name}</div>
-                <div className="text-xs text-text-muted mt-0.5">
-                  {entries.length} scene{entries.length !== 1 ? 's' : ''} &middot; {uniqueLooks.size} look{uniqueLooks.size !== 1 ? 's' : ''}
-                </div>
-              </div>
-              <svg
-                className={clsx('w-5 h-5 text-text-light transition-transform', isExpanded && 'rotate-180')}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Expanded: scenes list */}
-            {isExpanded && (
-              <div className="border-t border-border divide-y divide-border">
-                {entries.map(({ scene, look, prepBreakdown: prepEntry }) => (
-                  <div key={scene.id} className="px-4 py-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={clsx(
-                        'text-xs font-bold px-2 py-0.5 rounded',
-                        scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
-                      )}>
-                        Sc {scene.sceneNumber}
-                      </span>
-                      <span className="text-xs text-text-muted truncate">{scene.slugline}</span>
-                    </div>
-                    <FullBreakdownSummary prepBreakdown={prepEntry} look={look} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-/* ─── Character Breakdown Card ─── */
-
-interface CharacterBreakdownCardProps {
+interface CharacterRowProps {
   character: Character;
   look: Look | undefined;
-  prepBreakdown: PrepCharacterBreakdown | undefined;
+  cb: PrepCharacterBreakdown | undefined;
+  resolved: ResolvedFields;
+  continuity: string;
+  hasChange: boolean;
 }
 
-function CharacterBreakdownCard({ character, look, prepBreakdown }: CharacterBreakdownCardProps) {
+function CharacterRow({ character, look, cb, resolved, continuity, hasChange }: CharacterRowProps) {
   return (
-    <div className="px-4 py-3 border-b border-border last:border-b-0">
+    <div className="px-4 py-3">
       <div className="flex items-center gap-2 mb-2">
         <CharacterAvatar character={character} size="sm" />
-        <span className="text-sm font-medium text-foreground">{character.name}</span>
+        <span className="text-sm font-semibold text-foreground">{character.name}</span>
       </div>
-      <FullBreakdownSummary prepBreakdown={prepBreakdown} look={look} />
+
+      <div className="space-y-1.5 ml-8">
+        <DetailRow label="Look" value={look?.name || ''} color="text-gold" />
+        <DetailRow
+          label="Hair"
+          value={resolved.hair}
+          exit={hasChange ? cb?.exitsWith?.hair : undefined}
+          color="text-amber-400"
+        />
+        <DetailRow
+          label="Makeup"
+          value={resolved.makeup}
+          exit={hasChange ? cb?.exitsWith?.makeup : undefined}
+          color="text-pink-400"
+        />
+        <DetailRow
+          label="Wardrobe"
+          value={resolved.wardrobe}
+          exit={hasChange ? cb?.exitsWith?.wardrobe : undefined}
+          color="text-purple-400"
+        />
+        <DetailRow label="SFX" value={resolved.sfx} color="text-red-400" highlight={!!resolved.sfx} />
+        <DetailRow
+          label="Env."
+          value={resolved.environmental}
+          color="text-sky-400"
+          highlight={!!resolved.environmental}
+        />
+        <DetailRow label="Action" value={resolved.action} color="text-violet-400" />
+        <NotesRow
+          changeNotes={hasChange ? cb?.changeNotes : undefined}
+          continuity={continuity}
+        />
+      </div>
     </div>
   );
 }
 
-/* ─── Full Breakdown Summary (matches prep categories) ─── */
+/* ─── Detail Row ─── */
 
-function FullBreakdownSummary({ prepBreakdown, look }: { prepBreakdown: PrepCharacterBreakdown | undefined; look: Look | undefined }) {
-  // Resolve values: prep breakdown manual entry → look defaults → empty
-  const lookName = look?.name || '';
-  const hair = prepBreakdown?.entersWith?.hair || (look ? buildHairSummary(look.hair) : '');
-  const makeup = prepBreakdown?.entersWith?.makeup || (look ? buildMakeupSummary(look.makeup) : '');
-  const wardrobe = prepBreakdown?.entersWith?.wardrobe || '';
-  const sfx = prepBreakdown?.sfx || (look?.sfxDetails?.sfxRequired && look.sfxDetails.sfxTypes.length > 0 ? look.sfxDetails.sfxTypes.join(', ') : '');
-  const environmental = prepBreakdown?.environmental || '';
-  const action = prepBreakdown?.action || '';
-  const notes = prepBreakdown?.notes || look?.notes || '';
-
-  // Build continuity notes from change info
-  const continuityParts: string[] = [];
-  if (prepBreakdown?.changeType === 'change' && prepBreakdown.changeNotes) {
-    continuityParts.push(prepBreakdown.changeNotes);
-  }
-  const continuityNotes = continuityParts.join('; ');
-
-  return (
-    <div className="space-y-1.5 ml-8">
-      <DetailRow label="Look" value={lookName} color="text-gold" />
-      <DetailRow label="Hair" value={hair} color="text-amber-400" />
-      <DetailRow label="Makeup" value={makeup} color="text-pink-400" />
-      <DetailRow label="Wardrobe" value={wardrobe} color="text-purple-400" />
-      <DetailRow label="SFX" value={sfx} color="text-red-400" />
-      <DetailRow label="Env." value={environmental} color="text-sky-400" />
-      <DetailRow label="Action" value={action} color="text-violet-400" />
-      <DetailRow label="Notes" value={notes || continuityNotes} color="text-text-muted" />
-    </div>
-  );
-}
-
-function DetailRow({ label, value, color }: { label: string; value: string; color: string }) {
+function DetailRow({
+  label,
+  value,
+  color,
+  exit,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  color: string;
+  exit?: string;
+  highlight?: boolean;
+}) {
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className={clsx('font-semibold flex-shrink-0 w-14', color)}>{label}</span>
-      {value ? (
-        <span className="text-text-muted">{value}</span>
-      ) : (
-        <span className="text-text-light">—</span>
-      )}
+      <span className={clsx('font-semibold flex-shrink-0 w-16', color)}>{label}</span>
+      <div className="flex-1 min-w-0">
+        {value ? (
+          <span className={clsx(highlight ? 'text-foreground font-medium' : 'text-text-muted')}>
+            {value}
+          </span>
+        ) : (
+          <span className="text-text-light">—</span>
+        )}
+        {exit && (
+          <div className="text-[10px] text-text-light italic mt-0.5">Exit: {exit}</div>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ─── Helpers ─── */
+/* ─── Notes Row ─── */
 
-function buildHairSummary(hair: Look['hair']): string {
+function NotesRow({ changeNotes, continuity }: { changeNotes?: string; continuity: string }) {
+  const isSameRef = continuity.startsWith('Same as');
+  const hasContent = !!changeNotes || !!continuity;
+  return (
+    <div className="flex items-start gap-2 text-xs">
+      <span className="font-semibold flex-shrink-0 w-16 text-text-muted">Notes</span>
+      <div className="flex-1 min-w-0">
+        {changeNotes && <div className="text-text-muted">{changeNotes}</div>}
+        {continuity ? (
+          isSameRef ? (
+            <span className="text-text-light italic">{continuity}</span>
+          ) : (
+            <span className="text-text-muted">{continuity}</span>
+          )
+        ) : !hasContent ? (
+          <span className="text-text-light">—</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Field resolution: prep manual entry → look defaults ─── */
+
+function resolveCharacterFields(
+  cb: PrepCharacterBreakdown | undefined,
+  look: Look | undefined,
+): ResolvedFields {
+  return {
+    hair: cb?.entersWith?.hair || (look ? buildHairSummary(look.hair) : ''),
+    makeup: cb?.entersWith?.makeup || (look ? buildMakeupSummary(look.makeup) : ''),
+    wardrobe: cb?.entersWith?.wardrobe || '',
+    sfx:
+      cb?.sfx ||
+      (look?.sfxDetails?.sfxRequired && look.sfxDetails.sfxTypes.length > 0
+        ? look.sfxDetails.sfxTypes.join(', ')
+        : ''),
+    environmental: cb?.environmental || '',
+    action: cb?.action || '',
+  };
+}
+
+/* ─── Build continuity notes (matches prep BreakdownSheet logic) ─── */
+
+function buildContinuityNotes(
+  cb: PrepCharacterBreakdown | undefined,
+  charId: string,
+  sceneIdx: number,
+  findPrevScene: (charId: string, currentIdx: number) => string | null,
+  resolved: ResolvedFields,
+): string {
+  const parts: string[] = [];
+
+  if (cb?.notes) parts.push(cb.notes);
+
+  // "Same as Sc N" only when there's no data at all for this character
+  const hasManualEntry =
+    cb &&
+    (cb.entersWith?.hair ||
+      cb.entersWith?.makeup ||
+      cb.entersWith?.wardrobe ||
+      cb.sfx ||
+      cb.environmental ||
+      cb.action);
+  const hasResolvedAny =
+    resolved.hair || resolved.makeup || resolved.wardrobe || resolved.sfx || resolved.environmental || resolved.action;
+
+  if (parts.length === 0 && !hasManualEntry && !hasResolvedAny) {
+    const prev = findPrevScene(charId, sceneIdx);
+    if (prev !== null) parts.push(`Same as Sc ${prev}`);
+  }
+
+  return parts.join('; ');
+}
+
+/* ─── Look summary helpers ─── */
+
+function buildHairSummary(hair: HairDetails): string {
   const parts: string[] = [];
   if (hair.hairType && hair.hairType !== 'Natural') parts.push(hair.hairType);
   if (hair.style) parts.push(hair.style);
@@ -488,7 +600,7 @@ function buildHairSummary(hair: Look['hair']): string {
   return parts.join(' / ');
 }
 
-function buildMakeupSummary(makeup: Look['makeup']): string {
+function buildMakeupSummary(makeup: MakeupDetails): string {
   const parts: string[] = [];
   if (makeup.foundation) parts.push(`Foundation: ${makeup.foundation}`);
   if (makeup.lidColour) parts.push(`Eyes: ${makeup.lidColour}`);
