@@ -18,8 +18,8 @@ initChangeTracking();
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
+import { Scenes } from '@/components/scenes';
 import { Breakdown } from '@/components/breakdown';
-import { MasterBreakdown } from '@/components/master-breakdown';
 import { Lookbooks } from '@/components/lookbooks';
 import { Timesheet } from '@/components/timesheet';
 import { Budget } from '@/components/budget';
@@ -586,9 +586,9 @@ function AppContent() {
       case 'today':
         return <Today onSceneSelect={handleSceneSelect} onNavigateToTab={handleNavigateToTab} />;
       case 'scenes':
-        return <Breakdown onSceneSelect={handleSceneSelect} />;
+        return <Scenes onSceneSelect={handleSceneSelect} />;
       case 'breakdown':
-        return <MasterBreakdown />;
+        return <Breakdown />;
       case 'lookbook':
         return <Lookbooks />;
       case 'hours':
