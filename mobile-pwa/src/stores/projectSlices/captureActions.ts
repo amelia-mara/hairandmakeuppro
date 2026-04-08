@@ -257,4 +257,82 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
   getSceneCapture: (sceneId: string, characterId: string) => {
     return get().sceneCaptures[`${sceneId}-${characterId}`];
   },
+
+  // ── Floor-team deviation record ────────────────────────────────────
+  // Owned by the standby/floor team during shoot. Lives alongside the
+  // existing notes/photos/flags/events on SceneCapture but is the only
+  // place the floor team logs differences from the prep lookbook.
+
+  setDeviationNote: (captureId: string, note: string) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture) return state;
+      const existing = capture.deviation ?? { note: '', photos: [] };
+      return {
+        sceneCaptures: {
+          ...state.sceneCaptures,
+          [captureId]: {
+            ...capture,
+            deviation: {
+              ...existing,
+              note,
+              loggedAt: existing.loggedAt ?? new Date(),
+            },
+          },
+        },
+      };
+    });
+  },
+
+  addDeviationPhoto: (captureId: string, photo: Photo) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture) return state;
+      const existing = capture.deviation ?? { note: '', photos: [] };
+      return {
+        sceneCaptures: {
+          ...state.sceneCaptures,
+          [captureId]: {
+            ...capture,
+            deviation: {
+              ...existing,
+              photos: [...existing.photos, photo],
+              loggedAt: existing.loggedAt ?? new Date(),
+            },
+          },
+        },
+      };
+    });
+  },
+
+  removeDeviationPhoto: (captureId: string, photoId: string) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture || !capture.deviation) return state;
+      return {
+        sceneCaptures: {
+          ...state.sceneCaptures,
+          [captureId]: {
+            ...capture,
+            deviation: {
+              ...capture.deviation,
+              photos: capture.deviation.photos.filter((p) => p.id !== photoId),
+            },
+          },
+        },
+      };
+    });
+  },
+
+  clearDeviation: (captureId: string) => {
+    set((state) => {
+      const capture = state.sceneCaptures[captureId];
+      if (!capture) return state;
+      const next = { ...capture };
+      delete next.deviation;
+      return {
+        sceneCaptures: { ...state.sceneCaptures, [captureId]: next },
+      };
+    });
+  },
 });

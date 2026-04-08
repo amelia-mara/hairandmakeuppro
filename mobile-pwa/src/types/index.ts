@@ -279,8 +279,27 @@ export interface SceneCapture {
   sfxDetails: SFXDetails;
   notes: string;
   applicationTime?: number;
+  // Floor-team deviation record. Optional — when set with non-empty
+  // note OR at least one photo, the scene is considered to have a
+  // logged deviation and is auto-flagged in the scene list.
+  deviation?: SceneDeviation;
   // Costume continuity data (used when department === 'costume')
   costumeContinuity?: import('@/config/department').CostumeContinuityData;
+}
+
+/**
+ * Floor-team deviation record attached to a SceneCapture.
+ *
+ * Captures anything that differs from the lookbook on the day. Owned by
+ * the standby/floor team during shoot. Self-contained — no Designer
+ * sign-off required. Has its own photo collection separate from the
+ * hero continuity photo grid so deviation evidence stays distinct from
+ * the standard continuity record.
+ */
+export interface SceneDeviation {
+  note: string;
+  photos: Photo[];
+  loggedAt?: Date;
 }
 
 export interface Photo {

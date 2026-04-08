@@ -107,6 +107,25 @@ export function getSceneStatusIcon(scene: Scene, captures: Record<string, SceneC
 }
 
 /**
+ * Returns true when any character capture for this scene has a deviation
+ * record with either a non-empty note or at least one deviation photo.
+ *
+ * Used by SceneCard to surface a deviation flag in the scene list, so
+ * floor-team-logged deviations are immediately obvious without opening
+ * each card individually.
+ */
+export function hasSceneDeviation(
+  scene: Scene,
+  captures: Record<string, SceneCapture>,
+): boolean {
+  return scene.characters.some((charId) => {
+    const capture = captures[`${scene.id}-${charId}`];
+    if (!capture?.deviation) return false;
+    return capture.deviation.note.trim().length > 0 || capture.deviation.photos.length > 0;
+  });
+}
+
+/**
  * Format estimated time for display
  */
 export function formatEstimatedTime(minutes: number): string {
