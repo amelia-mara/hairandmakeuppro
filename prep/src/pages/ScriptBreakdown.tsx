@@ -16,12 +16,12 @@ import { ordinal } from '@/utils/ordinal';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useScriptDrafts } from '@/hooks/useScriptDrafts';
 import { useScriptUploadProcessor } from '@/hooks/useScriptUploadProcessor';
-import { ToolsIcon, ImportIcon, DraftsIcon, BreakdownViewIcon, ExportIcon } from '@/components/icons/ScriptBreakdownIcons';
 import { SceneRangeSelect } from './script-breakdown/breakdown-form/SceneRangeSelect';
 import { FInput, FSelect } from './script-breakdown/breakdown-form/form-primitives';
 import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { DraftPdfViewer } from './script-breakdown/DraftPdfViewer';
+import { ToolsMenu } from './script-breakdown/ToolsMenu';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
@@ -42,7 +42,6 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [fontSize, setFontSize] = useState(16);
   const [showLegend, setShowLegend] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const toolsRef = useRef<HTMLDivElement>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
 
@@ -154,18 +153,6 @@ export function ScriptBreakdown({ projectId }: Props) {
       statusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     }, 800);
   }, []);
-
-  /* Close tools menu on outside click */
-  useEffect(() => {
-    if (!toolsOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) {
-        setToolsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [toolsOpen]);
 
   /* Scroll the active scene card into view in the left panel */
   const sceneListRef = useRef<HTMLDivElement>(null);
@@ -521,99 +508,24 @@ export function ScriptBreakdown({ projectId }: Props) {
                 </svg>
               </button>
             )}
-            <div className="fp-panel-actions" ref={toolsRef} style={{ position: 'relative' }}>
-              <button className="btn-ghost bd-btn" onClick={() => setToolsOpen(!toolsOpen)}>
-                <ToolsIcon /> Tools
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ transition: 'transform 0.2s ease', transform: toolsOpen ? 'rotate(180deg)' : 'rotate(0deg)', marginLeft: '2px' }}>
-                  <path d="m6 9 6 6 6-6"/>
-                </svg>
-              </button>
-              {toolsOpen && (
-                <div className="tools-dropdown">
-                  <div className="tools-dropdown-section">
-                    <button className="tools-dropdown-item" onClick={() => { setShowUploadModal(true); setToolsOpen(false); }}>
-                      <ImportIcon /> <span>Import New Script</span>
-                    </button>
-                    <button
-                      className={`tools-dropdown-item ${draftsExpanded ? 'tools-dropdown-item--expanded' : ''}`}
-                      onClick={() => setDraftsExpanded(!draftsExpanded)}
-                    >
-                      <DraftsIcon />
-                      <span style={{ flex: 1 }}>Script Drafts</span>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ transition: 'transform 0.2s ease', transform: draftsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                        <path d="m6 9 6 6 6-6"/>
-                      </svg>
-                    </button>
-                    {draftsExpanded && (
-                      <div className="tools-drafts-sub">
-                        {draftsLoading && (
-                          <div className="tools-drafts-loading">Loading drafts...</div>
-                        )}
-                        {!draftsLoading && drafts.length === 0 && (
-                          <div className="tools-drafts-empty">No drafts yet</div>
-                        )}
-                        {!draftsLoading && drafts.map((draft) => (
-                          <div
-                            key={draft.id}
-                            className={`tools-draft-item ${draft.is_active ? 'tools-draft-item--active' : ''}`}
-                            onClick={() => handleLoadDraft(draft)}
-                            role="button"
-                            tabIndex={0}
-                          >
-                            <div className="tools-draft-info">
-                              <div className="tools-draft-name">
-                                {draft.version_label || draft.file_name}
-                                {draft.is_active && <span className="tools-draft-badge">Current</span>}
-                              </div>
-                              <div className="tools-draft-meta">
-                                {new Date(draft.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                {draft.scene_count ? ` · ${draft.scene_count} scenes` : ''}
-                                {!draft.parsed_data && !draft.is_active ? ' · PDF only' : ''}
-                              </div>
-                            </div>
-                            {loadingDraftId === draft.id && (
-                              <span className="tools-draft-spinner" />
-                            )}
-                            <button
-                              className="tools-draft-eye"
-                              onClick={(e) => handleViewDraftPdf(e, draft)}
-                              title="View original PDF"
-                              aria-label="View original PDF"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button className="tools-dropdown-item" onClick={() => { setSplitView(true); setToolsOpen(false); }}>
-                      <BreakdownViewIcon /> <span>View Breakdown</span>
-                    </button>
-                  </div>
-                  <div className="tools-dropdown-divider" />
-                  <div className="tools-dropdown-section">
-                    <div className="tools-dropdown-label">Export</div>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Export breakdown'); setToolsOpen(false); }}>
-                      <ExportIcon /> <span>Breakdown</span>
-                    </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Export lookbooks'); setToolsOpen(false); }}>
-                      <ExportIcon /> <span>Lookbooks</span>
-                    </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Export timeline'); setToolsOpen(false); }}>
-                      <ExportIcon /> <span>Timeline</span>
-                    </button>
-                    <button className="tools-dropdown-item" onClick={() => { console.log('Export bible'); setToolsOpen(false); }}>
-                      <ExportIcon /> <span>Bible</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ToolsMenu
+              open={toolsOpen}
+              onToggle={() => setToolsOpen(!toolsOpen)}
+              onClose={() => setToolsOpen(false)}
+              onImportScript={() => setShowUploadModal(true)}
+              onOpenBreakdownView={() => setSplitView(true)}
+              onExportBreakdown={() => console.log('Export breakdown')}
+              onExportLookbooks={() => console.log('Export lookbooks')}
+              onExportTimeline={() => console.log('Export timeline')}
+              onExportBible={() => console.log('Export bible')}
+              drafts={drafts}
+              draftsLoading={draftsLoading}
+              draftsExpanded={draftsExpanded}
+              onToggleDraftsExpanded={() => setDraftsExpanded(!draftsExpanded)}
+              loadingDraftId={loadingDraftId}
+              onLoadDraft={handleLoadDraft}
+              onViewDraftPdf={handleViewDraftPdf}
+            />
           </div>
           {splitView ? (
             <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
