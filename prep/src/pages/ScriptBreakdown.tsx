@@ -15,59 +15,8 @@ import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
 import { sceneColorClass } from '@/utils/sceneColorClass';
 import { buildTaggedSegments } from '@/utils/buildTaggedSegments';
 import { ordinal } from '@/utils/ordinal';
+import { usePanelResize } from '@/hooks/usePanelResize';
 import { supabase } from '@/lib/supabase';
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   DRAGGABLE PANEL RESIZE HOOK
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-function usePanelResize(storageKey: string, defaultWidth: number, min: number, max: number, side: 'left' | 'right') {
-  const [width, setWidth] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) { const n = Number(saved); if (n >= min && n <= max) return n; }
-    } catch { /* ignore */ }
-    return defaultWidth;
-  });
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const startW = useRef(0);
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = true;
-    startX.current = e.clientX;
-    startW.current = width;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return;
-      const delta = side === 'left'
-        ? ev.clientX - startX.current
-        : startX.current - ev.clientX;
-      const next = Math.max(min, Math.min(max, startW.current + delta));
-      setWidth(next);
-    };
-    const onUp = () => {
-      dragging.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [width, min, max, side]);
-
-  const onDoubleClick = useCallback(() => { setWidth(defaultWidth); }, [defaultWidth]);
-
-  useEffect(() => {
-    localStorage.setItem(storageKey, String(width));
-  }, [storageKey, width]);
-
-  return { width, onMouseDown, onDoubleClick };
-}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
