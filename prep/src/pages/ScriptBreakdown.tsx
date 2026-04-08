@@ -12,6 +12,7 @@ import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
 import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
+import { sceneColorClass } from '@/utils/sceneColorClass';
 import { supabase } from '@/lib/supabase';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -71,20 +72,6 @@ function usePanelResize(storageKey: string, defaultWidth: number, min: number, m
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 interface Props { projectId: string }
-
-/** Map INT/EXT + DAY/NIGHT to a CSS color class (matches original script-breakdown.css) */
-function sceneColorClass(intExt: string, dayNight: string): string {
-  const isInt = intExt.toUpperCase() === 'INT';
-  const isExt = intExt.toUpperCase() === 'EXT';
-  const isDay = dayNight.toUpperCase() === 'DAY';
-  const isNight = dayNight.toUpperCase() === 'NIGHT';
-
-  if (isInt && isDay) return 'sl-card--int-day';
-  if (isExt && isDay) return 'sl-card--ext-day';
-  if (isInt && isNight) return 'sl-card--int-night';
-  if (isExt && isNight) return 'sl-card--ext-night';
-  return '';
-}
 
 const LEFT_WIDTH = 280;
 const RIGHT_DEFAULT = 400;
