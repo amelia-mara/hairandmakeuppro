@@ -472,9 +472,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const ch = characters.find((c) => c.id === cid);
                     if (!ch) return null;
                     const cb = bd?.characters.find((c) => c.characterId === cid);
-                    const tags = tagStore.getTagsForScene(scene.id).filter((t) => t.characterId === cid);
+                    const tags = tagStore
+                      .getTagsForScene(scene.id)
+                      .filter((t) => t.characterId === cid && !t.dismissed);
 
-                    // Gather category tags
+                    // Gather category tags — rendered as pills next to each
+                    // column. They are NO LONGER merged into the field text,
+                    // so manual typing and "Set Look" can't erase them.
                     const hairTags = tags.filter((t) => t.categoryId === 'hair');
                     const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
                     const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
@@ -482,21 +486,20 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     const envTags = tags.filter((t) => t.categoryId === 'environmental');
                     const actionTags = tags.filter((t) => t.categoryId === 'action');
 
-                    // Resolve values: manual entry → tag text → look defaults
+                    // Resolve field values: manual entry → look default only.
                     const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
-                    const resolveField = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) => {
+                    const resolveField = (manual: string | undefined, lookField: string | undefined) => {
                       if (manual) return manual;
-                      if (tagList.length > 0) return tagList.map((t) => t.text).join(', ');
                       if (lookField) return lookField;
                       return '';
                     };
 
-                    const hair = resolveField(cb?.entersWith.hair, hairTags, charLook?.hair);
-                    const makeup = resolveField(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
-                    const wardrobe = resolveField(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
-                    const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
-                    const environmental = cb?.environmental || envTags.map((t) => t.text).join(', ') || '';
-                    const action = cb?.action || actionTags.map((t) => t.text).join(', ') || '';
+                    const hair = resolveField(cb?.entersWith.hair, charLook?.hair);
+                    const makeup = resolveField(cb?.entersWith.makeup, charLook?.makeup);
+                    const wardrobe = resolveField(cb?.entersWith.wardrobe, charLook?.wardrobe);
+                    const sfx = cb?.sfx || '';
+                    const environmental = cb?.environmental || '';
+                    const action = cb?.action || '';
 
                     // Build continuity notes
                     const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
@@ -504,6 +507,20 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
                     // Change info
                     const hasChange = cb?.changeType === 'change';
+
+                    // Helper: render a small pill list for a category column
+                    const pills = (list: typeof hairTags, color: string) =>
+                      list.length > 0 ? (
+                        <div className="bs-tag-row">
+                          {list.map((t) => (
+                            <span key={t.id} className="bs-tag-pill" style={{ borderColor: color, color }}>
+                              {t.text}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null;
+                    const showPlaceholder = (value: string, tagCount: number) =>
+                      !value && tagCount === 0 ? <span className="bs-empty">—</span> : null;
 
                     return (
                       <tr key={cid}
@@ -518,31 +535,43 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                           {charLook ? <span className="bs-look-name">{charLook.name}</span> : <span className="bs-empty">—</span>}
                         </td>
                         <td className="bs-col-hair">
-                          {hair || <span className="bs-empty">—</span>}
+                          {hair}
+                          {showPlaceholder(hair, hairTags.length)}
+                          {pills(hairTags, '#D4943A')}
                           {hasChange && cb?.exitsWith.hair && (
                             <div className="bs-exit-note">Exit: {cb.exitsWith.hair}</div>
                           )}
                         </td>
                         <td className="bs-col-makeup">
-                          {makeup || <span className="bs-empty">—</span>}
+                          {makeup}
+                          {showPlaceholder(makeup, makeupTags.length)}
+                          {pills(makeupTags, '#C2785C')}
                           {hasChange && cb?.exitsWith.makeup && (
                             <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>
                           )}
                         </td>
                         <td className="bs-col-wardrobe">
-                          {wardrobe || <span className="bs-empty">—</span>}
+                          {wardrobe}
+                          {showPlaceholder(wardrobe, wardrobeTags.length)}
+                          {pills(wardrobeTags, '#ec4899')}
                           {hasChange && cb?.exitsWith.wardrobe && (
                             <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>
                           )}
                         </td>
-                        <td className={`bs-col-sfx${sfx ? ' bs-cell--flag' : ''}`}>
-                          {sfx || <span className="bs-empty">—</span>}
+                        <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
+                          {sfx}
+                          {showPlaceholder(sfx, sfxTags.length)}
+                          {pills(sfxTags, '#ef4444')}
                         </td>
-                        <td className={`bs-col-env${environmental ? ' bs-cell--flag' : ''}`}>
-                          {environmental || <span className="bs-empty">—</span>}
+                        <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
+                          {environmental}
+                          {showPlaceholder(environmental, envTags.length)}
+                          {pills(envTags, '#38bdf8')}
                         </td>
                         <td className="bs-col-action">
-                          {action || <span className="bs-empty">—</span>}
+                          {action}
+                          {showPlaceholder(action, actionTags.length)}
+                          {pills(actionTags, '#a855f7')}
                         </td>
                         <td className="bs-col-notes">
                           {hasChange && cb?.changeNotes && (
@@ -664,7 +693,9 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                   const ch = characters.find((c) => c.id === cid);
                   if (!ch) return null;
                   const cb = bd?.characters.find((c) => c.characterId === cid);
-                  const tags = tagStore.getTagsForScene(scene.id).filter((t) => t.characterId === cid);
+                  const tags = tagStore
+                    .getTagsForScene(scene.id)
+                    .filter((t) => t.characterId === cid && !t.dismissed);
                   const hairTags = tags.filter((t) => t.categoryId === 'hair');
                   const makeupTags = tags.filter((t) => t.categoryId === 'makeup');
                   const wardrobeTags = tags.filter((t) => t.categoryId === 'wardrobe');
@@ -672,17 +703,31 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                   const envTags = tags.filter((t) => t.categoryId === 'environmental');
                   const actionTags = tags.filter((t) => t.categoryId === 'action');
                   const charLook = cb?.lookId ? looks.find((l) => l.id === cb.lookId) : null;
-                  const resolve = (manual: string | undefined, tagList: typeof hairTags, lookField: string | undefined) =>
-                    manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
-                  const hair = resolve(cb?.entersWith.hair, hairTags, charLook?.hair);
-                  const makeup = resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
-                  const wardrobe = resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
-                  const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
-                  const environmental = cb?.environmental || envTags.map((t) => t.text).join(', ') || '';
-                  const action = cb?.action || actionTags.map((t) => t.text).join(', ') || '';
+                  // Field values: manual entry → look default. Tags render
+                  // alongside as pills, never merged into the field text.
+                  const resolve = (manual: string | undefined, lookField: string | undefined) =>
+                    manual || lookField || '';
+                  const hair = resolve(cb?.entersWith.hair, charLook?.hair);
+                  const makeup = resolve(cb?.entersWith.makeup, charLook?.makeup);
+                  const wardrobe = resolve(cb?.entersWith.wardrobe, charLook?.wardrobe);
+                  const sfx = cb?.sfx || '';
+                  const environmental = cb?.environmental || '';
+                  const action = cb?.action || '';
                   const continuity = buildContinuityNotes(cb, cid, globalIdx, scenes, bd, tags);
                   const hasEvents = bd?.continuityEvents.some((e) => e.characterId === cid);
                   const hasChange = cb?.changeType === 'change';
+                  const pills = (list: typeof hairTags, color: string) =>
+                    list.length > 0 ? (
+                      <div className="bs-tag-row">
+                        {list.map((t) => (
+                          <span key={t.id} className="bs-tag-pill" style={{ borderColor: color, color }}>
+                            {t.text}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null;
+                  const placeholder = (value: string, count: number) =>
+                    !value && count === 0 ? <span className="bs-empty">—</span> : null;
                   return (
                     <tr key={cid} className={`bs-row ${hasEvents ? 'bs-row--continuity' : ''}`}>
                       <td className="bs-col-char">
@@ -695,25 +740,37 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                         {charLook ? <span className="bs-look-name">{charLook.name}</span> : <span className="bs-empty">—</span>}
                       </td>
                       <td className="bs-col-hair">
-                        {hair || <span className="bs-empty">—</span>}
+                        {hair}
+                        {placeholder(hair, hairTags.length)}
+                        {pills(hairTags, '#D4943A')}
                         {hasChange && cb?.exitsWith.hair && <div className="bs-exit-note">Exit: {cb.exitsWith.hair}</div>}
                       </td>
                       <td className="bs-col-makeup">
-                        {makeup || <span className="bs-empty">—</span>}
+                        {makeup}
+                        {placeholder(makeup, makeupTags.length)}
+                        {pills(makeupTags, '#C2785C')}
                         {hasChange && cb?.exitsWith.makeup && <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>}
                       </td>
                       <td className="bs-col-wardrobe">
-                        {wardrobe || <span className="bs-empty">—</span>}
+                        {wardrobe}
+                        {placeholder(wardrobe, wardrobeTags.length)}
+                        {pills(wardrobeTags, '#ec4899')}
                         {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
                       </td>
-                      <td className={`bs-col-sfx${sfx ? ' bs-cell--flag' : ''}`}>
-                        {sfx || <span className="bs-empty">—</span>}
+                      <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
+                        {sfx}
+                        {placeholder(sfx, sfxTags.length)}
+                        {pills(sfxTags, '#ef4444')}
                       </td>
-                      <td className={`bs-col-env${environmental ? ' bs-cell--flag' : ''}`}>
-                        {environmental || <span className="bs-empty">—</span>}
+                      <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
+                        {environmental}
+                        {placeholder(environmental, envTags.length)}
+                        {pills(envTags, '#38bdf8')}
                       </td>
                       <td className="bs-col-action">
-                        {action || <span className="bs-empty">—</span>}
+                        {action}
+                        {placeholder(action, actionTags.length)}
+                        {pills(actionTags, '#a855f7')}
                       </td>
                       <td className="bs-col-notes">
                         {hasChange && cb?.changeNotes && <div className="bs-change-note">{cb.changeNotes}</div>}

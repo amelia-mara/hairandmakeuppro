@@ -634,20 +634,15 @@ export function ScriptBreakdown({ projectId }: Props) {
                         });
                       }
 
-                      /* Auto-fill scene breakdown fields */
-                      if (cat.field.startsWith('entersWith.')) {
-                        const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
-                        const existing = cb.entersWith[key];
-                        store.updateCharacterBreakdown(sceneId, characterId, {
-                          entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${text}` : text },
-                        });
-                      } else {
-                        const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
-                        const existing = cb[field] || '';
-                        store.updateCharacterBreakdown(sceneId, characterId, {
-                          [field]: existing ? `${existing}, ${text}` : text,
-                        });
-                      }
+                      /* Tags for breakdown-group categories are pure metadata —
+                         they render as pills under the matching form field in
+                         CharBlock, and as pills alongside the column value in
+                         BreakdownSheet. They no longer auto-fill cb.entersWith
+                         / cb.sfx / cb.environmental / cb.action / cb.notes, so
+                         manual typing and look-selection can't "erase" them.
+                         Suppress unused-variable warning since `cb` is no
+                         longer read after the breakdown-ensure guard above. */
+                      void cb;
                     } else if (cat.group === 'profile') {
                       /* Auto-fill character profile fields */
                       if (cat.field === 'scriptNotes') {
@@ -2697,53 +2692,18 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
     return true;
   });
 
-  const stripTagText = useCallback((fieldValue: string, text: string): string => {
-    // Remove the tag text from the field, handling ", text" and "text, " patterns
-    let result = fieldValue;
-    // Try removing ", text" first (when appended)
-    if (result.includes(`, ${text}`)) {
-      result = result.replace(`, ${text}`, '');
-    } else if (result.includes(`${text}, `)) {
-      result = result.replace(`${text}, `, '');
-    } else {
-      result = result.replace(text, '');
-    }
-    return result.trim();
-  }, []);
-
+  // Tags are pure metadata now — dismiss/restore only toggles the tag's
+  // dismissed flag in the store. They no longer mutate cb.entersWith / sfx /
+  // environmental / action / notes. The pill row under each field is driven
+  // directly by the tag store, so hiding/showing a pill is visible
+  // immediately without touching the form field text.
   const handleDismissTag = useCallback((tag: ScriptTag) => {
     tagStore.dismissTag(tag.id);
-    const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
-    if (!cat) return;
-    if (cat.field.startsWith('entersWith.')) {
-      const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
-      const existing = cb.entersWith[key];
-      if (existing) {
-        onUpdate({ entersWith: { ...cb.entersWith, [key]: stripTagText(existing, tag.text) } });
-      }
-    } else {
-      const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
-      const existing = cb[field] || '';
-      if (existing) {
-        onUpdate({ [field]: stripTagText(existing as string, tag.text) });
-      }
-    }
-  }, [cb, onUpdate, stripTagText, tagStore]);
+  }, [tagStore]);
 
   const handleRestoreTag = useCallback((tag: ScriptTag) => {
     tagStore.restoreTag(tag.id);
-    const cat = BREAKDOWN_CATEGORIES.find((c) => c.id === tag.categoryId);
-    if (!cat) return;
-    if (cat.field.startsWith('entersWith.')) {
-      const key = cat.field.split('.')[1] as 'hair' | 'makeup' | 'wardrobe';
-      const existing = cb.entersWith[key];
-      onUpdate({ entersWith: { ...cb.entersWith, [key]: existing ? `${existing}, ${tag.text}` : tag.text } });
-    } else {
-      const field = cat.field as 'sfx' | 'environmental' | 'action' | 'notes';
-      const existing = (cb[field] as string) || '';
-      onUpdate({ [field]: existing ? `${existing}, ${tag.text}` : tag.text });
-    }
-  }, [cb, onUpdate, tagStore]);
+  }, [tagStore]);
 
   const TagPills = ({ tags, color }: { tags: ScriptTag[]; color: string }) =>
     tags.length > 0 ? (
