@@ -1029,6 +1029,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const isScrollingTo = useRef(false);
   const tagStore = useTagStore();
+  const projectRevisions = useRevisedScenesStore((state) => state.revisions[projectId]);
   const [popup, setPopup] = useState<TagPopupState | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -1641,7 +1642,7 @@ function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scroll
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
           data-scene-id={scene.id}
-          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''} ${useRevisedScenesStore.getState().isSceneRevised(projectId, scene.id) ? 'sv-paper--revised' : ''}`}
+          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''} ${projectRevisions && projectRevisions.changes.some((c) => c.sceneId === scene.id) && !projectRevisions.reviewedSceneIds.includes(scene.id) ? 'sv-paper--revised' : ''}`}
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
