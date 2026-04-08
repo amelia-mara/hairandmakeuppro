@@ -10,7 +10,6 @@ import {
 import { useProjectStore } from '@/stores/projectStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { type DiffResult } from '@/utils/scriptDiff';
-import { sceneColorClass } from '@/utils/sceneColorClass';
 import { buildTaggedSegments } from '@/utils/buildTaggedSegments';
 import { ordinal } from '@/utils/ordinal';
 import { usePanelResize } from '@/hooks/usePanelResize';
@@ -22,6 +21,7 @@ import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPane
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { DraftPdfViewer } from './script-breakdown/DraftPdfViewer';
 import { ToolsMenu } from './script-breakdown/ToolsMenu';
+import { SceneListPanel } from './script-breakdown/SceneListPanel';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
@@ -29,7 +29,6 @@ import { ToolsMenu } from './script-breakdown/ToolsMenu';
 
 interface Props { projectId: string }
 
-const LEFT_WIDTH = 280;
 const RIGHT_DEFAULT = 400;
 const RIGHT_MIN = 300;
 const RIGHT_MAX = 560;
@@ -154,17 +153,6 @@ export function ScriptBreakdown({ projectId }: Props) {
     }, 800);
   }, []);
 
-  /* Scroll the active scene card into view in the left panel */
-  const sceneListRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const list = sceneListRef.current;
-    if (!list) return;
-    const active = list.querySelector('.sl-card--active') as HTMLElement;
-    if (active) {
-      active.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [selectedSceneId]);
-
   const filteredScenes = nonPreambleScenes.filter((s) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -218,107 +206,16 @@ export function ScriptBreakdown({ projectId }: Props) {
       <div className={`bd-panels`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
-        {(
-        <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
-          <div className="sl-header">
-            <span className="sl-header-label">Scenes</span>
-            <span className="sl-header-count">{nonPreambleScenes.length}</span>
-          </div>
-          <div className="sl-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-            </svg>
-            <input className="sl-search-input" placeholder="Search scenes, script, characters..."
-              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-          </div>
-          <div className="sl-list" ref={sceneListRef}>
-            {filteredScenes.map((s) => {
-              const status = store.getCompletionStatus(s.id, s);
-              const isActive = s.id === selectedSceneId;
-              const bd = store.getBreakdown(s.id);
-              const colorClass = sceneColorClass(s.intExt, s.dayNight);
-              const isRevised = revisedStore.isSceneRevised(projectId, s.id);
-              return (
-                <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass} ${isRevised ? 'sl-card--revised' : ''}`}
-                  onClick={() => selectScene(s.id)}>
-                  <div className="sl-card-top">
-                    <span className="sl-card-num">{s.number}</span>
-                    <span className="sl-card-location">{s.intExt}. {s.location}</span>
-                  </div>
-                  <div className="sl-card-meta">
-                    <span className={`sl-card-pill sl-pill--${s.dayNight.toLowerCase()}`}>{s.dayNight}</span>
-                    <span className="sl-card-detail">{s.intExt}</span>
-                    {s.characterIds.length > 0 && (
-                      <span className="sl-card-cast">{s.characterIds.length}</span>
-                    )}
-                    <span className={`sl-card-status sl-card-status--${status}`} />
-                  </div>
-                  {isActive && isRevised && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '6px 10px', margin: '6px 0 0',
-                      background: 'rgba(232, 98, 26, 0.12)',
-                      borderRadius: 6, fontSize: '0.6875rem', color: '#E8621A', fontWeight: 600,
-                    }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 9v4"/><path d="M12 17h.01"/>
-                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                      </svg>
-                      <span style={{ flex: 1 }}>Revised — review changes</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); revisedStore.markReviewed(projectId, s.id); }}
-                        style={{
-                          background: '#E8621A', border: 'none', borderRadius: 4,
-                          color: '#fff', fontSize: '0.625rem', fontWeight: 700,
-                          padding: '2px 8px', cursor: 'pointer', textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                        }}
-                      >
-                        ✓ Reviewed
-                      </button>
-                    </div>
-                  )}
-                  {isActive && (
-                    <div className="sl-card-expand">
-                      {bd && (bd.timeline.day || bd.timeline.type) && (
-                        <div className="sl-expand-pill">
-                          <span className="sl-expand-label">Timeline</span>
-                          <span className="sl-expand-value">
-                            {[bd.timeline.day, bd.timeline.type && bd.timeline.type !== 'Normal' ? bd.timeline.type : ''].filter(Boolean).join(' · ') || '—'}
-                          </span>
-                        </div>
-                      )}
-                      {synopsisStore.getSynopsis(s.id, s.synopsis) && (
-                        <div className="sl-expand-pill">
-                          <span className="sl-expand-label">Synopsis</span>
-                          <span className="sl-expand-value">{synopsisStore.getSynopsis(s.id, s.synopsis)}</span>
-                        </div>
-                      )}
-                      {s.characterIds.length > 0 && (() => {
-                        const principals = s.characterIds.map((cid) => ALL_CHARACTERS.find((c) => c.id === cid)).filter((c): c is Character => !!c && c.category !== 'supporting_artist');
-                        const saCount = s.characterIds.map((cid) => ALL_CHARACTERS.find((c) => c.id === cid)).filter((c): c is Character => !!c && c.category === 'supporting_artist').length;
-                        return (
-                          <div className="sl-expand-pill">
-                            <span className="sl-expand-label">Characters</span>
-                            <div className="sl-expand-chars">
-                              {principals.map((ch) => (
-                                <span key={ch.id} className="sl-card-char-tag">{ch.name.split(' ')[0].toUpperCase()}</span>
-                              ))}
-                              {saCount > 0 && (
-                                <span className="sl-card-char-tag" style={{ opacity: 0.6, fontStyle: 'italic' }}>+{saCount} SA</span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        )}
+        <SceneListPanel
+          totalSceneCount={nonPreambleScenes.length}
+          filteredScenes={filteredScenes}
+          allCharacters={ALL_CHARACTERS}
+          selectedSceneId={selectedSceneId}
+          onSelectScene={selectScene}
+          projectId={projectId}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+        />
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
