@@ -2729,15 +2729,36 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
 
   const handleSetLook = useCallback((lookId: string) => {
     const look = looks.find((l) => l.id === lookId);
-    if (look) {
-      onUpdate({
-        lookId,
-        entersWith: { hair: look.hair, makeup: look.makeup, wardrobe: look.wardrobe },
-      });
-    } else {
+    if (!look) {
       onUpdate({ lookId });
+      return;
     }
-  }, [looks, onUpdate]);
+    // Decide per-field whether to take the look's value or keep what's in
+    // the form. Two cases:
+    //   (a) cb.lookId is already set → the user is SWITCHING looks. The
+    //       text currently in entersWith came from the previous look, so
+    //       it's safe to replace with the new look's values. But if the
+    //       new look has an empty value for a field, keep the previous
+    //       text rather than clobbering it with empty.
+    //   (b) cb.lookId is empty → this is the FIRST look pick on this
+    //       character/scene. Anything already in entersWith was typed
+    //       manually by the user and must NOT be overwritten. Only fill
+    //       fields that are still empty so the look's values fall in
+    //       where there's nothing to lose.
+    const wasLookSet = !!cb.lookId;
+    const pickField = (current: string, fromLook: string): string => {
+      if (wasLookSet) return fromLook || current;
+      return current || fromLook;
+    };
+    onUpdate({
+      lookId,
+      entersWith: {
+        hair: pickField(cb.entersWith.hair, look.hair),
+        makeup: pickField(cb.entersWith.makeup, look.makeup),
+        wardrobe: pickField(cb.entersWith.wardrobe, look.wardrobe),
+      },
+    });
+  }, [cb.lookId, cb.entersWith, looks, onUpdate]);
 
   return (
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
