@@ -6,14 +6,9 @@ import {
 } from '@/stores/breakdownStore';
 import { LookbookTab, useLookbookMeta } from './LookbookTab';
 import { BibleTab } from './BibleTab';
+import { ordinal } from '@/utils/ordinal';
 
 /* ━━━ Helpers ━━━ */
-
-const ordinal = (n: number) => {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-};
 
 /** Find the previous scene a character appeared in (script order) */
 function findPrevScene(charId: string, currentIdx: number, scenes: Scene[]): number | null {
