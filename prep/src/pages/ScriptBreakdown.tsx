@@ -5,7 +5,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
   useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag, type ParsedCharacterData, type SceneChange,
+  type ScriptTag, type ParsedCharacterData,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
@@ -17,6 +17,10 @@ import { usePanelResize } from '@/hooks/usePanelResize';
 import { useScriptDrafts } from '@/hooks/useScriptDrafts';
 import { useScriptUploadProcessor } from '@/hooks/useScriptUploadProcessor';
 import { ToolsIcon, ImportIcon, DraftsIcon, BreakdownViewIcon, ExportIcon } from '@/components/icons/ScriptBreakdownIcons';
+import { SceneRangeSelect } from './script-breakdown/breakdown-form/SceneRangeSelect';
+import { FInput, FSelect } from './script-breakdown/breakdown-form/form-primitives';
+import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
+import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
@@ -1783,60 +1787,6 @@ function ScriptUploadModal({ projectId, onClose, onUploaded }: ScriptUploadModal
   );
 }
 
-/* ━━━ SUPPORTING ARTISTS PANEL ━━━ */
-
-function SupportingArtistsPanel({ artists, scene, allScenes }: { artists: Character[]; scene: Scene; allScenes: Scene[] }) {
-  return (
-    <div style={{ padding: '20px 24px', overflowY: 'auto', height: '100%' }}>
-      <div style={{ marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e8e0d4)' }}>
-          Supporting Artists
-        </h3>
-        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted, #a89b8c)' }}>
-          Background and extras in this scene
-        </p>
-      </div>
-
-      {artists.length === 0 ? (
-        <p style={{ color: 'var(--text-muted, #a89b8c)', fontStyle: 'italic' }}>No supporting artists in this scene.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {artists.map((artist) => {
-            const otherScenes = allScenes.filter((s) => s.id !== scene.id && s.characterIds.includes(artist.id));
-            return (
-              <div key={artist.id} style={{
-                background: 'var(--card-bg, #2a2520)', border: '1px solid var(--border, #3d352d)',
-                borderRadius: 8, padding: '12px 16px',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary, #e8e0d4)' }}>
-                    {artist.name}
-                  </span>
-                  <span style={{
-                    fontSize: '0.7rem', padding: '2px 8px', borderRadius: 10,
-                    background: 'var(--accent-muted, #78716c)', color: 'var(--text-primary, #e8e0d4)',
-                  }}>
-                    SA
-                  </span>
-                </div>
-                {artist.notes && (
-                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--text-muted, #a89b8c)' }}>
-                    {artist.notes}
-                  </p>
-                )}
-                {otherScenes.length > 0 && (
-                  <div style={{ marginTop: 6, fontSize: '0.75rem', color: 'var(--text-muted, #a89b8c)' }}>
-                    Also in: {otherScenes.map((s) => `Sc ${s.number}`).join(', ')}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ━━━ CHARACTER VIEW ━━━ */
 
@@ -2535,237 +2485,6 @@ function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, on
   );
 }
 
-/* ━━━ Scene range selector ━━━ */
-
-function SceneRangeSelect({ sceneRange, allScenes, onChange }: {
-  sceneRange: string; allScenes: Scene[]; onChange: (range: string) => void;
-}) {
-  const parts = sceneRange.split('-');
-  const startScene = parts[0]?.trim() || '';
-  const endScene = parts[1]?.trim() || startScene;
-
-  const handleStart = (v: string) => onChange(`${v}-${endScene}`);
-  const handleEnd = (v: string) => onChange(`${startScene}-${v}`);
-
-  return (
-    <div className="ce-scene-range">
-      <div className="ce-scene-range-field">
-        <label className="ce-scene-range-label">Start</label>
-        <select className="ce-scene-range-select" value={startScene} onChange={(e) => handleStart(e.target.value)}>
-          {allScenes.map((s) => <option key={s.id} value={String(s.number)}>Scene {s.number}</option>)}
-        </select>
-      </div>
-      <span className="ce-scene-range-sep">—</span>
-      <div className="ce-scene-range-field">
-        <label className="ce-scene-range-label">End</label>
-        <select className="ce-scene-range-select" value={endScene} onChange={(e) => handleEnd(e.target.value)}>
-          {allScenes.map((s) => <option key={s.id} value={String(s.number)}>Scene {s.number}</option>)}
-        </select>
-      </div>
-    </div>
-  );
-}
-
-/* ━━━ CHANGES SUMMARY MODAL ━━━ */
-
-function ChangesSummaryModal({
-  diffResult,
-  onClose,
-  onGoToScene,
-}: {
-  diffResult: DiffResult;
-  onClose: () => void;
-  onGoToScene: (sceneId: string) => void;
-}) {
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose]);
-
-  const { changes, stats } = diffResult;
-  const changeTypeIcon = (type: SceneChange['changeType']) => {
-    switch (type) {
-      case 'modified': return { color: '#E8621A', label: 'Modified', icon: '~' };
-      case 'added': return { color: '#22c55e', label: 'Added', icon: '+' };
-      case 'omitted': return { color: '#94a3b8', label: 'Omitted', icon: '−' };
-    }
-  };
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-glass" style={{ width: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div style={{ padding: '24px 28px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{
-              fontSize: '0.8125rem', letterSpacing: '0.1em',
-              textTransform: 'uppercase' as const, color: 'var(--text-heading)', margin: 0,
-            }}>
-              <span className="heading-italic">Script</span>{' '}
-              <span className="heading-regular">Changes</span>
-            </h2>
-            <button onClick={onClose} style={{
-              background: 'none', border: 'none', color: 'var(--text-muted)',
-              cursor: 'pointer', padding: 4,
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* Stats bar */}
-          <div style={{
-            display: 'flex', gap: 16, marginTop: 16, marginBottom: 8,
-            fontSize: '0.8125rem', color: 'var(--text-muted)',
-          }}>
-            {stats.modified > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#E8621A', display: 'inline-block' }} />
-                {stats.modified} modified
-              </span>
-            )}
-            {stats.added > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                {stats.added} added
-              </span>
-            )}
-            {stats.omitted > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
-                {stats.omitted} omitted
-              </span>
-            )}
-            <span style={{ marginLeft: 'auto' }}>
-              {stats.unchanged} unchanged
-            </span>
-          </div>
-        </div>
-
-        <div style={{ padding: '12px 28px 28px', overflowY: 'auto', flex: 1 }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', margin: '0 0 16px' }}>
-            Changed scenes are highlighted in orange in the scene list. Click a scene below to jump to it and review the changes. Your existing breakdown data has been preserved.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {changes.map((change) => {
-              const info = changeTypeIcon(change.changeType);
-              return (
-                <button
-                  key={change.sceneId + change.sceneNumber}
-                  onClick={() => onGoToScene(change.sceneId)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 14px',
-                    background: 'var(--bg-secondary, rgba(255,255,255,0.03))',
-                    border: `1px solid ${info.color}30`,
-                    borderLeft: `3px solid ${info.color}`,
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    width: '100%',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = `${info.color}10`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--bg-secondary, rgba(255,255,255,0.03))';
-                  }}
-                >
-                  {/* Change type indicator */}
-                  <span style={{
-                    width: 26, height: 26, borderRadius: 6,
-                    background: `${info.color}18`,
-                    color: info.color,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1rem', fontWeight: 700, flexShrink: 0,
-                    fontFamily: 'monospace',
-                  }}>
-                    {info.icon}
-                  </span>
-
-                  {/* Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{
-                        color: 'var(--text-heading)', fontWeight: 600, fontSize: '0.8125rem',
-                      }}>
-                        Scene {change.sceneNumber}
-                      </span>
-                      <span style={{
-                        fontSize: '0.6875rem', fontWeight: 500,
-                        color: info.color,
-                        background: `${info.color}15`,
-                        padding: '1px 6px', borderRadius: 4,
-                        textTransform: 'uppercase', letterSpacing: '0.03em',
-                      }}>
-                        {info.label}
-                      </span>
-                    </div>
-                    <div style={{
-                      color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {change.summary}
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <path d="m9 18 6-6-6-6"/>
-                  </svg>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: '16px 28px',
-          borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.06))',
-          display: 'flex', justifyContent: 'flex-end', gap: 10,
-        }}>
-          <button onClick={onClose} style={{
-            padding: '8px 20px', borderRadius: 8, cursor: 'pointer',
-            background: 'var(--accent-gold, #D4943A)', border: 'none',
-            color: '#1a1a1a', fontSize: '0.8125rem', fontWeight: 600,
-          }}>
-            Review Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-/* ━━━ Form primitives ━━━ */
-
-function FInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <div className="fi-wrap">
-      <label className="fi-label">{label}</label>
-      <input className="fi-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
-  );
-}
-
-function FSelect({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void;
-}) {
-  return (
-    <div className="fi-wrap">
-      <label className="fi-label">{label}</label>
-      <select className="fi-select" value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => <option key={o} value={o}>{o || '—'}</option>)}
-      </select>
-    </div>
-  );
-}
 
 
 
