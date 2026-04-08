@@ -21,6 +21,7 @@ import { SceneRangeSelect } from './script-breakdown/breakdown-form/SceneRangeSe
 import { FInput, FSelect } from './script-breakdown/breakdown-form/form-primitives';
 import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
+import { DraftPdfViewer } from './script-breakdown/DraftPdfViewer';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
@@ -696,52 +697,7 @@ export function ScriptBreakdown({ projectId }: Props) {
       )}
 
       {/* Draft PDF Viewer */}
-      {viewingDraftPdf && (
-        <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={() => setViewingDraftPdf(null)}>
-          <div onClick={(e) => e.stopPropagation()} style={{
-            width: '90vw', height: '90vh', maxWidth: 1000,
-            background: 'var(--bg-primary, #1a1815)',
-            borderRadius: 12, overflow: 'hidden',
-            display: 'flex', flexDirection: 'column',
-            border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-          }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '16px 24px',
-              borderBottom: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button onClick={() => setViewingDraftPdf(null)} style={{
-                  background: 'none', border: 'none', color: 'var(--text-muted)',
-                  cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center',
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
-                  </svg>
-                </button>
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-heading)' }}>
-                  {viewingDraftPdf.name}
-                </span>
-              </div>
-              <button onClick={() => setViewingDraftPdf(null)} style={{
-                background: 'none', border: 'none', color: 'var(--text-muted)',
-                cursor: 'pointer', padding: 4,
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-            <div style={{ flex: 1, background: '#fff' }}>
-              <iframe
-                src={viewingDraftPdf.url}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title={viewingDraftPdf.name}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <DraftPdfViewer draft={viewingDraftPdf} onClose={() => setViewingDraftPdf(null)} />
 
       {/* Changes Summary Modal */}
       {showChangesModal && (
