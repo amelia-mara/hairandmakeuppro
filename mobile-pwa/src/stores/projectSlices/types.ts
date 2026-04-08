@@ -99,6 +99,13 @@ export interface ProjectState {
   addSFXPhoto: (captureId: string, photo: Photo) => void;
   removeSFXPhoto: (captureId: string, photoId: string) => void;
 
+  // Actions - Floor-team deviation record (separate from the hero
+  // continuity photo grid; auto-flagged in scene list when populated)
+  setDeviationNote: (captureId: string, note: string) => void;
+  addDeviationPhoto: (captureId: string, photo: Photo) => void;
+  removeDeviationPhoto: (captureId: string, photoId: string) => void;
+  clearDeviation: (captureId: string) => void;
+
   // Actions - Scene Management
   addScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => Scene;
   addCharacterToScene: (sceneId: string, characterId: string) => void;

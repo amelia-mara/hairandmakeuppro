@@ -3,3 +3,4 @@ export { SceneList } from './SceneList';
 export { SceneView } from './SceneView';
 export { SceneScriptModal } from './SceneScriptModal';
 export { Scenes } from './Scenes';
+export { SceneDeviationSection } from './SceneDeviationSection';
