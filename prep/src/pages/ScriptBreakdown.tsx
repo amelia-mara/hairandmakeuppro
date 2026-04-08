@@ -5,7 +5,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
   useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type ContinuityEvent, type HMWEntry, type SceneBreakdown,
-  type ScriptTag, type ParsedCharacterData, type ParsedSceneData, type SceneChange,
+  type ScriptTag, type ParsedCharacterData, type SceneChange,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
@@ -16,6 +16,7 @@ import { sceneColorClass } from '@/utils/sceneColorClass';
 import { buildTaggedSegments } from '@/utils/buildTaggedSegments';
 import { ordinal } from '@/utils/ordinal';
 import { usePanelResize } from '@/hooks/usePanelResize';
+import { useScriptDrafts } from '@/hooks/useScriptDrafts';
 import { ToolsIcon, ImportIcon, DraftsIcon, BreakdownViewIcon, ExportIcon } from '@/components/icons/ScriptBreakdownIcons';
 import { supabase } from '@/lib/supabase';
 
@@ -59,115 +60,24 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
 
-  /* Drafts dropdown state (inline within Tools menu) */
-  const [draftsExpanded, setDraftsExpanded] = useState(false);
-  const [drafts, setDrafts] = useState<ScriptDraft[]>([]);
-  const [draftsLoading, setDraftsLoading] = useState(false);
-  const [viewingDraftPdf, setViewingDraftPdf] = useState<{ url: string; name: string } | null>(null);
-  const [loadingDraftId, setLoadingDraftId] = useState<string | null>(null);
-
-  /* Fetch drafts when the drafts sub-dropdown is opened */
-  useEffect(() => {
-    if (!draftsExpanded || drafts.length > 0) return;
-    async function fetchDrafts() {
-      setDraftsLoading(true);
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('script_uploads')
-          .select('id, file_name, storage_path, file_size, scene_count, character_count, version_number, version_label, is_active, created_at, parsed_data')
-          .eq('project_id', projectId)
-          .order('created_at', { ascending: false });
-
-        if (fetchError) throw fetchError;
-        setDrafts(data || []);
-      } catch (err) {
-        console.error('Failed to fetch drafts:', err);
-      } finally {
-        setDraftsLoading(false);
-      }
-    }
-    fetchDrafts();
-  }, [draftsExpanded, projectId, drafts.length]);
-
-  /* Reset drafts cache when tools menu closes */
-  useEffect(() => {
-    if (!toolsOpen) {
-      setDraftsExpanded(false);
-      setDrafts([]);
-    }
-  }, [toolsOpen]);
-
-  /* Load a previous draft's praised/parsed data */
-  const handleLoadDraft = useCallback(async (draft: ScriptDraft) => {
-    if (!draft.parsed_data) return;
-    // Allow re-loading the active draft when the store is empty (e.g. after
-    // switching devices or clearing cache)
-    const storeHasData = !!parsedScriptStore.getParsedData(projectId);
-    if (draft.is_active && storeHasData) return;
-    setLoadingDraftId(draft.id);
-    try {
-      // Load the draft's parsed data into the parsedScriptStore
-      parsedScriptStore.setParsedData(projectId, {
-        scenes: draft.parsed_data.scenes,
-        characters: draft.parsed_data.characters,
-        looks: draft.parsed_data.looks,
-        filename: draft.parsed_data.filename,
-        parsedAt: draft.parsed_data.parsedAt,
-      });
-
-      // Update script upload store
-      scriptUpload.setScript(projectId, {
-        projectId,
-        filename: draft.file_name,
-        uploadedAt: draft.created_at,
-        sceneCount: draft.scene_count || 0,
-        rawText: '',
-      });
-
-      // Update active status in Supabase
-      await supabase.from('script_uploads')
-        .update({ is_active: false })
-        .eq('project_id', projectId)
-        .eq('is_active', true);
-
-      await supabase.from('script_uploads')
-        .update({ is_active: true })
-        .eq('id', draft.id);
-
-      // Update project filename
-      updateProject(projectId, { scriptFilename: draft.file_name });
-
-      // Refresh drafts list to show new active state
-      setDrafts((prev) => prev.map((d) => ({
-        ...d,
-        is_active: d.id === draft.id,
-      })));
-
-      setToolsOpen(false);
-    } catch (err) {
-      console.error('Failed to load draft:', err);
-    } finally {
-      setLoadingDraftId(null);
-    }
-  }, [projectId, parsedScriptStore, scriptUpload, updateProject]);
-
-  /* View a draft's original PDF */
-  const handleViewDraftPdf = useCallback(async (e: React.MouseEvent, draft: ScriptDraft) => {
-    e.stopPropagation();
-    try {
-      const { data, error: urlError } = await supabase.storage
-        .from('project-documents')
-        .createSignedUrl(draft.storage_path, 3600);
-
-      if (urlError) throw urlError;
-      if (data?.signedUrl) {
-        setViewingDraftPdf({ url: data.signedUrl, name: draft.file_name });
-        setToolsOpen(false);
-      }
-    } catch (err) {
-      console.error('Failed to get PDF URL:', err);
-    }
-  }, []);
+  /* Drafts drawer + auto-recover flow — lazy fetch, load draft,
+     sign PDF preview URL, and recover parsed data from script_uploads
+     when the local store is empty. All owned by this hook. */
+  const {
+    drafts,
+    draftsLoading,
+    draftsExpanded,
+    setDraftsExpanded,
+    loadingDraftId,
+    handleLoadDraft,
+    handleViewDraftPdf,
+    viewingDraftPdf,
+    setViewingDraftPdf,
+  } = useScriptDrafts({
+    projectId,
+    isToolsMenuOpen: toolsOpen,
+    onCloseToolsMenu: () => setToolsOpen(false),
+  });
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -185,50 +95,6 @@ export function ScriptBreakdown({ projectId }: Props) {
   /* Hide preamble from scene list — its content is merged into the first real scene */
   const preambleScene = ALL_SCENES.find(s => s.location === 'PREAMBLE');
   const nonPreambleScenes = useMemo(() => ALL_SCENES.filter(s => s.location !== 'PREAMBLE'), [ALL_SCENES]);
-
-  /* Auto-recover: if parsedScriptStore is empty but the active draft in
-     script_uploads has parsed_data, load it. This handles the case where
-     the scenes/characters tables are empty AND localStorage was cleared. */
-  useEffect(() => {
-    if (parsedData) return; // Already have data
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('script_uploads')
-          .select('id, file_name, parsed_data, created_at, scene_count')
-          .eq('project_id', projectId)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (cancelled || error || !data?.parsed_data) return;
-        const pd = data.parsed_data as {
-          scenes?: any[]; characters?: any[]; looks?: any[];
-          filename?: string; parsedAt?: string;
-        };
-        if (!pd.scenes || pd.scenes.length === 0) return;
-        console.log('[ScriptBreakdown] Auto-recovering parsed data from script_uploads —', pd.scenes.length, 'scenes');
-        parsedScriptStore.setParsedData(projectId, {
-          scenes: pd.scenes || [],
-          characters: pd.characters || [],
-          looks: pd.looks || [],
-          filename: pd.filename || data.file_name || 'script.pdf',
-          parsedAt: pd.parsedAt || new Date().toISOString(),
-        });
-        scriptUpload.setScript(projectId, {
-          projectId,
-          filename: data.file_name || 'script.pdf',
-          uploadedAt: data.created_at || new Date().toISOString(),
-          sceneCount: data.scene_count || pd.scenes.length,
-          rawText: '',
-        });
-      } catch (err) {
-        console.error('[ScriptBreakdown] Auto-recover failed:', err);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [projectId, parsedData, parsedScriptStore, scriptUpload]);
 
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
@@ -3134,26 +3000,5 @@ function FSelect({ label, value, options, onChange }: {
 }
 
 
-/* ━━━ PREVIOUS DRAFTS MODAL ━━━ */
-
-interface ScriptDraft {
-  id: string;
-  file_name: string;
-  storage_path: string;
-  file_size: number | null;
-  scene_count: number | null;
-  character_count: number | null;
-  version_number: number;
-  version_label: string | null;
-  is_active: boolean;
-  created_at: string;
-  parsed_data: {
-    scenes: ParsedSceneData[];
-    characters: ParsedCharacterData[];
-    looks: Look[];
-    filename: string;
-    parsedAt: string;
-  } | null;
-}
 
 
