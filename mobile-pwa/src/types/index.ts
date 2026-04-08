@@ -44,10 +44,29 @@ export interface PrepCharacterBreakdown {
   notes: string;
 }
 
+// Continuity event as written by prep's breakdown editor. This is a
+// separate shape from the mobile-pwa ContinuityEvent further down this
+// file because the prep version lives per-scene-per-character (has a
+// `characterId`) while mobile's native continuity events live on
+// Look / SceneCapture. Kept structural so any extra fields prep writes
+// (name, stage, scenes[], products, progression) round-trip cleanly.
+export interface PrepContinuityEvent {
+  id: string;
+  type: string;
+  characterId: string;
+  description: string;
+  sceneRange?: string;
+  name?: string;
+  stage?: string;
+  scenes?: string[];
+  products?: string;
+}
+
 export interface PrepSceneBreakdown {
   sceneId: string;
   timeline: { day: string; dayConfirmed?: boolean; time: string; type: string; note: string };
   characters: PrepCharacterBreakdown[];
+  continuityEvents?: PrepContinuityEvent[];
 }
 
 export interface Scene {

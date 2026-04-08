@@ -8,6 +8,7 @@ import type {
   HairDetails,
   MakeupDetails,
   PrepCharacterBreakdown,
+  PrepSceneBreakdown,
 } from '@/types';
 import { clsx } from 'clsx';
 
@@ -130,7 +131,7 @@ export function Breakdown() {
         const cb = bd?.characters?.find((c) => c.characterId === cid);
         const look = resolveLook(cb, cid, scene.sceneNumber);
         const resolved = resolveCharacterFields(cb, look);
-        const continuity = buildContinuityNotes(cb, cid, idx, findPrevScene, resolved);
+        const continuity = buildContinuityNotes(cb, cid, idx, findPrevScene, resolved, bd);
         rows.push([
           scene.sceneNumber,
           storyDay,
@@ -391,7 +392,7 @@ function SceneBlock({
             const cb = bd?.characters?.find((c) => c.characterId === cid);
             const look = resolveLook(cb, cid, scene.sceneNumber);
             const resolved = resolveCharacterFields(cb, look);
-            const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved);
+            const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved, bd);
             const hasChange = cb?.changeType === 'change';
 
             return (
@@ -563,12 +564,23 @@ function buildContinuityNotes(
   sceneIdx: number,
   findPrevScene: (charId: string, currentIdx: number) => string | null,
   resolved: ResolvedFields,
+  bd: PrepSceneBreakdown | undefined,
 ): string {
   const parts: string[] = [];
 
+  // 1. Active continuity events for this character in this scene.
+  //    Mirrors prep/src/pages/BreakdownSheet.tsx buildContinuityNotes.
+  if (bd?.continuityEvents && bd.continuityEvents.length > 0) {
+    const events = bd.continuityEvents.filter((e) => e.characterId === charId);
+    if (events.length > 0) {
+      parts.push(events.map((e) => e.description || e.type).join(', '));
+    }
+  }
+
+  // 2. Character-level breakdown notes from the form
   if (cb?.notes) parts.push(cb.notes);
 
-  // "Same as Sc N" only when there's no data at all for this character
+  // 3. "Same as Sc N" only when there's no data at all for this character
   const hasManualEntry =
     cb &&
     (cb.entersWith?.hair ||
