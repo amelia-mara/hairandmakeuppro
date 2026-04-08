@@ -925,41 +925,36 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
       const parsed = useParsedScriptStore.getState().getParsedData(projectId);
       const looks = parsed?.looks ?? [];
       for (const sceneId of changedSceneIds) {
+        const sceneTags = state.tags.filter((t) => t.sceneId === sceneId);
         const bd = breakdowns[sceneId];
         if (bd) {
-          const sceneTags = state.tags.filter((t) => t.sceneId === sceneId);
           const resolved = resolveBreakdownForSync(bd, sceneTags, looks);
           saveBreakdown(projectId, sceneId, resolved as any);
-        } else {
-          // No breakdown in store, but tags exist — build a minimal breakdown
-          // from tags so mobile can display the data
-          const sceneTags = state.tags.filter((t) => t.sceneId === sceneId && !t.dismissed);
-          if (sceneTags.length > 0) {
-            const scene = parsed?.scenes?.find((s: any) => s.id === sceneId);
-            const charIds: string[] = scene?.characterIds || [];
-            const tagBreakdown = {
-              sceneId,
-              timeline: { day: '', time: '', type: '', note: '' },
-              characters: charIds.map((cid: string) => {
-                const charTags = sceneTags.filter(t => t.characterId === cid);
-                const resolveTag = (catId: string) => {
-                  const m = charTags.filter(t => t.categoryId === catId);
-                  return m.length > 0 ? m.map(t => t.text).join(', ') : '';
-                };
-                return {
-                  characterId: cid, lookId: '',
-                  entersWith: { hair: resolveTag('hair'), makeup: resolveTag('makeup'), wardrobe: resolveTag('wardrobe') },
-                  sfx: resolveTag('sfx'), environmental: resolveTag('environmental'),
-                  action: resolveTag('action'),
-                  changeType: 'no-change', changeNotes: '',
-                  exitsWith: { hair: '', makeup: '', wardrobe: '' },
-                  notes: resolveTag('notes'),
-                };
-              }),
-              continuityEvents: [],
-            };
-            saveBreakdown(projectId, sceneId, tagBreakdown as any);
-          }
+          continue;
+        }
+        // No local breakdown — if there are live tags for this scene, build a
+        // minimal stub with empty form fields and let resolveBreakdownForSync
+        // attach the tags sideband so mobile can still render pills.
+        if (sceneTags.some((t) => !t.dismissed)) {
+          const scene = parsed?.scenes?.find((s: any) => s.id === sceneId);
+          const charIds: string[] = scene?.characterIds || [];
+          if (charIds.length === 0) continue;
+          const stub = {
+            sceneId,
+            timeline: { day: '', time: '', type: '', note: '' },
+            characters: charIds.map((cid: string) => ({
+              characterId: cid,
+              lookId: '',
+              entersWith: { hair: '', makeup: '', wardrobe: '' },
+              sfx: '', environmental: '', action: '',
+              changeType: 'no-change' as const, changeNotes: '',
+              exitsWith: { hair: '', makeup: '', wardrobe: '' },
+              notes: '',
+            })),
+            continuityEvents: [],
+          };
+          const resolved = resolveBreakdownForSync(stub, sceneTags, looks);
+          saveBreakdown(projectId, sceneId, resolved as any);
         }
       }
     });

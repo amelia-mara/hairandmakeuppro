@@ -9,6 +9,7 @@ import type {
   MakeupDetails,
   PrepCharacterBreakdown,
   PrepSceneBreakdown,
+  PrepBreakdownTag,
 } from '@/types';
 import { clsx } from 'clsx';
 
@@ -404,6 +405,7 @@ function SceneBlock({
                 resolved={resolved}
                 continuity={continuity}
                 hasChange={hasChange}
+                tags={bd?.tags ?? []}
               />
             );
           })
@@ -431,9 +433,31 @@ interface CharacterRowProps {
   resolved: ResolvedFields;
   continuity: string;
   hasChange: boolean;
+  tags: PrepBreakdownTag[];
 }
 
-function CharacterRow({ character, look, cb, resolved, continuity, hasChange }: CharacterRowProps) {
+function CharacterRow({
+  character,
+  look,
+  cb,
+  resolved,
+  continuity,
+  hasChange,
+  tags,
+}: CharacterRowProps) {
+  // Filter tags by category for this character. Tags are pure metadata
+  // attached as a sideband on PrepSceneBreakdown — they render as pills
+  // alongside the resolved field value, so they remain visible even when
+  // the user has manually entered text or applied a look on the prep side.
+  const tagsByCategory = (categoryId: string) =>
+    tags.filter((t) => t.characterId === character.id && t.categoryId === categoryId);
+  const hairTags = tagsByCategory('hair');
+  const makeupTags = tagsByCategory('makeup');
+  const wardrobeTags = tagsByCategory('wardrobe');
+  const sfxTags = tagsByCategory('sfx');
+  const envTags = tagsByCategory('environmental');
+  const actionTags = tagsByCategory('action');
+
   return (
     <div className="px-4 py-3">
       <div className="flex items-center gap-2 mb-2">
@@ -448,27 +472,48 @@ function CharacterRow({ character, look, cb, resolved, continuity, hasChange }: 
           value={resolved.hair}
           exit={hasChange ? cb?.exitsWith?.hair : undefined}
           color="text-amber-400"
+          tags={hairTags}
+          tagBorder="#D4943A"
         />
         <DetailRow
           label="Makeup"
           value={resolved.makeup}
           exit={hasChange ? cb?.exitsWith?.makeup : undefined}
           color="text-pink-400"
+          tags={makeupTags}
+          tagBorder="#C2785C"
         />
         <DetailRow
           label="Wardrobe"
           value={resolved.wardrobe}
           exit={hasChange ? cb?.exitsWith?.wardrobe : undefined}
           color="text-purple-400"
+          tags={wardrobeTags}
+          tagBorder="#ec4899"
         />
-        <DetailRow label="SFX" value={resolved.sfx} color="text-red-400" highlight={!!resolved.sfx} />
+        <DetailRow
+          label="SFX"
+          value={resolved.sfx}
+          color="text-red-400"
+          highlight={!!resolved.sfx}
+          tags={sfxTags}
+          tagBorder="#ef4444"
+        />
         <DetailRow
           label="Env."
           value={resolved.environmental}
           color="text-sky-400"
           highlight={!!resolved.environmental}
+          tags={envTags}
+          tagBorder="#38bdf8"
         />
-        <DetailRow label="Action" value={resolved.action} color="text-violet-400" />
+        <DetailRow
+          label="Action"
+          value={resolved.action}
+          color="text-violet-400"
+          tags={actionTags}
+          tagBorder="#a855f7"
+        />
         <NotesRow
           changeNotes={hasChange ? cb?.changeNotes : undefined}
           continuity={continuity}
@@ -486,23 +531,42 @@ function DetailRow({
   color,
   exit,
   highlight,
+  tags,
+  tagBorder,
 }: {
   label: string;
   value: string;
   color: string;
   exit?: string;
   highlight?: boolean;
+  tags?: PrepBreakdownTag[];
+  tagBorder?: string;
 }) {
+  const hasValue = !!value;
+  const hasTags = !!tags && tags.length > 0;
   return (
     <div className="flex items-start gap-2 text-xs">
       <span className={clsx('font-semibold flex-shrink-0 w-16', color)}>{label}</span>
       <div className="flex-1 min-w-0">
-        {value ? (
+        {hasValue ? (
           <span className={clsx(highlight ? 'text-foreground font-medium' : 'text-text-muted')}>
             {value}
           </span>
-        ) : (
+        ) : !hasTags ? (
           <span className="text-text-light">—</span>
+        ) : null}
+        {hasTags && (
+          <div className={clsx('flex flex-wrap gap-1', hasValue && 'mt-1')}>
+            {tags!.map((t) => (
+              <span
+                key={t.id}
+                className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
+                style={{ borderColor: tagBorder, color: tagBorder }}
+              >
+                {t.text}
+              </span>
+            ))}
+          </div>
         )}
         {exit && (
           <div className="text-[10px] text-text-light italic mt-0.5">Exit: {exit}</div>

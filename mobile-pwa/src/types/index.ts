@@ -62,11 +62,23 @@ export interface PrepContinuityEvent {
   products?: string;
 }
 
+// Sideband tag attached to PrepSceneBreakdown so the mobile breakdown
+// can render it as a coloured pill alongside the matching field. Tags
+// are no longer merged into entersWith / sfx / etc. — they're a separate
+// channel that survives manual edits and look-selection on the prep side.
+export interface PrepBreakdownTag {
+  id: string;
+  characterId?: string;
+  categoryId: string;
+  text: string;
+}
+
 export interface PrepSceneBreakdown {
   sceneId: string;
   timeline: { day: string; dayConfirmed?: boolean; time: string; type: string; note: string };
   characters: PrepCharacterBreakdown[];
   continuityEvents?: PrepContinuityEvent[];
+  tags?: PrepBreakdownTag[];
 }
 
 export interface Scene {

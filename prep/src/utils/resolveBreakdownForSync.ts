@@ -1,59 +1,76 @@
 import type { SceneBreakdown, ScriptTag, Look } from '@/stores/breakdownStore';
 
 /**
- * Resolve a SceneBreakdown for cross-app sync by merging the three sources
- * the prep BreakdownSheet uses at render time:
+ * Sideband tag payload attached to every synced breakdown. Mirrors the
+ * shape mobile-pwa consumes to render tag pills next to each column.
+ */
+export interface SyncedBreakdownTag {
+  id: string;
+  characterId?: string;
+  categoryId: string;
+  text: string;
+}
+
+/**
+ * Extended SceneBreakdown shape used for cross-app sync. Adds a `tags`
+ * sideband so the mobile app can render tags as pills alongside the
+ * resolved form-field values rather than merging tag text into them.
+ */
+export interface SyncedSceneBreakdown extends SceneBreakdown {
+  tags?: SyncedBreakdownTag[];
+}
+
+/**
+ * Resolve a SceneBreakdown for cross-app sync.
  *
- *   1. Manual entry from the scene breakdown panel form (`cb.entersWith.*`,
- *      `cb.sfx`, `cb.environmental`, `cb.action`, `cb.notes`)
- *   2. Script tag text from useTagStore (joined by ", ")
- *   3. Look defaults from the assigned look (`charLook.hair/makeup/wardrobe`)
+ * Field values (`entersWith.*`, `sfx`, `environmental`, `action`, `notes`)
+ * carry ONLY what the user manually entered in the scene breakdown panel,
+ * falling back to the assigned look's hair/makeup/wardrobe strings when a
+ * field is empty. Script tags are NO LONGER merged into these fields — they
+ * are attached as a sideband `tags[]` array so the consumer (mobile or
+ * prep's BreakdownSheet) can render them as pills that remain visible
+ * even when the user overwrites the field with manual text or a look.
  *
- * This must stay in lock-step with the resolver in
- * `prep/src/pages/BreakdownSheet.tsx` so that the data the mobile app reads
- * out of `filming_notes` matches exactly what prep displays.
- *
- * Without this merge, a user who assigns a look to a character but never
- * manually edits the breakdown form (and never tags the script for those
- * fields) sees the look's hair/makeup/wardrobe in prep but empty fields in
- * mobile, because the synced payload only contained the unfilled form data.
+ * This must stay in lock-step with the render logic in
+ * `prep/src/pages/BreakdownSheet.tsx` and
+ * `mobile-pwa/src/components/breakdown/Breakdown.tsx`.
  */
 export function resolveBreakdownForSync(
   bd: SceneBreakdown,
   sceneTags: ScriptTag[],
   looks: Look[],
-): SceneBreakdown {
-  return {
+): SyncedSceneBreakdown {
+  const resolved: SyncedSceneBreakdown = {
     ...bd,
     characters: bd.characters.map((cb) => {
       const charLook = cb.lookId ? looks.find((l) => l.id === cb.lookId) : null;
-      const charTags = sceneTags.filter(
-        (t) => t.characterId === cb.characterId && !t.dismissed,
-      );
 
-      const resolveField = (
-        manual: string,
-        categoryId: string,
-        lookField?: string,
-      ): string => {
+      const resolveField = (manual: string, lookField?: string): string => {
         if (manual) return manual;
-        const matching = charTags.filter((t) => t.categoryId === categoryId);
-        if (matching.length > 0) return matching.map((t) => t.text).join(', ');
         return lookField || '';
       };
 
       return {
         ...cb,
         entersWith: {
-          hair: resolveField(cb.entersWith.hair, 'hair', charLook?.hair),
-          makeup: resolveField(cb.entersWith.makeup, 'makeup', charLook?.makeup),
-          wardrobe: resolveField(cb.entersWith.wardrobe, 'wardrobe', charLook?.wardrobe),
+          hair: resolveField(cb.entersWith.hair, charLook?.hair),
+          makeup: resolveField(cb.entersWith.makeup, charLook?.makeup),
+          wardrobe: resolveField(cb.entersWith.wardrobe, charLook?.wardrobe),
         },
-        sfx: resolveField(cb.sfx, 'sfx'),
-        environmental: resolveField(cb.environmental, 'environmental'),
-        action: resolveField(cb.action, 'action'),
-        notes: resolveField(cb.notes, 'notes'),
+        sfx: cb.sfx || '',
+        environmental: cb.environmental || '',
+        action: cb.action || '',
+        notes: cb.notes || '',
       };
     }),
+    tags: sceneTags
+      .filter((t) => !t.dismissed)
+      .map((t) => ({
+        id: t.id,
+        characterId: t.characterId,
+        categoryId: t.categoryId,
+        text: t.text,
+      })),
   };
+  return resolved;
 }
