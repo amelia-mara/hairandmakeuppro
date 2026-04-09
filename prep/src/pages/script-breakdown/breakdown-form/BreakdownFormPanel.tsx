@@ -44,17 +44,11 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();
-  if (!breakdown) return null;
-
-  const sceneIdx = scenes.findIndex((s) => s.id === scene.id);
-  const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
-  const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
-
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
   const synopsisStore = useSynopsisStore();
-  const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
+  const synopsis = synopsisStore.getSynopsis(breakdown ? scene.id : '', breakdown ? scene.synopsis : '');
   const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
 
   useEffect(() => {
@@ -69,6 +63,12 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [scene.id]);
+
+  if (!breakdown) return null;
+
+  const sceneIdx = scenes.findIndex((s) => s.id === scene.id);
+  const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
+  const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
   return (
     <div className="fp-wrap">

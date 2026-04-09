@@ -15,6 +15,7 @@ import {
 import { ordinal } from '@/utils/ordinal';
 import { FInput } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
+import { CostumeBreakdownFields, type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
 /**
  * Per-character form block rendered inside BreakdownFormPanel. One
@@ -29,8 +30,6 @@ import { SceneRangeSelect } from './SceneRangeSelect';
  * Everything else flows through the 15 props received from
  * BreakdownFormPanel.
  */
-import { CostumeBreakdownFields, type CostumeSceneBreakdown } from './CostumeBreakdownFields';
-
 export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook, department, costumeData, onCostumeUpdate }: {
   char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
