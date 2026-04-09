@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import {
   BREAKDOWN_CATEGORIES,
+  getBreakdownCategoriesForDepartment,
   type Character,
   type Scene,
   type ScriptTag,
@@ -35,6 +36,7 @@ interface ScriptTagPopupProps {
   onEditChangeCategory: (tagId: string, newCatId: string) => void;
   onEditDeleteTag: (tagId: string) => void;
   onBack: () => void;
+  department?: 'hmu' | 'costume';
 }
 
 /**
@@ -65,7 +67,9 @@ export function ScriptTagPopup({
   onEditChangeCategory,
   onEditDeleteTag,
   onBack,
+  department,
 }: ScriptTagPopupProps) {
+  const deptBreakdownCats = getBreakdownCategoriesForDepartment(department);
   if (!popup) return null;
 
   return createPortal(
@@ -120,7 +124,7 @@ export function ScriptTagPopup({
           <div className="sv-tag-popup-field-section">
             <div className="sv-tag-popup-field-label">Scene Breakdown</div>
             <div className="sv-tag-popup-grid">
-              {BREAKDOWN_CATEGORIES.filter(c => c.group === 'breakdown').map((cat) => (
+              {deptBreakdownCats.map((cat) => (
                 <button key={cat.id} className="sv-tag-popup-btn" onClick={() => onFieldPick(cat.id)}>
                   <span className="sv-tag-popup-swatch" style={{ background: cat.color }} />
                   {cat.label}
