@@ -220,19 +220,30 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
 
 // ─── TIER 3: TOD REGRESSION ─────────────────────────────────────────────────
 
+/** Map a TOD value to a numeric time order for regression detection. */
+export function getTimeOrder(tod: TOD): number {
+  switch (tod) {
+    case 'DAWN':        return 0.5;  // DAWN, SUNRISE
+    case 'MORNING':     return 1;    // MORNING, EARLY MORNING
+    case 'DAY':         return 2;    // DAY, MIDDAY, NOON
+    case 'AFTERNOON':   return 2.5;
+    case 'DUSK':        return 3;    // DUSK, SUNSET, GOLDEN HOUR, TWILIGHT
+    case 'EVENING':     return 3.5;
+    case 'NIGHT':       return 4;    // NIGHT, LATE NIGHT
+    case 'MIDNIGHT':    return 4.5;
+    default:            return -1;   // UNKNOWN, CONTINUOUS, LATER, etc.
+  }
+}
+
 type RegressionResult = 'new-day' | 'same-day' | 'ambiguous';
 
 export function checkTODRegression(prev: TOD, curr: TOD): RegressionResult {
   if (SKIP_SET.has(prev) || SKIP_SET.has(curr)) return 'ambiguous';
-  const prevNight = NIGHT_SET.has(prev);
-  const currNight = NIGHT_SET.has(curr);
-  const prevDay   = DAY_SET.has(prev);
-  const currDay   = DAY_SET.has(curr);
-  if (prevNight && currDay)   return 'new-day';   // NIGHT→DAY = overnight
-  if (prevDay   && currNight) return 'same-day';  // DAY→NIGHT = same evening
-  if (prevDay   && currDay)   return 'same-day';  // DAY→DAY = same day
-  if (prevNight && currNight) return 'ambiguous'; // NIGHT→NIGHT = unclear
-  return 'ambiguous';
+  const prevTimeOrder = getTimeOrder(prev);
+  const currTimeOrder = getTimeOrder(curr);
+  if (prevTimeOrder === -1 || currTimeOrder === -1) return 'ambiguous';
+  if (currTimeOrder < prevTimeOrder) return 'new-day';
+  return 'same-day';
 }
 
 // ─── CONCURRENT DETECTION ───────────────────────────────────────────────────
