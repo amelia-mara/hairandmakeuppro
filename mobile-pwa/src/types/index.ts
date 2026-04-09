@@ -44,10 +44,41 @@ export interface PrepCharacterBreakdown {
   notes: string;
 }
 
+// Continuity event as written by prep's breakdown editor. This is a
+// separate shape from the mobile-pwa ContinuityEvent further down this
+// file because the prep version lives per-scene-per-character (has a
+// `characterId`) while mobile's native continuity events live on
+// Look / SceneCapture. Kept structural so any extra fields prep writes
+// (name, stage, scenes[], products, progression) round-trip cleanly.
+export interface PrepContinuityEvent {
+  id: string;
+  type: string;
+  characterId: string;
+  description: string;
+  sceneRange?: string;
+  name?: string;
+  stage?: string;
+  scenes?: string[];
+  products?: string;
+}
+
+// Sideband tag attached to PrepSceneBreakdown so the mobile breakdown
+// can render it as a coloured pill alongside the matching field. Tags
+// are no longer merged into entersWith / sfx / etc. — they're a separate
+// channel that survives manual edits and look-selection on the prep side.
+export interface PrepBreakdownTag {
+  id: string;
+  characterId?: string;
+  categoryId: string;
+  text: string;
+}
+
 export interface PrepSceneBreakdown {
   sceneId: string;
   timeline: { day: string; dayConfirmed?: boolean; time: string; type: string; note: string };
   characters: PrepCharacterBreakdown[];
+  continuityEvents?: PrepContinuityEvent[];
+  tags?: PrepBreakdownTag[];
 }
 
 export interface Scene {
@@ -248,8 +279,27 @@ export interface SceneCapture {
   sfxDetails: SFXDetails;
   notes: string;
   applicationTime?: number;
+  // Floor-team deviation record. Optional — when set with non-empty
+  // note OR at least one photo, the scene is considered to have a
+  // logged deviation and is auto-flagged in the scene list.
+  deviation?: SceneDeviation;
   // Costume continuity data (used when department === 'costume')
   costumeContinuity?: import('@/config/department').CostumeContinuityData;
+}
+
+/**
+ * Floor-team deviation record attached to a SceneCapture.
+ *
+ * Captures anything that differs from the lookbook on the day. Owned by
+ * the standby/floor team during shoot. Self-contained — no Designer
+ * sign-off required. Has its own photo collection separate from the
+ * hero continuity photo grid so deviation evidence stays distinct from
+ * the standard continuity record.
+ */
+export interface SceneDeviation {
+  note: string;
+  photos: Photo[];
+  loggedAt?: Date;
 }
 
 export interface Photo {

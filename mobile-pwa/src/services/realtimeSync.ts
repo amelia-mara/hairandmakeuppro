@@ -235,8 +235,24 @@ function handleSceneChange(payload: ChangePayload) {
     }
   } else if (payload.eventType === 'INSERT' && payload.new) {
     const row = payload.new as Record<string, unknown>;
+    const rowId = row.id as string | undefined;
+    const rowSceneNumber = (row.scene_number as string) || '0';
+
+    // Skip if this scene already exists locally — by id (server pushed
+    // back our own insert) or by sceneNumber (we already have this scene
+    // under a different id). Re-adding would create a duplicate Scene
+    // with empty characters, since the realtime payload doesn't include
+    // the scene_characters junction rows.
+    const alreadyExists = project.scenes.some(
+      (s) => (rowId && s.id === rowId) || s.sceneNumber === rowSceneNumber,
+    );
+    if (alreadyExists) {
+      console.log('[AppRealtime] Scene insert ignored (already present):', rowId, rowSceneNumber);
+      return;
+    }
+
     store.addScene({
-      sceneNumber: (row.scene_number as string) || '0',
+      sceneNumber: rowSceneNumber,
       slugline: `${row.int_ext || 'INT'}. ${row.location || ''} - ${row.time_of_day || 'DAY'}`,
       intExt: (row.int_ext as 'INT' | 'EXT') || 'INT',
       timeOfDay: (row.time_of_day as any) || 'DAY',
@@ -244,7 +260,7 @@ function handleSceneChange(payload: ChangePayload) {
       scriptContent: (row.script_content as string) || '',
       characters: [],
     });
-    console.log('[AppRealtime] Scene inserted:', row.id);
+    console.log('[AppRealtime] Scene inserted:', rowId);
   }
 }
 

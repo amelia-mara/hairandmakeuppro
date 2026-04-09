@@ -130,7 +130,35 @@ export function autoSaveScenes(): void {
   const scenes = [...project.scenes];
 
   debounced('scenes', async () => {
-    const dbScenes = deduplicateSceneNumbers(scenes.map(s => sceneToDb(s, projectId)));
+    // Preserve prep-authored filming_notes for any scenes whose local
+    // prepBreakdown is undefined. Without this guard, sceneToDb would
+    // upsert filming_notes: null and wipe out the prep-written breakdown
+    // (which the user only sees in mobile's Breakdown tab).
+    const existingFilmingNotes = new Map<string, string | null>();
+    const sceneIdsToCheck = scenes
+      .filter(s => !s.prepBreakdown && !s.filmingNotes)
+      .map(s => s.id);
+    if (sceneIdsToCheck.length > 0) {
+      const { data: existingRows } = await supabase
+        .from('scenes')
+        .select('id, filming_notes')
+        .in('id', sceneIdsToCheck);
+      if (existingRows) {
+        for (const row of existingRows) {
+          existingFilmingNotes.set(row.id as string, row.filming_notes as string | null);
+        }
+      }
+    }
+
+    const dbScenes = deduplicateSceneNumbers(
+      scenes.map(s => {
+        const row = sceneToDb(s, projectId);
+        if (!s.prepBreakdown && !s.filmingNotes && existingFilmingNotes.has(s.id)) {
+          row.filming_notes = existingFilmingNotes.get(s.id) ?? null;
+        }
+        return row;
+      }),
+    );
     const { error } = await supabase
       .from('scenes')
       .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
@@ -408,7 +436,34 @@ export async function saveEverythingToSupabase(): Promise<void> {
   // ── 1. Scenes + scene_characters ──────────────────────────────
   if (project.scenes.length > 0) {
     try {
-      const dbScenes = deduplicateSceneNumbers(project.scenes.map(s => sceneToDb(s, projectId)));
+      // Preserve prep-authored filming_notes for any scenes whose local
+      // prepBreakdown is undefined (otherwise sceneToDb would write null
+      // and wipe out the prep breakdown data).
+      const existingFilmingNotes = new Map<string, string | null>();
+      const sceneIdsToCheck = project.scenes
+        .filter(s => !s.prepBreakdown && !s.filmingNotes)
+        .map(s => s.id);
+      if (sceneIdsToCheck.length > 0) {
+        const { data: existingRows } = await supabase
+          .from('scenes')
+          .select('id, filming_notes')
+          .in('id', sceneIdsToCheck);
+        if (existingRows) {
+          for (const row of existingRows) {
+            existingFilmingNotes.set(row.id as string, row.filming_notes as string | null);
+          }
+        }
+      }
+
+      const dbScenes = deduplicateSceneNumbers(
+        project.scenes.map(s => {
+          const row = sceneToDb(s, projectId);
+          if (!s.prepBreakdown && !s.filmingNotes && existingFilmingNotes.has(s.id)) {
+            row.filming_notes = existingFilmingNotes.get(s.id) ?? null;
+          }
+          return row;
+        }),
+      );
       const { error } = await supabase
         .from('scenes')
         .upsert(dbScenes, { onConflict: 'project_id,scene_number' });

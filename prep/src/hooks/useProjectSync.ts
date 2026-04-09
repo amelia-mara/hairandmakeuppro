@@ -50,9 +50,8 @@ import {
   useScriptUploadStore,
   useTagStore,
   useRevisedScenesStore,
-  type SceneBreakdown,
-  type ScriptTag,
 } from '@/stores/breakdownStore';
+import { resolveBreakdownForSync } from '@/utils/resolveBreakdownForSync';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useBudgetStore } from '@/stores/budgetStore';
@@ -96,45 +95,6 @@ function buildLookSceneMap(projectId: string): Record<string, string[]> {
   return map;
 }
 
-/**
- * Resolve a breakdown for Supabase sync by merging script tag text into any
- * empty breakdown fields.  This ensures the mobile app (which only reads
- * `filming_notes`) sees the same data that Prep's BreakdownSheet displays.
- */
-function resolveBreakdownForSync(
-  bd: SceneBreakdown,
-  sceneTags: ScriptTag[],
-): SceneBreakdown {
-  const resolved = {
-    ...bd,
-    characters: bd.characters.map((cb) => {
-      const charTags = sceneTags.filter((t) => t.characterId === cb.characterId && !t.dismissed);
-
-      const resolveField = (
-        manual: string,
-        categoryId: string,
-      ): string => {
-        if (manual) return manual;
-        const matching = charTags.filter((t) => t.categoryId === categoryId);
-        return matching.length > 0 ? matching.map((t) => t.text).join(', ') : '';
-      };
-
-      return {
-        ...cb,
-        entersWith: {
-          hair: resolveField(cb.entersWith.hair, 'hair'),
-          makeup: resolveField(cb.entersWith.makeup, 'makeup'),
-          wardrobe: resolveField(cb.entersWith.wardrobe, 'wardrobe'),
-        },
-        sfx: resolveField(cb.sfx, 'sfx'),
-        environmental: resolveField(cb.environmental, 'environmental'),
-        action: resolveField(cb.action, 'action'),
-        notes: resolveField(cb.notes, 'notes'),
-      };
-    }),
-  };
-  return resolved;
-}
 
 interface ProjectSyncState {
   loading: boolean;
@@ -440,6 +400,28 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           }
         }
 
+        // ── Re-resolve and re-save existing breakdowns ──
+        // After tags + looks are populated in their stores, re-run the
+        // resolver over every loaded breakdown and write the merged result
+        // back to filming_notes. This upgrades any data written by older
+        // versions of prep that didn't merge tag text + look defaults into
+        // the synced payload, so the mobile Breakdown tab sees exactly what
+        // prep's BreakdownSheet displays without needing the user to
+        // manually edit each scene first.
+        {
+          const allLoadedBreakdowns = useBreakdownStore.getState().breakdowns;
+          const allLoadedTags = useTagStore.getState().tags;
+          const allLoadedLooks = useParsedScriptStore.getState().getParsedData(projectId!)?.looks ?? [];
+          for (const [sceneId, bd] of Object.entries(allLoadedBreakdowns)) {
+            // Skip mock breakdown ids and scenes not in the current parsed set
+            if (!scenes.some((s: any) => s.id === sceneId)) continue;
+            if (!bd || !bd.characters || bd.characters.length === 0) continue;
+            const sceneTags = allLoadedTags.filter((t) => t.sceneId === sceneId);
+            const resolved = resolveBreakdownForSync(bd, sceneTags, allLoadedLooks);
+            saveBreakdown(projectId!, sceneId, resolved as any);
+          }
+        }
+
         // ── Populate revised scenes store (always, regardless of scene data) ──
         if (data.revision) {
           const changes = (data.revision.changes as any[]) || [];
@@ -554,14 +536,16 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               saveTags(projectId!, localTags);
             }
 
-            // Sync breakdowns (resolve tag text into empty fields for mobile)
+            // Sync breakdowns (merge tag text + look defaults into empty
+            // fields so mobile sees what prep's BreakdownSheet displays)
             const allTags = useTagStore.getState().tags;
             const breakdowns = useBreakdownStore.getState().breakdowns;
+            const allLooks = localParsed.looks;
             for (const [sceneId, bd] of Object.entries(breakdowns)) {
               // Skip mock breakdown IDs (s1, s2, etc.)
               if (localParsed.scenes.some(s => s.id === sceneId)) {
                 const sceneTags = allTags.filter((t) => t.sceneId === sceneId);
-                const resolved = resolveBreakdownForSync(bd, sceneTags);
+                const resolved = resolveBreakdownForSync(bd, sceneTags, allLooks);
                 saveBreakdown(projectId!, sceneId, resolved as any);
               }
             }
@@ -734,14 +718,16 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
     const unsub = useBreakdownStore.subscribe((state, prevState) => {
       if (state.breakdowns === prevState.breakdowns) return;
 
-      // Resolve tag text into empty fields before saving so mobile sees complete data
+      // Resolve tag text + look defaults into empty fields before saving
+      // so mobile sees the same data prep's BreakdownSheet displays.
       const tags = useTagStore.getState().tags;
+      const looks = useParsedScriptStore.getState().getParsedData(projectId)?.looks ?? [];
 
       // Find which breakdowns changed and save each one
       for (const sceneId of Object.keys(state.breakdowns)) {
         if (state.breakdowns[sceneId] !== prevState.breakdowns[sceneId]) {
           const sceneTags = tags.filter((t) => t.sceneId === sceneId);
-          const resolved = resolveBreakdownForSync(state.breakdowns[sceneId], sceneTags);
+          const resolved = resolveBreakdownForSync(state.breakdowns[sceneId], sceneTags, looks);
           saveBreakdown(projectId, sceneId, resolved as any);
         }
       }
@@ -937,42 +923,38 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
       const breakdowns = useBreakdownStore.getState().breakdowns;
       const parsed = useParsedScriptStore.getState().getParsedData(projectId);
+      const looks = parsed?.looks ?? [];
       for (const sceneId of changedSceneIds) {
+        const sceneTags = state.tags.filter((t) => t.sceneId === sceneId);
         const bd = breakdowns[sceneId];
         if (bd) {
-          const sceneTags = state.tags.filter((t) => t.sceneId === sceneId);
-          const resolved = resolveBreakdownForSync(bd, sceneTags);
+          const resolved = resolveBreakdownForSync(bd, sceneTags, looks);
           saveBreakdown(projectId, sceneId, resolved as any);
-        } else {
-          // No breakdown in store, but tags exist — build a minimal breakdown
-          // from tags so mobile can display the data
-          const sceneTags = state.tags.filter((t) => t.sceneId === sceneId && !t.dismissed);
-          if (sceneTags.length > 0) {
-            const scene = parsed?.scenes?.find((s: any) => s.id === sceneId);
-            const charIds: string[] = scene?.characterIds || [];
-            const tagBreakdown = {
-              sceneId,
-              timeline: { day: '', time: '', type: '', note: '' },
-              characters: charIds.map((cid: string) => {
-                const charTags = sceneTags.filter(t => t.characterId === cid);
-                const resolveTag = (catId: string) => {
-                  const m = charTags.filter(t => t.categoryId === catId);
-                  return m.length > 0 ? m.map(t => t.text).join(', ') : '';
-                };
-                return {
-                  characterId: cid, lookId: '',
-                  entersWith: { hair: resolveTag('hair'), makeup: resolveTag('makeup'), wardrobe: resolveTag('wardrobe') },
-                  sfx: resolveTag('sfx'), environmental: resolveTag('environmental'),
-                  action: resolveTag('action'),
-                  changeType: 'no-change', changeNotes: '',
-                  exitsWith: { hair: '', makeup: '', wardrobe: '' },
-                  notes: resolveTag('notes'),
-                };
-              }),
-              continuityEvents: [],
-            };
-            saveBreakdown(projectId, sceneId, tagBreakdown as any);
-          }
+          continue;
+        }
+        // No local breakdown — if there are live tags for this scene, build a
+        // minimal stub with empty form fields and let resolveBreakdownForSync
+        // attach the tags sideband so mobile can still render pills.
+        if (sceneTags.some((t) => !t.dismissed)) {
+          const scene = parsed?.scenes?.find((s: any) => s.id === sceneId);
+          const charIds: string[] = scene?.characterIds || [];
+          if (charIds.length === 0) continue;
+          const stub = {
+            sceneId,
+            timeline: { day: '', time: '', type: '', note: '' },
+            characters: charIds.map((cid: string) => ({
+              characterId: cid,
+              lookId: '',
+              entersWith: { hair: '', makeup: '', wardrobe: '' },
+              sfx: '', environmental: '', action: '',
+              changeType: 'no-change' as const, changeNotes: '',
+              exitsWith: { hair: '', makeup: '', wardrobe: '' },
+              notes: '',
+            })),
+            continuityEvents: [],
+          };
+          const resolved = resolveBreakdownForSync(stub, sceneTags, looks);
+          saveBreakdown(projectId, sceneId, resolved as any);
         }
       }
     });
