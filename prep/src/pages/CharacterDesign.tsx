@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
+import { useProjectStore } from '@/stores/projectStore';
 import {
   MOCK_SCENES, MOCK_CHARACTERS,
   useParsedScriptStore,
@@ -113,6 +114,8 @@ const useCharacterDesignStore = create<CharacterDesignStore>()(
 export function CharacterDesign({ projectId }: Props) {
   const [view, setView] = useState<ViewMode>('gallery');
   const [filter, setFilter] = useState<FilterMode>('all');
+  const cdProject = useProjectStore((s) => s.getProject(projectId));
+  const cdDeptLabel = cdProject?.department === 'costume' ? 'Costume' : 'Hair & Makeup';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCharId, setSelectedCharId] = useState<string>('');
   const [isDirty, setIsDirty] = useState(false);
@@ -286,7 +289,7 @@ export function CharacterDesign({ projectId }: Props) {
                 <span className="cd-title-regular">Design</span>
               </h1>
               <div className="cd-gh-sub">
-                {allCharacters.length} character{allCharacters.length !== 1 ? 's' : ''} · Hair &amp; Makeup
+                {allCharacters.length} character{allCharacters.length !== 1 ? 's' : ''} · {cdDeptLabel}
               </div>
             </div>
             <div className="cd-gh-actions">

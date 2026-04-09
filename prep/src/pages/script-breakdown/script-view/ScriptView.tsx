@@ -32,7 +32,7 @@ import {
  *     parent (drives the active scene in the left panel)
  *   - Revised-scene class for visual highlighting
  */
-export function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, onSynopsisTag, projectId }: {
+export function ScriptView({ scenes, preambleScene, characters, selectedSceneId, scrollTrigger, onSceneVisible, fontSize, onCharClick, onTagCreated, onSynopsisTag, projectId, department }: {
   scenes: Scene[];
   preambleScene?: Scene;
   characters: Character[];
@@ -44,6 +44,7 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
   onTagCreated: (sceneId: string, characterId: string, categoryId: string, text: string) => void;
   onSynopsisTag: (sceneId: string, text: string) => void;
   projectId: string;
+  department?: 'hmu' | 'costume';
 }) {
   const charNames = characters.map((c) => c.name);
   const cueNameToChar = useMemo(() => {
@@ -467,6 +468,7 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
         onEditChangeCategory={handleEditChangeCategory}
         onEditDeleteTag={handleEditDeleteTag}
         onBack={() => popup && setPopup({ ...popup, step: 'character' })}
+        department={department}
       />
     </div>
   );

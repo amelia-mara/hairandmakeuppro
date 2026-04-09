@@ -6,6 +6,7 @@ export interface Project {
   title: string;
   genre: string;
   type: string;
+  department?: 'hmu' | 'costume';
   status: 'active' | 'setup' | 'wrapped';
   progress: number;
   lastActive: string;

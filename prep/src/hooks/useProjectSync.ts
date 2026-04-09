@@ -231,6 +231,15 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               const characterId = entry.character_id as string;
               if (sceneId && characterId) {
                 const flags = (entry.continuity_flags as Record<string, boolean>) || {};
+                // Extract costume lookbook from JSONB if present
+                const rawEventsData = entry.continuity_events_data as unknown;
+                let costumeLookbook: { outfit?: string; accessories?: string; breakdown?: string } | undefined;
+                if (rawEventsData && typeof rawEventsData === 'object' && !Array.isArray(rawEventsData)) {
+                  const obj = rawEventsData as Record<string, unknown>;
+                  if (obj.costume_lookbook) {
+                    costumeLookbook = obj.costume_lookbook as typeof costumeLookbook;
+                  }
+                }
                 useContinuityTrackerStore.getState().setEntry(sceneId, characterId, {
                   sceneId,
                   characterId,
@@ -244,6 +253,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                     tears: flags.tears || false,
                   },
                   notes: (entry.general_notes as string) || '',
+                  costumeLookbook,
                 });
 
                 // Restore continuity photos from the stored metadata
@@ -558,6 +568,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                   status: entry.status === 'pending' ? 'not_started' : entry.status,
                   flags: { ...entry.flags } as Record<string, boolean>,
                   generalNotes: entry.notes,
+                  costumeLookbook: entry.costumeLookbook,
                 });
               }
             }
@@ -760,6 +771,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               status: entry.status === 'pending' ? 'not_started' : entry.status,
               flags: { ...entry.flags } as Record<string, boolean>,
               generalNotes: entry.notes,
+              costumeLookbook: entry.costumeLookbook,
             });
           }
         }

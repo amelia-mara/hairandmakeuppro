@@ -6,11 +6,15 @@ import {
   Clapperboard,
   Music,
   Video,
+  Scissors,
+  Palette,
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { PROJECT_TYPES, type ProjectType } from '@/types';
 import { createProjectInSupabase } from '@/services/projectService';
 import { ensurePrepAccess } from '@/services/designerUpgrade';
+
+type DepartmentType = 'hmu' | 'costume';
 
 const TYPE_ICONS: Record<ProjectType, typeof Film> = {
   'Feature Film': Film,
@@ -29,9 +33,10 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
   const [title, setTitle] = useState('');
   const [genre, setGenre] = useState('');
   const [projectType, setProjectType] = useState<ProjectType | ''>('');
+  const [department, setDepartment] = useState<DepartmentType | ''>('');
   const addProject = useProjectStore((s) => s.addProject);
 
-  const canCreate = title.trim() && projectType;
+  const canCreate = title.trim() && projectType && department;
 
   const [isCreating, setIsCreating] = useState(false);
 
@@ -41,9 +46,11 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
 
     try {
       // Create in Supabase first to get a real UUID
+      const dept = department || 'hmu';
       const { project: sbProject, error } = await createProjectInSupabase(
         title.trim(),
         projectType,
+        dept,
       );
 
       // Use Supabase UUID if available, fall back to local ID
@@ -54,6 +61,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
         title: title.trim(),
         genre: genre.trim(),
         type: projectType,
+        department: dept,
         status: 'setup',
         progress: 0,
         lastActive: new Date().toISOString(),
@@ -76,7 +84,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
       console.error('[CreateProject] Unexpected error:', err);
       setIsCreating(false);
     }
-  }, [title, genre, projectType, canCreate, isCreating, addProject, onComplete]);
+  }, [title, genre, projectType, department, canCreate, isCreating, addProject, onComplete]);
 
   // Close on Escape
   useEffect(() => {
@@ -222,6 +230,43 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
                       color: selected ? 'var(--accent-gold)' : 'var(--text-label)',
                     }}>
                       {type}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Department selector */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              color: 'var(--text-secondary)',
+              marginBottom: '10px',
+            }}>
+              Department
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {([
+                { value: 'hmu' as DepartmentType, label: 'Hair & Makeup', Icon: Palette },
+                { value: 'costume' as DepartmentType, label: 'Costume', Icon: Scissors },
+              ]).map(({ value, label, Icon }) => {
+                const selected = department === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setDepartment(value)}
+                    className={`type-card${selected ? ' type-card--selected' : ''}`}
+                  >
+                    <Icon size={20} style={{ color: selected ? 'var(--accent-gold)' : 'var(--text-muted)' }} />
+                    <span style={{
+                      fontSize: '0.6875rem',
+                      fontWeight: 500,
+                      color: selected ? 'var(--accent-gold)' : 'var(--text-label)',
+                    }}>
+                      {label}
                     </span>
                   </button>
                 );

@@ -248,6 +248,22 @@ export interface SFXDetails {
   sfxReferencePhotos: Photo[];
 }
 
+// Costume lookbook fields — filled by the Designer during prep.
+// Stored in continuity_events_data JSONB under key "costume_lookbook".
+export interface CostumeLookbook {
+  outfit?: string;
+  accessories?: string;
+  breakdown?: string;
+}
+
+// Floor tracking fields — editable by the floor team during shoot.
+// Stored in continuity_events_data JSONB under key "floor_tracking".
+export interface FloorTracking {
+  floorNote?: string;
+  hasDeviation?: boolean;
+  deviationNote?: string;
+}
+
 export interface SceneCapture {
   id: string;
   sceneId: string;
@@ -285,6 +301,9 @@ export interface SceneCapture {
   deviation?: SceneDeviation;
   // Costume continuity data (used when department === 'costume')
   costumeContinuity?: import('@/config/department').CostumeContinuityData;
+  // Two-layer model: costume lookbook (Designer prep) and floor tracking (on-set)
+  costumeLookbook?: CostumeLookbook;
+  floorTracking?: FloorTracking;
 }
 
 /**
@@ -340,6 +359,9 @@ export interface ContinuityEvent {
   products: string;
   referencePhotos: Photo[];
   progression?: ProgressionStage[]; // Timeline of how the event changes across scenes
+  // Two-layer model extensions
+  costumeLookbook?: CostumeLookbook;
+  floorTracking?: FloorTracking;
 }
 
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
