@@ -994,12 +994,19 @@ const emptyFlags = (): ContinuityFlags => ({
   dirt: false, wetHair: false, tears: false,
 });
 
+export interface CostumeLookbook {
+  outfit?: string;
+  accessories?: string;
+  breakdown?: string;
+}
+
 export interface SceneContinuity {
   sceneId: string;
   characterId: string;
   flags: ContinuityFlags;
   notes: string;
   status: 'pending' | 'in-progress' | 'complete';
+  costumeLookbook?: CostumeLookbook;
 }
 
 interface ContinuityTrackerState {

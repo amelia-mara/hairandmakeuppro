@@ -556,23 +556,44 @@ export function saveContinuityEntry(
     hairNotes?: string;
     makeupNotes?: string;
     generalNotes?: string;
+    costumeLookbook?: { outfit?: string; accessories?: string; breakdown?: string };
   },
 ) {
   if (receivingFromRealtime) return;
   debounced(`continuity:${sceneId}-${characterId}`, async () => {
+    // Build the JSONB payload with costume_lookbook when present
+    let continuityEventsData: Json | undefined;
+    if (data.costumeLookbook) {
+      // Merge with any existing events data — fetch current row first
+      const { data: existing } = await supabase
+        .from('continuity_events')
+        .select('continuity_events_data')
+        .eq('id', `${sceneId}-${characterId}`)
+        .maybeSingle();
+      const raw = existing?.continuity_events_data as Record<string, unknown> | unknown[] | null;
+      const base: Record<string, unknown> = Array.isArray(raw) ? { events: raw } : (raw as Record<string, unknown>) || {};
+      base.costume_lookbook = data.costumeLookbook;
+      continuityEventsData = base as unknown as Json;
+    }
+
+    const upsertPayload: Record<string, unknown> = {
+      id: `${sceneId}-${characterId}`,
+      scene_id: sceneId,
+      character_id: characterId,
+      look_id: data.lookId || sceneId,
+      status: data.status || 'not_started',
+      continuity_flags: data.flags as unknown as Json,
+      hair_notes: data.hairNotes || null,
+      makeup_notes: data.makeupNotes || null,
+      general_notes: data.generalNotes || null,
+    };
+    if (continuityEventsData !== undefined) {
+      upsertPayload.continuity_events_data = continuityEventsData;
+    }
+
     const { error } = await supabase
       .from('continuity_events')
-      .upsert({
-        id: `${sceneId}-${characterId}`,
-        scene_id: sceneId,
-        character_id: characterId,
-        look_id: data.lookId || sceneId, // fallback — looks table ID required
-        status: data.status || 'not_started',
-        continuity_flags: data.flags as unknown as Json,
-        hair_notes: data.hairNotes || null,
-        makeup_notes: data.makeupNotes || null,
-        general_notes: data.generalNotes || null,
-      }, { onConflict: 'id' });
+      .upsert(upsertPayload, { onConflict: 'id' });
     if (error) throw error;
     console.log('[PrepSync] Continuity entry saved');
   });

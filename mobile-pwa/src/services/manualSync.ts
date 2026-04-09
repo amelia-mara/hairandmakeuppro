@@ -28,6 +28,8 @@ import type {
   ProductionSchedule,
   ContinuityFlags,
   ContinuityEvent,
+  CostumeLookbook,
+  FloorTracking,
   SFXDetails,
   PhotoAngle,
   MakeupDetails,
@@ -161,6 +163,17 @@ export function sceneCaptureToDb(
   capture: SceneCapture,
   userId: string | null
 ): Omit<DbContinuityEvent, 'created_at'> {
+  // Build the JSONB payload: events array + optional costume_lookbook / floor_tracking
+  const eventsData: Record<string, unknown> = {
+    events: capture.continuityEvents,
+  };
+  if (capture.costumeLookbook) {
+    eventsData.costume_lookbook = capture.costumeLookbook;
+  }
+  if (capture.floorTracking) {
+    eventsData.floor_tracking = capture.floorTracking;
+  }
+
   return {
     id: capture.id,
     scene_id: capture.sceneId,
@@ -175,7 +188,7 @@ export function sceneCaptureToDb(
     general_notes: capture.notes || null,
     application_time: capture.applicationTime || null,
     continuity_flags: capture.continuityFlags as unknown as Json,
-    continuity_events_data: capture.continuityEvents as unknown as Json,
+    continuity_events_data: eventsData as unknown as Json,
     sfx_details: capture.sfxDetails as unknown as Json,
     checked_by: userId,
     checked_at: null,
@@ -323,6 +336,23 @@ function dbToSceneCapture(
   photos: { front?: Photo; left?: Photo; right?: Photo; back?: Photo },
   additionalPhotos: Photo[]
 ): SceneCapture {
+  // Parse continuity_events_data — may be a plain array (legacy) or an
+  // object with { events, costume_lookbook, floor_tracking }.
+  const raw = db.continuity_events_data as unknown;
+  let continuityEvents: ContinuityEvent[] = [];
+  let costumeLookbook: CostumeLookbook | undefined;
+  let floorTracking: FloorTracking | undefined;
+
+  if (Array.isArray(raw)) {
+    // Legacy format: plain ContinuityEvent[]
+    continuityEvents = raw as ContinuityEvent[];
+  } else if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    continuityEvents = (Array.isArray(obj.events) ? obj.events : []) as ContinuityEvent[];
+    costumeLookbook = obj.costume_lookbook as CostumeLookbook | undefined;
+    floorTracking = obj.floor_tracking as FloorTracking | undefined;
+  }
+
   return {
     id: db.id,
     sceneId: db.scene_id,
@@ -335,7 +365,9 @@ function dbToSceneCapture(
       sweat: false, dishevelled: false, blood: false,
       dirt: false, wetHair: false, tears: false,
     },
-    continuityEvents: (db.continuity_events_data as unknown as ContinuityEvent[]) || [],
+    continuityEvents,
+    costumeLookbook,
+    floorTracking,
     sfxDetails: (db.sfx_details as unknown as SFXDetails) || {
       sfxRequired: false, sfxTypes: [], prostheticPieces: '',
       prostheticAdhesive: '', bloodTypes: [], bloodProducts: '',
