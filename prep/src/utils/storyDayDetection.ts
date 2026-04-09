@@ -59,7 +59,6 @@ export interface StoryDayResult {
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
 
 const NIGHT_SET = new Set<TOD>(['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK']);
-const DAY_SET   = new Set<TOD>(['DAY', 'MORNING', 'DAWN', 'AFTERNOON']);
 const SKIP_SET  = new Set<TOD>(['CONTINUOUS', 'LATER', 'MOMENTS_LATER', 'UNKNOWN']);
 
 // ─── TOD CLASSIFIER ─────────────────────────────────────────────────────────
