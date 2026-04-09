@@ -69,11 +69,57 @@ function todPrefix(tod: TOD): 'D' | 'N' {
   return NIGHT_SET.has(tod) ? 'N' : 'D';
 }
 
+// ─── TOD PRE-PROCESSING ─────────────────────────────────────────────────────
+
+export interface TODPreprocessResult {
+  isNonPresent: boolean;
+  isContinuous: boolean;
+  cleaned: string;
+}
+
+/**
+ * Pre-process a raw TOD string before classification.
+ * Step A: detect non-present qualifiers (flashback, ago, etc.)
+ * Step B: detect continuous/same-moment qualifiers
+ * Step C: strip season/intensity prefixes
+ */
+export function preprocessRawTOD(raw: string): TODPreprocessResult {
+  // Strip trailing scene number (e.g. "NIGHT 23" → "NIGHT")
+  const stripped = (raw ?? '').replace(/\s+\d+[A-Za-z]?\s*$/, '');
+  let t = stripped.toUpperCase().trim();
+  if (!t) return { isNonPresent: false, isContinuous: false, cleaned: '' };
+
+  // STEP A — Non-present qualifiers: return early, do not update baseline
+  if (/\bAGO\b/.test(t) || /\bEARLIER\b/.test(t) || /\bPRIOR\b/.test(t) ||
+      /\bFLASHBACK\b/.test(t) || /\bFLASH\s*FORWARD\b/.test(t)) {
+    // For slash format ("NIGHT / FLASHBACK"), extract the part before the slash
+    const slashMatch = t.match(/^(.+?)\s*\/\s*/);
+    const underlying = slashMatch ? slashMatch[1].trim() : t;
+    return { isNonPresent: true, isContinuous: false, cleaned: underlying };
+  }
+
+  // STEP B — Continuous/same-moment qualifiers: no day change, no baseline update
+  // Note: CONTINUOUS and CONT. are already handled by classifyTOD's own checks,
+  // but we catch them here too for consistency with the other same-moment patterns.
+  if (/^SAME$/.test(t) || /SECONDS\s+LATER/.test(t) || /MOMENTS?\s+LATER/.test(t) ||
+      /A\s+BEAT\s+LATER/.test(t) || /^(CONTINUOUS|CONT\.)/.test(t)) {
+    return { isNonPresent: false, isContinuous: true, cleaned: t };
+  }
+
+  // STEP C — Season/intensity prefix stripping
+  t = t.replace(/^(SUMMER|WINTER|SPRING|AUTUMN)\s+/, '');
+  t = t.replace(/^EARLY\s+/, '');
+  // Strip "LATE " only before a TOD word — not from "LATER"
+  t = t.replace(/^LATE\s+(?=DAY\b|NIGHT\b|MORNING\b|AFTERNOON\b|EVENING\b|DAWN\b|DUSK\b|MIDNIGHT\b)/, '');
+
+  return { isNonPresent: false, isContinuous: false, cleaned: t };
+}
+
 export function classifyTOD(raw: string): TOD {
-  // Strip trailing scene number that some scripts place at both ends of the slugline
-  // e.g. "NIGHT 23" → "NIGHT", "SECONDS LATER 76" → "SECONDS LATER"
-  const cleaned = (raw ?? '').replace(/\s+\d+[A-Za-z]?\s*$/, '');
-  const t = cleaned.toUpperCase().trim();
+  const pre = preprocessRawTOD(raw);
+  if (pre.isNonPresent) return 'UNKNOWN';
+  if (pre.isContinuous) return 'CONTINUOUS';
+  const t = pre.cleaned;
   if (!t) return 'UNKNOWN';
   if (/^(CONTINUOUS|CONT\.)/.test(t))                    return 'CONTINUOUS';
   if (/^(MOMENTS?\s+LATER|A\s+LITTLE\s+LATER)/.test(t)) return 'MOMENTS_LATER';
