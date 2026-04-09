@@ -4,6 +4,7 @@ import {
   useBreakdownStore, useParsedScriptStore, useCharacterOverridesStore,
   type Scene, type Character,
 } from '@/stores/breakdownStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { useBudgetStore, CURRENCY_SYMBOLS, type BudgetLineItem } from '@/stores/budgetStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import { ReceiptConfirmPanel, type ConfirmData } from '@/components/budget/receipts/ReceiptConfirmPanel';
@@ -35,6 +36,8 @@ export function Budget({ projectId }: BudgetProps) {
   const [activePanel, setActivePanel] = useState('overview');
   const [expensePanelOpen, setExpensePanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const project = useProjectStore((s) => s.getProject(projectId));
+  const deptLabel = project?.department === 'costume' ? 'Costume' : 'Hair & Makeup';
 
   /* ── Stores ── */
   const store = useBudgetStore(projectId);
@@ -249,7 +252,7 @@ export function Budget({ projectId }: BudgetProps) {
               <div>
                 <div className="bg-eyebrow">01 — Overview</div>
                 <h2 className="bg-title"><span className="bg-title-italic">Budget</span>{' '}<span className="bg-title-regular">Overview</span></h2>
-                <div className="bg-subtitle">{scenes.length} scenes · Hair &amp; Makeup</div>
+                <div className="bg-subtitle">{scenes.length} scenes · {deptLabel}</div>
               </div>
               <div className="bg-header-actions">
                 <span className="bg-last-updated">Last updated today</span>
@@ -271,7 +274,7 @@ export function Budget({ projectId }: BudgetProps) {
                 <div className="bg-info-cell"><div className="bg-info-key">Production</div><div className="bg-info-val">Short Film</div></div>
                 <div className="bg-info-cell"><div className="bg-info-key">HOD</div><div className="bg-info-val">{characters[0]?.name || '—'}</div></div>
                 <div className="bg-info-cell"><div className="bg-info-key">Scenes</div><div className="bg-info-val">{scenes.length} scenes</div></div>
-                <div className="bg-info-cell"><div className="bg-info-key">Department</div><div className="bg-info-val">Hair &amp; Makeup</div></div>
+                <div className="bg-info-cell"><div className="bg-info-key">Department</div><div className="bg-info-val">{deptLabel}</div></div>
                 <div className="bg-info-cell"><div className="bg-info-key">Flagged Scenes</div><div className="bg-info-val">{flaggedCount} flagged</div></div>
                 <div className="bg-info-cell"><div className="bg-info-key">Categories</div><div className="bg-info-val">{categories.filter(c => c.items.length > 0).length} with items</div></div>
                 <div className="bg-info-cell"><div className="bg-info-key">Crew Wages</div><div className="bg-info-val">{isLTD ? fmt(totalCrewCost) : 'Not included in budget'}</div></div>

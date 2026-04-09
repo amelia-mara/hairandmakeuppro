@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import type {
   Scene,
   Character,
@@ -46,7 +45,6 @@ export function Breakdown() {
     return map;
   }, [looks]);
 
-  /** Resolve a character's look for a scene: prep lookId → scene-tagged look */
   const resolveLook = useCallback(
     (cb: PrepCharacterBreakdown | undefined, characterId: string, sceneNumber: string): Look | undefined => {
       if (cb?.lookId) {
@@ -59,7 +57,7 @@ export function Breakdown() {
     [looksById, looksByCharacter],
   );
 
-  /* ─── Sort scenes by scene number (alphanumeric-aware) ─── */
+  /* ─── Sort scenes ─── */
 
   const sortedScenes = useMemo(() => {
     return [...scenes].sort((a, b) =>
@@ -67,7 +65,7 @@ export function Breakdown() {
     );
   }, [scenes]);
 
-  /* ─── Detect time jumps: scenes where story day differs from prior ─── */
+  /* ─── Detect time jumps ─── */
 
   const timeJumpSceneIds = useMemo(() => {
     const jumps = new Set<string>();
@@ -80,7 +78,7 @@ export function Breakdown() {
     return jumps;
   }, [sortedScenes]);
 
-  /* ─── Filtered scenes (only those with characters) ─── */
+  /* ─── Filtered scenes ─── */
 
   const scenesWithCast = useMemo(() => {
     return sortedScenes.filter((s) => {
@@ -90,7 +88,7 @@ export function Breakdown() {
     });
   }, [sortedScenes, filterChar]);
 
-  /* ─── Find prior scene where a character appeared (for "Same as Sc N") ─── */
+  /* ─── Find prior scene ─── */
 
   const findPrevScene = useCallback(
     (charId: string, currentIdx: number): string | null => {
@@ -102,29 +100,15 @@ export function Breakdown() {
     [sortedScenes],
   );
 
-  /* ─── Export rows (used by Copy and CSV) ─── */
+  /* ─── Export rows ─── */
 
   const buildExportRows = useCallback((): string[][] => {
-    const headers = [
-      'Scene',
-      'Day',
-      'Character',
-      'Look',
-      'Hair',
-      'Makeup',
-      'Wardrobe',
-      'SFX',
-      'Environmental',
-      'Action',
-      'Continuity Notes',
-    ];
+    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Environmental', 'Action', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < sortedScenes.length; idx++) {
       const scene = sortedScenes[idx];
       const bd = scene.prepBreakdown;
-      const charIds = filterChar
-        ? scene.characters.filter((c) => c === filterChar)
-        : scene.characters;
+      const charIds = filterChar ? scene.characters.filter((c) => c === filterChar) : scene.characters;
       const storyDay = bd?.timeline?.day || '';
       for (const cid of charIds) {
         const ch = characterMap.get(cid);
@@ -133,19 +117,7 @@ export function Breakdown() {
         const look = resolveLook(cb, cid, scene.sceneNumber);
         const resolved = resolveCharacterFields(cb, look);
         const continuity = buildContinuityNotes(cb, cid, idx, findPrevScene, resolved, bd);
-        rows.push([
-          scene.sceneNumber,
-          storyDay,
-          ch.name,
-          look?.name || '',
-          resolved.hair,
-          resolved.makeup,
-          resolved.wardrobe,
-          resolved.sfx,
-          resolved.environmental,
-          resolved.action,
-          continuity,
-        ]);
+        rows.push([scene.sceneNumber, storyDay, ch.name, look?.name || '', resolved.hair, resolved.makeup, resolved.wardrobe, resolved.sfx, resolved.environmental, resolved.action, continuity]);
       }
     }
     return rows;
@@ -162,9 +134,7 @@ export function Breakdown() {
   const handleExportCSV = useCallback(() => {
     const rows = buildExportRows();
     const esc = (v: string) =>
-      v.includes(',') || v.includes('"') || v.includes('\n')
-        ? `"${v.replace(/"/g, '""')}"`
-        : v;
+      v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v.replace(/"/g, '""')}"` : v;
     const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -234,18 +204,10 @@ export function Breakdown() {
             >
               <option value="">All Characters</option>
               {characters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <svg
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light pointer-events-none"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
+            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -253,17 +215,13 @@ export function Breakdown() {
 
         {/* Stats bar */}
         <div className="px-4 py-2 bg-muted/50 border-t border-border flex items-center gap-4 text-xs text-text-muted">
-          <span>
-            {scenesWithCast.length} scene{scenesWithCast.length !== 1 ? 's' : ''}
-          </span>
-          <span>
-            {characters.length} character{characters.length !== 1 ? 's' : ''}
-          </span>
+          <span>{scenesWithCast.length} scene{scenesWithCast.length !== 1 ? 's' : ''}</span>
+          <span>{characters.length} character{characters.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
       {/* Scene blocks */}
-      <div className="px-4 py-3 space-y-3">
+      <div className="px-3 py-3 space-y-4">
         {scenesWithCast.length === 0 ? (
           <p className="text-sm text-text-muted text-center py-8">
             No scenes with characters{filterChar ? ' for this character' : ''}.
@@ -276,8 +234,6 @@ export function Breakdown() {
               ? scene.characters.filter((c) => c === filterChar)
               : scene.characters;
             const storyDay = bd?.timeline?.day || '';
-            const timelineType = bd?.timeline?.type || '';
-            const showBadge = Boolean(timelineType) && timelineType !== 'Normal';
             const isTimeJump = timeJumpSceneIds.has(scene.id);
 
             return (
@@ -289,8 +245,6 @@ export function Breakdown() {
                 resolveLook={resolveLook}
                 bd={bd}
                 storyDay={storyDay}
-                timelineType={timelineType}
-                showBadge={showBadge}
                 isTimeJump={isTimeJump}
                 globalIdx={globalIdx}
                 findPrevScene={findPrevScene}
@@ -303,38 +257,37 @@ export function Breakdown() {
   );
 }
 
+/* ─── Column config (mirrors prep column order) ─── */
+
+const COLUMNS = [
+  { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
+  { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
+  { key: 'hair', label: 'HAIR', width: 'min-w-[90px]' },
+  { key: 'makeup', label: 'MAKEUP', width: 'min-w-[90px]' },
+  { key: 'wardrobe', label: 'WARDROBE', width: 'min-w-[90px]' },
+  { key: 'sfx', label: 'SFX', width: 'min-w-[80px]' },
+  { key: 'env', label: 'ENV.', width: 'min-w-[80px]' },
+  { key: 'action', label: 'ACTION', width: 'min-w-[90px]' },
+  { key: 'notes', label: 'NOTES', width: 'min-w-[100px]' },
+] as const;
+
 /* ─── Scene Block ─── */
 
 interface SceneBlockProps {
   scene: Scene;
   charIds: string[];
   characterMap: Map<string, Character>;
-  resolveLook: (
-    cb: PrepCharacterBreakdown | undefined,
-    characterId: string,
-    sceneNumber: string,
-  ) => Look | undefined;
+  resolveLook: (cb: PrepCharacterBreakdown | undefined, characterId: string, sceneNumber: string) => Look | undefined;
   bd: Scene['prepBreakdown'];
   storyDay: string;
-  timelineType: string;
-  showBadge: boolean;
   isTimeJump: boolean;
   globalIdx: number;
   findPrevScene: (charId: string, currentIdx: number) => string | null;
 }
 
 function SceneBlock({
-  scene,
-  charIds,
-  characterMap,
-  resolveLook,
-  bd,
-  storyDay,
-  timelineType,
-  showBadge,
-  isTimeJump,
-  globalIdx,
-  findPrevScene,
+  scene, charIds, characterMap, resolveLook, bd,
+  storyDay, isTimeJump, globalIdx, findPrevScene,
 }: SceneBlockProps) {
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -348,256 +301,176 @@ function SceneBlock({
       )}
 
       {/* Scene header */}
-      <div className="px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span
-            className={clsx(
-              'flex-shrink-0 px-2 py-0.5 rounded text-xs font-bold',
-              scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400',
-            )}
-          >
+      <div className="px-3 py-2.5 border-b border-border">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={clsx(
+            'flex-shrink-0 px-2 py-0.5 rounded text-xs font-bold',
+            scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400',
+          )}>
             SC {scene.sceneNumber}
           </span>
           {storyDay && (
-            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gold text-white text-[10px] font-bold flex-shrink-0">
               {storyDay}
             </span>
           )}
-          {showBadge && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 uppercase tracking-wide">
-              {timelineType}
-            </span>
-          )}
-        </div>
-        <div className="text-sm font-medium text-foreground">
-          {scene.intExt}. {scene.slugline} — {scene.timeOfDay}
-        </div>
-        {bd?.timeline?.note && !isTimeJump && (
-          <div className="text-xs text-text-muted mt-1 italic">{bd.timeline.note}</div>
-        )}
-        {scene.synopsis && (
-          <div className="text-xs text-text-muted mt-1.5 leading-relaxed">{scene.synopsis}</div>
-        )}
-      </div>
-
-      {/* Characters */}
-      <div className="divide-y divide-border">
-        {charIds.length === 0 ? (
-          <p className="px-4 py-3 text-xs text-text-muted">
-            No characters confirmed for this scene
-          </p>
-        ) : (
-          charIds.map((cid) => {
-            const ch = characterMap.get(cid);
-            if (!ch) return null;
-            const cb = bd?.characters?.find((c) => c.characterId === cid);
-            const look = resolveLook(cb, cid, scene.sceneNumber);
-            const resolved = resolveCharacterFields(cb, look);
-            const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved, bd);
-            const hasChange = cb?.changeType === 'change';
-
-            return (
-              <CharacterRow
-                key={cid}
-                character={ch}
-                look={look}
-                cb={cb}
-                resolved={resolved}
-                continuity={continuity}
-                hasChange={hasChange}
-                tags={bd?.tags ?? []}
-              />
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Character Row ─── */
-
-interface ResolvedFields {
-  hair: string;
-  makeup: string;
-  wardrobe: string;
-  sfx: string;
-  environmental: string;
-  action: string;
-}
-
-interface CharacterRowProps {
-  character: Character;
-  look: Look | undefined;
-  cb: PrepCharacterBreakdown | undefined;
-  resolved: ResolvedFields;
-  continuity: string;
-  hasChange: boolean;
-  tags: PrepBreakdownTag[];
-}
-
-function CharacterRow({
-  character,
-  look,
-  cb,
-  resolved,
-  continuity,
-  hasChange,
-  tags,
-}: CharacterRowProps) {
-  // Filter tags by category for this character. Tags are pure metadata
-  // attached as a sideband on PrepSceneBreakdown — they render as pills
-  // alongside the resolved field value, so they remain visible even when
-  // the user has manually entered text or applied a look on the prep side.
-  const tagsByCategory = (categoryId: string) =>
-    tags.filter((t) => t.characterId === character.id && t.categoryId === categoryId);
-  const hairTags = tagsByCategory('hair');
-  const makeupTags = tagsByCategory('makeup');
-  const wardrobeTags = tagsByCategory('wardrobe');
-  const sfxTags = tagsByCategory('sfx');
-  const envTags = tagsByCategory('environmental');
-  const actionTags = tagsByCategory('action');
-
-  return (
-    <div className="px-4 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <CharacterAvatar character={character} size="sm" />
-        <span className="text-sm font-semibold text-foreground">{character.name}</span>
-      </div>
-
-      <div className="space-y-1.5 ml-8">
-        <DetailRow label="Look" value={look?.name || ''} color="text-gold" />
-        <DetailRow
-          label="Hair"
-          value={resolved.hair}
-          exit={hasChange ? cb?.exitsWith?.hair : undefined}
-          color="text-amber-400"
-          tags={hairTags}
-          tagBorder="#D4943A"
-        />
-        <DetailRow
-          label="Makeup"
-          value={resolved.makeup}
-          exit={hasChange ? cb?.exitsWith?.makeup : undefined}
-          color="text-pink-400"
-          tags={makeupTags}
-          tagBorder="#C2785C"
-        />
-        <DetailRow
-          label="Wardrobe"
-          value={resolved.wardrobe}
-          exit={hasChange ? cb?.exitsWith?.wardrobe : undefined}
-          color="text-purple-400"
-          tags={wardrobeTags}
-          tagBorder="#ec4899"
-        />
-        <DetailRow
-          label="SFX"
-          value={resolved.sfx}
-          color="text-red-400"
-          highlight={!!resolved.sfx}
-          tags={sfxTags}
-          tagBorder="#ef4444"
-        />
-        <DetailRow
-          label="Env."
-          value={resolved.environmental}
-          color="text-sky-400"
-          highlight={!!resolved.environmental}
-          tags={envTags}
-          tagBorder="#38bdf8"
-        />
-        <DetailRow
-          label="Action"
-          value={resolved.action}
-          color="text-violet-400"
-          tags={actionTags}
-          tagBorder="#a855f7"
-        />
-        <NotesRow
-          changeNotes={hasChange ? cb?.changeNotes : undefined}
-          continuity={continuity}
-        />
-      </div>
-    </div>
-  );
-}
-
-/* ─── Detail Row ─── */
-
-function DetailRow({
-  label,
-  value,
-  color,
-  exit,
-  highlight,
-  tags,
-  tagBorder,
-}: {
-  label: string;
-  value: string;
-  color: string;
-  exit?: string;
-  highlight?: boolean;
-  tags?: PrepBreakdownTag[];
-  tagBorder?: string;
-}) {
-  const hasValue = !!value;
-  const hasTags = !!tags && tags.length > 0;
-  return (
-    <div className="flex items-start gap-2 text-xs">
-      <span className={clsx('font-semibold flex-shrink-0 w-16', color)}>{label}</span>
-      <div className="flex-1 min-w-0">
-        {hasValue ? (
-          <span className={clsx(highlight ? 'text-foreground font-medium' : 'text-text-muted')}>
-            {value}
+          <span className="text-sm font-medium text-foreground">
+            {scene.intExt}. {scene.slugline?.replace(/^(INT\.|EXT\.)\s*/i, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\s*$/i, '') || 'UNKNOWN'} — {scene.timeOfDay}
           </span>
-        ) : !hasTags ? (
-          <span className="text-text-light">—</span>
-        ) : null}
-        {hasTags && (
-          <div className={clsx('flex flex-wrap gap-1', hasValue && 'mt-1')}>
-            {tags!.map((t) => (
-              <span
-                key={t.id}
-                className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
-                style={{ borderColor: tagBorder, color: tagBorder }}
-              >
-                {t.text}
-              </span>
-            ))}
-          </div>
-        )}
-        {exit && (
-          <div className="text-[10px] text-text-light italic mt-0.5">Exit: {exit}</div>
-        )}
+        </div>
+      </div>
+
+      {/* Table — horizontally scrollable */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-border">
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  className={clsx(
+                    'px-2.5 py-2 text-left text-[10px] font-bold tracking-wider text-text-muted uppercase whitespace-nowrap',
+                    col.width,
+                  )}
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/50">
+            {charIds.length === 0 ? (
+              <tr>
+                <td colSpan={COLUMNS.length} className="px-3 py-3 text-text-muted text-center">
+                  No characters confirmed
+                </td>
+              </tr>
+            ) : (
+              charIds.map((cid) => {
+                const ch = characterMap.get(cid);
+                if (!ch) return null;
+                const cb = bd?.characters?.find((c) => c.characterId === cid);
+                const look = resolveLook(cb, cid, scene.sceneNumber);
+                const resolved = resolveCharacterFields(cb, look);
+                const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved, bd);
+                const hasChange = cb?.changeType === 'change';
+                const tags = bd?.tags ?? [];
+                const tagFor = (cat: string) => tags.filter((t) => t.characterId === cid && t.categoryId === cat);
+
+                return (
+                  <tr key={cid} className="align-top">
+                    {/* Character */}
+                    <td className="px-2.5 py-2.5">
+                      <div className="font-semibold text-foreground leading-tight">{ch.name}</div>
+                    </td>
+                    {/* Look */}
+                    <td className="px-2.5 py-2.5">
+                      {look ? (
+                        <span className="text-gold font-semibold">{look.name}</span>
+                      ) : <Empty />}
+                    </td>
+                    {/* Hair */}
+                    <td className="px-2.5 py-2.5">
+                      <CellContent
+                        value={resolved.hair}
+                        tags={tagFor('hair')}
+                        tagColor="#D4943A"
+                        exit={hasChange ? cb?.exitsWith?.hair : undefined}
+                      />
+                    </td>
+                    {/* Makeup */}
+                    <td className="px-2.5 py-2.5">
+                      <CellContent
+                        value={resolved.makeup}
+                        tags={tagFor('makeup')}
+                        tagColor="#C2785C"
+                        exit={hasChange ? cb?.exitsWith?.makeup : undefined}
+                      />
+                    </td>
+                    {/* Wardrobe */}
+                    <td className="px-2.5 py-2.5">
+                      <CellContent
+                        value={resolved.wardrobe}
+                        tags={tagFor('wardrobe')}
+                        tagColor="#ec4899"
+                        exit={hasChange ? cb?.exitsWith?.wardrobe : undefined}
+                      />
+                    </td>
+                    {/* SFX */}
+                    <td className="px-2.5 py-2.5">
+                      <CellContent value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" />
+                    </td>
+                    {/* Env */}
+                    <td className="px-2.5 py-2.5">
+                      <CellContent value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" />
+                    </td>
+                    {/* Action */}
+                    <td className="px-2.5 py-2.5">
+                      <CellContent value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" />
+                    </td>
+                    {/* Notes */}
+                    <td className="px-2.5 py-2.5">
+                      {hasChange && cb?.changeNotes && (
+                        <div className="text-text-muted mb-0.5">{cb.changeNotes}</div>
+                      )}
+                      {continuity ? (
+                        continuity.startsWith('Same as') ? (
+                          <span className="text-text-light italic">{continuity}</span>
+                        ) : (
+                          <span className="text-text-muted">{continuity}</span>
+                        )
+                      ) : !hasChange ? <Empty /> : null}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-/* ─── Notes Row ─── */
+/* ─── Table cell content with tags ─── */
 
-function NotesRow({ changeNotes, continuity }: { changeNotes?: string; continuity: string }) {
-  const isSameRef = continuity.startsWith('Same as');
-  const hasContent = !!changeNotes || !!continuity;
+function CellContent({
+  value,
+  tags,
+  tagColor,
+  exit,
+}: {
+  value: string;
+  tags?: PrepBreakdownTag[];
+  tagColor?: string;
+  exit?: string;
+}) {
+  const hasTags = !!tags && tags.length > 0;
+  if (!value && !hasTags) return <Empty />;
+
   return (
-    <div className="flex items-start gap-2 text-xs">
-      <span className="font-semibold flex-shrink-0 w-16 text-text-muted">Notes</span>
-      <div className="flex-1 min-w-0">
-        {changeNotes && <div className="text-text-muted">{changeNotes}</div>}
-        {continuity ? (
-          isSameRef ? (
-            <span className="text-text-light italic">{continuity}</span>
-          ) : (
-            <span className="text-text-muted">{continuity}</span>
-          )
-        ) : !hasContent ? (
-          <span className="text-text-light">—</span>
-        ) : null}
-      </div>
+    <div>
+      {value && <span className="text-text-primary">{value}</span>}
+      {hasTags && (
+        <div className={clsx('flex flex-wrap gap-1', value && 'mt-1')}>
+          {tags!.map((t) => (
+            <span
+              key={t.id}
+              className="inline text-[10px] font-medium pl-1.5 pr-1 py-0 border-l-2 rounded-sm leading-snug"
+              style={{ borderColor: tagColor, color: tagColor }}
+            >
+              {t.text}
+            </span>
+          ))}
+        </div>
+      )}
+      {exit && <div className="text-[10px] text-text-light italic mt-0.5">Exit: {exit}</div>}
     </div>
   );
+}
+
+function Empty() {
+  return <span className="text-text-light">—</span>;
 }
 
 /* ─── Field resolution: prep manual entry → look defaults ─── */
@@ -620,7 +493,16 @@ function resolveCharacterFields(
   };
 }
 
-/* ─── Build continuity notes (matches prep BreakdownSheet logic) ─── */
+interface ResolvedFields {
+  hair: string;
+  makeup: string;
+  wardrobe: string;
+  sfx: string;
+  environmental: string;
+  action: string;
+}
+
+/* ─── Build continuity notes ─── */
 
 function buildContinuityNotes(
   cb: PrepCharacterBreakdown | undefined,
@@ -632,29 +514,15 @@ function buildContinuityNotes(
 ): string {
   const parts: string[] = [];
 
-  // 1. Active continuity events for this character in this scene.
-  //    Mirrors prep/src/pages/BreakdownSheet.tsx buildContinuityNotes.
   if (bd?.continuityEvents && bd.continuityEvents.length > 0) {
     const events = bd.continuityEvents.filter((e) => e.characterId === charId);
-    if (events.length > 0) {
-      parts.push(events.map((e) => e.description || e.type).join(', '));
-    }
+    if (events.length > 0) parts.push(events.map((e) => e.description || e.type).join(', '));
   }
 
-  // 2. Character-level breakdown notes from the form
   if (cb?.notes) parts.push(cb.notes);
 
-  // 3. "Same as Sc N" only when there's no data at all for this character
-  const hasManualEntry =
-    cb &&
-    (cb.entersWith?.hair ||
-      cb.entersWith?.makeup ||
-      cb.entersWith?.wardrobe ||
-      cb.sfx ||
-      cb.environmental ||
-      cb.action);
-  const hasResolvedAny =
-    resolved.hair || resolved.makeup || resolved.wardrobe || resolved.sfx || resolved.environmental || resolved.action;
+  const hasManualEntry = cb && (cb.entersWith?.hair || cb.entersWith?.makeup || cb.entersWith?.wardrobe || cb.sfx || cb.environmental || cb.action);
+  const hasResolvedAny = resolved.hair || resolved.makeup || resolved.wardrobe || resolved.sfx || resolved.environmental || resolved.action;
 
   if (parts.length === 0 && !hasManualEntry && !hasResolvedAny) {
     const prev = findPrevScene(charId, sceneIdx);

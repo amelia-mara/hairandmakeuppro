@@ -3,7 +3,6 @@ import {
   BREAKDOWN_CATEGORIES,
   CONTINUITY_EVENT_TYPES,
   useTagStore,
-  useCharacterOverridesStore,
   type Character,
   type Look,
   type CharacterBreakdown,
@@ -15,6 +14,7 @@ import {
 import { ordinal } from '@/utils/ordinal';
 import { FInput } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
+import { CostumeBreakdownFields, type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
 /**
  * Per-character form block rendered inside BreakdownFormPanel. One
@@ -24,12 +24,11 @@ import { SceneRangeSelect } from './SceneRangeSelect';
  * Notes field, an expandable character-profile section, per-character
  * continuity events, and a character-removal modal.
  *
- * Calls useTagStore() and useCharacterOverridesStore() internally for
- * tag-pill rendering and character-profile overrides respectively.
- * Everything else flows through the 15 props received from
+ * Calls useTagStore() internally for tag-pill rendering.
+ * Everything else flows through the props received from
  * BreakdownFormPanel.
  */
-export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook }: {
+export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook, department, costumeData, onCostumeUpdate }: {
   char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -42,18 +41,18 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
   onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
+  department?: 'hmu' | 'costume';
+  costumeData?: CostumeSceneBreakdown;
+  onCostumeUpdate?: (data: CostumeSceneBreakdown) => void;
 }) {
   const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
     onUpdate({ [f]: { ...cb[f], [k]: v } });
 
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
-  const [showProfile, setShowProfile] = useState(false);
   const [showNewLookInput, setShowNewLookInput] = useState(false);
   const [newLookName, setNewLookName] = useState('');
   const newLookInputRef = useRef<HTMLInputElement>(null);
-  const charOverrides = useCharacterOverridesStore();
-  const resolvedChar = charOverrides.getCharacter(char);
 
   /* Characters available for merge — exclude self, sort by billing (most likely merge targets first) */
   const mergeOptions = useMemo(() =>
@@ -62,17 +61,6 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
       .sort((a, b) => a.billing - b.billing),
     [allCharacters, char.id]
   );
-
-  const profileFields: { label: string; key: keyof Character }[] = [
-    { label: 'Age', key: 'age' },
-    { label: 'Gender', key: 'gender' },
-    { label: 'Hair Colour', key: 'hairColour' },
-    { label: 'Hair Type', key: 'hairType' },
-    { label: 'Eye Colour', key: 'eyeColour' },
-    { label: 'Skin Tone', key: 'skinTone' },
-    { label: 'Build', key: 'build' },
-    { label: 'Features', key: 'distinguishingFeatures' },
-  ];
 
   const tagStore = useTagStore();
   const sceneTags = tagStore.getTagsForScene(sceneId).filter((t) => t.characterId === char.id);
@@ -243,92 +231,72 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
         </div>
       )}
 
-      <div className="cb-field">
-        <label className="cb-label">Enters With</label>
-        <div className="cb-hmw">
-          <div><FInput label="Hair" value={cb.entersWith.hair} onChange={(v) => ue('entersWith', 'hair', v)} /><TagPills tags={hairTags} color={catColor('hair')} /></div>
-          <div><FInput label="Makeup" value={cb.entersWith.makeup} onChange={(v) => ue('entersWith', 'makeup', v)} /><TagPills tags={makeupTags} color={catColor('makeup')} /></div>
-          <div><FInput label="Wardrobe" value={cb.entersWith.wardrobe} onChange={(v) => ue('entersWith', 'wardrobe', v)} /><TagPills tags={wardrobeTags} color={catColor('wardrobe')} /></div>
-        </div>
-      </div>
-
-      <div className="cb-field">
-        <FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} />
-        <TagPills tags={sfxTags} color={catColor('sfx')} />
-      </div>
-
-      <div className="cb-field">
-        <FInput label="Environmental" value={cb.environmental || ''} onChange={(v) => onUpdate({ environmental: v })} />
-        <TagPills tags={sceneTags.filter(t => t.categoryId === 'environmental')} color={catColor('environmental')} />
-      </div>
-
-      <div className="cb-field">
-        <FInput label="Action" value={cb.action || ''} onChange={(v) => onUpdate({ action: v })} />
-        <TagPills tags={sceneTags.filter(t => t.categoryId === 'action')} color={catColor('action')} />
-      </div>
-
-      <div className="cb-field">
-        <label className="cb-label">Changes</label>
-        <div className="cb-toggle">
-          <button className={`cb-tog-opt ${cb.changeType === 'no-change' ? 'cb-tog-opt--on' : ''}`}
-            onClick={() => onUpdate({ changeType: 'no-change', changeNotes: '' })}>No Change</button>
-          <button className={`cb-tog-opt ${cb.changeType === 'change' ? 'cb-tog-opt--on' : ''}`}
-            onClick={() => onUpdate({ changeType: 'change' })}>Change</button>
-        </div>
-        {cb.changeType === 'change' && (
-          <>
-            <textarea className="cb-textarea" placeholder="Describe change..." value={cb.changeNotes}
-              onChange={(e) => onUpdate({ changeNotes: e.target.value })} rows={2} />
-
-            <div className="cb-field" style={{ marginTop: '12px' }}>
-              <div className="cb-exits-head">
-                <label className="cb-label">Exits With</label>
-                <button className="cb-same-btn" onClick={() => onUpdate({ exitsWith: { ...cb.entersWith } })}>Same as entry</button>
-              </div>
-              <div className="cb-hmw">
-                <FInput label="Hair" value={cb.exitsWith.hair} onChange={(v) => ue('exitsWith', 'hair', v)} />
-                <FInput label="Makeup" value={cb.exitsWith.makeup} onChange={(v) => ue('exitsWith', 'makeup', v)} />
-                <FInput label="Wardrobe" value={cb.exitsWith.wardrobe} onChange={(v) => ue('exitsWith', 'wardrobe', v)} />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      <FInput label="Notes" value={cb.notes} onChange={(v) => onUpdate({ notes: v })} />
-
-      {/* Expandable character profile section */}
-      <div className="cb-profile-section">
-        <button className="cb-profile-toggle" onClick={() => setShowProfile(!showProfile)}>
-          <svg className={`cb-profile-chevron${showProfile ? ' cb-profile-chevron--open' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          Character Profile
-        </button>
-        {showProfile && (
-          <div className="cb-profile-grid">
-            {profileFields.map(({ label, key }) => (
-              <div key={key} className="cb-profile-field">
-                <label className="cb-profile-label">{label}</label>
-                <input
-                  className="fi-input cb-profile-input"
-                  value={resolvedChar[key] as string || ''}
-                  onChange={(e) => charOverrides.updateCharacter(char.id, { [key]: e.target.value })}
-                  placeholder={`Enter ${label.toLowerCase()}…`}
-                />
-              </div>
-            ))}
-            <div className="cb-profile-field cb-profile-field--wide">
-              <label className="cb-profile-label">Notes</label>
-              <textarea
-                className="fi-input cb-profile-textarea"
-                value={resolvedChar.notes || ''}
-                onChange={(e) => charOverrides.updateCharacter(char.id, { notes: e.target.value })}
-                placeholder="Enter notes…"
-                rows={2}
-              />
+      {department === 'costume' && costumeData && onCostumeUpdate ? (
+        /* ── Costume department fields ── */
+        <CostumeBreakdownFields
+          charId={char.id}
+          sceneId={sceneId}
+          data={costumeData}
+          onChange={onCostumeUpdate}
+        />
+      ) : (
+        /* ── HMU department fields (default) ── */
+        <>
+          <div className="cb-field">
+            <label className="cb-label">Enters With</label>
+            <div className="cb-hmw">
+              <div><FInput label="Hair" value={cb.entersWith.hair} onChange={(v) => ue('entersWith', 'hair', v)} /><TagPills tags={hairTags} color={catColor('hair')} /></div>
+              <div><FInput label="Makeup" value={cb.entersWith.makeup} onChange={(v) => ue('entersWith', 'makeup', v)} /><TagPills tags={makeupTags} color={catColor('makeup')} /></div>
+              <div><FInput label="Wardrobe" value={cb.entersWith.wardrobe} onChange={(v) => ue('entersWith', 'wardrobe', v)} /><TagPills tags={wardrobeTags} color={catColor('wardrobe')} /></div>
             </div>
           </div>
-        )}
-      </div>
+
+          <div className="cb-field">
+            <FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} />
+            <TagPills tags={sfxTags} color={catColor('sfx')} />
+          </div>
+
+          <div className="cb-field">
+            <FInput label="Environmental" value={cb.environmental || ''} onChange={(v) => onUpdate({ environmental: v })} />
+            <TagPills tags={sceneTags.filter(t => t.categoryId === 'environmental')} color={catColor('environmental')} />
+          </div>
+
+          <div className="cb-field">
+            <FInput label="Action" value={cb.action || ''} onChange={(v) => onUpdate({ action: v })} />
+            <TagPills tags={sceneTags.filter(t => t.categoryId === 'action')} color={catColor('action')} />
+          </div>
+
+          <div className="cb-field">
+            <label className="cb-label">Changes</label>
+            <div className="cb-toggle">
+              <button className={`cb-tog-opt ${cb.changeType === 'no-change' ? 'cb-tog-opt--on' : ''}`}
+                onClick={() => onUpdate({ changeType: 'no-change', changeNotes: '' })}>No Change</button>
+              <button className={`cb-tog-opt ${cb.changeType === 'change' ? 'cb-tog-opt--on' : ''}`}
+                onClick={() => onUpdate({ changeType: 'change' })}>Change</button>
+            </div>
+            {cb.changeType === 'change' && (
+              <>
+                <textarea className="cb-textarea" placeholder="Describe change..." value={cb.changeNotes}
+                  onChange={(e) => onUpdate({ changeNotes: e.target.value })} rows={2} />
+
+                <div className="cb-field" style={{ marginTop: '12px' }}>
+                  <div className="cb-exits-head">
+                    <label className="cb-label">Exits With</label>
+                    <button className="cb-same-btn" onClick={() => onUpdate({ exitsWith: { ...cb.entersWith } })}>Same as entry</button>
+                  </div>
+                  <div className="cb-hmw">
+                    <FInput label="Hair" value={cb.exitsWith.hair} onChange={(v) => ue('exitsWith', 'hair', v)} />
+                    <FInput label="Makeup" value={cb.exitsWith.makeup} onChange={(v) => ue('exitsWith', 'makeup', v)} />
+                    <FInput label="Wardrobe" value={cb.exitsWith.wardrobe} onChange={(v) => ue('exitsWith', 'wardrobe', v)} />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <FInput label="Notes" value={cb.notes} onChange={(v) => onUpdate({ notes: v })} />
+        </>
+      )}
 
       {/* Per-character continuity events */}
       <div className="cb-continuity">

@@ -42,6 +42,7 @@ function supabaseToLocal(sp: SupabaseProject) {
     title: sp.name,
     genre: '',
     type: sp.production_type || '',
+    department: (sp.department as 'hmu' | 'costume') || 'hmu',
     status: 'setup' as const,
     progress: 0,
     lastActive: sp.created_at,

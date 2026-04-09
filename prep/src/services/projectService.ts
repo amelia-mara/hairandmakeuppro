@@ -25,13 +25,14 @@ export interface SupabaseProject {
 export async function createProjectInSupabase(
   name: string,
   productionType: string,
+  department: 'hmu' | 'costume' = 'hmu',
 ): Promise<{ project: SupabaseProject | null; error: Error | null }> {
   try {
     const { data, error } = await supabase.rpc('create_project', {
       project_name: name,
       production_type_input: productionType,
       owner_role_input: 'designer',
-      department_input: 'hmu',
+      department_input: department,
       has_prep_access_input: true,
     });
 

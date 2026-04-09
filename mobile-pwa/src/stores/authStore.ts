@@ -120,7 +120,7 @@ function toProjectMembership(
     teamMemberCount: 0, // Will be fetched separately if needed
     sceneCount: 0, // Will be fetched separately if needed
     projectCode: project.invite_code,
-    status: project.status === 'wrapped' ? 'wrapped' : 'active',
+    status: (project.status as ProjectMembership['status']) || 'active',
     ownerName: project.owner_name,
     pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
   };

@@ -134,7 +134,7 @@ export const CONTINUITY_EVENT_TYPES = ['Wound', 'Bruise', 'Prosthetic', 'Scar', 
 /* ━━━ Category colours ━━━ */
 
 export const BREAKDOWN_CATEGORIES = [
-  // ━━━ Scene Breakdown fields ━━━
+  // ━━━ HMU Scene Breakdown fields ━━━
   { id: 'hair',           label: 'Hair',              color: '#D4943A', group: 'breakdown', field: 'entersWith.hair' },
   { id: 'makeup',         label: 'Makeup',            color: '#C2785C', group: 'breakdown', field: 'entersWith.makeup' },
   { id: 'wardrobe',       label: 'Wardrobe',          color: '#ec4899', group: 'breakdown', field: 'entersWith.wardrobe' },
@@ -142,6 +142,17 @@ export const BREAKDOWN_CATEGORIES = [
   { id: 'environmental',  label: 'Environmental',     color: '#38bdf8', group: 'breakdown', field: 'environmental' },
   { id: 'action',         label: 'Action',            color: '#a855f7', group: 'breakdown', field: 'action' },
   { id: 'notes',          label: 'Notes',             color: '#78716c', group: 'breakdown', field: 'notes' },
+
+  // ━━━ Costume Scene Breakdown fields ━━━
+  { id: 'clothing',       label: 'Clothing',          color: '#ec4899', group: 'costume_breakdown', field: 'clothing' },
+  { id: 'shoes',          label: 'Shoes',             color: '#C2785C', group: 'costume_breakdown', field: 'shoes' },
+  { id: 'accessories',    label: 'Accessories',       color: '#D4943A', group: 'costume_breakdown', field: 'accessories' },
+  { id: 'outerwear',      label: 'Outerwear',         color: '#6ba3f7', group: 'costume_breakdown', field: 'outerwear' },
+  { id: 'cos_hmu',        label: 'Hair & Makeup',     color: '#C2785C', group: 'costume_breakdown', field: 'hairAndMakeupNotes' },
+  { id: 'cos_sfx',        label: 'SFX',               color: '#ef4444', group: 'costume_breakdown', field: 'sfxNotes' },
+  { id: 'cos_env',        label: 'Environmental',     color: '#38bdf8', group: 'costume_breakdown', field: 'environmental' },
+  { id: 'cos_action',     label: 'Action',            color: '#a855f7', group: 'costume_breakdown', field: 'action' },
+  { id: 'cos_change',     label: 'Change',            color: '#f97316', group: 'costume_breakdown', field: 'changeNotes' },
 
   // ━━━ Character Profile fields ━━━
   { id: 'age',            label: 'Age',               color: '#8B7355', group: 'profile', field: 'age' },
@@ -155,6 +166,14 @@ export const BREAKDOWN_CATEGORIES = [
   { id: 'profileNotes',   label: 'Profile Notes',     color: '#78716c', group: 'profile', field: 'notes' },
   { id: 'scriptDesc',     label: 'Script Description',color: '#D4A843', group: 'profile', field: 'scriptNotes' },
 ];
+
+/** Return the breakdown-group categories appropriate for a department. */
+export function getBreakdownCategoriesForDepartment(department?: string) {
+  if (department === 'costume') {
+    return BREAKDOWN_CATEGORIES.filter((c) => c.group === 'costume_breakdown');
+  }
+  return BREAKDOWN_CATEGORIES.filter((c) => c.group === 'breakdown');
+}
 
 /* ━━━ Mock Characters ━━━ */
 
@@ -994,12 +1013,19 @@ const emptyFlags = (): ContinuityFlags => ({
   dirt: false, wetHair: false, tears: false,
 });
 
+export interface CostumeLookbook {
+  outfit?: string;
+  accessories?: string;
+  breakdown?: string;
+}
+
 export interface SceneContinuity {
   sceneId: string;
   characterId: string;
   flags: ContinuityFlags;
   notes: string;
   status: 'pending' | 'in-progress' | 'complete';
+  costumeLookbook?: CostumeLookbook;
 }
 
 interface ContinuityTrackerState {

@@ -360,15 +360,17 @@
 
 /* Tag pills in table cells */
 .bs-tag-row {
-  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;
+  display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;
 }
 .bs-tag-pill {
-  display: inline-flex; align-items: center;
-  font-size: 0.625rem; font-weight: 600;
-  padding: 2px 8px; border: 1px solid;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.03);
-  line-height: 1.3;
+  display: inline;
+  font-size: 0.6875rem; font-weight: 500;
+  padding: 1px 5px; border-left: 2px solid;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.05);
+  line-height: 1.4;
+  max-width: 100%;
+  word-break: break-word;
 }
 
 /* Time jump scene highlight — solid row tint instead of border glow */
@@ -507,7 +509,7 @@
   color: rgba(80, 60, 30, 0.3);
 }
 [data-theme="light"] .bs-tag-pill {
-  background: rgba(0,0,0,0.03);
+  background: rgba(0,0,0,0.04);
 }
 
 /* Time jump — amber highlight on light cards */

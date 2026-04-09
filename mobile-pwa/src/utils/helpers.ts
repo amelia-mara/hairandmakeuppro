@@ -120,8 +120,14 @@ export function hasSceneDeviation(
 ): boolean {
   return scene.characters.some((charId) => {
     const capture = captures[`${scene.id}-${charId}`];
-    if (!capture?.deviation) return false;
-    return capture.deviation.note.trim().length > 0 || capture.deviation.photos.length > 0;
+    if (!capture) return false;
+    // Check local deviation record (photos + note)
+    if (capture.deviation) {
+      if (capture.deviation.note.trim().length > 0 || capture.deviation.photos.length > 0) return true;
+    }
+    // Also check floorTracking.hasDeviation (from JSONB round-trip)
+    if (capture.floorTracking?.hasDeviation) return true;
+    return false;
   });
 }
 

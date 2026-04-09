@@ -25,7 +25,10 @@ import { CharBlock } from './CharBlock';
  * Everything else flows through the 17 props received from the
  * parent ScriptBreakdown component.
  */
-export function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook }: {
+import { useCharacterOverridesStore } from '@/stores/breakdownStore';
+import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
+
+export function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
   scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -38,18 +41,14 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
   onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
+  department?: 'hmu' | 'costume';
 }) {
-  if (!breakdown) return null;
-
-  const sceneIdx = scenes.findIndex((s) => s.id === scene.id);
-  const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
-  const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
-
+  const charOverrides = useCharacterOverridesStore();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
   const synopsisStore = useSynopsisStore();
-  const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);
+  const synopsis = synopsisStore.getSynopsis(breakdown ? scene.id : '', breakdown ? scene.synopsis : '');
   const setSynopsis = useCallback((text: string) => synopsisStore.setSynopsis(scene.id, text), [synopsisStore, scene.id]);
 
   useEffect(() => {
@@ -64,6 +63,12 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [scene.id]);
+
+  if (!breakdown) return null;
+
+  const sceneIdx = scenes.findIndex((s) => s.id === scene.id);
+  const prevScene = sceneIdx > 0 ? scenes[sceneIdx - 1] : null;
+  const nextScene = sceneIdx < scenes.length - 1 ? scenes[sceneIdx + 1] : null;
 
   return (
     <div className="fp-wrap">
@@ -130,6 +135,10 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
             const cb = breakdown.characters.find((c) => c.characterId === ch.id);
             if (!cb) return null;
             const charEvents = breakdown.continuityEvents.filter((e) => e.characterId === ch.id);
+            // Costume data stored in character metadata JSONB
+            const resolvedChar = charOverrides.getCharacter(ch);
+            const costumeBreakdowns = (resolvedChar as any).costume_breakdown as Record<string, CostumeSceneBreakdown> | undefined;
+            const costumeData: CostumeSceneBreakdown = costumeBreakdowns?.[String(scene.number)] || {};
             return (
               <CharBlock key={ch.id} char={ch} cb={cb}
                 sceneId={scene.id}
@@ -147,7 +156,15 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
                 onAddLook={onAddLook}
-                onSetLook={onSetLook} />
+                onSetLook={onSetLook}
+                department={department}
+                costumeData={department === 'costume' ? costumeData : undefined}
+                onCostumeUpdate={department === 'costume' ? (data) => {
+                  const existing = (resolvedChar as any).costume_breakdown || {};
+                  charOverrides.updateCharacter(ch.id, {
+                    costume_breakdown: { ...existing, [String(scene.number)]: data },
+                  } as any);
+                } : undefined} />
             );
           })}
         </div>
