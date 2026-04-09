@@ -222,9 +222,15 @@ export function matchHeadingTimeJump(slugline: string): Tier1Match | null {
 
 // ─── TIER 1B: TITLE CARD ────────────────────────────────────────────────────
 
+/** Structural heading patterns — not valid title cards */
+const STRUCTURAL_HEADING_RE = /^(EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i;
+
 export function matchTitleCard(raw: string | null): Tier1Match | null {
   if (!raw) return null;
   const t = raw.trim().toUpperCase();
+
+  // Skip structural headings — these are not title cards
+  if (STRUCTURAL_HEADING_RE.test(t)) return null;
 
   // Return to present markers — check first so "END FLASHBACK" isn't
   // caught by the general \bFLASHBACK\b pattern below

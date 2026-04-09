@@ -61,13 +61,15 @@ function extractActionLines(content: string): {
 
     // Title card: ALL-CAPS line that appears before any action text,
     // is not a character cue (character cues are followed by dialogue),
-    // and contains known title-card patterns
+    // and contains known title-card patterns.
+    // Skip structural headings (EPISODE, ACT, PART, CHAPTER, SCENE).
     if (
       !titleCard &&
       actionLines.length === 0 &&
       /^[A-Z0-9][A-Z\s,.:'\-!0-9]+$/.test(line) &&
       line.length > 4 &&
-      /\b(FLASHBACK|LATER|AGO|EARLIER|EPISODE|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
+      !/^(EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i.test(line) &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
     ) {
       titleCard = line;
       continue;

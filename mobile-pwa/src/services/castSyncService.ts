@@ -230,12 +230,14 @@ function extractActionLinesFromContent(content: string): {
   for (const line of lines) {
     if (actionLines.length >= 3) break;
 
+    // Skip structural headings (EPISODE, ACT, PART, CHAPTER, SCENE)
     if (
       !titleCard &&
       actionLines.length === 0 &&
       /^[A-Z][A-Z\s,.:'\-!0-9]+$/.test(line) &&
       line.length > 4 &&
-      /\b(FLASHBACK|LATER|AGO|EARLIER|EPISODE|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
+      !/^(EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i.test(line) &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
     ) {
       titleCard = line;
       continue;
