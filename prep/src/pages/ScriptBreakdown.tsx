@@ -285,7 +285,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                     const cat = BREAKDOWN_CATEGORIES.find(c => c.id === categoryId);
                     if (!cat) return;
 
-                    if (cat.group === 'breakdown') {
+                    if (cat.group === 'breakdown' || cat.group === 'costume_breakdown') {
                       /* Ensure a breakdown entry exists for this scene so the
                          field update is always persisted (and synced to mobile). */
                       let bd = store.getBreakdown(sceneId);
