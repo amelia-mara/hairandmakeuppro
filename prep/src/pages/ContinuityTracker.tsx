@@ -5,7 +5,7 @@ import {
   useParsedScriptStore, useCharacterOverridesStore,
   type Scene, type Character, type Look,
   type ContinuityEvent, type ProgressionStage, type ContinuityFlags,
-  type PhotoAngle, type ContinuityPhoto, type CostumeLookbook,
+  type PhotoAngle, type ContinuityPhoto,
   emptyHMW,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';

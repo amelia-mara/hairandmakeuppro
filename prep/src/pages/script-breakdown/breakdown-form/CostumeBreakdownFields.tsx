@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import {
   BREAKDOWN_CATEGORIES,
   useTagStore,
-  type Character,
   type ScriptTag,
 } from '@/stores/breakdownStore';
 import { FInput } from './form-primitives';
