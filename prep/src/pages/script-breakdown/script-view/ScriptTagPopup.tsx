@@ -167,7 +167,7 @@ export function ScriptTagPopup({
                   </button>
                 </div>
                 <div className="sv-tag-popup-edit-cats">
-                  {BREAKDOWN_CATEGORIES.filter(c => c.group === 'breakdown').map(cat => (
+                  {deptBreakdownCats.map(cat => (
                     <button key={cat.id}
                       className={`sv-tag-popup-btn${cat.id === tag.categoryId ? ' sv-tag-popup-btn--active' : ''}`}
                       onClick={() => onEditChangeCategory(tagId, cat.id)}>
