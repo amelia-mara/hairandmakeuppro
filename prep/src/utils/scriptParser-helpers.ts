@@ -133,7 +133,7 @@ export function extractTitleCardFromInterstitial(text: string): string | null {
       line.length > 4 &&
       line.length < 80 &&
       /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|CHRISTMAS|VALENTINE|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(line) &&
-      !/^(INT|EXT|EPISODE)\b/.test(line)
+      !/^(INT|EXT|EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i.test(line)
     ) {
       return line;
     }
