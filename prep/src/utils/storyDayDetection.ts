@@ -70,7 +70,10 @@ function todPrefix(tod: TOD): 'D' | 'N' {
 }
 
 export function classifyTOD(raw: string): TOD {
-  const t = (raw ?? '').toUpperCase().trim();
+  // Strip trailing scene number that some scripts place at both ends of the slugline
+  // e.g. "NIGHT 23" → "NIGHT", "SECONDS LATER 76" → "SECONDS LATER"
+  const cleaned = (raw ?? '').replace(/\s+\d+[A-Za-z]?\s*$/, '');
+  const t = cleaned.toUpperCase().trim();
   if (!t) return 'UNKNOWN';
   if (/^(CONTINUOUS|CONT\.)/.test(t))                    return 'CONTINUOUS';
   if (/^(MOMENTS?\s+LATER|A\s+LITTLE\s+LATER)/.test(t)) return 'MOMENTS_LATER';
