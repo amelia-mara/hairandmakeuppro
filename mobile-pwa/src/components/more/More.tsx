@@ -21,7 +21,7 @@ import {
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
 import { parseScenesFast } from '@/utils/scriptParser';
 import { runBackgroundCharacterDetection } from '@/services/characterDetectionService';
-import { AmendmentReviewModal } from '@/components/breakdown/AmendmentReviewModal';
+import { AmendmentReviewModal } from '@/components/scenes/AmendmentReviewModal';
 import type { AmendmentResult } from '@/services/scriptAmendmentService';
 import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentModal';
 import type { ScheduleAmendmentResult } from '@/services/scheduleAmendmentService';

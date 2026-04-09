@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { formatEstimatedTime, formatSceneRange, getCaptureStatus } from '@/utils/helpers';
-import type { Photo, PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
+import type { Photo, PhotoAngle, ContinuityEvent } from '@/types';
 import { countFilledFields, countHairFields, countSFXFields } from '@/types';
 import { Button, Accordion } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
@@ -15,6 +15,7 @@ import { MakeupForm } from '../forms/MakeupForm';
 import { HairForm } from '../forms/HairForm';
 import { SFXForm } from '../forms/SFXForm';
 import { NotesForm } from '../forms/NotesForm';
+import { SceneDeviationSection } from '../scenes/SceneDeviationSection';
 import { createDefaultCostumeContinuity, type CostumePhotoCategory, type CostumeContinuityData } from '@/config/department';
 
 interface CharacterProfileProps {
@@ -36,14 +37,12 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     toggleContinuityFlag,
     addContinuityEvent,
     removeContinuityEvent,
-    updateSFXDetails,
     addSFXPhoto,
     removeSFXPhoto,
     markSceneComplete,
     copyToNextScene,
     setCurrentScene,
     sceneCaptures,
-    updateLook,
   } = useProjectStore();
 
   const character = getCharacter(characterId);
@@ -96,11 +95,6 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     } else {
       addPhotoToCapture(captureId, photo, captureAngle === 'additional' ? 'additional' : captureAngle);
     }
-  };
-
-  // Handle SFX details change
-  const handleSFXChange = (sfx: SFXDetails) => {
-    updateSFXDetails(captureId, sfx);
   };
 
   // Handle mark complete
@@ -353,52 +347,53 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           />
         </div>
 
-        {/* Accordion sections for Makeup, Hair, Notes (HMU only) */}
+        {/* ── LOOKBOOK LAYER (locked during shoot) ────────────────────
+           Filled by the Designer in prep. Visible on every scene card
+           but read-only for the floor team. Designers edit in the
+           Lookbook tab. */}
         {!isCostume && (
         <Accordion
-          title="MAKEUP"
+          title="MAKEUP — LOOKBOOK"
           count={look ? countFilledFields(look.makeup) : 0}
         >
-          <MakeupForm
-            makeup={look?.makeup}
-            onChange={look ? (makeup) => updateLook(look.id, { makeup }) : undefined}
-          />
+          <MakeupForm makeup={look?.makeup} readOnly />
         </Accordion>
         )}
 
         {!isCostume && (
         <Accordion
-          title="HAIR"
+          title="HAIR — LOOKBOOK"
           count={look ? countHairFields(look.hair) : 0}
         >
-          <HairForm
-            hair={look?.hair}
-            onChange={look ? (hair) => updateLook(look.id, { hair }) : undefined}
-          />
+          <HairForm hair={look?.hair} readOnly />
         </Accordion>
         )}
 
         {!isCostume && (
         <Accordion
-          title="SPECIAL EFFECTS"
+          title="SPECIAL EFFECTS — LOOKBOOK"
           count={countSFXFields(capture.sfxDetails)}
           badge={!capture.sfxDetails.sfxRequired ? 'None' : undefined}
         >
-          <SFXForm
-            sfx={capture.sfxDetails}
-            onChange={handleSFXChange}
-            onCapturePhoto={() => handleOpenCapture('additional', false, true)}
-            onRemovePhoto={(photoId) => removeSFXPhoto(captureId, photoId)}
-          />
+          <SFXForm sfx={capture.sfxDetails} readOnly />
         </Accordion>
         )}
 
-        <Accordion title="SCENE NOTES">
+        {/* ── FLOOR LAYER (editable on set) ───────────────────────────
+           Single free-text notes field plus a self-contained deviation
+           record (note + photos). The floor team owns both. */}
+        <Accordion title="FLOOR NOTES">
           <NotesForm
             notes={capture.notes}
             onChange={(notes) => updateSceneCapture(captureId, { notes })}
           />
         </Accordion>
+
+        <SceneDeviationSection
+          capture={capture}
+          characterName={character.name}
+          sceneNumber={scene.sceneNumber}
+        />
 
         {/* Application/Fitting Time */}
         <div className="card flex items-center gap-3.5">

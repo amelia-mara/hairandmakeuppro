@@ -1,10 +1,22 @@
 import type { Scene, SceneCapture, SceneFilmingStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ProjectSet, ProjectGet } from './types';
+import { dedupeScenesByNumber } from './sceneDedupe';
 
 export const createSceneSlice = (set: ProjectSet, get: ProjectGet) => ({
   // Scene management
   addScene: (sceneData: Partial<Scene> & { sceneNumber: string }): Scene => {
+    // Defensive dedupe: if a scene with this sceneNumber already exists,
+    // return it instead of inserting a duplicate. This protects against
+    // the realtime-sync INSERT loop and any other path that may attempt
+    // to re-add an already-present scene.
+    const existing = get().currentProject?.scenes.find(
+      (s) => s.sceneNumber === sceneData.sceneNumber,
+    );
+    if (existing) {
+      return existing;
+    }
+
     const newScene: Scene = {
       id: uuidv4(),
       sceneNumber: sceneData.sceneNumber,
@@ -22,8 +34,9 @@ export const createSceneSlice = (set: ProjectSet, get: ProjectGet) => ({
     set((state) => {
       if (!state.currentProject) return state;
 
-      // Insert scene in order by scene number
-      const scenes = [...state.currentProject.scenes, newScene].sort((a, b) => {
+      // Insert scene in order by scene number, deduping defensively
+      const merged = dedupeScenesByNumber([...state.currentProject.scenes, newScene]);
+      const scenes = merged.sort((a, b) => {
         // Extract numeric part for sorting
         const numA = parseInt(a.sceneNumber.replace(/\D/g, '')) || 0;
         const numB = parseInt(b.sceneNumber.replace(/\D/g, '')) || 0;

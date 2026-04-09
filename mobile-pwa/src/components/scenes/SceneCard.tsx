@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import type { Scene, SceneCapture } from '@/types';
 import { Badge } from '../ui';
-import { getSceneStatusIcon } from '@/utils/helpers';
+import { getSceneStatusIcon, hasSceneDeviation } from '@/utils/helpers';
 
 interface SceneCardProps {
   scene: Scene;
@@ -11,12 +11,16 @@ interface SceneCardProps {
 
 export function SceneCard({ scene, captures, onClick }: SceneCardProps) {
   const statusIcon = getSceneStatusIcon(scene, captures);
+  const flagged = hasSceneDeviation(scene, captures);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full card flex items-start gap-3 text-left touch-manipulation transition-shadow hover:shadow-card-hover active:scale-[0.99]"
+      className={clsx(
+        'w-full card flex items-start gap-3 text-left touch-manipulation transition-shadow hover:shadow-card-hover active:scale-[0.99]',
+        flagged && 'ring-2 ring-warning',
+      )}
     >
       {/* Scene number */}
       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -36,6 +40,15 @@ export function SceneCard({ scene, captures, onClick }: SceneCardProps) {
             {scene.intExt}
           </Badge>
           <span className="text-xs text-text-muted">{scene.timeOfDay}</span>
+          {flagged && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-warning text-white"
+              title="A deviation from the lookbook has been logged on this scene"
+            >
+              <span aria-hidden>⚠</span>
+              DEVIATION
+            </span>
+          )}
         </div>
       </div>
 
