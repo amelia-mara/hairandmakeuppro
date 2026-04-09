@@ -3,7 +3,6 @@ import {
   BREAKDOWN_CATEGORIES,
   CONTINUITY_EVENT_TYPES,
   useTagStore,
-  useCharacterOverridesStore,
   type Character,
   type Look,
   type CharacterBreakdown,
@@ -25,9 +24,8 @@ import { CostumeBreakdownFields, type CostumeSceneBreakdown } from './CostumeBre
  * Notes field, an expandable character-profile section, per-character
  * continuity events, and a character-removal modal.
  *
- * Calls useTagStore() and useCharacterOverridesStore() internally for
- * tag-pill rendering and character-profile overrides respectively.
- * Everything else flows through the 15 props received from
+ * Calls useTagStore() internally for tag-pill rendering.
+ * Everything else flows through the props received from
  * BreakdownFormPanel.
  */
 export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook, department, costumeData, onCostumeUpdate }: {
@@ -52,12 +50,9 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
 
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
-  const [showProfile, setShowProfile] = useState(false);
   const [showNewLookInput, setShowNewLookInput] = useState(false);
   const [newLookName, setNewLookName] = useState('');
   const newLookInputRef = useRef<HTMLInputElement>(null);
-  const charOverrides = useCharacterOverridesStore();
-  const resolvedChar = charOverrides.getCharacter(char);
 
   /* Characters available for merge — exclude self, sort by billing (most likely merge targets first) */
   const mergeOptions = useMemo(() =>
@@ -66,17 +61,6 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
       .sort((a, b) => a.billing - b.billing),
     [allCharacters, char.id]
   );
-
-  const profileFields: { label: string; key: keyof Character }[] = [
-    { label: 'Age', key: 'age' },
-    { label: 'Gender', key: 'gender' },
-    { label: 'Hair Colour', key: 'hairColour' },
-    { label: 'Hair Type', key: 'hairType' },
-    { label: 'Eye Colour', key: 'eyeColour' },
-    { label: 'Skin Tone', key: 'skinTone' },
-    { label: 'Build', key: 'build' },
-    { label: 'Features', key: 'distinguishingFeatures' },
-  ];
 
   const tagStore = useTagStore();
   const sceneTags = tagStore.getTagsForScene(sceneId).filter((t) => t.characterId === char.id);
@@ -313,39 +297,6 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
           <FInput label="Notes" value={cb.notes} onChange={(v) => onUpdate({ notes: v })} />
         </>
       )}
-
-      {/* Expandable character profile section */}
-      <div className="cb-profile-section">
-        <button className="cb-profile-toggle" onClick={() => setShowProfile(!showProfile)}>
-          <svg className={`cb-profile-chevron${showProfile ? ' cb-profile-chevron--open' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          Character Profile
-        </button>
-        {showProfile && (
-          <div className="cb-profile-grid">
-            {profileFields.map(({ label, key }) => (
-              <div key={key} className="cb-profile-field">
-                <label className="cb-profile-label">{label}</label>
-                <input
-                  className="fi-input cb-profile-input"
-                  value={resolvedChar[key] as string || ''}
-                  onChange={(e) => charOverrides.updateCharacter(char.id, { [key]: e.target.value })}
-                  placeholder={`Enter ${label.toLowerCase()}…`}
-                />
-              </div>
-            ))}
-            <div className="cb-profile-field cb-profile-field--wide">
-              <label className="cb-profile-label">Notes</label>
-              <textarea
-                className="fi-input cb-profile-textarea"
-                value={resolvedChar.notes || ''}
-                onChange={(e) => charOverrides.updateCharacter(char.id, { notes: e.target.value })}
-                placeholder="Enter notes…"
-                rows={2}
-              />
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Per-character continuity events */}
       <div className="cb-continuity">

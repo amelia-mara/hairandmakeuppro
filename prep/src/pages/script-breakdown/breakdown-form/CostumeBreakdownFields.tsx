@@ -9,8 +9,6 @@ import { FInput } from './form-primitives';
 /**
  * Costume breakdown fields for a single character in a single scene.
  * Rendered inside CharBlock when the project department is 'costume'.
- * Fields: lookDescription, clothing, shoes, accessories, outerwear,
- * hairAndMakeupNotes, sfxNotes, environmental, action, changeNotes.
  */
 
 export interface CostumeSceneBreakdown {
@@ -23,6 +21,7 @@ export interface CostumeSceneBreakdown {
   sfxNotes?: string;
   environmental?: string;
   action?: string;
+  changeType?: 'no-change' | 'change';
   changeNotes?: string;
 }
 
@@ -64,6 +63,8 @@ export function CostumeBreakdownFields({ charId, sceneId, data, onChange }: Cost
         ))}
       </div>
     ) : null;
+
+  const changeType = data.changeType || 'no-change';
 
   return (
     <>
@@ -112,7 +113,18 @@ export function CostumeBreakdownFields({ charId, sceneId, data, onChange }: Cost
       </div>
 
       <div className="cb-field">
-        <FInput label="Change Notes" value={data.changeNotes || ''} onChange={(v) => update('changeNotes', v)} />
+        <label className="cb-label">Changes</label>
+        <div className="cb-toggle">
+          <button className={`cb-tog-opt ${changeType === 'no-change' ? 'cb-tog-opt--on' : ''}`}
+            onClick={() => onChange({ ...data, changeType: 'no-change', changeNotes: '' })}>No Change</button>
+          <button className={`cb-tog-opt ${changeType === 'change' ? 'cb-tog-opt--on' : ''}`}
+            onClick={() => onChange({ ...data, changeType: 'change' })}>Change</button>
+        </div>
+        {changeType === 'change' && (
+          <textarea className="cb-textarea" placeholder="Describe the costume change..."
+            value={data.changeNotes || ''}
+            onChange={(e) => update('changeNotes', e.target.value)} rows={2} />
+        )}
         <TagPills tags={sceneTags.filter((t) => t.categoryId === 'cos_change')} color={catColor('cos_change')} />
       </div>
     </>
