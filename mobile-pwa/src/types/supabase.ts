@@ -326,7 +326,7 @@ export type Database = {
           id: string
           continuity_event_id: string
           storage_path: string
-          photo_type: 'reference' | 'on_set' | 'wrap'
+          photo_type: 'reference' | 'on_set' | 'wrap' | 'deviation'
           angle: 'front' | 'left' | 'right' | 'back' | 'detail' | 'additional'
           notes: string | null
           taken_by: string | null
@@ -336,7 +336,7 @@ export type Database = {
           id?: string
           continuity_event_id: string
           storage_path: string
-          photo_type?: 'reference' | 'on_set' | 'wrap'
+          photo_type?: 'reference' | 'on_set' | 'wrap' | 'deviation'
           angle?: 'front' | 'left' | 'right' | 'back' | 'detail' | 'additional'
           notes?: string | null
           taken_by?: string | null
@@ -346,7 +346,7 @@ export type Database = {
           id?: string
           continuity_event_id?: string
           storage_path?: string
-          photo_type?: 'reference' | 'on_set' | 'wrap'
+          photo_type?: 'reference' | 'on_set' | 'wrap' | 'deviation'
           angle?: 'front' | 'left' | 'right' | 'back' | 'detail' | 'additional'
           notes?: string | null
           taken_by?: string | null

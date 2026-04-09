@@ -5,9 +5,10 @@ import {
   useParsedScriptStore, useCharacterOverridesStore,
   type Scene, type Character, type Look,
   type ContinuityEvent, type ProgressionStage, type ContinuityFlags,
-  type PhotoAngle, type ContinuityPhoto,
+  type PhotoAngle, type ContinuityPhoto, type CostumeLookbook,
   emptyHMW,
 } from '@/stores/breakdownStore';
+import { useProjectStore } from '@/stores/projectStore';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    HELPERS
@@ -58,6 +59,8 @@ export function ContinuityTracker({ projectId }: Props) {
   const photosStore = useContinuityPhotosStore();
   const parsedScriptStore = useParsedScriptStore();
   const overridesStore = useCharacterOverridesStore();
+  const project = useProjectStore((s) => s.getProject(projectId));
+  const isCostume = project?.department === 'costume';
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -518,6 +521,51 @@ export function ContinuityTracker({ projectId }: Props) {
                     })}
                   </div>
                 </div>
+
+                {/* Costume Lookbook Fields (costume department only) */}
+                {isCostume && (
+                  <div className="ct-section">
+                    <h4 className="ct-section-title">COSTUME LOOKBOOK</h4>
+                    <div className="ct-lookbook-fields" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div>
+                        <label className="ct-field-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Outfit</label>
+                        <textarea
+                          className="ct-notes-input"
+                          placeholder="Describe the outfit..."
+                          value={charEntry.costumeLookbook?.outfit ?? ''}
+                          onChange={(e) => continuityStore.setEntry(selectedSceneId, activeCharId, {
+                            costumeLookbook: { ...charEntry.costumeLookbook, outfit: e.target.value },
+                          })}
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="ct-field-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Accessories</label>
+                        <textarea
+                          className="ct-notes-input"
+                          placeholder="Jewellery, bags, hats, glasses..."
+                          value={charEntry.costumeLookbook?.accessories ?? ''}
+                          onChange={(e) => continuityStore.setEntry(selectedSceneId, activeCharId, {
+                            costumeLookbook: { ...charEntry.costumeLookbook, accessories: e.target.value },
+                          })}
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="ct-field-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Breakdown</label>
+                        <textarea
+                          className="ct-notes-input"
+                          placeholder="Ageing, distressing, breakdown effects..."
+                          value={charEntry.costumeLookbook?.breakdown ?? ''}
+                          onChange={(e) => continuityStore.setEntry(selectedSceneId, activeCharId, {
+                            costumeLookbook: { ...charEntry.costumeLookbook, breakdown: e.target.value },
+                          })}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Continuity Events */}
                 <div className="ct-section">

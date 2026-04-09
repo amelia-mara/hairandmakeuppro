@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useAuthStore } from '@/stores/authStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { formatEstimatedTime, formatSceneRange, getCaptureStatus } from '@/utils/helpers';
-import type { Photo, PhotoAngle, ContinuityEvent } from '@/types';
+import type { Photo, PhotoAngle, ContinuityEvent, CostumeLookbook, FloorTracking } from '@/types';
 import { countFilledFields, countHairFields, countSFXFields } from '@/types';
-import { Button, Accordion } from '../ui';
+import { Button, Accordion, Textarea } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
 import { PhotoGrid, AdditionalPhotosGrid, CostumePhotoGrid, MasterReference, PhotoCapture, SceneThumbnailSlot, PhotoViewer } from '../photos';
 import { QuickFlags } from '../continuity/QuickFlags';
@@ -16,6 +17,7 @@ import { HairForm } from '../forms/HairForm';
 import { SFXForm } from '../forms/SFXForm';
 import { NotesForm } from '../forms/NotesForm';
 import { SceneDeviationSection } from '../scenes/SceneDeviationSection';
+import { CostumeLookbookFields } from '../continuity/CostumeLookbookFields';
 import { createDefaultCostumeContinuity, type CostumePhotoCategory, type CostumeContinuityData } from '@/config/department';
 
 interface CharacterProfileProps {
@@ -67,12 +69,26 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
   const [viewerSource, setViewerSource] = useState<'scene' | 'additional' | 'sfx'>('scene');
 
+  // Permission state
+  const projectMemberships = useAuthStore((s) => s.projectMemberships);
+  const membership = projectMemberships.find((m) => m.projectId === currentProject?.id);
+  const projectStatus = membership?.status;
+  const userRole = membership?.role;
+
   if (!character || !scene || !currentProject) {
     return null;
   }
 
   const isCostume = currentProject.department === 'costume';
   const captureId = `${sceneId}-${characterId}`;
+
+  // Permission flags
+  const isOwner = userRole === 'owner';
+  const isPrep = projectStatus === 'prep';
+  const isShooting = projectStatus === 'shooting';
+  const isFloorTeam = userRole === 'floor';
+  const canEditLookbook = isOwner && isPrep;
+  const canEditFloor = isShooting && (isFloorTeam || isOwner || userRole === 'key' || userRole === 'supervisor' || userRole === 'hod' || userRole === 'designer');
 
   // Handle photo capture
   const handleOpenCapture = (angle: PhotoAngle, isMaster: boolean = false, isSFX: boolean = false) => {
@@ -347,53 +363,93 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           />
         </div>
 
-        {/* ── LOOKBOOK LAYER (locked during shoot) ────────────────────
-           Filled by the Designer in prep. Visible on every scene card
-           but read-only for the floor team. Designers edit in the
-           Lookbook tab. */}
-        {!isCostume && (
-        <Accordion
-          title="MAKEUP — LOOKBOOK"
-          count={look ? countFilledFields(look.makeup) : 0}
-        >
-          <MakeupForm makeup={look?.makeup} readOnly />
-        </Accordion>
-        )}
+        {/* ═══ LAYER 1: INTENDED LOOK (Lookbook — locked during shoot) ═══ */}
+        <div className="border-t-2 border-border pt-3 mt-1">
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <span className="text-[11px] font-bold tracking-wider text-text-muted uppercase">
+              Intended Look
+            </span>
+            {!canEditLookbook && (
+              <span className="text-[10px] text-text-light italic">read-only</span>
+            )}
+          </div>
 
-        {!isCostume && (
-        <Accordion
-          title="HAIR — LOOKBOOK"
-          count={look ? countHairFields(look.hair) : 0}
-        >
-          <HairForm hair={look?.hair} readOnly />
-        </Accordion>
-        )}
+          {isCostume ? (
+            /* Costume lookbook: outfit, accessories, breakdown */
+            <CostumeLookbookFields
+              data={capture.costumeLookbook || {}}
+              readOnly={!canEditLookbook}
+              onChange={(costumeLookbook: CostumeLookbook) =>
+                updateSceneCapture(captureId, { costumeLookbook })
+              }
+            />
+          ) : (
+            <>
+              {/* HMU lookbook: makeup, hair, SFX — always read-only on this card */}
+              <Accordion
+                title="MAKEUP — LOOKBOOK"
+                count={look ? countFilledFields(look.makeup) : 0}
+              >
+                <MakeupForm makeup={look?.makeup} readOnly />
+              </Accordion>
 
-        {!isCostume && (
-        <Accordion
-          title="SPECIAL EFFECTS — LOOKBOOK"
-          count={countSFXFields(capture.sfxDetails)}
-          badge={!capture.sfxDetails.sfxRequired ? 'None' : undefined}
-        >
-          <SFXForm sfx={capture.sfxDetails} readOnly />
-        </Accordion>
-        )}
+              <Accordion
+                title="HAIR — LOOKBOOK"
+                count={look ? countHairFields(look.hair) : 0}
+              >
+                <HairForm hair={look?.hair} readOnly />
+              </Accordion>
 
-        {/* ── FLOOR LAYER (editable on set) ───────────────────────────
-           Single free-text notes field plus a self-contained deviation
-           record (note + photos). The floor team owns both. */}
-        <Accordion title="FLOOR NOTES">
-          <NotesForm
-            notes={capture.notes}
-            onChange={(notes) => updateSceneCapture(captureId, { notes })}
+              <Accordion
+                title="SPECIAL EFFECTS — LOOKBOOK"
+                count={countSFXFields(capture.sfxDetails)}
+                badge={!capture.sfxDetails.sfxRequired ? 'None' : undefined}
+              >
+                <SFXForm sfx={capture.sfxDetails} readOnly />
+              </Accordion>
+            </>
+          )}
+        </div>
+
+        {/* ═══ LAYER 2: ON SET (Floor tracking — editable during shoot) ═══ */}
+        <div className="border-t-2 border-border pt-3 mt-1">
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <span className="text-[11px] font-bold tracking-wider text-text-muted uppercase">
+              On Set
+            </span>
+            {!canEditFloor && (
+              <span className="text-[10px] text-text-light italic">
+                {isShooting ? 'view-only' : 'available during shoot'}
+              </span>
+            )}
+          </div>
+
+          {/* Floor note — single free-text field */}
+          <div className="card">
+            <h3 className="section-header mb-2">FLOOR NOTE</h3>
+            <Textarea
+              value={capture.floorTracking?.floorNote ?? capture.notes ?? ''}
+              onChange={(e) => {
+                const floorNote = e.target.value;
+                updateSceneCapture(captureId, {
+                  floorTracking: { ...capture.floorTracking, floorNote },
+                  notes: floorNote,
+                });
+              }}
+              placeholder="On-set notes — what happened, what changed, what to flag..."
+              rows={3}
+              className="resize-none"
+              disabled={!canEditFloor}
+            />
+          </div>
+
+          {/* Deviation section */}
+          <SceneDeviationSection
+            capture={capture}
+            characterName={character.name}
+            sceneNumber={scene.sceneNumber}
           />
-        </Accordion>
-
-        <SceneDeviationSection
-          capture={capture}
-          characterName={character.name}
-          sceneNumber={scene.sceneNumber}
-        />
+        </div>
 
         {/* Application/Fitting Time */}
         <div className="card flex items-center gap-3.5">

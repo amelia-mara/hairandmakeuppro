@@ -268,6 +268,7 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
       const capture = state.sceneCaptures[captureId];
       if (!capture) return state;
       const existing = capture.deviation ?? { note: '', photos: [] };
+      const hasDeviation = note.trim().length > 0 || existing.photos.length > 0;
       return {
         sceneCaptures: {
           ...state.sceneCaptures,
@@ -277,6 +278,11 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
               ...existing,
               note,
               loggedAt: existing.loggedAt ?? new Date(),
+            },
+            floorTracking: {
+              ...capture.floorTracking,
+              hasDeviation,
+              deviationNote: note,
             },
           },
         },
@@ -299,6 +305,10 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
               photos: [...existing.photos, photo],
               loggedAt: existing.loggedAt ?? new Date(),
             },
+            floorTracking: {
+              ...capture.floorTracking,
+              hasDeviation: true,
+            },
           },
         },
       };
@@ -309,6 +319,8 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
     set((state) => {
       const capture = state.sceneCaptures[captureId];
       if (!capture || !capture.deviation) return state;
+      const remainingPhotos = capture.deviation.photos.filter((p) => p.id !== photoId);
+      const hasDeviation = capture.deviation.note.trim().length > 0 || remainingPhotos.length > 0;
       return {
         sceneCaptures: {
           ...state.sceneCaptures,
@@ -316,7 +328,11 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
             ...capture,
             deviation: {
               ...capture.deviation,
-              photos: capture.deviation.photos.filter((p) => p.id !== photoId),
+              photos: remainingPhotos,
+            },
+            floorTracking: {
+              ...capture.floorTracking,
+              hasDeviation,
             },
           },
         },
@@ -330,6 +346,11 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
       if (!capture) return state;
       const next = { ...capture };
       delete next.deviation;
+      next.floorTracking = {
+        ...next.floorTracking,
+        hasDeviation: false,
+        deviationNote: '',
+      };
       return {
         sceneCaptures: { ...state.sceneCaptures, [captureId]: next },
       };
