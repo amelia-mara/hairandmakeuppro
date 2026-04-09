@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES,
+  getBreakdownCategoriesForDepartment,
   useBreakdownStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
   useCharacterOverridesStore, useRevisedScenesStore,
   type Scene, type Character, type Look,
@@ -47,6 +48,9 @@ export function ScriptBreakdown({ projectId }: Props) {
 
   const store = useBreakdownStore();
   const synopsisStore = useSynopsisStore();
+  const project = useProjectStore((s) => s.getProject(projectId));
+  const department = (project?.department as 'hmu' | 'costume') || 'hmu';
+  const departmentCategories = useMemo(() => getBreakdownCategoriesForDepartment(department), [department]);
 
   /* Script upload state */
   const scriptUpload = useScriptUploadStore();
@@ -247,7 +251,7 @@ export function ScriptBreakdown({ projectId }: Props) {
             </button>
             {showLegend && (
               <div className="bd-legend-tags">
-                {BREAKDOWN_CATEGORIES.map((cat) => (
+                {departmentCategories.map((cat) => (
                   <span key={cat.id} className="bd-legend-tag">
                     <span className="bd-legend-swatch" style={{ background: cat.color }} />
                     {cat.label}
@@ -270,6 +274,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                   fontSize={fontSize}
                   onCharClick={setActiveTab}
                   projectId={projectId}
+                  department={department}
                   onSynopsisTag={(sceneId, text) => {
                     const existing = synopsisStore.getSynopsis(sceneId, '');
                     synopsisStore.setSynopsis(sceneId, existing ? `${existing} ${text}` : text);
@@ -474,6 +479,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                 }
                 triggerSave();
               }}
+              department={department}
             />
             )
           )}

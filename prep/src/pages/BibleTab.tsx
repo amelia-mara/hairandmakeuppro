@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useProjectStore } from '@/stores/projectStore';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS,
   useBreakdownStore, useTagStore, useParsedScriptStore, useCharacterOverridesStore,
@@ -27,6 +28,8 @@ interface BibleSection {
 export function BibleTab({ projectId }: { projectId: string }) {
   const breakdownStore = useBreakdownStore();
   const tagStore = useTagStore();
+  const bbProject = useProjectStore((s) => s.getProject(projectId));
+  const bbDeptLabel = bbProject?.department === 'costume' ? 'Costume' : '{bbDeptLabel}';
   const parsedScriptStore = useParsedScriptStore();
   const overridesStore = useCharacterOverridesStore();
 
@@ -213,7 +216,7 @@ export function BibleTab({ projectId }: { projectId: string }) {
                   </div>
                   <div>
                     <div className="bb-field-label">Department</div>
-                    <div className="bb-field-value">Hair & Makeup</div>
+                    <div className="bb-field-value">{bbDeptLabel}</div>
                   </div>
                   <div>
                     <div className="bb-field-label">Characters</div>
