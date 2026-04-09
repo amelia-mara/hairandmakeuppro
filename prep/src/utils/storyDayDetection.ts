@@ -138,7 +138,7 @@ export function classifyTOD(raw: string): TOD {
 // ─── TIER 1: ACTION LINE PATTERNS ───────────────────────────────────────────
 
 interface Tier1Match {
-  type: 'new-day' | 'same-day' | 'flashback' | 'large-jump' | 'inferred-new-day';
+  type: 'new-day' | 'same-day' | 'flashback' | 'large-jump' | 'inferred-new-day' | 'concurrent';
   signal: string;
   gapNote?: string;
 }
@@ -238,11 +238,22 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
     return { type: 'same-day', signal: `Return to present: "${raw.trim()}"` };
   }
 
+  // Flashback colon format: "FLASHBACK: 1985", "FLASH FORWARD: 2050"
+  if (/^FLASHBACK:\s*.+/.test(t) || /^FLASH\s*BACK:\s*.+/.test(t) ||
+      /^FLASH\s*FORWARD:\s*.+/.test(t)) {
+    return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"`, gapNote: raw.trim() };
+  }
+
   // Non-present markers: FLASHBACK, FLASH BACK, FLASH FORWARD, DREAM, MEMORY
   // Must check BEFORE time jumps — "FLASHBACK: 2 WEEKS AGO" is a flashback,
   // not a present-timeline time jump
   if (/\b(FLASHBACK|FLASH\s*BACK|FLASH\s+FORWARD|DREAM|MEMORY|NIGHTMARE)\b/.test(t)) {
     return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"` };
+  }
+
+  // INTERCUT: mark following scene as concurrent (same story day)
+  if (/^INTERCUT\b/.test(t)) {
+    return { type: 'concurrent', signal: `Intercut title card: "${raw.trim()}"` };
   }
 
   // Time jumps: "6 MONTHS LATER", "TWO WEEKS AGO", "3 DAYS LATER", etc.
@@ -383,6 +394,13 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     if (titleCardMatch?.type === 'flashback') {
       postLargeJump = false;
       results.push(makeFlashback(scene, dayCounter));
+      continue;
+    }
+    if (titleCardMatch?.type === 'concurrent') {
+      postLargeJump = false;
+      // No day increment, no baseline update
+      results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
+        titleCardMatch.signal, null));
       continue;
     }
     if (titleCardMatch?.type === 'same-day') {

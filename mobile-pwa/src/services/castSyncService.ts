@@ -237,7 +237,7 @@ function extractActionLinesFromContent(content: string): {
       /^[A-Z][A-Z\s,.:'\-!0-9]+$/.test(line) &&
       line.length > 4 &&
       !/^(EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i.test(line) &&
-      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?)\b/.test(line)
+      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|INTERCUT)\b/.test(line)
     ) {
       titleCard = line;
       continue;
