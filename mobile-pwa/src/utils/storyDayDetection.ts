@@ -166,8 +166,11 @@ export function matchTier1(actionLines: string[]): Tier1Match | null {
     [/\bthe?\s+following\s+(morning|day|afternoon)\b/i,           '"The following day/morning"'],
     [/\bnext\s+morning\b/i,                                        '"Next morning"'],
     [/\bdawn\s+breaks\b/i,                                         '"Dawn breaks"'],
-    [/\b(\d+|one|two|three|four|five|six|seven)\s+days?\s+later\b/i,  'N days later'],
-    [/\b(\d+|one|two|three|four)\s+weeks?\s+later\b/i,            'N weeks later'],
+    [/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\s+days?\s+later\b/i, 'N days later'],
+    [/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\s+later\b/i, 'N weeks later'],
+    [/\b(several|a\s+few|a\s+couple\s+of|many|some)\s+days?\s+later\b/i, 'Vague days later'],
+    [/\b(several|a\s+few|a\s+couple\s+of|many)\s+weeks?\s+later\b/i, 'Vague weeks later'],
+    [/\bthe\s+following\s+week\b/i,                                'The following week'],
   ];
   for (const [pattern, signal] of newDay) {
     const m = text.match(pattern);
