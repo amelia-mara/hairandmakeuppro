@@ -117,6 +117,7 @@ export function isTemporalPrefixMarker(line: string): boolean {
       || /\bBACK\s+TO\s+PRESENT\b/.test(t)
       || /\bRETURN\s+TO\s+PRESENT\b/.test(t)
       || /\bEND\s+FLASHBACK\b/.test(t)
+      || /^INTERCUT\b/.test(t)
       || /\b(\d+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|SEVERAL|FEW|MANY|SOME|A\s+FEW)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+(LATER|AGO|EARLIER)\b/.test(t);
 }
 
@@ -132,7 +133,7 @@ export function extractTitleCardFromInterstitial(text: string): string | null {
       /^[A-Z0-9][A-Z\s,.:'\-!0-9]+$/.test(line) &&
       line.length > 4 &&
       line.length < 80 &&
-      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|CHRISTMAS|VALENTINE|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(line) &&
+      /\b(FLASHBACK|LATER|AGO|EARLIER|MORNING|YEARS?|MONTHS?|WEEKS?|DAYS?|INTERCUT|CHRISTMAS|VALENTINE|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/.test(line) &&
       !/^(INT|EXT|EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i.test(line)
     ) {
       return line;
