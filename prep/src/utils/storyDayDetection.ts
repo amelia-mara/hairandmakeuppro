@@ -59,7 +59,6 @@ export interface StoryDayResult {
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
 
 const NIGHT_SET = new Set<TOD>(['NIGHT', 'MIDNIGHT', 'EVENING', 'DUSK']);
-const DAY_SET   = new Set<TOD>(['DAY', 'MORNING', 'DAWN', 'AFTERNOON']);
 const SKIP_SET  = new Set<TOD>(['CONTINUOUS', 'LATER', 'MOMENTS_LATER', 'UNKNOWN']);
 
 // ─── TOD CLASSIFIER ─────────────────────────────────────────────────────────
@@ -69,8 +68,57 @@ function todPrefix(tod: TOD): 'D' | 'N' {
   return NIGHT_SET.has(tod) ? 'N' : 'D';
 }
 
+// ─── TOD PRE-PROCESSING ─────────────────────────────────────────────────────
+
+export interface TODPreprocessResult {
+  isNonPresent: boolean;
+  isContinuous: boolean;
+  cleaned: string;
+}
+
+/**
+ * Pre-process a raw TOD string before classification.
+ * Step A: detect non-present qualifiers (flashback, ago, etc.)
+ * Step B: detect continuous/same-moment qualifiers
+ * Step C: strip season/intensity prefixes
+ */
+export function preprocessRawTOD(raw: string): TODPreprocessResult {
+  // Strip trailing scene number (e.g. "NIGHT 23" → "NIGHT")
+  const stripped = (raw ?? '').replace(/\s+\d+[A-Za-z]?\s*$/, '');
+  let t = stripped.toUpperCase().trim();
+  if (!t) return { isNonPresent: false, isContinuous: false, cleaned: '' };
+
+  // STEP A — Non-present qualifiers: return early, do not update baseline
+  if (/\bAGO\b/.test(t) || /\bEARLIER\b/.test(t) || /\bPRIOR\b/.test(t) ||
+      /\bFLASHBACK\b/.test(t) || /\bFLASH\s*FORWARD\b/.test(t)) {
+    // For slash format ("NIGHT / FLASHBACK"), extract the part before the slash
+    const slashMatch = t.match(/^(.+?)\s*\/\s*/);
+    const underlying = slashMatch ? slashMatch[1].trim() : t;
+    return { isNonPresent: true, isContinuous: false, cleaned: underlying };
+  }
+
+  // STEP B — Continuous/same-moment qualifiers: no day change, no baseline update
+  // Note: CONTINUOUS and CONT. are already handled by classifyTOD's own checks,
+  // but we catch them here too for consistency with the other same-moment patterns.
+  if (/^SAME$/.test(t) || /SECONDS\s+LATER/.test(t) || /MOMENTS?\s+LATER/.test(t) ||
+      /A\s+BEAT\s+LATER/.test(t) || /^(CONTINUOUS|CONT\.)/.test(t)) {
+    return { isNonPresent: false, isContinuous: true, cleaned: t };
+  }
+
+  // STEP C — Season/intensity prefix stripping
+  t = t.replace(/^(SUMMER|WINTER|SPRING|AUTUMN)\s+/, '');
+  t = t.replace(/^EARLY\s+/, '');
+  // Strip "LATE " only before a TOD word — not from "LATER"
+  t = t.replace(/^LATE\s+(?=DAY\b|NIGHT\b|MORNING\b|AFTERNOON\b|EVENING\b|DAWN\b|DUSK\b|MIDNIGHT\b)/, '');
+
+  return { isNonPresent: false, isContinuous: false, cleaned: t };
+}
+
 export function classifyTOD(raw: string): TOD {
-  const t = (raw ?? '').toUpperCase().trim();
+  const pre = preprocessRawTOD(raw);
+  if (pre.isNonPresent) return 'UNKNOWN';
+  if (pre.isContinuous) return 'CONTINUOUS';
+  const t = pre.cleaned;
   if (!t) return 'UNKNOWN';
   if (/^(CONTINUOUS|CONT\.)/.test(t))                    return 'CONTINUOUS';
   if (/^(MOMENTS?\s+LATER|A\s+LITTLE\s+LATER)/.test(t)) return 'MOMENTS_LATER';
@@ -89,7 +137,7 @@ export function classifyTOD(raw: string): TOD {
 // ─── TIER 1: ACTION LINE PATTERNS ───────────────────────────────────────────
 
 interface Tier1Match {
-  type: 'new-day' | 'same-day' | 'flashback' | 'large-jump' | 'inferred-new-day';
+  type: 'new-day' | 'same-day' | 'flashback' | 'large-jump' | 'inferred-new-day' | 'concurrent';
   signal: string;
   gapNote?: string;
 }
@@ -117,8 +165,11 @@ export function matchTier1(actionLines: string[]): Tier1Match | null {
     [/\bthe?\s+following\s+(morning|day|afternoon)\b/i,           '"The following day/morning"'],
     [/\bnext\s+morning\b/i,                                        '"Next morning"'],
     [/\bdawn\s+breaks\b/i,                                         '"Dawn breaks"'],
-    [/\b(\d+|one|two|three|four|five|six|seven)\s+days?\s+later\b/i,  'N days later'],
-    [/\b(\d+|one|two|three|four)\s+weeks?\s+later\b/i,            'N weeks later'],
+    [/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\s+days?\s+later\b/i, 'N days later'],
+    [/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\s+later\b/i, 'N weeks later'],
+    [/\b(several|a\s+few|a\s+couple\s+of|many|some)\s+days?\s+later\b/i, 'Vague days later'],
+    [/\b(several|a\s+few|a\s+couple\s+of|many)\s+weeks?\s+later\b/i, 'Vague weeks later'],
+    [/\bthe\s+following\s+week\b/i,                                'The following week'],
   ];
   for (const [pattern, signal] of newDay) {
     const m = text.match(pattern);
@@ -173,9 +224,15 @@ export function matchHeadingTimeJump(slugline: string): Tier1Match | null {
 
 // ─── TIER 1B: TITLE CARD ────────────────────────────────────────────────────
 
+/** Structural heading patterns — not valid title cards */
+const STRUCTURAL_HEADING_RE = /^(EPISODE\s+\d+|ACT\s+(ONE|TWO|THREE|FOUR|FIVE|\d+)|PART\s+(ONE|TWO|THREE|FOUR|\d+)|CHAPTER\s+\d+|SCENE\s+\d+)\b/i;
+
 export function matchTitleCard(raw: string | null): Tier1Match | null {
   if (!raw) return null;
   const t = raw.trim().toUpperCase();
+
+  // Skip structural headings — these are not title cards
+  if (STRUCTURAL_HEADING_RE.test(t)) return null;
 
   // Return to present markers — check first so "END FLASHBACK" isn't
   // caught by the general \bFLASHBACK\b pattern below
@@ -183,11 +240,22 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
     return { type: 'same-day', signal: `Return to present: "${raw.trim()}"` };
   }
 
+  // Flashback colon format: "FLASHBACK: 1985", "FLASH FORWARD: 2050"
+  if (/^FLASHBACK:\s*.+/.test(t) || /^FLASH\s*BACK:\s*.+/.test(t) ||
+      /^FLASH\s*FORWARD:\s*.+/.test(t)) {
+    return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"`, gapNote: raw.trim() };
+  }
+
   // Non-present markers: FLASHBACK, FLASH BACK, FLASH FORWARD, DREAM, MEMORY
   // Must check BEFORE time jumps — "FLASHBACK: 2 WEEKS AGO" is a flashback,
   // not a present-timeline time jump
   if (/\b(FLASHBACK|FLASH\s*BACK|FLASH\s+FORWARD|DREAM|MEMORY|NIGHTMARE)\b/.test(t)) {
     return { type: 'flashback', signal: `Flashback title card: "${raw.trim()}"` };
+  }
+
+  // INTERCUT: mark following scene as concurrent (same story day)
+  if (/^INTERCUT\b/.test(t)) {
+    return { type: 'concurrent', signal: `Intercut title card: "${raw.trim()}"` };
   }
 
   // Time jumps: "6 MONTHS LATER", "TWO WEEKS AGO", "3 DAYS LATER", etc.
@@ -217,19 +285,30 @@ export function matchTitleCard(raw: string | null): Tier1Match | null {
 
 // ─── TIER 3: TOD REGRESSION ─────────────────────────────────────────────────
 
+/** Map a TOD value to a numeric time order for regression detection. */
+export function getTimeOrder(tod: TOD): number {
+  switch (tod) {
+    case 'DAWN':        return 0.5;  // DAWN, SUNRISE
+    case 'MORNING':     return 1;    // MORNING, EARLY MORNING
+    case 'DAY':         return 2;    // DAY, MIDDAY, NOON
+    case 'AFTERNOON':   return 2.5;
+    case 'DUSK':        return 3;    // DUSK, SUNSET, GOLDEN HOUR, TWILIGHT
+    case 'EVENING':     return 3.5;
+    case 'NIGHT':       return 4;    // NIGHT, LATE NIGHT
+    case 'MIDNIGHT':    return 4.5;
+    default:            return -1;   // UNKNOWN, CONTINUOUS, LATER, etc.
+  }
+}
+
 type RegressionResult = 'new-day' | 'same-day' | 'ambiguous';
 
 export function checkTODRegression(prev: TOD, curr: TOD): RegressionResult {
   if (SKIP_SET.has(prev) || SKIP_SET.has(curr)) return 'ambiguous';
-  const prevNight = NIGHT_SET.has(prev);
-  const currNight = NIGHT_SET.has(curr);
-  const prevDay   = DAY_SET.has(prev);
-  const currDay   = DAY_SET.has(curr);
-  if (prevNight && currDay)   return 'new-day';   // NIGHT→DAY = overnight
-  if (prevDay   && currNight) return 'same-day';  // DAY→NIGHT = same evening
-  if (prevDay   && currDay)   return 'same-day';  // DAY→DAY = same day
-  if (prevNight && currNight) return 'ambiguous'; // NIGHT→NIGHT = unclear
-  return 'ambiguous';
+  const prevTimeOrder = getTimeOrder(prev);
+  const currTimeOrder = getTimeOrder(curr);
+  if (prevTimeOrder === -1 || currTimeOrder === -1) return 'ambiguous';
+  if (currTimeOrder < prevTimeOrder) return 'new-day';
+  return 'same-day';
 }
 
 // ─── CONCURRENT DETECTION ───────────────────────────────────────────────────
@@ -317,6 +396,13 @@ export function buildStoryDayMap(scenes: ParsedScene[]): StoryDayResult[] {
     if (titleCardMatch?.type === 'flashback') {
       postLargeJump = false;
       results.push(makeFlashback(scene, dayCounter));
+      continue;
+    }
+    if (titleCardMatch?.type === 'concurrent') {
+      postLargeJump = false;
+      // No day increment, no baseline update
+      results.push(make(scene, dayCounter || 1, 'concurrent', 'inferred',
+        titleCardMatch.signal, null));
       continue;
     }
     if (titleCardMatch?.type === 'same-day') {
