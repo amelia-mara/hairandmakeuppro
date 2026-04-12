@@ -6,7 +6,7 @@ import type { Scene, Character, CharacterRole } from '@/types';
 import { clsx } from 'clsx';
 
 const ROLE_OPTIONS: { value: CharacterRole; label: string; shortLabel: string; colour: string }[] = [
-  { value: 'lead', label: 'Lead', shortLabel: 'L', colour: 'bg-amber-500 text-white' },
+  { value: 'lead', label: 'Lead', shortLabel: 'L', colour: 'bg-amber text-white' },
   { value: 'supporting', label: 'Supporting', shortLabel: 'SA', colour: 'bg-blue-500 text-white' },
   { value: 'background', label: 'Background', shortLabel: 'BG', colour: 'bg-gray-400 text-white' },
 ];
@@ -328,7 +328,7 @@ export function SceneCharacterConfirmation({
           </div>
           <button
             onClick={onClose}
-            className="p-2 -mr-2 text-text-muted active:text-gold"
+            className="p-2 -mr-2 text-text-muted active:text-brand-gold"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -364,9 +364,9 @@ export function SceneCharacterConfirmation({
                     <div
                       key={charId}
                       className={clsx(
-                        'p-3 rounded-xl border transition-all',
+                        'p-2.5 rounded-xl border transition-all',
                         isSelected
-                          ? 'border-gold bg-gold/5'
+                          ? 'border-brand-gold bg-brand-gold/5'
                           : 'border-red-200 bg-red-50'
                       )}
                     >
@@ -386,7 +386,7 @@ export function SceneCharacterConfirmation({
                                   setEditingKey(null);
                                 }
                               }}
-                              className="w-full px-2 py-1 text-sm font-medium border border-gold rounded bg-white text-text-primary uppercase"
+                              className="w-full px-2 py-1 text-sm font-medium border border-brand-gold rounded bg-white text-text-primary uppercase"
                               autoFocus
                             />
                           ) : (
@@ -396,7 +396,7 @@ export function SceneCharacterConfirmation({
                               className="flex items-center gap-1.5 group"
                             >
                               <span className={clsx(
-                                'font-medium',
+                                'text-sm font-medium',
                                 isSelected ? 'text-text-primary' : 'text-red-400 line-through'
                               )}>{displayName}</span>
                               <svg className="w-3 h-3 text-text-light opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -475,9 +475,9 @@ export function SceneCharacterConfirmation({
                     <div
                       key={name}
                       className={clsx(
-                        'w-full p-3 rounded-xl border transition-all text-left',
+                        'w-full p-2.5 rounded-xl border transition-all text-left',
                         isSelected
-                          ? 'border-gold bg-gold/5'
+                          ? 'border-brand-gold bg-brand-gold/5'
                           : 'border-border bg-card'
                       )}
                     >
@@ -488,7 +488,7 @@ export function SceneCharacterConfirmation({
                           onClick={() => handleToggleSuggested(name, existingCharacter)}
                           className={clsx(
                             'w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                            isSelected ? 'border-gold bg-gold' : 'border-gray-300'
+                            isSelected ? 'border-brand-gold bg-gold' : 'border-gray-300'
                           )}
                         >
                           {isSelected && (
@@ -516,7 +516,7 @@ export function SceneCharacterConfirmation({
                                   setEditingKey(null);
                                 }
                               }}
-                              className="w-full px-2 py-1 text-sm font-medium border border-gold rounded bg-white text-text-primary uppercase"
+                              className="w-full px-2 py-1 text-sm font-medium border border-brand-gold rounded bg-white text-text-primary uppercase"
                               autoFocus
                             />
                           ) : (
@@ -525,7 +525,7 @@ export function SceneCharacterConfirmation({
                               onClick={() => startEditing(name, existingCharacter ? existingCharacter.name : name)}
                               className="flex items-center gap-1.5 group"
                             >
-                              <span className="font-medium text-text-primary">{displayName}</span>
+                              <span className="text-sm font-medium text-text-primary">{displayName}</span>
                               {existingCharacter ? (
                                 <span className="text-xs text-green-600">In project</span>
                               ) : (
@@ -598,7 +598,7 @@ export function SceneCharacterConfirmation({
             ) : (
               <button
                 onClick={() => setShowAddCharacter(true)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-text-muted hover:border-gold hover:text-gold transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-text-muted hover:border-brand-gold hover:text-brand-gold transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -613,7 +613,7 @@ export function SceneCharacterConfirmation({
         <div className="px-4 py-4 border-t border-border shrink-0">
           <button
             onClick={handleConfirm}
-            className="w-full py-3 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-button bg-gold text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
           >
             Confirm {selectedCount} Character{selectedCount !== 1 ? 's' : ''}
           </button>
@@ -647,7 +647,7 @@ export function SceneCharacterStatus({
     const unassigned = confirmedCharacters.filter(c => !c.role);
 
     const roleGroups = [
-      { key: 'lead', label: 'L', colour: 'bg-amber-100 text-amber-700', chars: leads },
+      { key: 'lead', label: 'L', colour: 'bg-amber-100 text-brand-gold', chars: leads },
       { key: 'supporting', label: 'SA', colour: 'bg-blue-100 text-blue-700', chars: supportingChars },
       { key: 'background', label: 'BG', colour: 'bg-gray-100 text-gray-500', chars: backgroundChars },
       { key: 'unassigned', label: '', colour: '', chars: unassigned },
@@ -686,7 +686,7 @@ export function SceneCharacterStatus({
         {/* Add character button - always visible */}
         <button
           onClick={onConfirmClick}
-          className="inline-flex items-center gap-1 text-[10px] text-gold font-medium mt-1.5 hover:text-gold-dark transition-colors"
+          className="inline-flex items-center gap-1 text-[10px] text-brand-gold font-medium mt-1.5 hover:text-brand-gold-dark transition-colors"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -725,7 +725,7 @@ export function SceneCharacterStatus({
           Suggested: {suggestedNames.slice(0, 3).join(', ')}
           {suggestedNames.length > 3 && ` +${suggestedNames.length - 3} more`}
         </p>
-        <span className="inline-flex items-center gap-1 text-[10px] text-gold font-medium">
+        <span className="inline-flex items-center gap-1 text-[10px] text-brand-gold font-medium">
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
@@ -739,7 +739,7 @@ export function SceneCharacterStatus({
   return (
     <button
       onClick={onConfirmClick}
-      className="inline-flex items-center gap-1 text-xs text-gold font-medium"
+      className="inline-flex items-center gap-1 text-xs text-brand-gold font-medium"
     >
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -766,9 +766,9 @@ export function CharacterConfirmationProgress({
   }
 
   return (
-    <div className="mx-4 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+    <div className="mx-4 mb-3 p-3 bg-brand-gold/5 border border-amber-200 rounded-xl">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-amber-700">
+        <span className="text-xs font-medium text-brand-gold">
           Character Confirmation
         </span>
         <span className="text-xs text-amber-600">
@@ -777,7 +777,7 @@ export function CharacterConfirmationProgress({
       </div>
       <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-amber-500 rounded-full transition-all duration-300"
+          className="h-full bg-brand-gold/50 rounded-full transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </div>
