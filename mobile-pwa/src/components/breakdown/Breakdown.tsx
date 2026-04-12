@@ -14,7 +14,6 @@ import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { AccessRestricted } from '@/components/AccessRestricted';
 import { canAccessPrep } from '@/utils/tierUtils';
 import { SceneCharacterConfirmation } from '@/components/scenes/SceneCharacterConfirmation';
-import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { FilmingStatusDropdown, FilmingNotesModal } from '@/components/scenes/FilmingStatusDropdown';
 import type {
   Character,
@@ -38,7 +37,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const access = useProjectAccess();
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
   const [confirmSceneId, setConfirmSceneId] = useState<string | null>(null);
   const [notesModalState, setNotesModalState] = useState<{
     sceneNumber: string;
@@ -235,7 +233,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 
   /* ─── Modal scenes ─── */
 
-  const scriptModalScene = scriptModalSceneId ? scenes.find((s) => s.id === scriptModalSceneId) : null;
   const confirmScene = confirmSceneId ? scenes.find((s) => s.id === confirmSceneId) : null;
 
   /* ─── Empty states ─── */
@@ -342,9 +339,14 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                   </div>
                 )}
 
-                {/* Scene header with actions */}
-                <div className="px-3 py-2.5 border-b border-border">
-                  <div className="flex items-center gap-2 flex-wrap">
+                {/* Scene header — single row with scene info + actions */}
+                <div className={clsx(
+                  'px-3 py-2.5 border-b border-border',
+                  scene.filmingStatus === 'complete' && 'bg-green-500/8',
+                  scene.filmingStatus === 'partial' && 'bg-amber-500/8',
+                  scene.filmingStatus === 'not-filmed' && 'bg-red-500/8',
+                )}>
+                  <div className="flex items-center gap-2">
                     <span className={clsx(
                       'flex-shrink-0 px-2 py-0.5 rounded text-xs font-bold',
                       scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400',
@@ -360,6 +362,22 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                       {scene.intExt}. {scene.slugline?.replace(/^(INT\.|EXT\.)\s*/i, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\s*$/i, '') || 'UNKNOWN'} — {scene.timeOfDay}
                     </span>
 
+                    {/* Actions — inline with scene info */}
+                    <FilmingStatusDropdown
+                      scene={scene}
+                      onStatusChange={handleFilmingStatusChange}
+                      onNotesModalOpen={handleNotesModalOpen}
+                    />
+                    <button
+                      onClick={() => setConfirmSceneId(scene.id)}
+                      className="text-[10px] font-semibold text-text-muted px-1.5 py-1 rounded-lg border border-border hover:border-gold/50 transition-colors flex-shrink-0"
+                      title="Add character"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                    </button>
+
                     {/* Unconfirmed indicator */}
                     {isUnconfirmed && (
                       <button
@@ -370,32 +388,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
                       </button>
                     )}
-                  </div>
-
-                  {/* Action row */}
-                  <div className="flex items-center gap-2 mt-2">
-                    <FilmingStatusDropdown
-                      scene={scene}
-                      onStatusChange={handleFilmingStatusChange}
-                      onNotesModalOpen={handleNotesModalOpen}
-                    />
-                    {scene.scriptContent && (
-                      <button
-                        onClick={() => setScriptModalSceneId(scene.id)}
-                        className="text-[10px] font-semibold text-text-muted px-2 py-1 rounded-lg border border-border hover:border-gold/50 transition-colors"
-                      >
-                        View Scene
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setConfirmSceneId(scene.id)}
-                      className="text-[10px] font-semibold text-text-muted px-1.5 py-1 rounded-lg border border-border hover:border-gold/50 transition-colors"
-                      title="Add character"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
 
@@ -489,14 +481,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           })
         )}
       </div>
-
-      {/* Script modal */}
-      {scriptModalScene && (
-        <SceneScriptModal
-          scene={scriptModalScene}
-          onClose={() => setScriptModalSceneId(null)}
-        />
-      )}
 
       {/* Character confirmation modal */}
       {confirmScene && (
