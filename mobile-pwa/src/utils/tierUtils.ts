@@ -8,11 +8,11 @@
  * irrelevant — do not use these functions for joined-project access.
  */
 
-export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer';
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner';
 
 /** Can the user create their own projects? */
 export const canCreateProjects = (tier: string): boolean =>
-  ['artist', 'supervisor', 'designer'].includes(tier);
+  ['artist', 'supervisor', 'designer', 'owner'].includes(tier);
 
 /** Has Artist reached their one-project limit? */
 export const hasReachedProjectLimit = (
@@ -22,20 +22,24 @@ export const hasReachedProjectLimit = (
 
 /** Can the user invite team members to their own projects? */
 export const canInviteTeam = (tier: string): boolean =>
-  ['supervisor', 'designer'].includes(tier);
+  ['supervisor', 'designer', 'owner'].includes(tier);
 
 /** Can the user access budget on their own projects? */
 export const canAccessBudget = (tier: string): boolean =>
-  ['supervisor', 'designer'].includes(tier);
+  ['supervisor', 'designer', 'owner'].includes(tier);
 
 /** Can the user access project settings on their own projects? */
 export const canAccessProjectSettings = (tier: string): boolean =>
-  ['supervisor', 'designer'].includes(tier);
+  ['supervisor', 'designer', 'owner'].includes(tier);
 
 /** Can the user access Prep Happy desktop? */
 export const canAccessPrep = (tier: string): boolean =>
-  tier === 'designer';
+  ['designer', 'owner'].includes(tier);
 
 /** Can the user approve timesheets and countersign invoices? */
 export const canApproveTimesheets = (tier: string): boolean =>
-  tier === 'designer';
+  ['designer', 'owner'].includes(tier);
+
+/** Is this the platform owner account? */
+export const isOwnerTier = (tier: string): boolean =>
+  tier === 'owner';

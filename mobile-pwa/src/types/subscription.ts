@@ -3,7 +3,7 @@
 // Beta Mode - Set to false when ready to launch with pricing
 export const BETA_MODE = true;
 
-export type SubscriptionTier = 'daily' | 'artist' | 'supervisor' | 'designer';
+export type SubscriptionTier = 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner';
 export type BillingPeriod = 'monthly' | 'yearly' | 'per_project';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'trialing' | null;
 

@@ -89,7 +89,7 @@ interface AuthState {
 }
 
 // Valid tiers for lookup safety
-const VALID_TIERS: UserTier[] = ['daily', 'artist', 'supervisor', 'designer'];
+const VALID_TIERS: UserTier[] = ['daily', 'artist', 'supervisor', 'designer', 'owner'];
 
 // Convert Supabase user profile to app User type
 function toAppUser(profile: supabaseAuth.UserProfile): User {
