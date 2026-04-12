@@ -31,6 +31,7 @@ function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const userTier = useAuthStore((s) => s.user?.tier);
 
   // Restore session on mount
   useEffect(() => {
@@ -179,8 +180,7 @@ function App() {
     );
   }
 
-  // Prep Happy tier gate — Designer only
-  const userTier = useAuthStore((s) => s.user?.tier);
+  // Prep Happy tier gate — Designer and Owner only
   if (isAuthenticated && userTier && !canAccessPrep(userTier)) {
     return (
       <PrepUpgradeScreen
