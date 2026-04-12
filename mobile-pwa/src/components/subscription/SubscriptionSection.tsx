@@ -5,6 +5,7 @@ import {
   formatPrice,
 } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
+import { isOwnerTier } from '@/utils/tierUtils';
 
 export interface SubscriptionSectionProps {
   onChangePlan: () => void;
@@ -14,6 +15,22 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
   const { user, subscription } = useAuthStore();
 
   if (!user) return null;
+
+  // Owner tier — show minimal label, no billing UI
+  if (isOwnerTier(user.tier)) {
+    return (
+      <div className="bg-card rounded-xl p-4 border border-border">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium text-text-primary">Current Plan</span>
+            <div className="mt-1">
+              <Badge variant="default">Internal</Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentTier = getTierById(user.tier as SubscriptionTier);
 

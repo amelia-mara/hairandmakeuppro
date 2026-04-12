@@ -175,7 +175,7 @@ function CrossIcon() {
 }
 
 export function ComparisonModal({ isOpen, onClose, currentTier }: ComparisonModalProps) {
-  const tiers = SUBSCRIPTION_TIERS;
+  const tiers = SUBSCRIPTION_TIERS.filter(t => t.id !== 'owner');
 
   const renderValue = (value: string | boolean, tierId: SubscriptionTier) => {
     if (typeof value === 'boolean') {

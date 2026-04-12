@@ -12,6 +12,10 @@ import {
   BETA_MODE,
 } from '@/types/subscription';
 import type { SubscriptionTier, BillingPeriod } from '@/types/subscription';
+import { isOwnerTier } from '@/utils/tierUtils';
+
+// Owner tier is never shown on the pricing screen
+const DISPLAYED_TIERS = SUBSCRIPTION_TIERS.filter(t => t.id !== 'owner');
 
 export interface SelectPlanScreenProps {
   // For onboarding flow - no current tier
@@ -140,7 +144,7 @@ export function SelectPlanScreen({
       {/* Tier cards - scrollable */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="space-y-4 max-w-md mx-auto">
-          {SUBSCRIPTION_TIERS.map((tier) => (
+          {DISPLAYED_TIERS.map((tier) => (
             <TierCard
               key={tier.id}
               tier={tier}

@@ -160,7 +160,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                         <div className="account-info">
                           <div className="account-name">{user?.name || 'User'}</div>
                           <div className="account-email">{user?.email || ''}</div>
-                          <span className="account-badge">Beta Tester</span>
+                          <span className="account-badge">{isOwnerTier(user?.tier ?? '') ? 'Internal' : 'Beta Tester'}</span>
                         </div>
                       </div>
                       <div className="account-divider" />
