@@ -12,7 +12,6 @@ import {
   BETA_MODE,
 } from '@/types/subscription';
 import type { SubscriptionTier, BillingPeriod } from '@/types/subscription';
-import { isOwnerTier } from '@/utils/tierUtils';
 
 // Owner tier is never shown on the pricing screen
 const DISPLAYED_TIERS = SUBSCRIPTION_TIERS.filter(t => t.id !== 'owner');

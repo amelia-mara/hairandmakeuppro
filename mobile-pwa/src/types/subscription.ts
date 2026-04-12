@@ -133,6 +133,24 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
     exportProductionBooks: true,
     budgetSchedulingTools: true,
   },
+  owner: {
+    maxProjects: -1,
+    maxArchivedProjects: -1,
+    maxPhotosPerProject: -1,
+    canCreateProjects: true,
+    offlineMode: true,
+    exportReports: true,
+    personalTemplates: true,
+    teamManagement: true,
+    characterProgressionTracking: true,
+    shootingScheduleView: true,
+    teamPhotoStorage: true,
+    desktopWebAccess: true,
+    preProductionBreakdown: true,
+    characterDesignDocs: true,
+    exportProductionBooks: true,
+    budgetSchedulingTools: true,
+  },
 };
 
 // Tier pricing (GBP)
@@ -159,6 +177,12 @@ export const TIER_PRICING: Record<SubscriptionTier, TierPricing> = {
     monthly: 29.99,
     yearly: 287.90, // Save ~20%
     perProject: 49,
+    currency: 'GBP',
+    currencySymbol: '£',
+  },
+  owner: {
+    monthly: 0,
+    yearly: 0,
     currency: 'GBP',
     currencySymbol: '£',
   },

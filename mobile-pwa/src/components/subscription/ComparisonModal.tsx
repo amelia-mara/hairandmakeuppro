@@ -11,128 +11,129 @@ export interface ComparisonModalProps {
 
 interface FeatureRow {
   label: string;
-  trainee: string | boolean;
+  daily: string | boolean;
   artist: string | boolean;
   supervisor: string | boolean;
   designer: string | boolean;
+  [key: string]: string | boolean;
 }
 
 const COMPARISON_FEATURES: FeatureRow[] = [
   {
     label: 'Photos per project',
-    trainee: '50',
+    daily: '50',
     artist: '500',
     supervisor: '1,000',
     designer: 'Unlimited',
   },
   {
     label: 'Projects',
-    trainee: '3',
-    artist: '10',
+    daily: '3',
+    artist: '1',
     supervisor: '25',
     designer: 'Unlimited',
   },
   {
     label: 'Archived projects',
-    trainee: '1',
+    daily: '1',
     artist: 'Unlimited',
     supervisor: '15',
     designer: 'Unlimited',
   },
   {
     label: 'Offline mode',
-    trainee: false,
+    daily: false,
     artist: true,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Export PDF reports',
-    trainee: false,
+    daily: false,
     artist: true,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Personal templates',
-    trainee: false,
+    daily: false,
     artist: true,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Create projects',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Team management',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Team invite codes',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Character progression',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Shooting schedule',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: true,
     designer: true,
   },
   {
     label: 'Team photo storage',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: false,
     designer: true,
   },
   {
     label: 'Desktop web access',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: false,
     designer: true,
   },
   {
     label: 'Pre-production breakdown',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: false,
     designer: true,
   },
   {
     label: 'Character design docs',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: false,
     designer: true,
   },
   {
     label: 'Production books export',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: false,
     designer: true,
   },
   {
     label: 'Budget & scheduling',
-    trainee: false,
+    daily: false,
     artist: false,
     supervisor: false,
     designer: true,
