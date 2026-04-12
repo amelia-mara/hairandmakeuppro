@@ -288,12 +288,13 @@ supabase.auth.onAuthStateChange((_event, session) => {
       // New user session — fetch tier from DB so the Prep gate works correctly
       const userId = session.user.id;
       const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
-      supabase
-        .from('users')
-        .select('name, tier')
-        .eq('id', userId)
-        .single()
-        .then(({ data: profile }) => {
+      (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('name, tier')
+            .eq('id', userId)
+            .single();
           useAuthStore.setState({
             session,
             user: toAppUser(
@@ -304,8 +305,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
             isAuthenticated: true,
             isLoading: false,
           });
-        })
-        .catch(() => {
+        } catch {
           // Fallback without tier — user will get 'daily' default
           useAuthStore.setState({
             session,
@@ -313,7 +313,8 @@ supabase.auth.onAuthStateChange((_event, session) => {
             isAuthenticated: true,
             isLoading: false,
           });
-        });
+        }
+      })();
     }
   } else {
     useAuthStore.setState({
