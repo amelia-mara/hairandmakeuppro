@@ -3,14 +3,14 @@
 --
 -- The owner tier has all Designer capabilities plus platform admin access.
 -- Only one account can ever hold the 'owner' tier (enforced by unique index).
--- The confirmed owner email is: amelia-mara@outlook.com
+-- Confirmed owner email: amelia-mara@outlook.com
 --
--- IMPORTANT: This migration uses projects.created_by (NOT owner_id).
--- The projects table has no owner_id column — verified against 001_initial_schema.sql.
+-- Uses projects.created_by throughout (projects table has no owner_id column).
+-- Safe to run on a live database — all statements are idempotent.
 -- ============================================================================
 
 
--- Step 2: Add 'owner' to the tier constraint
+-- 1. Add 'owner' to the tier CHECK constraint
 ALTER TABLE public.users
   DROP CONSTRAINT IF EXISTS users_tier_check;
 
@@ -19,20 +19,20 @@ ALTER TABLE public.users
   CHECK (tier IN ('daily', 'artist', 'supervisor', 'designer', 'owner'));
 
 
--- Step 3: Set the owner tier
+-- 2. Set the owner tier on the confirmed account
 UPDATE public.users
 SET tier = 'owner'
 WHERE email = 'amelia-mara@outlook.com';
 
 
--- Step 4: Uniqueness constraint — only one owner account ever
+-- 3. Partial unique index — only one owner account can ever exist
 CREATE UNIQUE INDEX IF NOT EXISTS one_owner_only
-ON public.users ((tier = 'owner'))
+ON public.users ((true))
 WHERE tier = 'owner';
 
 
--- Step 5: Update the has_prep_access trigger to allow owner tier
--- Uses created_by (the actual column) not owner_id (which doesn't exist)
+-- 4. Update the enforce_has_prep_access trigger to allow 'owner' tier
+--    (migration 020 created this function checking only 'designer')
 CREATE OR REPLACE FUNCTION public.enforce_has_prep_access()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -49,25 +49,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- The trigger itself already exists from migration 020 — just verify
--- it's still attached (CREATE OR REPLACE above updates the function body,
--- the existing trigger continues to call it).
 
-
--- Step 6: Set has_prep_access on owner's projects
+-- 5. Set has_prep_access on all projects created by the owner
 UPDATE public.projects
 SET has_prep_access = true
 WHERE created_by = (SELECT id FROM public.users WHERE tier = 'owner');
 
 
 -- ============================================================================
--- Verification queries (run these after applying to confirm):
+-- VERIFICATION (run manually after applying)
+-- ============================================================================
+--
+-- SELECT constraint_name, check_clause
+-- FROM information_schema.check_constraints
+-- WHERE constraint_name = 'users_tier_check';
+--
+-- SELECT id, email, tier, beta_access FROM users WHERE tier = 'owner';
+--
+-- SELECT indexname, indexdef FROM pg_indexes WHERE indexname = 'one_owner_only';
+--
+-- SELECT trigger_name, event_manipulation, action_timing
+-- FROM information_schema.triggers
+-- WHERE event_object_table = 'projects' AND trigger_name = 'check_prep_access';
+--
+-- SELECT p.id, p.name, p.has_prep_access
+-- FROM projects p
+-- WHERE p.created_by = (SELECT id FROM users WHERE tier = 'owner');
 --
 -- SELECT tier, COUNT(*) FROM users GROUP BY tier ORDER BY tier;
--- SELECT id, email, tier, beta_access FROM users WHERE tier = 'owner';
--- SELECT indexname FROM pg_indexes WHERE indexname = 'one_owner_only';
--- SELECT trigger_name FROM information_schema.triggers
---   WHERE event_object_table = 'projects' AND trigger_name = 'check_prep_access';
--- SELECT constraint_name, check_clause FROM information_schema.check_constraints
---   WHERE constraint_name = 'users_tier_check';
 -- ============================================================================
