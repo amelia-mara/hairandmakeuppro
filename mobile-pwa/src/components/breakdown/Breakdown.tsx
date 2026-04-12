@@ -58,9 +58,24 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const looks = currentProject?.looks ?? [];
   const department = currentProject?.department ?? 'hmu';
 
-  /* ─── Columns — HMU vs Costume ─── */
+  // Detect if any scene has prep breakdown data or any looks exist.
+  // Mobile-only projects (no Prep) have no prepBreakdown and no looks —
+  // only scene number, slugline, story day, and characters are available.
+  const hasPrepData = useMemo(() => {
+    if (looks.length > 0) return true;
+    return scenes.some((s) => s.prepBreakdown?.characters && s.prepBreakdown.characters.length > 0);
+  }, [scenes, looks]);
+
+  /* ─── Columns — adapt to available data ─── */
 
   const COLUMNS = useMemo(() => {
+    if (!hasPrepData) {
+      // Mobile-only project — only show character and look (look will be empty but column exists for when data arrives)
+      return [
+        { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
+        { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
+      ] as const;
+    }
     if (department === 'costume') {
       return [
         { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
@@ -75,7 +90,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       { key: 'hair', label: 'HAIR', width: 'min-w-[90px]' },
       { key: 'makeup', label: 'MAKEUP', width: 'min-w-[90px]' },
     ] as const;
-  }, [department]);
+  }, [department, hasPrepData]);
 
   /* ─── Lookups ─── */
 
@@ -442,7 +457,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                               <td className="px-2.5 py-2.5">
                                 {look ? <span className="text-gold font-semibold">{look.name}</span> : <Empty />}
                               </td>
-                              {department === 'costume' ? (
+                              {hasPrepData && department === 'costume' && (
                                 <>
                                   <td className="px-2.5 py-2.5">
                                     <CellContent value={resolved.wardrobe} />
@@ -451,7 +466,8 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                                     <CellContent value="" />
                                   </td>
                                 </>
-                              ) : (
+                              )}
+                              {hasPrepData && department !== 'costume' && (
                                 <>
                                   <td className="px-2.5 py-2.5">
                                     <CellContent value={resolved.hair} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'hair')} tagColor="#D4943A" />
