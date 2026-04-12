@@ -27,6 +27,7 @@ import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/co
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { isFeatureEnabled } from '@/utils/featureFlags';
 import {
   WelcomeScreen,
   SignInScreen,
@@ -636,8 +637,8 @@ function AppContent() {
 
       {/* Sync bottom sheet — hidden while auto-save handles solo users */}
 
-      {/* AI Chat Assistant */}
-      <ChatAssistant />
+      {/* AI Chat Assistant — owner-only until released */}
+      {isFeatureEnabled('aiAssistantChat', user?.tier || '') && <ChatAssistant />}
 
       {/* Wrap Popup Modal (shows when project completion is triggered) */}
       <WrapPopupModal onExport={() => setShowExport(true)} />

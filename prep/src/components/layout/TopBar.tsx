@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
+import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
 
 interface TopBarProps {
   title?: string;
@@ -11,18 +12,18 @@ interface TopBarProps {
   onNavigateToAuth?: () => void;
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { id: string; label: string; icon: any; flag?: FeatureFlag }[] = [
   { id: 'projects', label: 'Projects', icon: ProjectsIcon },
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
-  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon },
+  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon, flag: 'characterDesign' },
   { id: 'continuity', label: 'Continuity', icon: ContinuityIcon },
-  { id: 'budget', label: 'Budget', icon: BudgetIcon },
-  { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon },
+  { id: 'budget', label: 'Budget', icon: BudgetIcon, flag: 'budget' },
+  { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon, flag: 'timesheets' },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
   { id: 'call-sheets', label: 'Call Sheets', icon: CallSheetsIcon },
-  { id: 'team', label: 'Team', icon: TeamIcon },
+  { id: 'team', label: 'Team', icon: TeamIcon, flag: 'teamManagement' },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
@@ -99,7 +100,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
 
           {navOpen && onNavigate && (
             <div className="topbar-nav-dropdown">
-              {NAV_ITEMS.map((item) => (
+              {NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, user?.tier || '')).map((item) => (
                 <button
                   key={item.id}
                   className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
