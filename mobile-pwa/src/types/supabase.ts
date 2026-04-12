@@ -14,7 +14,7 @@ export type Database = {
           id: string
           email: string
           name: string
-          tier: 'daily' | 'artist' | 'supervisor' | 'designer'
+          tier: 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner'
           stripe_customer_id: string | null
           created_at: string
         }

@@ -1375,7 +1375,7 @@ export const calculateDaysUntilDeletion = (wrappedAt: Date): number => {
 // ============================================
 
 // User subscription tiers - 'daily' is the free tier (renamed from 'free')
-export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer';
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner';
 
 // Re-export subscription types
 export * from './subscription';

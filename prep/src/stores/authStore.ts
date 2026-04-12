@@ -5,7 +5,7 @@ import { useProjectStore } from './projectStore';
 import { loadUserProjects, type SupabaseProject } from '@/services/projectService';
 import { flushPrepSync } from '@/services/supabaseSync';
 
-export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer';
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner';
 
 export interface User {
   id: string;
@@ -30,7 +30,7 @@ function toAppUser(supabaseUser: SupabaseUser, profileName?: string, profileTier
     supabaseUser.user_metadata?.name ||
     supabaseUser.email?.split('@')[0]?.replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ||
     'User';
-  const validTiers: UserTier[] = ['daily', 'artist', 'supervisor', 'designer'];
+  const validTiers: UserTier[] = ['daily', 'artist', 'supervisor', 'designer', 'owner'];
   const tier: UserTier = validTiers.includes(profileTier as UserTier)
     ? (profileTier as UserTier)
     : 'daily';
