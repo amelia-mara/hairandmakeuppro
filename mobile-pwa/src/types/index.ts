@@ -1473,7 +1473,7 @@ export const formatProjectCode = (input: string): string => {
 // Tier feature limits (basic version - see subscription.ts for full feature details)
 export const TIER_LIMITS: Record<UserTier, { maxProjects: number; maxArchivedProjects: number; canCreateProjects: boolean }> = {
   daily: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
-  artist: { maxProjects: 10, maxArchivedProjects: -1, canCreateProjects: false },
+  artist: { maxProjects: 1, maxArchivedProjects: -1, canCreateProjects: true },
   supervisor: { maxProjects: 25, maxArchivedProjects: 15, canCreateProjects: true },
   designer: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true }, // -1 = unlimited
 };

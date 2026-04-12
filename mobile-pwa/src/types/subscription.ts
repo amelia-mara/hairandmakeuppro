@@ -80,10 +80,10 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
     budgetSchedulingTools: false,
   },
   artist: {
-    maxProjects: 10,
+    maxProjects: 1,
     maxArchivedProjects: -1, // unlimited
     maxPhotosPerProject: 500,
-    canCreateProjects: false,
+    canCreateProjects: true,
     offlineMode: true,
     exportReports: true,
     personalTemplates: true,
