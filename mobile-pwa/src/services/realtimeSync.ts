@@ -12,6 +12,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { useAuthStore } from '@/stores/authStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { loadProjectFromSupabase } from '@/services/projectLoader';
 import type { Look, ProductionSchedule, ScheduleCastMember, ScheduleDay, CallSheet } from '@/types';
@@ -140,6 +141,18 @@ export function subscribeToProject(projectId: string): () => void {
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
         handleScheduleChange(payload);
+      });
+    })
+
+    // Owner changed a team member's access toggles
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'project_members',
+      filter: `project_id=eq.${projectId}`,
+    }, (payload: ChangePayload) => {
+      handleWithFlag(() => {
+        handleMemberAccessChange(payload);
       });
     })
 
@@ -520,6 +533,42 @@ function handleCallSheetChange(payload: ChangePayload) {
       console.log('[AppRealtime] Call sheet deleted from Prep:', id);
     }
   }
+}
+
+function handleMemberAccessChange(payload: ChangePayload) {
+  if (payload.eventType !== 'UPDATE' || !payload.new) return;
+
+  const updated = payload.new as Record<string, unknown>;
+  const currentUserId = useAuthStore.getState().user?.id;
+  if (!currentUserId) return;
+
+  // Only process if this update is for the current user's membership record
+  if (updated.user_id !== currentUserId) return;
+
+  // Store the updated access toggles on the auth store's membership record
+  // so components can re-read them via getProjectAccess()
+  const memberships = useAuthStore.getState().projectMemberships || [];
+  const projectId = updated.project_id as string;
+  const updatedMemberships = memberships.map(m =>
+    m.projectId === projectId
+      ? {
+          ...m,
+          access_breakdown: updated.access_breakdown as boolean,
+          access_script: updated.access_script as boolean,
+          access_lookbook: updated.access_lookbook as boolean,
+          access_callsheets: updated.access_callsheets as boolean,
+          access_chat: updated.access_chat as boolean,
+          access_continuity: updated.access_continuity as boolean,
+          access_hours: updated.access_hours as boolean,
+          access_receipts: updated.access_receipts as boolean,
+          access_budget: updated.access_budget as boolean,
+          access_export_hours: updated.access_export_hours as boolean,
+          access_export_invoice: updated.access_export_invoice as boolean,
+        }
+      : m
+  );
+  useAuthStore.setState({ projectMemberships: updatedMemberships });
+  console.log('[AppRealtime] Access toggles updated for current user on project', projectId);
 }
 
 // ============================================================================
