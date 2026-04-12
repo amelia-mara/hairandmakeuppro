@@ -136,17 +136,27 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
         const prepAccess = !!(project as any).has_prep_access;
         setHasPrepAccess(true); // Always true in Prep — this is the Prep app
 
-        // Auto-fix: if project doesn't have has_prep_access, set it now
-        // so data syncs survive across sessions
+        // Only auto-enable has_prep_access if the current user is a
+        // designer (by tier) or the project owner. Other users opening
+        // the project in Prep should not silently upgrade it.
         if (!prepAccess) {
-          supabase
-            .from('projects')
-            .update({ has_prep_access: true })
-            .eq('id', projectId!)
-            .then(({ error }) => {
-              if (error) console.warn('[useProjectSync] Failed to set has_prep_access:', error);
-              else console.log('[useProjectSync] Auto-enabled has_prep_access for project', projectId);
-            });
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            const [{ data: profile }, { data: membership }] = await Promise.all([
+              supabase.from('users').select('tier').eq('id', authUser.id).single(),
+              supabase.from('project_members').select('is_owner').eq('project_id', projectId!).eq('user_id', authUser.id).single(),
+            ]);
+            if (profile?.tier === 'designer' || membership?.is_owner) {
+              supabase
+                .from('projects')
+                .update({ has_prep_access: true })
+                .eq('id', projectId!)
+                .then(({ error }) => {
+                  if (error) console.warn('[useProjectSync] Failed to set has_prep_access:', error);
+                  else console.log('[useProjectSync] Auto-enabled has_prep_access for project', projectId);
+                });
+            }
+          }
         }
 
         // Build scene → character ID map
