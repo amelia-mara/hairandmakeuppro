@@ -11,6 +11,17 @@ export interface ProjectWithRole extends Project {
   role: ProjectMember['role'];
   is_owner: boolean;
   owner_name?: string;
+  access_breakdown?: boolean;
+  access_script?: boolean;
+  access_lookbook?: boolean;
+  access_callsheets?: boolean;
+  access_chat?: boolean;
+  access_continuity?: boolean;
+  access_hours?: boolean;
+  access_receipts?: boolean;
+  access_budget?: boolean;
+  access_export_hours?: boolean;
+  access_export_invoice?: boolean;
 }
 
 // Generate a unique invite code
@@ -140,6 +151,17 @@ export async function getUserProjects(
         role,
         is_owner,
         joined_at,
+        access_breakdown,
+        access_script,
+        access_lookbook,
+        access_callsheets,
+        access_chat,
+        access_continuity,
+        access_hours,
+        access_receipts,
+        access_budget,
+        access_export_hours,
+        access_export_invoice,
         projects (*, users:created_by (name))
       `)
       .eq('user_id', userId)
@@ -152,6 +174,17 @@ export async function getUserProjects(
       role: pm.role,
       is_owner: pm.is_owner,
       owner_name: pm.projects?.users?.name || undefined,
+      access_breakdown: pm.access_breakdown,
+      access_script: pm.access_script,
+      access_lookbook: pm.access_lookbook,
+      access_callsheets: pm.access_callsheets,
+      access_chat: pm.access_chat,
+      access_continuity: pm.access_continuity,
+      access_hours: pm.access_hours,
+      access_receipts: pm.access_receipts,
+      access_budget: pm.access_budget,
+      access_export_hours: pm.access_export_hours,
+      access_export_invoice: pm.access_export_invoice,
     }));
 
     // Remove the nested users object from the project data

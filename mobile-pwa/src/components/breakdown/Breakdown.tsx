@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { AccessRestricted } from '@/components/AccessRestricted';
 import type {
   Scene,
   Character,
@@ -14,8 +16,11 @@ import { clsx } from 'clsx';
 
 export function Breakdown() {
   const currentProject = useProjectStore((s) => s.currentProject);
+  const access = useProjectAccess();
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
+
+  if (!access.breakdown) return <AccessRestricted />;
 
   const scenes = currentProject?.scenes ?? [];
   const characters = currentProject?.characters ?? [];

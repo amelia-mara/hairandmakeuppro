@@ -27,6 +27,8 @@ import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/co
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AccessRestricted } from '@/components/AccessRestricted';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import {
   WelcomeScreen,
@@ -109,6 +111,9 @@ function AppContent() {
   } = useTutorialStore();
 
   // Tutorial is triggered from CreateProjectScreen after first project creation
+
+  // Access toggles for the active project (owner always has full access)
+  const access = useProjectAccess();
 
   // Track if we're showing the home/setup screen
   // Start as false - will be set true explicitly when needed
@@ -599,8 +604,12 @@ function AppContent() {
       // These tabs are handled by the More component internally,
       // but if user navigates directly (e.g., from customized nav), show the specific view
       case 'script':
-      case 'schedule':
+        if (!access.script) return <AccessRestricted />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
       case 'callsheets':
+        if (!access.callsheets) return <AccessRestricted />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
+      case 'schedule':
       case 'settings':
       case 'more':
         return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;

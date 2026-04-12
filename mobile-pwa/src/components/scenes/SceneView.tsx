@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '@/stores/projectStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { AccessRestricted } from '@/components/AccessRestricted';
 import { Header } from '../navigation';
 import { CharacterProfile } from '../characters/CharacterProfile';
 import { Button } from '../ui';
@@ -11,6 +13,8 @@ interface SceneViewProps {
 }
 
 export function SceneView({ sceneId, onBack }: SceneViewProps) {
+  const access = useProjectAccess();
+  if (!access.continuity) return <AccessRestricted />;
   const {
     currentProject,
     currentCharacterId,
