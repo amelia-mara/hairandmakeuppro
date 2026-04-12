@@ -379,10 +379,10 @@ export interface NavItemConfig {
 export type NavIconName = 'calendar' | 'grid' | 'table' | 'book' | 'clock' | 'wallet' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
 
 // All available nav items (except 'more' which is fixed)
+// 'scenes' renders the merged Breakdown page — 'breakdown' as a separate item is retired
 export const ALL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'today', label: 'Today', iconName: 'calendar' },
-  { id: 'scenes', label: 'Scenes', iconName: 'grid' },
-  { id: 'breakdown', label: 'Breakdown', iconName: 'table' },
+  { id: 'scenes', label: 'Breakdown', iconName: 'table' },
   { id: 'lookbook', label: 'Lookbook', iconName: 'book' },
   { id: 'hours', label: 'Hours', iconName: 'clock' },
   { id: 'budget', label: 'Budget', iconName: 'wallet' },
