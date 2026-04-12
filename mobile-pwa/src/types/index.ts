@@ -1550,6 +1550,7 @@ export const getTeamMemberRoleLevel = (role: TeamMemberRole): number => {
 
 // Team member with full details
 export interface TeamMember {
+  membershipId: string; // project_members PK (for access toggle updates)
   userId: string;
   projectId: string;
   name: string;
@@ -1560,6 +1561,18 @@ export interface TeamMember {
   joinedAt: Date;
   lastActiveAt: Date;
   editCount: number;
+  // Per-member access toggles (set by project owner)
+  accessBreakdown: boolean;
+  accessScript: boolean;
+  accessLookbook: boolean;
+  accessCallsheets: boolean;
+  accessChat: boolean;
+  accessContinuity: boolean;
+  accessHours: boolean;
+  accessReceipts: boolean;
+  accessBudget: boolean;
+  accessExportHours: boolean;
+  accessExportInvoice: boolean;
 }
 
 // Permission levels for project settings

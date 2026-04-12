@@ -1,24 +1,31 @@
 import { useState, useRef, useEffect } from 'react';
 import type { TeamMember, TeamMemberRole } from '@/types';
 import { getTeamMemberRoleLabel, TEAM_MEMBER_ROLES } from '@/types';
+import { ACCESS_TOGGLE_LABELS, type AccessToggles } from '@/utils/projectAccess';
 
 interface TeamMemberCardProps {
   member: TeamMember;
   isCurrentUser?: boolean;
   canManage: boolean;
+  isOwner?: boolean; // Whether the CURRENT USER is the project owner
   onChangeRole?: (userId: string, newRole: TeamMemberRole) => void;
   onRemove?: (userId: string) => void;
+  onToggleAccess?: (membershipId: string, field: string, value: boolean) => void;
 }
 
 export function TeamMemberCard({
   member,
   isCurrentUser,
   canManage,
+  isOwner,
   onChangeRole,
   onRemove,
+  onToggleAccess,
 }: TeamMemberCardProps) {
   const [showActions, setShowActions] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
+  const [showAccessToggles, setShowAccessToggles] = useState(false);
+  const [savedField, setSavedField] = useState<string | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
   // Format join date
@@ -165,6 +172,58 @@ export function TeamMemberCard({
           </span>
         )}
       </div>
+
+      {/* Manage access — owner only, not on the owner's own card */}
+      {isOwner && !member.isOwner && onToggleAccess && (
+        <>
+          <button
+            onClick={() => setShowAccessToggles(!showAccessToggles)}
+            className="w-full px-3 py-2 text-[11px] font-medium text-text-muted border-t border-border flex items-center justify-between"
+          >
+            <span>{showAccessToggles ? 'Hide access settings' : 'Manage access'}</span>
+            <svg className={`w-3.5 h-3.5 transition-transform ${showAccessToggles ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showAccessToggles && (
+            <div className="px-3 pb-3 space-y-1 border-t border-border pt-2">
+              <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">Access</div>
+              {(Object.keys(ACCESS_TOGGLE_LABELS) as (keyof AccessToggles)[]).map((dbField) => {
+                const label = ACCESS_TOGGLE_LABELS[dbField];
+                // Map snake_case DB field to camelCase TeamMember field
+                const camelField = dbField.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+                const value = (member as any)[camelField] ?? true;
+                return (
+                  <label key={dbField} className="flex items-center justify-between py-1.5">
+                    <div className="flex-1 min-w-0 mr-3">
+                      <div className="text-xs font-medium text-text-primary">{label.name}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {savedField === camelField && (
+                        <span className="text-[10px] text-green-500 animate-pulse">Saved</span>
+                      )}
+                      <button
+                        onClick={() => {
+                          onToggleAccess(member.membershipId, camelField, !value);
+                          setSavedField(camelField);
+                          setTimeout(() => setSavedField(null), 1500);
+                        }}
+                        className={`relative w-10 h-5.5 rounded-full transition-colors ${
+                          value ? 'bg-[#D4591A]' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform ${
+                          value ? 'translate-x-[18px]' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Actions Menu */}
       {showActions && (
