@@ -25,6 +25,7 @@ export function TeamScreen({
     loadTeamMembers,
     changeTeamMemberRole,
     removeTeamMember,
+    updateMemberAccess,
   } = useProjectSettingsStore();
 
   const { user } = useAuthStore();
@@ -90,8 +91,10 @@ export function TeamScreen({
               members={teamMembers}
               currentUserId={user?.id}
               canManage={canManage}
+              isOwner={isOwner}
               onChangeRole={handleChangeRole}
               onRemoveMember={handleRemoveMember}
+              onToggleAccess={updateMemberAccess}
             />
 
             {/* Invite section at bottom */}

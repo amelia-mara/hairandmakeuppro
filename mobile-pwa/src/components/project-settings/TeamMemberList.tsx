@@ -8,16 +8,20 @@ interface TeamMemberListProps {
   members: TeamMember[];
   currentUserId?: string;
   canManage: boolean;
+  isOwner?: boolean;
   onChangeRole?: (userId: string, newRole: TeamMemberRole) => void;
   onRemoveMember?: (userId: string) => void;
+  onToggleAccess?: (membershipId: string, field: string, value: boolean) => void;
 }
 
 export function TeamMemberList({
   members,
   currentUserId,
   canManage,
+  isOwner,
   onChangeRole,
   onRemoveMember,
+  onToggleAccess,
 }: TeamMemberListProps) {
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
 
@@ -92,8 +96,10 @@ export function TeamMemberList({
                   member={member}
                   isCurrentUser={member.userId === currentUserId}
                   canManage={canManage}
+                  isOwner={isOwner}
                   onChangeRole={onChangeRole}
                   onRemove={handleRemoveRequest}
+                  onToggleAccess={onToggleAccess}
                 />
               ))}
             </div>
