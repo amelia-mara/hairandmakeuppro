@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { SyncIcon } from '@/components/sync';
+import { isOwnerTier } from '@/utils/tierUtils';
 import { getAutoSaveFailureCount, getLastAutoSaveError } from '@/services/autoSave';
 import { parseScriptRevision } from '@/utils/parseScriptRevision';
 import type { ProjectRole, ProductionType } from '@/types';
@@ -140,6 +141,21 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
             </button>
 
             <div className="flex items-center gap-1">
+              {/* Owner badge */}
+              {isOwnerTier(user?.tier ?? '') && (
+                <span style={{
+                  backgroundColor: '#2A1A08',
+                  borderRadius: 4,
+                  padding: '2px 5px',
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: '#E8621A',
+                  letterSpacing: '0.08em',
+                }}>
+                  OWNER
+                </span>
+              )}
+
               {/* Sync icon */}
               {onSyncTap && <SyncIcon onClick={onSyncTap} />}
 
