@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
+import { isOwnerTier } from '@/utils/tierUtils';
 
 interface TopBarProps {
   title?: string;
@@ -124,6 +125,21 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         <div ref={accountRef} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {isAuthenticated ? (
             <>
+              {/* Owner badge */}
+              {isOwnerTier(user?.tier ?? '') && (
+                <div style={{
+                  backgroundColor: '#2A1A08',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  color: '#E8621A',
+                  letterSpacing: '0.1em',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  OWNER
+                </div>
+              )}
               {/* Avatar — THE SUN */}
               <div className="avatar-wrap">
                 <div className="avatar-halo avatar-halo--outer" />
