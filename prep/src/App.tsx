@@ -19,6 +19,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
+import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
 
 function App() {
@@ -240,6 +241,7 @@ function ProjectView({
   const getProject = useProjectStore((s) => s.getProject);
   const project = getProject(projectId);
   const projectTitle = project?.title || 'Project';
+  const userTier = useAuthStore((s) => s.user?.tier || '');
 
   // Connect to Supabase sync + Realtime subscriptions
   const { loading, saveStatus } = useProjectSync(projectId);
@@ -331,16 +333,16 @@ function ProjectView({
         {activePage === 'breakdown' && (
           <BreakdownSheet projectId={projectId} />
         )}
-        {activePage === 'character-design' && (
+        {activePage === 'character-design' && isFeatureEnabled('characterDesign', userTier) && (
           <CharacterDesign projectId={projectId} />
         )}
         {activePage === 'continuity' && (
           <ContinuityTracker projectId={projectId} />
         )}
-        {activePage === 'budget' && (
+        {activePage === 'budget' && isFeatureEnabled('budget', userTier) && (
           <Budget projectId={projectId} />
         )}
-        {activePage === 'timesheet' && (
+        {activePage === 'timesheet' && isFeatureEnabled('timesheets', userTier) && (
           <Timesheet projectId={projectId} />
         )}
         {activePage === 'schedule' && (
@@ -349,7 +351,7 @@ function ProjectView({
         {activePage === 'call-sheets' && (
           <CallSheets projectId={projectId} />
         )}
-        {activePage === 'team' && (
+        {activePage === 'team' && isFeatureEnabled('teamManagement', userTier) && (
           <Team projectId={projectId} />
         )}
       </ProjectLayout>
