@@ -18,7 +18,8 @@ initChangeTracking();
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
-import { Scenes } from '@/components/scenes';
+// Scenes page retired — functionality merged into Breakdown
+// import { Scenes } from '@/components/scenes';
 import { Breakdown } from '@/components/breakdown';
 import { Lookbooks } from '@/components/lookbooks';
 import { Timesheet } from '@/components/timesheet';
@@ -580,8 +581,8 @@ function AppContent() {
 
   // Render content based on active tab and current view
   const renderContent = () => {
-    // If viewing a specific scene (from Today or Breakdown tabs)
-    if (currentSceneId && (activeTab === 'today' || activeTab === 'scenes')) {
+    // If viewing a specific scene (from Today, Scenes, or Breakdown tabs)
+    if (currentSceneId && (activeTab === 'today' || activeTab === 'scenes' || activeTab === 'breakdown')) {
       return (
         <SceneView
           sceneId={currentSceneId}
@@ -595,9 +596,8 @@ function AppContent() {
       case 'today':
         return <Today onSceneSelect={handleSceneSelect} onNavigateToTab={handleNavigateToTab} />;
       case 'scenes':
-        return <Scenes onSceneSelect={handleSceneSelect} />;
       case 'breakdown':
-        return <Breakdown />;
+        return <Breakdown onSceneSelect={handleSceneSelect} />;
       case 'lookbook':
         return <Lookbooks />;
       case 'hours':
