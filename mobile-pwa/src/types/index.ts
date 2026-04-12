@@ -1391,7 +1391,7 @@ export interface User {
 }
 
 // Project membership role (matches Supabase database roles)
-export type ProjectRole = 'owner' | 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'daily' | 'artist' | 'viewer';
+export type ProjectRole = 'owner' | 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee' | 'artist' | 'viewer';
 
 // Production types for new projects
 export type ProductionType = 'film' | 'tv_series' | 'short_film' | 'commercial' | 'music_video' | 'other';
@@ -1476,6 +1476,7 @@ export const TIER_LIMITS: Record<UserTier, { maxProjects: number; maxArchivedPro
   artist: { maxProjects: 1, maxArchivedProjects: -1, canCreateProjects: true },
   supervisor: { maxProjects: 25, maxArchivedProjects: 15, canCreateProjects: true },
   designer: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true }, // -1 = unlimited
+  owner: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true },
 };
 
 // Helper to check if project should trigger wrap
@@ -1511,7 +1512,7 @@ export const shouldTriggerWrap = (
 // ============================================
 
 // Team member roles (more granular than ProjectRole)
-export type TeamMemberRole = 'designer' | 'supervisor' | 'key' | 'hair' | 'makeup' | 'sfx' | 'daily' | 'daily';
+export type TeamMemberRole = 'designer' | 'supervisor' | 'key' | 'hair' | 'makeup' | 'sfx' | 'daily' | 'trainee';
 
 // Role display names and hierarchy
 export const TEAM_MEMBER_ROLES: { value: TeamMemberRole; label: string; level: number }[] = [
