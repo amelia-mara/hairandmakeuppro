@@ -103,6 +103,9 @@ function AppContent() {
     settingsProjectId,
     setSettingsProjectId,
     setAutoOpenProject,
+    getEffectiveTier,
+    previewTier,
+    setPreviewTier,
   } = useAuthStore();
 
   // Tutorial state — shown after first project creation
@@ -623,6 +626,25 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Tier preview banner */}
+      {previewTier && (
+        <div
+          onClick={() => setPreviewTier(null)}
+          style={{
+            position: 'sticky', top: 0, zIndex: 9999, width: '100%',
+            backgroundColor: '#2A1A08', padding: '6px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: '11px' }}>👁</span>
+          <span style={{ fontSize: '11px', color: '#D4591A', fontWeight: 600 }}>
+            Previewing as {previewTier.charAt(0).toUpperCase() + previewTier.slice(1)}
+          </span>
+          <span style={{ fontSize: '10px', color: '#9C7A5A' }}> — tap to exit</span>
+        </div>
+      )}
+
       {/* Lifecycle Banner (shows when project is wrapped/archived) */}
       {lifecycle.state !== 'active' && (
         <LifecycleBanner onExport={() => setShowExport(true)} />
@@ -647,7 +669,7 @@ function AppContent() {
       {/* Sync bottom sheet — hidden while auto-save handles solo users */}
 
       {/* AI Chat Assistant — owner-only until released */}
-      {isFeatureEnabled('aiAssistantChat', user?.tier || '') && <ChatAssistant />}
+      {isFeatureEnabled('aiAssistantChat', getEffectiveTier()) && <ChatAssistant />}
 
       {/* Wrap Popup Modal (shows when project completion is triggered) */}
       <WrapPopupModal onExport={() => setShowExport(true)} />

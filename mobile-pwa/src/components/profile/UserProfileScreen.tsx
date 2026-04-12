@@ -3,7 +3,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/services/supabaseAuth';
+import { isOwnerTier } from '@/utils/tierUtils';
 import { BETA_MODE } from '@/types';
+import type { UserTier } from '@/utils/tierUtils';
 
 interface UserProfileScreenProps {
   onBack: () => void;
@@ -384,6 +386,38 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
             <p className="text-xs text-text-muted">Please wait while we save your data</p>
           </div>
         )}
+
+        {/* Tier Preview — owner only */}
+        {isOwnerTier(user?.tier ?? '') && (() => {
+          const { previewTier, setPreviewTier } = useAuthStore.getState();
+          const tiers: { value: UserTier | null; label: string }[] = [
+            { value: null, label: 'Owner (you)' },
+            { value: 'designer', label: 'Designer' },
+            { value: 'supervisor', label: 'Supervisor' },
+            { value: 'artist', label: 'Artist' },
+            { value: 'daily', label: 'Daily' },
+          ];
+          return (
+            <div className="mb-4">
+              <div className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2 px-1">Preview As</div>
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                {tiers.map(t => {
+                  const isActive = t.value === previewTier;
+                  return (
+                    <button
+                      key={t.value ?? 'owner'}
+                      onClick={() => setPreviewTier(t.value)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm border-b border-border last:border-b-0"
+                    >
+                      <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${isActive ? 'border-gold bg-gold' : 'border-border bg-transparent'}`} />
+                      <span className={isActive ? 'font-medium text-text-primary' : 'text-text-secondary'}>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* App Version */}
         <div className="text-center text-xs text-text-muted py-4">

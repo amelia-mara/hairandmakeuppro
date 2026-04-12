@@ -109,11 +109,23 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+
+  // Tier preview mode (owner only, local state only, not persisted)
+  previewTier: UserTier | null;
+  setPreviewTier: (tier: UserTier | null) => void;
+  getEffectiveTier: () => UserTier;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   session: null,
+  previewTier: null,
+  setPreviewTier: (tier) => set({ previewTier: tier }),
+  getEffectiveTier: () => {
+    const { user, previewTier } = get();
+    if (previewTier && user?.tier === 'owner') return previewTier;
+    return user?.tier ?? 'daily';
+  },
   isAuthenticated: false,
   isLoading: true, // Start true — getSession will resolve on init
   error: null,

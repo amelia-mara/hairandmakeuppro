@@ -101,7 +101,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
 
           {navOpen && onNavigate && (
             <div className="topbar-nav-dropdown">
-              {NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, user?.tier || '')).map((item) => (
+              {NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, useAuthStore.getState().getEffectiveTier())).map((item) => (
                 <button
                   key={item.id}
                   className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
@@ -221,6 +221,39 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                         ))}
                       </div>
                     </div>
+
+                    {/* Tier Preview — owner only */}
+                    {isOwnerTier(user?.tier ?? '') && (() => {
+                      const previewTier = useAuthStore.getState().previewTier;
+                      const setPreview = useAuthStore.getState().setPreviewTier;
+                      const options: { value: string | null; label: string }[] = [
+                        { value: null, label: 'Owner (you)' },
+                        { value: 'designer', label: 'Designer' },
+                      ];
+                      return (
+                        <>
+                          <div className="account-section-label">Preview As</div>
+                          <div className="account-card">
+                            {options.map(o => (
+                              <button
+                                key={o.value ?? 'owner'}
+                                className="account-row"
+                                onClick={() => { setPreview(o.value as any); setAccountOpen(false); }}
+                              >
+                                <div style={{
+                                  width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
+                                  border: '2px solid var(--border-medium)',
+                                  backgroundColor: (o.value === previewTier) ? 'var(--accent-gold)' : 'transparent',
+                                }} />
+                                <div className="account-row-text">
+                                  <span className="account-row-title">{o.label}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {/* Sign out */}
                     <button className="account-signout" onClick={() => { setAccountOpen(false); logout(); }}>

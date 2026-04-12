@@ -86,6 +86,10 @@ interface AuthState {
   setPinnedProject: (projectId: string) => void;
   setSettingsProjectId: (projectId: string | null) => void;
   setAutoOpenProject: (projectId: string | null) => void;
+  // Tier preview mode (owner only, local state only, not persisted)
+  previewTier: UserTier | null;
+  setPreviewTier: (tier: UserTier | null) => void;
+  getEffectiveTier: () => UserTier;
 }
 
 // Valid tiers for lookup safety
@@ -172,6 +176,13 @@ export const useAuthStore = create<AuthState>()(
       pinnedProjectId: null,
       settingsProjectId: null,
       autoOpenProjectId: null,
+      previewTier: null,
+      setPreviewTier: (tier) => set({ previewTier: tier }),
+      getEffectiveTier: () => {
+        const { user, previewTier } = get();
+        if (previewTier && user?.tier === 'owner') return previewTier;
+        return user?.tier ?? 'daily';
+      },
 
       // Initialize auth state from Supabase session
       initializeAuth: async () => {
