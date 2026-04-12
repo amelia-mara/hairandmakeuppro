@@ -1374,8 +1374,8 @@ export const calculateDaysUntilDeletion = (wrappedAt: Date): number => {
 // Authentication & User Types
 // ============================================
 
-// User subscription tiers - 'trainee' is the free tier (renamed from 'free')
-export type UserTier = 'trainee' | 'artist' | 'supervisor' | 'designer';
+// User subscription tiers - 'daily' is the free tier (renamed from 'free')
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer';
 
 // Re-export subscription types
 export * from './subscription';
@@ -1391,7 +1391,7 @@ export interface User {
 }
 
 // Project membership role (matches Supabase database roles)
-export type ProjectRole = 'owner' | 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee' | 'artist' | 'viewer';
+export type ProjectRole = 'owner' | 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'daily' | 'artist' | 'viewer';
 
 // Production types for new projects
 export type ProductionType = 'film' | 'tv_series' | 'short_film' | 'commercial' | 'music_video' | 'other';
@@ -1472,7 +1472,7 @@ export const formatProjectCode = (input: string): string => {
 
 // Tier feature limits (basic version - see subscription.ts for full feature details)
 export const TIER_LIMITS: Record<UserTier, { maxProjects: number; maxArchivedProjects: number; canCreateProjects: boolean }> = {
-  trainee: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
+  daily: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
   artist: { maxProjects: 10, maxArchivedProjects: -1, canCreateProjects: false },
   supervisor: { maxProjects: 25, maxArchivedProjects: 15, canCreateProjects: true },
   designer: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true }, // -1 = unlimited
@@ -1511,7 +1511,7 @@ export const shouldTriggerWrap = (
 // ============================================
 
 // Team member roles (more granular than ProjectRole)
-export type TeamMemberRole = 'designer' | 'supervisor' | 'key' | 'hair' | 'makeup' | 'sfx' | 'daily' | 'trainee';
+export type TeamMemberRole = 'designer' | 'supervisor' | 'key' | 'hair' | 'makeup' | 'sfx' | 'daily' | 'daily';
 
 // Role display names and hierarchy
 export const TEAM_MEMBER_ROLES: { value: TeamMemberRole; label: string; level: number }[] = [
@@ -1522,7 +1522,7 @@ export const TEAM_MEMBER_ROLES: { value: TeamMemberRole; label: string; level: n
   { value: 'makeup', label: 'Makeup Artist', level: 4 },
   { value: 'sfx', label: 'Special Effects Artist', level: 3 },
   { value: 'daily', label: 'Daily', level: 2 },
-  { value: 'trainee', label: 'Trainee', level: 1 },
+  { value: 'daily', label: 'Trainee', level: 1 },
 ];
 
 // Get display label for a role

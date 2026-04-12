@@ -89,13 +89,13 @@ interface AuthState {
 }
 
 // Valid tiers for lookup safety
-const VALID_TIERS: UserTier[] = ['trainee', 'artist', 'supervisor', 'designer'];
+const VALID_TIERS: UserTier[] = ['daily', 'artist', 'supervisor', 'designer'];
 
 // Convert Supabase user profile to app User type
 function toAppUser(profile: supabaseAuth.UserProfile): User {
   const tier = VALID_TIERS.includes(profile.tier as UserTier)
     ? (profile.tier as UserTier)
-    : 'trainee';
+    : 'daily';
   return {
     id: profile.id,
     email: profile.email,
@@ -338,14 +338,14 @@ export const useAuthStore = create<AuthState>()(
               id: authUser.id,
               email: authUser.email!,
               name: authUser.user_metadata?.name || email.split('@')[0],
-              tier: 'trainee',
+              tier: 'daily',
             });
 
             appUser = {
               id: authUser.id,
               email: authUser.email!,
               name: authUser.user_metadata?.name || email.split('@')[0],
-              tier: 'trainee',
+              tier: 'daily',
               createdAt: new Date(),
             };
           } else {
@@ -420,7 +420,7 @@ export const useAuthStore = create<AuthState>()(
             email: authUser.email!,
             name,
             // Beta-validated users get Designer tier
-            tier: betaValidated || BETA_MODE ? 'designer' : 'trainee',
+            tier: betaValidated || BETA_MODE ? 'designer' : 'daily',
             createdAt: new Date(),
           };
 
@@ -842,10 +842,10 @@ export const useAuthStore = create<AuthState>()(
 
           const updatedSubscription: SubscriptionData = {
             tier,
-            status: tier === 'trainee' ? null : 'active',
-            billingPeriod: tier === 'trainee' ? null : billingPeriod,
-            subscriptionStartedAt: tier !== 'trainee' ? new Date() : undefined,
-            currentPeriodEndsAt: tier !== 'trainee'
+            status: tier === 'daily' ? null : 'active',
+            billingPeriod: tier === 'daily' ? null : billingPeriod,
+            subscriptionStartedAt: tier !== 'daily' ? new Date() : undefined,
+            currentPeriodEndsAt: tier !== 'daily'
               ? new Date(Date.now() + (billingPeriod === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
               : undefined,
           };

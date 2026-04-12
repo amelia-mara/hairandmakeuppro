@@ -16,7 +16,7 @@ export interface UserProfile {
   id: string;
   email: string;
   name: string;
-  tier: 'trainee' | 'artist' | 'supervisor' | 'designer';
+  tier: 'daily' | 'artist' | 'supervisor' | 'designer';
   stripe_customer_id: string | null;
   created_at: string;
 }
@@ -46,7 +46,7 @@ export async function signUp({ email, password, name }: SignUpData): Promise<{ u
         id: data.user.id,
         email,
         name,
-        tier: 'trainee', // Default tier
+        tier: 'daily', // Default tier
       });
 
     if (profileError) {

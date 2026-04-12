@@ -74,7 +74,7 @@ export function SelectPlanScreen({
     if (onSkip) {
       onSkip();
     } else if (onSelectTier) {
-      onSelectTier('trainee', 'monthly');
+      onSelectTier('daily', 'monthly');
     }
   };
 
@@ -229,7 +229,7 @@ export function SelectPlanScreen({
                 </svg>
                 Processing...
               </span>
-            ) : selectedTier === 'trainee' ? (
+            ) : selectedTier === 'daily' ? (
               'Start Free'
             ) : isDowngrade ? (
               'Downgrade Plan'
@@ -254,7 +254,7 @@ export function SelectPlanScreen({
           )}
 
           {/* Manage billing link for existing subscribers */}
-          {!isOnboarding && currentTier && currentTier !== 'trainee' && (
+          {!isOnboarding && currentTier && currentTier !== 'daily' && (
             <button className="w-full text-center text-sm text-gold hover:underline">
               Manage billing
             </button>
