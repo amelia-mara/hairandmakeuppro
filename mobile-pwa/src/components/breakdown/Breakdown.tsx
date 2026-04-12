@@ -8,14 +8,12 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { useAuthStore } from '@/stores/authStore';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { AccessRestricted } from '@/components/AccessRestricted';
 import { SceneCharacterConfirmation } from '@/components/scenes/SceneCharacterConfirmation';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { FilmingStatusDropdown, FilmingNotesModal } from '@/components/scenes/FilmingStatusDropdown';
 import type {
-  Scene,
   Character,
   Look,
   HairDetails,
@@ -291,7 +289,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           </p>
         ) : (
           scenesWithCast.map((scene) => {
-            const globalIdx = sortedScenes.indexOf(scene);
             const bd = scene.prepBreakdown;
             const charIds = filterChar
               ? scene.characters.filter((c) => c === filterChar)
