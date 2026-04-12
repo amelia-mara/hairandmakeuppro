@@ -63,14 +63,15 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
 
   // Get tier display
   const getTierDisplay = () => {
+    if (!user?.tier) return 'Free';
+    if (user.tier === 'owner') return 'Internal';
     // In beta mode, show "Beta Tester" instead of actual tier
     if (BETA_MODE) return 'Beta Tester';
-    if (!user?.tier) return 'Free';
     const tiers: Record<string, string> = {
-      trainee: 'Trainee',
+      daily: 'Daily',
       artist: 'Artist',
-      designer: 'Designer',
       supervisor: 'Supervisor',
+      designer: 'Designer',
     };
     return tiers[user.tier] || user.tier;
   };
