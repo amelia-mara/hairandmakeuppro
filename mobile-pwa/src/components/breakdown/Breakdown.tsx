@@ -8,8 +8,11 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useSyncStore } from '@/stores/syncStore';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { AccessRestricted } from '@/components/AccessRestricted';
+import { canAccessPrep } from '@/utils/tierUtils';
 import { SceneCharacterConfirmation } from '@/components/scenes/SceneCharacterConfirmation';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { FilmingStatusDropdown, FilmingNotesModal } from '@/components/scenes/FilmingStatusDropdown';
@@ -41,6 +44,12 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     sceneNumber: string;
     status: 'partial' | 'not-filmed';
   } | null>(null);
+
+  const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
+  const syncStatus = useSyncStore((s) => s.status);
+  const lastSynced = useSyncStore((s) => s.lastUploadedAt || s.lastDownloadedAt);
+  const hasPrepAccess = !!(currentProject as any)?.hasPrepAccess;
+  const showSyncBadge = canAccessPrep(effectiveTier) && hasPrepAccess;
 
   if (!access.breakdown) return <AccessRestricted />;
 
@@ -247,6 +256,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-lg font-semibold text-foreground">Breakdown</h1>
             <div className="flex items-center gap-2">
+              {/* Prep sync badge */}
+              {showSyncBadge && (
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-green-500/10 text-green-600">
+                  {syncStatus === 'synced' && lastSynced
+                    ? `Synced ${new Date(lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : syncStatus === 'uploading' || syncStatus === 'downloading'
+                      ? 'Syncing...'
+                      : 'Prep linked'}
+                </span>
+              )}
               <button onClick={handleCopy} className="text-xs text-text-muted font-medium px-2 py-1 rounded-md border border-border">
                 {copied ? 'Copied!' : 'Copy'}
               </button>
@@ -353,6 +372,15 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                         View Scene
                       </button>
                     )}
+                    <button
+                      onClick={() => setConfirmSceneId(scene.id)}
+                      className="text-[10px] font-semibold text-text-muted px-1.5 py-1 rounded-lg border border-border hover:border-gold/50 transition-colors"
+                      title="Add character"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
