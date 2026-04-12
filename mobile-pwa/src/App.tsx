@@ -413,7 +413,7 @@ function AppContent() {
 
   // Handler for skipping plan selection (continue with free)
   const handleSkipPlanSelection = async () => {
-    await selectTier('trainee', 'monthly');
+    await selectTier('daily', 'monthly');
   };
 
   // Auth flow - show auth screens for new users or logged out users

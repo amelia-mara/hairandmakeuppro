@@ -21,7 +21,7 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
 
   // Format the billing period
   const getBillingInfo = () => {
-    if (!subscription.billingPeriod || user.tier === 'trainee') {
+    if (!subscription.billingPeriod || user.tier === 'daily') {
       return 'Free forever';
     }
 
@@ -42,7 +42,7 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
 
   // Format next billing date
   const getNextBillingDate = () => {
-    if (!subscription.currentPeriodEndsAt || user.tier === 'trainee') {
+    if (!subscription.currentPeriodEndsAt || user.tier === 'daily') {
       return null;
     }
 
@@ -119,10 +119,10 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
             onClick={onChangePlan}
             className="w-full py-2.5 px-4 bg-gold-50/50 border border-gold/20 rounded-lg text-sm font-medium text-gold hover:bg-gold-100/50 transition-colors"
           >
-            {user.tier === 'trainee' ? 'Upgrade Plan' : 'Change Plan'}
+            {user.tier === 'daily' ? 'Upgrade Plan' : 'Change Plan'}
           </button>
 
-          {user.tier !== 'trainee' && subscription.status === 'active' && (
+          {user.tier !== 'daily' && subscription.status === 'active' && (
             <button className="w-full py-2.5 px-4 text-sm text-text-muted hover:text-text-secondary transition-colors">
               Manage Billing
             </button>

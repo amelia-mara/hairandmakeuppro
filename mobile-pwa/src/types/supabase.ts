@@ -14,7 +14,7 @@ export type Database = {
           id: string
           email: string
           name: string
-          tier: 'trainee' | 'artist' | 'supervisor' | 'designer'
+          tier: 'daily' | 'artist' | 'supervisor' | 'designer'
           stripe_customer_id: string | null
           created_at: string
         }
@@ -22,7 +22,7 @@ export type Database = {
           id: string
           email: string
           name: string
-          tier?: 'trainee' | 'artist' | 'supervisor' | 'designer'
+          tier?: 'daily' | 'artist' | 'supervisor' | 'designer'
           stripe_customer_id?: string | null
           created_at?: string
         }
@@ -30,7 +30,7 @@ export type Database = {
           id?: string
           email?: string
           name?: string
-          tier?: 'trainee' | 'artist' | 'supervisor' | 'designer'
+          tier?: 'daily' | 'artist' | 'supervisor' | 'designer'
           stripe_customer_id?: string | null
           created_at?: string
         }

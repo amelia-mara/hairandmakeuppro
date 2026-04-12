@@ -3,7 +3,7 @@
 // Beta Mode - Set to false when ready to launch with pricing
 export const BETA_MODE = true;
 
-export type SubscriptionTier = 'trainee' | 'artist' | 'supervisor' | 'designer';
+export type SubscriptionTier = 'daily' | 'artist' | 'supervisor' | 'designer';
 export type BillingPeriod = 'monthly' | 'yearly' | 'per_project';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'trialing' | null;
 
@@ -61,7 +61,7 @@ export interface SubscriptionData {
 
 // Tier feature configurations
 export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
-  trainee: {
+  daily: {
     maxProjects: 3,
     maxArchivedProjects: 1,
     maxPhotosPerProject: 50,
@@ -137,7 +137,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
 
 // Tier pricing (GBP)
 export const TIER_PRICING: Record<SubscriptionTier, TierPricing> = {
-  trainee: {
+  daily: {
     monthly: 0,
     yearly: 0,
     currency: 'GBP',
@@ -167,12 +167,12 @@ export const TIER_PRICING: Record<SubscriptionTier, TierPricing> = {
 // Complete tier information
 export const SUBSCRIPTION_TIERS: TierInfo[] = [
   {
-    id: 'trainee',
-    name: 'TRAINEE',
-    displayName: 'Trainee',
-    description: 'Perfect for students and emerging artists',
-    pricing: TIER_PRICING.trainee,
-    features: TIER_FEATURES.trainee,
+    id: 'daily',
+    name: 'DAILY',
+    displayName: 'Daily',
+    description: 'Join projects and contribute on set',
+    pricing: TIER_PRICING.daily,
+    features: TIER_FEATURES.daily,
     featureList: [
       'Multiple projects simultaneously',
       '50 photos per project',
@@ -258,7 +258,8 @@ export const calculateYearlySavings = (monthlyPrice: number, yearlyPrice: number
 
 // Check if a tier is higher than another
 export const isTierHigher = (tier1: SubscriptionTier, tier2: SubscriptionTier): boolean => {
-  const tierOrder: SubscriptionTier[] = ['trainee', 'artist', 'supervisor', 'designer'];
+  const tierOrder: SubscriptionTier[] = ['daily', 'artist', 'supervisor', 'designer'];
+  // 'daily' was 'trainee' before migration 018 — the hierarchy is unchanged
   return tierOrder.indexOf(tier1) > tierOrder.indexOf(tier2);
 };
 
@@ -321,7 +322,7 @@ export const getDowngradeWarnings = (fromTier: SubscriptionTier, toTier: Subscri
 // Create default subscription data for new users
 // In beta mode, all users get Designer tier with full access
 export const createDefaultSubscription = (): SubscriptionData => ({
-  tier: BETA_MODE ? 'designer' : 'trainee',
+  tier: BETA_MODE ? 'designer' : 'daily',
   status: BETA_MODE ? 'active' : null,
   billingPeriod: null,
 });

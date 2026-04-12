@@ -18,6 +18,8 @@ import { BetaCodePage } from '@/pages/BetaCodePage';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectSync } from '@/hooks/useProjectSync';
+import { canAccessPrep } from '@/utils/tierUtils';
+import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -173,6 +175,16 @@ function App() {
           }}
         />
       </div>
+    );
+  }
+
+  // Prep Happy tier gate — Designer only
+  const userTier = useAuthStore((s) => s.user?.tier);
+  if (isAuthenticated && userTier && !canAccessPrep(userTier)) {
+    return (
+      <PrepUpgradeScreen
+        onSignOut={() => useAuthStore.getState().signOut()}
+      />
     );
   }
 

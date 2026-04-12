@@ -139,7 +139,7 @@ const COMPARISON_FEATURES: FeatureRow[] = [
   },
 ];
 
-const tierOrder: SubscriptionTier[] = ['trainee', 'artist', 'supervisor', 'designer'];
+const tierOrder: SubscriptionTier[] = ['daily', 'artist', 'supervisor', 'designer'];
 
 function CheckIcon() {
   return (
@@ -257,7 +257,7 @@ export function ComparisonModal({ isOpen, onClose, currentTier }: ComparisonModa
                   >
                     <span className={clsx(
                       'text-sm font-bold',
-                      tier.id === 'trainee' ? 'text-text-primary' : 'text-gold'
+                      tier.id === 'daily' ? 'text-text-primary' : 'text-gold'
                     )}>
                       {tier.pricing.monthly === 0 ? 'Free' : `£${tier.pricing.monthly.toFixed(2)}`}
                     </span>

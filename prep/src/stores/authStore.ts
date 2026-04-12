@@ -5,11 +5,14 @@ import { useProjectStore } from './projectStore';
 import { loadUserProjects, type SupabaseProject } from '@/services/projectService';
 import { flushPrepSync } from '@/services/supabaseSync';
 
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   initials: string;
+  tier: UserTier;
 }
 
 function getInitials(name: string): string {
@@ -21,17 +24,22 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function toAppUser(supabaseUser: SupabaseUser, profileName?: string): User {
+function toAppUser(supabaseUser: SupabaseUser, profileName?: string, profileTier?: string): User {
   const name =
     profileName ||
     supabaseUser.user_metadata?.name ||
     supabaseUser.email?.split('@')[0]?.replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ||
     'User';
+  const validTiers: UserTier[] = ['daily', 'artist', 'supervisor', 'designer'];
+  const tier: UserTier = validTiers.includes(profileTier as UserTier)
+    ? (profileTier as UserTier)
+    : 'daily';
   return {
     id: supabaseUser.id,
     name,
     email: supabaseUser.email || '',
     initials: getInitials(name),
+    tier,
   };
 }
 
@@ -120,19 +128,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ isLoading: false, error: error.message });
       throw error;
     }
-    // Fetch profile name from users table
+    // Fetch profile from users table
     let profileName: string | undefined;
+    let profileTier: string | undefined;
     try {
       const { data: profile } = await supabase
         .from('users')
-        .select('name')
+        .select('name, tier')
         .eq('id', data.user.id)
         .single();
       if (profile?.name) profileName = profile.name;
+      if (profile?.tier) profileTier = profile.tier as string;
     } catch { /* use metadata fallback */ }
 
     set({
-      user: toAppUser(data.user, profileName),
+      user: toAppUser(data.user, profileName, profileTier),
       session: data.session,
       isAuthenticated: true,
       isLoading: false,
@@ -169,20 +179,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   getSession: async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
-      // Fetch profile name
+      // Fetch profile
       let profileName: string | undefined;
+      let profileTier: string | undefined;
       try {
         const { data: profile } = await supabase
           .from('users')
-          .select('name')
+          .select('name, tier')
           .eq('id', data.session.user.id)
           .single();
         if (profile?.name) profileName = profile.name;
+        if (profile?.tier) profileTier = profile.tier as string;
       } catch { /* use metadata fallback */ }
 
       set({
         session: data.session,
-        user: toAppUser(data.session.user, profileName),
+        user: toAppUser(data.session.user, profileName, profileTier),
         isAuthenticated: true,
         isLoading: false,
       });
