@@ -24,8 +24,8 @@ const NAV_ITEMS: { id: string; label: string; icon: any; flag?: FeatureFlag }[] 
 
 export function ProjectSidebar({ projectId, activePage, onNavigate }: ProjectSidebarProps) {
   const project = useProjectStore((s) => s.getProject(projectId));
-  const userTier = useAuthStore((s) => s.user?.tier || '');
-  const visibleNavItems = NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, userTier));
+  const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
+  const visibleNavItems = NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, effectiveTier));
 
   if (!project) return null;
 

@@ -27,7 +27,7 @@ const NAV_ITEMS: { id: string; label: string; icon: any; flag?: FeatureFlag }[] 
 
 export function ProjectLayout({ activePage, onNavigate, onBackToHub, children }: ProjectLayoutProps) {
   const showSidebar = activePage === 'dashboard';
-  const userTier = useAuthStore((s) => s.user?.tier || '');
+  const userTier = useAuthStore((s) => s.getEffectiveTier)();
   const visibleNavItems = NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, userTier));
 
   return (

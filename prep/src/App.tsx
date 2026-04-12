@@ -32,6 +32,9 @@ function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
   const userTier = useAuthStore((s) => s.user?.tier);
+  const getEffectiveTier = useAuthStore((s) => s.getEffectiveTier);
+  const previewTier = useAuthStore((s) => s.previewTier);
+  const setPreviewTier = useAuthStore((s) => s.setPreviewTier);
 
   // Restore session on mount
   useEffect(() => {
@@ -205,6 +208,23 @@ function App() {
   // Hub view
   return (
     <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {previewTier && (
+        <div
+          onClick={() => setPreviewTier(null)}
+          style={{
+            position: 'sticky', top: 0, zIndex: 9999, width: '100%',
+            backgroundColor: '#2A1A08', padding: '6px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+          }}
+        >
+          <span style={{ fontSize: '12px' }}>👁</span>
+          <span style={{ fontSize: '12px', color: '#D4591A', fontWeight: 600 }}>
+            Previewing as {previewTier.charAt(0).toUpperCase() + previewTier.slice(1)}
+          </span>
+          <span style={{ fontSize: '11px', color: '#9C7A5A' }}> — Exit preview</span>
+        </div>
+      )}
       <TopBar onNavigateToAuth={() => handleNavigateToAuth('login')} />
       <ProjectHub
         onCreateProject={handleCreateProject}
@@ -241,7 +261,9 @@ function ProjectView({
   const getProject = useProjectStore((s) => s.getProject);
   const project = getProject(projectId);
   const projectTitle = project?.title || 'Project';
-  const userTier = useAuthStore((s) => s.user?.tier || '');
+  const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
+  // userTier for feature flags uses effectiveTier (preview-aware)
+  const userTier = effectiveTier;
 
   // Connect to Supabase sync + Realtime subscriptions
   const { loading, saveStatus } = useProjectSync(projectId);

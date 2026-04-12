@@ -55,7 +55,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
   const [currentView, setCurrentView] = useState<MoreView>(getInitialView);
   const [billingReturnView, setBillingReturnView] = useState<MoreView>('menu');
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
-  const { projectMemberships, user } = useAuthStore();
+  const { projectMemberships, user, getEffectiveTier } = useAuthStore();
   const { projectSettings, clearState: clearProjectSettingsState } = useProjectSettingsStore();
   const activeProjectId = useProjectStore((s) => s.currentProject?.id ?? '');
 
@@ -63,7 +63,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
   const currentProjectMembership = projectMemberships.find(pm => pm.projectId === activeProjectId)
     || (projectMemberships.length > 0 ? projectMemberships[0] : null);
   const isOwner = currentProjectMembership?.role === 'owner';
-  const canManage = currentProjectMembership && user ? canManageProject(user.tier, {
+  const canManage = currentProjectMembership && user ? canManageProject(getEffectiveTier(), {
     isOwner,
     role: isOwner ? 'designer' : currentProjectMembership.role === 'supervisor' ? 'supervisor' : 'trainee',
   }) : false;
