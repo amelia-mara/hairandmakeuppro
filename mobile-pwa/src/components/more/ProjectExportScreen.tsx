@@ -4,6 +4,7 @@ import { useBillingStore } from '@/stores/billingStore';
 import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 import type {
   ExportDocument,
   ExportDocumentType,
@@ -23,6 +24,7 @@ interface ProjectExportScreenProps {
 const INVOICE_TIERS: UserTier[] = ['supervisor', 'designer'];
 
 export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBilling }: ProjectExportScreenProps) {
+  const access = useProjectAccess();
   const { currentProject, lifecycle, sceneCaptures } = useProjectStore();
   const { billingDetails, isBillingComplete } = useBillingStore();
   const projectId = currentProject?.id ?? '';
@@ -33,8 +35,8 @@ export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBill
     EXPORT_DOCUMENTS.map(doc => ({ ...doc }))
   );
 
-  // Check if user can generate invoices
-  const canGenerateInvoice = user && INVOICE_TIERS.includes(user.tier);
+  // Check if user can generate invoices (tier gate + access toggle gate)
+  const canGenerateInvoice = user && INVOICE_TIERS.includes(user.tier) && access.exportInvoice;
   const invoiceSelected = documents.find(d => d.id === 'invoice_summary')?.selected;
   const billingComplete = isBillingComplete();
   const [deliveryMethod, setDeliveryMethod] = useState<ExportDeliveryMethod>('download');

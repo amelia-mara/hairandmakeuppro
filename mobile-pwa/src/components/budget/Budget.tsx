@@ -1,4 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { AccessRestricted } from '@/components/AccessRestricted';
 import { formatShortDate } from '@/utils/helpers';
 import {
   CURRENCIES,
@@ -20,6 +22,9 @@ import {
 export type { ExpenseCategory, Receipt, BudgetSummary };
 
 export function Budget() {
+  const access = useProjectAccess();
+  if (!access.budget) return <AccessRestricted />;
+
   // Budget data from store (persisted to IndexedDB)
   const {
     budgetTotal,

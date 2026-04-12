@@ -1423,6 +1423,18 @@ export interface ProjectMembership {
   status: ProjectStatus;
   ownerName?: string;
   pendingDeletionAt?: Date | null;
+  // Per-member access toggles (set by project owner)
+  access_breakdown?: boolean;
+  access_script?: boolean;
+  access_lookbook?: boolean;
+  access_callsheets?: boolean;
+  access_chat?: boolean;
+  access_continuity?: boolean;
+  access_hours?: boolean;
+  access_receipts?: boolean;
+  access_budget?: boolean;
+  access_export_hours?: boolean;
+  access_export_invoice?: boolean;
 }
 
 // Auth screen types for navigation

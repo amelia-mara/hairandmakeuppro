@@ -123,6 +123,17 @@ function toProjectMembership(
     status: (project.status as ProjectMembership['status']) || 'active',
     ownerName: project.owner_name,
     pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
+    access_breakdown: project.access_breakdown,
+    access_script: project.access_script,
+    access_lookbook: project.access_lookbook,
+    access_callsheets: project.access_callsheets,
+    access_chat: project.access_chat,
+    access_continuity: project.access_continuity,
+    access_hours: project.access_hours,
+    access_receipts: project.access_receipts,
+    access_budget: project.access_budget,
+    access_export_hours: project.access_export_hours,
+    access_export_invoice: project.access_export_invoice,
   };
 }
 

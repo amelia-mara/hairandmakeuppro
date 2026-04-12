@@ -3,6 +3,8 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { generateCharacterLookbookPDF } from '@/utils/exportUtils';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { AccessRestricted } from '@/components/AccessRestricted';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
@@ -11,6 +13,8 @@ import { clsx } from 'clsx';
 
 export function Lookbooks() {
   const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
+  const access = useProjectAccess();
+  if (!access.lookbook) return <AccessRestricted />;
   const { schedule } = useScheduleStore();
   const { callSheets } = useCallSheetStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
