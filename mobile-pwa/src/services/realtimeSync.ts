@@ -10,9 +10,11 @@
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useProjectStore } from '@/stores/projectStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { loadProjectFromSupabase } from '@/services/projectLoader';
-import type { Look } from '@/types';
+import type { Look, ProductionSchedule, ScheduleCastMember, ScheduleDay, CallSheet } from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -101,6 +103,11 @@ export function subscribeToProject(projectId: string): () => void {
     })
 
     // Prep approved timesheet hours
+    // NOTE: Mobile timesheets are local-only (IndexedDB). Prep stores
+    // timesheet state in a sentinel row (week_starting='1970-01-01') with
+    // a different structure (crew + production + entries blob). Full
+    // two-way timesheet sync requires a design decision on shared format.
+    // For now, log the event so it's visible in dev tools.
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
@@ -108,7 +115,7 @@ export function subscribeToProject(projectId: string): () => void {
       filter: `project_id=eq.${projectId}`,
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
-        console.log('[AppRealtime] Timesheet updated:', payload);
+        console.log('[AppRealtime] Timesheet updated from Prep:', payload);
       });
     })
 
@@ -120,7 +127,7 @@ export function subscribeToProject(projectId: string): () => void {
       filter: `project_id=eq.${projectId}`,
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
-        console.log('[AppRealtime] Call sheet changed:', payload);
+        handleCallSheetChange(payload);
       });
     })
 
@@ -132,7 +139,7 @@ export function subscribeToProject(projectId: string): () => void {
       filter: `project_id=eq.${projectId}`,
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
-        console.log('[AppRealtime] Schedule changed:', payload);
+        handleScheduleChange(payload);
       });
     })
 
@@ -438,6 +445,81 @@ function handleLookScenesChange(payload: ChangePayload) {
       }
       console.log('[AppRealtime] Look scenes updated:', lookId, sceneNumbers);
     });
+}
+
+function handleScheduleChange(payload: ChangePayload) {
+  if ((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new) {
+    const row = payload.new as Record<string, unknown>;
+    const castList = (row.cast_list as ScheduleCastMember[]) || [];
+    const days = (row.days as ScheduleDay[]) || [];
+    const status = (row.status as string) === 'complete' ? 'complete' : 'pending';
+
+    if (!days.length && !castList.length) return;
+
+    const scheduleStore = useScheduleStore.getState();
+    const current = scheduleStore.schedule;
+
+    const schedule: ProductionSchedule = {
+      id: row.id as string,
+      status: status as ProductionSchedule['status'],
+      castList,
+      days,
+      totalDays: days.length,
+      uploadedAt: new Date((row.created_at as string) || Date.now()),
+      rawText: (row.raw_pdf_text as string) || undefined,
+      // Preserve local PDF URI if same schedule
+      pdfUri: current?.id === (row.id as string) ? current.pdfUri : undefined,
+    };
+
+    scheduleStore.setSchedule(schedule);
+    console.log('[AppRealtime] Schedule updated from Prep:', row.id);
+  }
+}
+
+function handleCallSheetChange(payload: ChangePayload) {
+  if ((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new) {
+    const row = payload.new as Record<string, unknown>;
+    const parsed = (row.parsed_data || {}) as Record<string, unknown>;
+
+    const callSheet: CallSheet = {
+      ...parsed,
+      id: row.id as string,
+      date: (row.shoot_date as string) || '',
+      productionDay: (row.production_day as number) || 0,
+      rawText: (row.raw_text as string) || (parsed.rawText as string) || undefined,
+      pdfUri: undefined,
+      uploadedAt: new Date((row.created_at as string) || Date.now()),
+      scenes: (parsed.scenes as CallSheet['scenes']) || [],
+    } as CallSheet;
+
+    const store = useCallSheetStore.getState();
+    const existingIdx = store.callSheets.findIndex(cs => cs.id === callSheet.id);
+    if (existingIdx >= 0) {
+      // Update existing
+      useCallSheetStore.setState(state => ({
+        callSheets: state.callSheets.map(cs =>
+          cs.id === callSheet.id ? { ...cs, ...callSheet, pdfUri: cs.pdfUri } : cs
+        ),
+      }));
+    } else {
+      // Insert new
+      useCallSheetStore.setState(state => ({
+        callSheets: [...state.callSheets, callSheet].sort(
+          (a, b) => a.productionDay - b.productionDay
+        ),
+      }));
+    }
+    console.log('[AppRealtime] Call sheet updated from Prep:', row.id);
+  } else if (payload.eventType === 'DELETE' && payload.old) {
+    const old = payload.old as Record<string, unknown>;
+    const id = old.id as string;
+    if (id) {
+      useCallSheetStore.setState(state => ({
+        callSheets: state.callSheets.filter(cs => cs.id !== id),
+      }));
+      console.log('[AppRealtime] Call sheet deleted from Prep:', id);
+    }
+  }
 }
 
 // ============================================================================
