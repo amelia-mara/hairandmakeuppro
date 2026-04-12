@@ -148,20 +148,7 @@ export async function getUserProjects(
     const { data, error } = await supabase
       .from('project_members')
       .select(`
-        role,
-        is_owner,
-        joined_at,
-        access_breakdown,
-        access_script,
-        access_lookbook,
-        access_callsheets,
-        access_chat,
-        access_continuity,
-        access_hours,
-        access_receipts,
-        access_budget,
-        access_export_hours,
-        access_export_invoice,
+        *,
         projects (*, users:created_by (name))
       `)
       .eq('user_id', userId)
