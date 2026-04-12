@@ -32,7 +32,6 @@ function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
   const userTier = useAuthStore((s) => s.user?.tier);
-  const getEffectiveTier = useAuthStore((s) => s.getEffectiveTier);
   const previewTier = useAuthStore((s) => s.previewTier);
   const setPreviewTier = useAuthStore((s) => s.setPreviewTier);
 
