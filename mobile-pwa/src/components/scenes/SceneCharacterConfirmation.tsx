@@ -6,9 +6,9 @@ import type { Scene, Character, CharacterRole } from '@/types';
 import { clsx } from 'clsx';
 
 const ROLE_OPTIONS: { value: CharacterRole; label: string; shortLabel: string; colour: string }[] = [
-  { value: 'lead', label: 'Lead', shortLabel: 'L', colour: 'bg-amber text-white' },
-  { value: 'supporting', label: 'Supporting', shortLabel: 'SA', colour: 'bg-blue-500 text-white' },
-  { value: 'background', label: 'Background', shortLabel: 'BG', colour: 'bg-gray-400 text-white' },
+  { value: 'lead', label: 'Lead', shortLabel: 'L', colour: 'bg-teal text-white' },
+  { value: 'supporting', label: 'Supporting', shortLabel: 'SA', colour: 'bg-teal text-white' },
+  { value: 'background', label: 'Background', shortLabel: 'BG', colour: 'bg-teal text-white' },
 ];
 
 /** Compact role selector pill strip */
@@ -328,7 +328,7 @@ export function SceneCharacterConfirmation({
           </div>
           <button
             onClick={onClose}
-            className="p-2 -mr-2 text-text-muted active:text-brand-gold"
+            className="p-2 -mr-2 text-text-muted active:text-amber"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -353,7 +353,7 @@ export function SceneCharacterConfirmation({
               <h4 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
                 CURRENT CHARACTERS
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {scene.characters.map(charId => {
                   const char = projectCharacters.find(c => c.id === charId);
                   if (!char) return null;
@@ -366,12 +366,12 @@ export function SceneCharacterConfirmation({
                       className={clsx(
                         'p-2.5 rounded-xl border transition-all',
                         isSelected
-                          ? 'border-brand-gold bg-brand-gold/5'
+                          ? 'border-amber bg-amber/5'
                           : 'border-red-200 bg-red-50'
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <CharacterAvatar character={char} size="sm" />
+                      <div className="flex items-center gap-2">
+                        <CharacterAvatar character={char} size="xs" />
                         <div className="flex-1 min-w-0">
                           {isEditing ? (
                             <input
@@ -386,7 +386,7 @@ export function SceneCharacterConfirmation({
                                   setEditingKey(null);
                                 }
                               }}
-                              className="w-full px-2 py-1 text-sm font-medium border border-brand-gold rounded bg-white text-text-primary uppercase"
+                              className="w-full px-2 py-1 text-sm font-medium border border-amber rounded bg-white text-text-primary uppercase"
                               autoFocus
                             />
                           ) : (
@@ -466,7 +466,7 @@ export function SceneCharacterConfirmation({
               <h4 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
                 SUGGESTED CHARACTERS
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {suggestedWithExisting.map(({ name, existingCharacter }) => {
                   const isSelected = selectedSuggestedNames.has(name);
                   const isEditing = editingKey === name;
@@ -477,18 +477,18 @@ export function SceneCharacterConfirmation({
                       className={clsx(
                         'w-full p-2.5 rounded-xl border transition-all text-left',
                         isSelected
-                          ? 'border-brand-gold bg-brand-gold/5'
+                          ? 'border-amber bg-amber/5'
                           : 'border-border bg-card'
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         {/* Checkbox */}
                         <button
                           type="button"
                           onClick={() => handleToggleSuggested(name, existingCharacter)}
                           className={clsx(
                             'w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                            isSelected ? 'border-brand-gold bg-gold' : 'border-gray-300'
+                            isSelected ? 'border-teal bg-teal' : 'border-gray-300'
                           )}
                         >
                           {isSelected && (
@@ -500,7 +500,7 @@ export function SceneCharacterConfirmation({
 
                         {/* Character info */}
                         {existingCharacter && (
-                          <CharacterAvatar character={existingCharacter} size="sm" />
+                          <CharacterAvatar character={existingCharacter} size="xs" />
                         )}
                         <div className="flex-1 min-w-0">
                           {isEditing ? (
@@ -516,7 +516,7 @@ export function SceneCharacterConfirmation({
                                   setEditingKey(null);
                                 }
                               }}
-                              className="w-full px-2 py-1 text-sm font-medium border border-brand-gold rounded bg-white text-text-primary uppercase"
+                              className="w-full px-2 py-1 text-sm font-medium border border-amber rounded bg-white text-text-primary uppercase"
                               autoFocus
                             />
                           ) : (
@@ -581,7 +581,7 @@ export function SceneCharacterConfirmation({
                 <button
                   onClick={handleAddNewCharacter}
                   disabled={!newCharacterName.trim()}
-                  className="px-3 py-2 bg-gold text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="px-3 py-2 bg-amber text-white rounded-lg text-sm font-medium disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -598,7 +598,7 @@ export function SceneCharacterConfirmation({
             ) : (
               <button
                 onClick={() => setShowAddCharacter(true)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-text-muted hover:border-brand-gold hover:text-brand-gold transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-text-muted hover:border-amber hover:text-amber transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -613,7 +613,7 @@ export function SceneCharacterConfirmation({
         <div className="px-4 py-4 border-t border-border shrink-0">
           <button
             onClick={handleConfirm}
-            className="w-full py-3 rounded-button bg-gold text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-button bg-amber text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
           >
             Confirm {selectedCount} Character{selectedCount !== 1 ? 's' : ''}
           </button>
@@ -647,7 +647,7 @@ export function SceneCharacterStatus({
     const unassigned = confirmedCharacters.filter(c => !c.role);
 
     const roleGroups = [
-      { key: 'lead', label: 'L', colour: 'bg-amber-100 text-brand-gold', chars: leads },
+      { key: 'lead', label: 'L', colour: 'bg-amber-100 text-amber', chars: leads },
       { key: 'supporting', label: 'SA', colour: 'bg-blue-100 text-blue-700', chars: supportingChars },
       { key: 'background', label: 'BG', colour: 'bg-gray-100 text-gray-500', chars: backgroundChars },
       { key: 'unassigned', label: '', colour: '', chars: unassigned },
@@ -686,7 +686,7 @@ export function SceneCharacterStatus({
         {/* Add character button - always visible */}
         <button
           onClick={onConfirmClick}
-          className="inline-flex items-center gap-1 text-[10px] text-brand-gold font-medium mt-1.5 hover:text-brand-gold-dark transition-colors"
+          className="inline-flex items-center gap-1 text-[10px] text-amber font-medium mt-1.5 hover:text-amber-dark transition-colors"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -725,7 +725,7 @@ export function SceneCharacterStatus({
           Suggested: {suggestedNames.slice(0, 3).join(', ')}
           {suggestedNames.length > 3 && ` +${suggestedNames.length - 3} more`}
         </p>
-        <span className="inline-flex items-center gap-1 text-[10px] text-brand-gold font-medium">
+        <span className="inline-flex items-center gap-1 text-[10px] text-amber font-medium">
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
@@ -739,7 +739,7 @@ export function SceneCharacterStatus({
   return (
     <button
       onClick={onConfirmClick}
-      className="inline-flex items-center gap-1 text-xs text-brand-gold font-medium"
+      className="inline-flex items-center gap-1 text-xs text-amber font-medium"
     >
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -766,9 +766,9 @@ export function CharacterConfirmationProgress({
   }
 
   return (
-    <div className="mx-4 mb-3 p-3 bg-brand-gold/5 border border-amber-200 rounded-xl">
+    <div className="mx-4 mb-3 p-3 bg-amber/5 border border-amber-200 rounded-xl">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-brand-gold">
+        <span className="text-xs font-medium text-amber">
           Character Confirmation
         </span>
         <span className="text-xs text-amber-600">
@@ -777,7 +777,7 @@ export function CharacterConfirmationProgress({
       </div>
       <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-brand-gold/50 rounded-full transition-all duration-300"
+          className="h-full bg-amber/50 rounded-full transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </div>
