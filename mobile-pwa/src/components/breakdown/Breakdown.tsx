@@ -289,7 +289,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               <button onClick={handleCopy} className="text-xs text-text-muted font-medium px-2 py-1 rounded-md border border-border">
                 {copied ? 'Copied!' : 'Copy'}
               </button>
-              <button onClick={handleExportCSV} className="text-xs text-brand-gold font-medium px-2 py-1 rounded-md border border-brand-gold/40/40">
+              <button onClick={handleExportCSV} className="text-xs text-amber font-medium px-2 py-1 rounded-md border border-amber/40">
                 Export CSV
               </button>
             </div>
@@ -302,7 +302,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               <select
                 value={filterChar}
                 onChange={(e) => setFilterChar(e.target.value)}
-                className="w-full pl-2.5 pr-7 py-1.5 bg-muted rounded-lg text-xs text-foreground border-none outline-none focus:ring-1 focus:ring-brand-gold/50/50 appearance-none"
+                className="w-full pl-2.5 pr-7 py-1.5 bg-muted rounded-lg text-xs text-foreground border-none outline-none focus:ring-1 focus:ring-amber/50 appearance-none"
               >
                 <option value="">All Characters</option>
                 {characters.map((c) => (
@@ -321,7 +321,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                   if (e.target.value) handleJumpToScene(e.target.value);
                   e.target.value = '';
                 }}
-                className="w-full pl-2.5 pr-7 py-1.5 bg-muted rounded-lg text-xs text-foreground border-none outline-none focus:ring-1 focus:ring-brand-gold/50/50 appearance-none"
+                className="w-full pl-2.5 pr-7 py-1.5 bg-muted rounded-lg text-xs text-foreground border-none outline-none focus:ring-1 focus:ring-amber/50 appearance-none"
               >
                 <option value="">Jump to scene...</option>
                 {scenesWithCast.map((s) => (
@@ -404,7 +404,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                     />
                     <button
                       onClick={() => setConfirmSceneId(scene.id)}
-                      className="text-[10px] font-semibold text-text-muted px-1.5 py-1 rounded-lg border border-border hover:border-brand-gold/40/50 transition-colors flex-shrink-0"
+                      className="text-[10px] font-semibold text-text-muted px-1.5 py-1 rounded-lg border border-border hover:border-amber/50 transition-colors flex-shrink-0"
                       title="Add character"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -481,7 +481,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                                 )}
                               </td>
                               <td className="px-2.5 py-2.5">
-                                {look ? <span className="text-brand-gold font-semibold">{look.name}</span> : <Empty />}
+                                {look ? <span className="text-amber font-semibold">{look.name}</span> : <Empty />}
                               </td>
                               {hasPrepData && department === 'costume' && (
                                 <>
@@ -496,7 +496,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                               {hasPrepData && department !== 'costume' && (
                                 <>
                                   <td className="px-2.5 py-2.5">
-                                    <CellContent value={resolved.hair} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'hair')} tagColor="#D4943A" />
+                                    <CellContent value={resolved.hair} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'hair')} tagColor="#F5A623" />
                                   </td>
                                   <td className="px-2.5 py-2.5">
                                     <CellContent value={resolved.makeup} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'makeup')} tagColor="#C2785C" />
