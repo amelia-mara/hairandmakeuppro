@@ -362,41 +362,40 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               <div
                 key={scene.id}
                 ref={(el) => { if (el) sceneRefs.current.set(scene.id, el); }}
-                className="bg-card rounded-xl border border-border overflow-hidden"
+                className="bg-card rounded-[14px] overflow-hidden"
+                style={{ border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03)' }}
               >
                 {/* Time jump banner */}
                 {isTimeJump && (
-                  <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-[11px] font-semibold text-amber-400 flex items-center gap-1.5">
+                  <div className="px-4 py-1.5 text-[11px] font-semibold flex items-center gap-1.5" style={{ background: 'rgba(232,98,26,0.1)', color: '#C4522A' }}>
                     <span>&#9203;</span>
                     TIME JUMP — {storyDay}
                     {bd?.timeline?.note && <span className="font-normal opacity-80"> &middot; {bd.timeline.note}</span>}
                   </div>
                 )}
 
-                {/* Scene header — single row with scene info + actions */}
+                {/* Scene header — matches Prep aesthetic */}
                 <div className={clsx(
-                  'px-3 py-2.5 border-b border-border',
-                  scene.filmingStatus === 'complete' && 'bg-green-500/8',
-                  scene.filmingStatus === 'partial' && 'bg-amber-500/8',
-                  scene.filmingStatus === 'not-filmed' && 'bg-red-500/8',
+                  'px-4 pt-4 pb-3',
+                  scene.filmingStatus === 'complete' && 'bg-green-500/[0.06]',
+                  scene.filmingStatus === 'partial' && 'bg-amber-500/[0.06]',
+                  scene.filmingStatus === 'not-filmed' && 'bg-red-500/[0.06]',
                 )}>
-                  <div className="flex items-center gap-2">
-                    <span className={clsx(
-                      'flex-shrink-0 px-2 py-0.5 rounded text-xs font-bold',
-                      scene.intExt === 'INT' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400',
-                    )}>
+                  <div className="flex items-center gap-2.5">
+                    {/* SC number in accent color, no pill */}
+                    <span className="text-base font-extrabold flex-shrink-0" style={{ color: '#E8621A', letterSpacing: '0.02em' }}>
                       SC {scene.sceneNumber}
                     </span>
                     {storyDay && (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber text-white text-[10px] font-bold flex-shrink-0">
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-teal text-white text-[10px] font-bold flex-shrink-0">
                         {storyDay}
                       </span>
                     )}
-                    <span className="text-sm font-medium text-foreground truncate flex-1">
+                    <span className="text-[0.8125rem] font-semibold text-foreground truncate flex-1" style={{ letterSpacing: '0.01em' }}>
                       {scene.intExt}. {scene.slugline?.replace(/^(INT\.|EXT\.)\s*/i, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\s*$/i, '') || 'UNKNOWN'} — {scene.timeOfDay}
                     </span>
 
-                    {/* Actions — inline with scene info */}
+                    {/* Actions */}
                     <FilmingStatusDropdown
                       scene={scene}
                       onStatusChange={handleFilmingStatusChange}
@@ -404,10 +403,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                     />
                     <button
                       onClick={() => setConfirmSceneId(scene.id)}
-                      className="text-[10px] font-semibold text-text-muted px-1.5 py-1 rounded-lg border border-border hover:border-amber/50 transition-colors flex-shrink-0"
+                      className="text-text-muted p-1 rounded-md hover:bg-black/5 transition-colors flex-shrink-0"
                       title="Add character"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                       </svg>
                     </button>
@@ -425,16 +424,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                   </div>
                 </div>
 
-                {/* Character table */}
+                {/* Character table — Prep-style */}
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-border">
+                      <tr style={{ borderTop: '1px solid rgba(0,0,0,0.08)', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
                         {COLUMNS.map((col) => (
                           <th
                             key={col.key}
                             className={clsx(
-                              'px-2.5 py-2 text-left text-[10px] font-bold tracking-wider text-text-muted uppercase whitespace-nowrap',
+                              'px-4 py-2.5 text-left text-[0.6875rem] font-bold tracking-[0.08em] text-text-muted uppercase whitespace-nowrap',
                               col.width,
                             )}
                           >
@@ -443,10 +442,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/50">
+                    <tbody>
                       {charIds.length === 0 ? (
                         <tr>
-                          <td colSpan={COLUMNS.length} className="px-3 py-3 text-text-muted text-center">
+                          <td colSpan={COLUMNS.length} className="px-4 py-4 text-text-muted text-center text-[0.8125rem]">
                             No characters confirmed
                           </td>
                         </tr>
@@ -463,9 +462,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                             <tr
                               key={cid}
                               className={clsx(
-                                'align-top cursor-pointer active:bg-muted/50 transition-colors',
+                                'align-top cursor-pointer transition-colors hover:bg-black/[0.03]',
                                 charUnconfirmed && 'opacity-50',
                               )}
+                              style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}
                               onClick={() => {
                                 if (charUnconfirmed) {
                                   setConfirmSceneId(scene.id);
@@ -474,31 +474,34 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                                 }
                               }}
                             >
-                              <td className="px-2.5 py-2.5">
-                                <div className="font-semibold text-foreground leading-tight">{ch.name}</div>
+                              <td className="px-4 py-3">
+                                <div className="text-[0.8125rem] font-semibold leading-tight" style={{ color: '#E8621A' }}>{ch.name}</div>
+                                {ch.actorNumber && !charUnconfirmed && (
+                                  <span className="text-[10px] text-text-muted">{ch.actorNumber}{ch.actorNumber === 1 ? 'st' : ch.actorNumber === 2 ? 'nd' : ch.actorNumber === 3 ? 'rd' : 'th'}</span>
+                                )}
                                 {charUnconfirmed && (
                                   <span className="text-[9px] text-amber-500 font-medium">unconfirmed</span>
                                 )}
                               </td>
-                              <td className="px-2.5 py-2.5">
-                                {look ? <span className="text-amber font-semibold">{look.name}</span> : <Empty />}
+                              <td className="px-4 py-3 text-[0.8125rem]">
+                                {look ? <span className="text-text-primary">{look.name}</span> : <Empty />}
                               </td>
                               {hasPrepData && department === 'costume' && (
                                 <>
-                                  <td className="px-2.5 py-2.5">
+                                  <td className="px-4 py-3 text-[0.8125rem]">
                                     <CellContent value={resolved.wardrobe} />
                                   </td>
-                                  <td className="px-2.5 py-2.5">
+                                  <td className="px-4 py-3 text-[0.8125rem]">
                                     <CellContent value="" />
                                   </td>
                                 </>
                               )}
                               {hasPrepData && department !== 'costume' && (
                                 <>
-                                  <td className="px-2.5 py-2.5">
+                                  <td className="px-4 py-3 text-[0.8125rem]">
                                     <CellContent value={resolved.hair} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'hair')} tagColor="#F5A623" />
                                   </td>
-                                  <td className="px-2.5 py-2.5">
+                                  <td className="px-4 py-3 text-[0.8125rem]">
                                     <CellContent value={resolved.makeup} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'makeup')} tagColor="#C2785C" />
                                   </td>
                                 </>
