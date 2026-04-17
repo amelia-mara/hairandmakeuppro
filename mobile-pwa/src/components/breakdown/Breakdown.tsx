@@ -81,6 +81,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
         { key: 'clothing', label: 'CLOTHING', width: 'min-w-[90px]' },
         { key: 'accessories', label: 'ACCESSORIES', width: 'min-w-[90px]' },
+        { key: 'sfx', label: 'SFX / PROSTHETICS', width: 'min-w-[90px]' },
+        { key: 'env', label: 'ENVIRONMENTAL', width: 'min-w-[80px]' },
+        { key: 'action', label: 'ACTION', width: 'min-w-[80px]' },
+        { key: 'notes', label: 'CONTINUITY NOTES', width: 'min-w-[100px]' },
       ] as const;
     }
     return [
@@ -88,6 +92,11 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
       { key: 'hair', label: 'HAIR', width: 'min-w-[90px]' },
       { key: 'makeup', label: 'MAKEUP', width: 'min-w-[90px]' },
+      { key: 'wardrobe', label: 'WARDROBE', width: 'min-w-[90px]' },
+      { key: 'sfx', label: 'SFX / PROSTHETICS', width: 'min-w-[90px]' },
+      { key: 'env', label: 'ENVIRONMENTAL', width: 'min-w-[80px]' },
+      { key: 'action', label: 'ACTION', width: 'min-w-[80px]' },
+      { key: 'notes', label: 'CONTINUITY NOTES', width: 'min-w-[100px]' },
     ] as const;
   }, [department, hasPrepData]);
 
@@ -350,6 +359,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           </p>
         ) : (
           scenesWithCast.map((scene) => {
+            const globalIdx = sortedScenes.indexOf(scene);
             const bd = scene.prepBreakdown;
             const charIds = filterChar
               ? scene.characters.filter((c) => c === filterChar)
@@ -494,29 +504,47 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                                   <span className="text-[9px] text-amber-500 font-medium">unconfirmed</span>
                                 )}
                               </td>
+                              {/* Look */}
                               <td className="px-4 py-3 text-[0.8125rem]">
                                 {look ? <span className="text-text-primary">{look.name}</span> : <Empty />}
                               </td>
-                              {hasPrepData && department === 'costume' && (
-                                <>
-                                  <td className="px-4 py-3 text-[0.8125rem]">
-                                    <CellContent value={resolved.wardrobe} />
-                                  </td>
-                                  <td className="px-4 py-3 text-[0.8125rem]">
-                                    <CellContent value="" />
-                                  </td>
-                                </>
-                              )}
-                              {hasPrepData && department !== 'costume' && (
-                                <>
-                                  <td className="px-4 py-3 text-[0.8125rem]">
-                                    <CellContent value={resolved.hair} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'hair')} tagColor="#F5A623" />
-                                  </td>
-                                  <td className="px-4 py-3 text-[0.8125rem]">
-                                    <CellContent value={resolved.makeup} tags={bd?.tags?.filter(t => t.characterId === cid && t.categoryId === 'makeup')} tagColor="#C2785C" />
-                                  </td>
-                                </>
-                              )}
+                              {/* Department-specific columns + shared columns */}
+                              {hasPrepData && (() => {
+                                const tags = bd?.tags ?? [];
+                                const tagFor = (cat: string) => tags.filter(t => t.characterId === cid && t.categoryId === cat);
+                                const hasChange = cb?.changeType === 'change';
+                                const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved, bd);
+                                return department === 'costume' ? (
+                                  <>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.wardrobe} tags={tagFor('clothing')} tagColor="#ec4899" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value="" tags={tagFor('accessories')} tagColor="#D4943A" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]">
+                                      {hasChange && cb?.changeNotes && <div className="text-text-muted mb-0.5">{cb.changeNotes}</div>}
+                                      {continuity ? (
+                                        continuity.startsWith('Same as') ? <span className="text-text-muted italic">{continuity}</span> : <span className="text-text-primary">{continuity}</span>
+                                      ) : <Empty />}
+                                    </td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.hair} tags={tagFor('hair')} tagColor="#D4943A" exit={hasChange ? cb?.exitsWith?.hair : undefined} /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.makeup} tags={tagFor('makeup')} tagColor="#C2785C" exit={hasChange ? cb?.exitsWith?.makeup : undefined} /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.wardrobe} tags={tagFor('wardrobe')} tagColor="#ec4899" exit={hasChange ? cb?.exitsWith?.wardrobe : undefined} /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]">
+                                      {hasChange && cb?.changeNotes && <div className="text-text-muted mb-0.5">{cb.changeNotes}</div>}
+                                      {continuity ? (
+                                        continuity.startsWith('Same as') ? <span className="text-text-muted italic">{continuity}</span> : <span className="text-text-primary">{continuity}</span>
+                                      ) : <Empty />}
+                                    </td>
+                                  </>
+                                );
+                              })()}
                             </tr>
                           );
                         })
@@ -558,13 +586,15 @@ function CellContent({
   value,
   tags,
   tagColor,
+  exit,
 }: {
   value: string;
   tags?: PrepBreakdownTag[];
   tagColor?: string;
+  exit?: string;
 }) {
   const hasTags = !!tags && tags.length > 0;
-  if (!value && !hasTags) return <Empty />;
+  if (!value && !hasTags && !exit) return <Empty />;
 
   return (
     <div>
@@ -582,6 +612,7 @@ function CellContent({
           ))}
         </div>
       )}
+      {exit && <div className="text-[10px] text-text-muted italic mt-0.5">Exit: {exit}</div>}
     </div>
   );
 }
