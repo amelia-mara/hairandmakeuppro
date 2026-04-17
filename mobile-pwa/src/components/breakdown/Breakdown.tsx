@@ -362,8 +362,17 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               <div
                 key={scene.id}
                 ref={(el) => { if (el) sceneRefs.current.set(scene.id, el); }}
-                className="bg-card rounded-[14px] overflow-hidden"
-                style={{ border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03)' }}
+                className={clsx(
+                  'rounded-[14px] overflow-hidden',
+                  scene.filmingStatus === 'complete' && 'bg-green-500/[0.08]',
+                  scene.filmingStatus === 'partial' && 'bg-amber-500/[0.10]',
+                  scene.filmingStatus === 'not-filmed' && 'bg-red-500/[0.08]',
+                  !scene.filmingStatus && 'bg-card',
+                )}
+                style={{
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03)',
+                }}
               >
                 {/* Time jump banner */}
                 {isTimeJump && (
@@ -375,12 +384,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                 )}
 
                 {/* Scene header — matches Prep aesthetic */}
-                <div className={clsx(
-                  'px-4 pt-4 pb-3',
-                  scene.filmingStatus === 'complete' && 'bg-green-500/[0.06]',
-                  scene.filmingStatus === 'partial' && 'bg-amber-500/[0.06]',
-                  scene.filmingStatus === 'not-filmed' && 'bg-red-500/[0.06]',
-                )}>
+                <div className="px-4 pt-4 pb-3">
                   <div className="flex items-center gap-2.5">
                     {/* SC number in accent color, no pill */}
                     <span className="text-base font-extrabold flex-shrink-0" style={{ color: '#E8621A', letterSpacing: '0.02em' }}>
