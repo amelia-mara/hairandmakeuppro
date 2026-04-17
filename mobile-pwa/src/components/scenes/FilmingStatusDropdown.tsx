@@ -36,6 +36,11 @@ export function FilmingStatusDropdown({ scene, onStatusChange, onNotesModalOpen 
 
   const handleStatusSelect = (status: SceneFilmingStatus) => {
     setIsOpen(false);
+    // If already selected, unset (clear status)
+    if (scene.filmingStatus === status) {
+      onStatusChange(scene.sceneNumber, undefined as unknown as SceneFilmingStatus);
+      return;
+    }
     if (status === 'complete') {
       onStatusChange(scene.sceneNumber, status);
     } else {
