@@ -433,6 +433,18 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
 
   return (
     <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
+      {/* Title page — rendered as its own paper before scenes */}
+      {preambleScene && (
+        <div
+          className="sv-paper"
+          style={{ fontSize: `${fontSize}px` }}
+        >
+          <div className="sv-content sv-preamble-content">
+            {renderPreambleContent(preambleScene)}
+          </div>
+        </div>
+      )}
+
       {scenes.map((scene, idx) => (
         <div
           key={scene.id}
@@ -442,35 +454,6 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
-          {idx === 0 && preambleScene && (
-            <>
-              <div className="sv-content sv-preamble-content">
-                {renderPreambleContent(preambleScene)}
-              </div>
-              {/* Page break between title page and first scene */}
-              <div style={{
-                margin: '40px 0',
-                borderTop: '2px dashed rgba(180, 160, 120, 0.3)',
-                position: 'relative',
-              }}>
-                <span style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'var(--bg-card, #FAF7F0)',
-                  padding: '0 12px',
-                  fontSize: '0.625rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted, #9C9488)',
-                }}>
-                  Page Break
-                </span>
-              </div>
-            </>
-          )}
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
           <div className="sv-content">
             {memoRenderSceneContent(scene)}
