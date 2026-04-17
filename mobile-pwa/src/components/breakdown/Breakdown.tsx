@@ -372,16 +372,17 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               <div
                 key={scene.id}
                 ref={(el) => { if (el) sceneRefs.current.set(scene.id, el); }}
-                className={clsx(
-                  'rounded-[14px] overflow-hidden',
-                  scene.filmingStatus === 'complete' && 'bg-green-500/[0.08]',
-                  scene.filmingStatus === 'partial' && 'bg-amber-500/[0.10]',
-                  scene.filmingStatus === 'not-filmed' && 'bg-red-500/[0.08]',
-                  !scene.filmingStatus && 'bg-card',
-                )}
+                className="rounded-[14px] overflow-hidden"
                 style={{
                   border: '1px solid rgba(0,0,0,0.08)',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03)',
+                  backgroundColor: scene.filmingStatus === 'complete'
+                    ? 'rgba(74, 191, 176, 0.10)'    // Teal — matches complete dot #4ABFB0
+                    : scene.filmingStatus === 'partial'
+                      ? 'rgba(245, 166, 35, 0.10)'  // Amber — matches partial dot #F5A623
+                      : scene.filmingStatus === 'not-filmed'
+                        ? 'rgba(232, 98, 26, 0.10)'  // Orange — matches incomplete dot #E8621A
+                        : 'var(--bg-card, #fff)',
                 }}
               >
                 {/* Time jump banner */}
