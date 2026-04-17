@@ -445,7 +445,7 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
         </div>
       )}
 
-      {scenes.map((scene, idx) => (
+      {scenes.map((scene) => (
         <div
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
