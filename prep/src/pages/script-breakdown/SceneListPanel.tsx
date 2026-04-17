@@ -109,6 +109,35 @@ export function SceneListPanel({
         <input className="sl-search-input" placeholder="Search scenes, script, characters..."
           value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} />
       </div>
+      {/* Jump to scene */}
+      <div style={{ padding: '0 12px 8px' }}>
+        <select
+          value=""
+          onChange={(e) => {
+            if (e.target.value) {
+              onSelectScene(e.target.value);
+              e.target.value = '';
+            }
+          }}
+          style={{
+            width: '100%', padding: '6px 8px', borderRadius: '6px',
+            fontSize: '0.6875rem', fontWeight: 500,
+            backgroundColor: 'var(--bg-secondary, #F0EBE0)',
+            border: '1px solid rgba(0,0,0,0.06)',
+            color: 'var(--text-muted)', outline: 'none',
+            cursor: 'pointer', appearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239C9488' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 8px center',
+            paddingRight: '24px',
+          }}
+        >
+          <option value="">Jump to scene...</option>
+          {filteredScenes.map(s => (
+            <option key={s.id} value={s.id}>SC {s.number} — {s.intExt}. {s.location}</option>
+          ))}
+        </select>
+      </div>
       <div className="sl-list" ref={sceneListRef}>
         {filteredScenes.map((s) => {
           const status = store.getCompletionStatus(s.id, s);
