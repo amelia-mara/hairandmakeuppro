@@ -7,7 +7,6 @@ import {
   type Scene, type Character, type Look,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { useDirectorQueriesStore } from '@/stores/directorQueriesStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { type DiffResult } from '@/utils/scriptDiff';
 import { usePanelResize } from '@/hooks/usePanelResize';
@@ -145,7 +144,8 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [validSceneId, store, scene]);
 
-  const exportDirectorQueries = useCallback(() => {
+  const exportDirectorQueries = useCallback(async () => {
+    const { useDirectorQueriesStore } = await import('@/stores/directorQueriesStore');
     const store = useDirectorQueriesStore(projectId);
     const allUnresolved = store.getState().getAllUnresolved();
     if (allUnresolved.length === 0) {
