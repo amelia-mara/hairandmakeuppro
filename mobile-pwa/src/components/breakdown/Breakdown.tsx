@@ -477,10 +477,15 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                             <tr
                               key={cid}
                               className={clsx(
-                                'align-top cursor-pointer transition-colors hover:bg-black/[0.03]',
+                                'align-top cursor-pointer transition-colors',
                                 charUnconfirmed && 'opacity-50',
                               )}
-                              style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}
+                              style={{
+                                borderBottom: '1px solid rgba(180, 160, 120, 0.18)',
+                                backgroundColor: 'rgba(210, 195, 165, 0.12)',
+                              }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(210, 195, 165, 0.25)'; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(210, 195, 165, 0.12)'; }}
                               onClick={() => {
                                 if (charUnconfirmed) {
                                   setConfirmSceneId(scene.id);
