@@ -7,6 +7,7 @@ import {
   type Scene, type Character, type Look,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useDirectorQueriesStore } from '@/stores/directorQueriesStore';
 import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { type DiffResult } from '@/utils/scriptDiff';
 import { usePanelResize } from '@/hooks/usePanelResize';
@@ -41,6 +42,7 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [toolsOpen, setToolsOpen] = useState(false);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
+  const queriesStore = useDirectorQueriesStore(projectId);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -143,6 +145,30 @@ export function ScriptBreakdown({ projectId }: Props) {
       store.updateTimeline(validSceneId, { ...existing.timeline, day: scene.storyDay });
     }
   }, [validSceneId, store, scene]);
+
+  const exportDirectorQueries = useCallback(() => {
+    const allUnresolved = queriesStore.getState().getAllUnresolved();
+    if (allUnresolved.length === 0) {
+      alert('No unresolved director queries to export.');
+      return;
+    }
+    const sceneMap = new Map(ALL_SCENES.map(s => [s.id, s]));
+    const lines = ['DIRECTOR QUERIES', '================', ''];
+    for (const { sceneId, query } of allUnresolved) {
+      const sc = sceneMap.get(sceneId);
+      const sceneLabel = sc ? `SC ${sc.number} — ${sc.intExt}. ${sc.location} — ${sc.dayNight}` : `Scene ${sceneId}`;
+      lines.push(`${sceneLabel}`);
+      lines.push(`  Q: ${query.text}`);
+      lines.push('');
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'director-queries.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [queriesStore, ALL_SCENES]);
 
   const triggerSave = useCallback(() => {
     setSaveStatus('saving');
@@ -416,6 +442,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               onExportLookbooks={() => console.log('Export lookbooks')}
               onExportTimeline={() => console.log('Export timeline')}
               onExportBible={() => console.log('Export bible')}
+              onExportQueries={() => exportDirectorQueries()}
               drafts={drafts}
               draftsLoading={draftsLoading}
               draftsExpanded={draftsExpanded}
@@ -430,6 +457,7 @@ export function ScriptBreakdown({ projectId }: Props) {
           ) : (
             scene && (
             <BreakdownFormPanel
+              projectId={projectId}
               scene={scene} characters={sceneCharacters} breakdown={breakdown}
               activeCharacterId={activeTab !== 'script' ? activeTab : null}
               saveStatus={saveStatus}

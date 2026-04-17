@@ -9,6 +9,7 @@ import {
   type ContinuityEvent,
   type SceneBreakdown,
 } from '@/stores/breakdownStore';
+import { useDirectorQueriesStore } from '@/stores/directorQueriesStore';
 import { FInput, FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
 import { CharBlock } from './CharBlock';
@@ -28,8 +29,8 @@ import { CharBlock } from './CharBlock';
 import { useCharacterOverridesStore } from '@/stores/breakdownStore';
 import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
-export function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
-  scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
+export function BreakdownFormPanel({ projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
+  projectId: string; scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
   onNavigate: (id: string) => void;
@@ -44,6 +45,14 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();
+  const queriesStore = useDirectorQueriesStore(projectId);
+  const sceneQueries = queriesStore((s) => s.getQueries(scene.id));
+  const addQuery = queriesStore((s) => s.addQuery);
+  const updateQuery = queriesStore((s) => s.updateQuery);
+  const toggleResolved = queriesStore((s) => s.toggleResolved);
+  const removeQuery = queriesStore((s) => s.removeQuery);
+  const [newQueryText, setNewQueryText] = useState('');
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
@@ -201,6 +210,98 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
             </div>
           ))}
         </div>
+        {/* ── Director Queries ── */}
+        <div style={{ marginTop: '24px', padding: '0 4px' }}>
+          <div style={{
+            fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: '#C4522A', marginBottom: '10px',
+          }}>
+            Director Queries
+          </div>
+
+          {sceneQueries.map((q) => (
+            <div
+              key={q.id}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: '8px',
+                padding: '8px 10px', marginBottom: '6px', borderRadius: '8px',
+                backgroundColor: q.resolved ? 'rgba(74,191,176,0.08)' : 'rgba(232,98,26,0.08)',
+                border: `1px solid ${q.resolved ? 'rgba(74,191,176,0.2)' : 'rgba(232,98,26,0.2)'}`,
+              }}
+            >
+              <button
+                onClick={() => toggleResolved(scene.id, q.id)}
+                style={{
+                  width: 16, height: 16, borderRadius: 4, flexShrink: 0, marginTop: 2,
+                  border: `2px solid ${q.resolved ? '#4ABFB0' : '#E8621A'}`,
+                  backgroundColor: q.resolved ? '#4ABFB0' : 'transparent',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                {q.resolved && (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+              <input
+                type="text"
+                value={q.text}
+                onChange={(e) => updateQuery(scene.id, q.id, e.target.value)}
+                style={{
+                  flex: 1, background: 'none', border: 'none', outline: 'none',
+                  fontSize: '0.8125rem', color: 'var(--text-primary)',
+                  textDecoration: q.resolved ? 'line-through' : 'none',
+                  opacity: q.resolved ? 0.5 : 1,
+                }}
+              />
+              <button
+                onClick={() => removeQuery(scene.id, q.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', flexShrink: 0 }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <input
+              type="text"
+              value={newQueryText}
+              onChange={(e) => setNewQueryText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newQueryText.trim()) {
+                  addQuery(scene.id, newQueryText.trim());
+                  setNewQueryText('');
+                }
+              }}
+              placeholder="Add a question for the director..."
+              style={{
+                flex: 1, padding: '8px 10px', borderRadius: '8px', fontSize: '0.8125rem',
+                border: '1px solid rgba(232,98,26,0.25)', backgroundColor: 'rgba(232,98,26,0.04)',
+                outline: 'none', color: 'var(--text-primary)',
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newQueryText.trim()) {
+                  addQuery(scene.id, newQueryText.trim());
+                  setNewQueryText('');
+                }
+              }}
+              disabled={!newQueryText.trim()}
+              style={{
+                padding: '8px 12px', borderRadius: '8px', border: 'none',
+                backgroundColor: newQueryText.trim() ? '#E8621A' : 'var(--bg-secondary)',
+                color: newQueryText.trim() ? '#fff' : 'var(--text-muted)',
+                fontSize: '0.75rem', fontWeight: 600, cursor: newQueryText.trim() ? 'pointer' : 'default',
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
         <div ref={sentinelRef} className="fp-scroll-sentinel" />
       </div>
 
