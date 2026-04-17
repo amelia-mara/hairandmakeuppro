@@ -287,7 +287,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             <div className="flex items-center gap-2">
               {/* Prep sync badge */}
               {showSyncBadge && (
-                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-green-500/10 text-green-600">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-teal-500/10 text-teal-700">
                   {syncStatus === 'synced' && lastSynced
                     ? `Synced ${new Date(lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                     : syncStatus === 'uploading' || syncStatus === 'downloading'
