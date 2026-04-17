@@ -16,6 +16,7 @@ import { CharacterDesign } from '@/pages/CharacterDesign';
 import { AuthPage } from '@/pages/AuthPage';
 import { BetaCodePage } from '@/pages/BetaCodePage';
 import { useProjectStore } from '@/stores/projectStore';
+import { useScriptUploadStore } from '@/stores/breakdownStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
@@ -260,6 +261,7 @@ function ProjectView({
   const getProject = useProjectStore((s) => s.getProject);
   const project = getProject(projectId);
   const projectTitle = project?.title || 'Project';
+  const scriptFilename = useScriptUploadStore((s) => s.getScript(projectId))?.filename;
   const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
   // userTier for feature flags uses effectiveTier (preview-aware)
   const userTier = effectiveTier;
@@ -303,6 +305,7 @@ function ProjectView({
         activePage={activePage}
         onNavigate={onNavigate}
         projectType={project?.type}
+        scriptFilename={scriptFilename}
         onBackToHub={onBackToHub}
         onNavigateToAuth={onNavigateToAuth}
       />

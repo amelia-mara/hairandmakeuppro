@@ -3,12 +3,14 @@ import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
 import { isOwnerTier } from '@/utils/tierUtils';
+import { parseScriptRevision } from '@/utils/parseScriptRevision';
 
 interface TopBarProps {
   title?: string;
   activePage?: string;
   onNavigate?: (page: string) => void;
   projectType?: string;
+  scriptFilename?: string;
   onBackToHub?: () => void;
   onNavigateToAuth?: () => void;
 }
@@ -28,7 +30,10 @@ const NAV_ITEMS: { id: string; label: string; icon: any; flag?: FeatureFlag }[] 
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function TopBar({ title = 'Projects', activePage, onNavigate, projectType: _projectType, onBackToHub, onNavigateToAuth }: TopBarProps) {
+export function TopBar({ title = 'Projects', activePage, onNavigate, projectType: _projectType, scriptFilename, onBackToHub, onNavigateToAuth }: TopBarProps) {
+  const scriptRevision = scriptFilename ? parseScriptRevision(scriptFilename) : null;
+  const draftLabel = scriptRevision?.colour ? `${scriptRevision.colour} Draft` : null;
+  const draftDate = scriptRevision?.formattedDate || null;
   const [navOpen, setNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -92,6 +97,25 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                   <path d="m6 9 6 6 6-6"/>
                 </svg>
               </button>
+              {(draftLabel || draftDate) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+                  {scriptRevision?.colourHex && (
+                    <span style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      backgroundColor: scriptRevision.colourHex,
+                      flexShrink: 0,
+                      border: '1px solid rgba(0,0,0,0.1)',
+                    }} />
+                  )}
+                  <span style={{
+                    fontSize: '0.6875rem', fontWeight: 500,
+                    color: 'var(--text-muted, #9C9488)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {[draftLabel, draftDate].filter(Boolean).join(' — ')}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="topbar-project-row">
