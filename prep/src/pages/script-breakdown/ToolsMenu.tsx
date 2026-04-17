@@ -65,6 +65,7 @@ export function ToolsMenu({
   onExportLookbooks,
   onExportTimeline,
   onExportBible,
+  onExportQueries,
   drafts,
   draftsLoading,
   draftsExpanded,
