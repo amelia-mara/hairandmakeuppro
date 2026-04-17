@@ -60,20 +60,15 @@ export function FilmingStatusDropdown({ scene, onStatusChange, onNotesModalOpen 
           currentConfig ? [
             currentConfig.bgClass,
             currentConfig.textClass,
-            scene.filmingStatus === 'complete' && 'border-green-200',
+            scene.filmingStatus === 'complete' && 'border-teal-200',
             scene.filmingStatus === 'partial' && 'border-amber-200',
-            scene.filmingStatus === 'not-filmed' && 'border-red-200'
+            scene.filmingStatus === 'not-filmed' && 'border-orange-200'
           ] : 'bg-gray-100 text-text-muted border-gray-200 hover:border-gray-300'
         )}
       >
         {currentConfig ? (
           <>
-            <span className={clsx(
-              'w-2 h-2 rounded-full',
-              scene.filmingStatus === 'complete' && 'bg-green-500',
-              scene.filmingStatus === 'partial' && 'bg-amber-500',
-              scene.filmingStatus === 'not-filmed' && 'bg-red-500'
-            )} />
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentConfig?.color }} />
             {currentConfig.shortLabel}
           </>
         ) : (
@@ -173,7 +168,8 @@ export function FilmingNotesModal({ sceneNumber, status, onConfirm, onClose }: F
             </button>
             <button
               onClick={() => onConfirm(notes)}
-              className={clsx('flex-1 py-2.5 rounded-button text-white text-sm font-medium', status === 'partial' ? 'bg-amber-500' : 'bg-red-500')}
+              className="flex-1 py-2.5 rounded-button text-white text-sm font-medium"
+              style={{ backgroundColor: SCENE_FILMING_STATUS_CONFIG[status].color }}
             >
               Mark as {config.label}
             </button>
