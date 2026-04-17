@@ -42,7 +42,6 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [toolsOpen, setToolsOpen] = useState(false);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
-  const queriesStore = useDirectorQueriesStore(projectId);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -147,7 +146,8 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [validSceneId, store, scene]);
 
   const exportDirectorQueries = useCallback(() => {
-    const allUnresolved = queriesStore.getState().getAllUnresolved();
+    const store = useDirectorQueriesStore(projectId);
+    const allUnresolved = store.getState().getAllUnresolved();
     if (allUnresolved.length === 0) {
       alert('No unresolved director queries to export.');
       return;
@@ -168,7 +168,7 @@ export function ScriptBreakdown({ projectId }: Props) {
     a.download = 'director-queries.txt';
     a.click();
     URL.revokeObjectURL(url);
-  }, [queriesStore, ALL_SCENES]);
+  }, [projectId, ALL_SCENES]);
 
   const triggerSave = useCallback(() => {
     setSaveStatus('saving');
