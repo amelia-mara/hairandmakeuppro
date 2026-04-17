@@ -14,7 +14,7 @@ export type Database = {
           id: string
           email: string
           name: string
-          tier: 'trainee' | 'artist' | 'supervisor' | 'designer'
+          tier: 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner'
           stripe_customer_id: string | null
           created_at: string
         }
@@ -22,7 +22,7 @@ export type Database = {
           id: string
           email: string
           name: string
-          tier?: 'trainee' | 'artist' | 'supervisor' | 'designer'
+          tier?: 'daily' | 'artist' | 'supervisor' | 'designer'
           stripe_customer_id?: string | null
           created_at?: string
         }
@@ -30,7 +30,7 @@ export type Database = {
           id?: string
           email?: string
           name?: string
-          tier?: 'trainee' | 'artist' | 'supervisor' | 'designer'
+          tier?: 'daily' | 'artist' | 'supervisor' | 'designer'
           stripe_customer_id?: string | null
           created_at?: string
         }
@@ -81,6 +81,17 @@ export type Database = {
           role: 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee'
           is_owner: boolean
           joined_at: string
+          access_breakdown: boolean
+          access_script: boolean
+          access_lookbook: boolean
+          access_callsheets: boolean
+          access_chat: boolean
+          access_continuity: boolean
+          access_hours: boolean
+          access_receipts: boolean
+          access_budget: boolean
+          access_export_hours: boolean
+          access_export_invoice: boolean
         }
         Insert: {
           id?: string
@@ -89,6 +100,17 @@ export type Database = {
           role: 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee'
           is_owner?: boolean
           joined_at?: string
+          access_breakdown?: boolean
+          access_script?: boolean
+          access_lookbook?: boolean
+          access_callsheets?: boolean
+          access_chat?: boolean
+          access_continuity?: boolean
+          access_hours?: boolean
+          access_receipts?: boolean
+          access_budget?: boolean
+          access_export_hours?: boolean
+          access_export_invoice?: boolean
         }
         Update: {
           id?: string
@@ -97,6 +119,17 @@ export type Database = {
           role?: 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee'
           is_owner?: boolean
           joined_at?: string
+          access_breakdown?: boolean
+          access_script?: boolean
+          access_lookbook?: boolean
+          access_callsheets?: boolean
+          access_chat?: boolean
+          access_continuity?: boolean
+          access_hours?: boolean
+          access_receipts?: boolean
+          access_budget?: boolean
+          access_export_hours?: boolean
+          access_export_invoice?: boolean
         }
       }
       characters: {

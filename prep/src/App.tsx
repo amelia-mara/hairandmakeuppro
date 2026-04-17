@@ -18,6 +18,9 @@ import { BetaCodePage } from '@/pages/BetaCodePage';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectSync } from '@/hooks/useProjectSync';
+import { canAccessPrep } from '@/utils/tierUtils';
+import { isFeatureEnabled } from '@/utils/featureFlags';
+import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -28,6 +31,9 @@ function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const userTier = useAuthStore((s) => s.user?.tier);
+  const previewTier = useAuthStore((s) => s.previewTier);
+  const setPreviewTier = useAuthStore((s) => s.setPreviewTier);
 
   // Restore session on mount
   useEffect(() => {
@@ -176,6 +182,15 @@ function App() {
     );
   }
 
+  // Prep Happy tier gate — Designer and Owner only
+  if (isAuthenticated && userTier && !canAccessPrep(userTier)) {
+    return (
+      <PrepUpgradeScreen
+        onSignOut={() => useAuthStore.getState().signOut()}
+      />
+    );
+  }
+
   // Project view — TopBar with nav dropdown + content
   if (selectedProjectId) {
     return (
@@ -192,6 +207,23 @@ function App() {
   // Hub view
   return (
     <div className="ambient-light min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {previewTier && (
+        <div
+          onClick={() => setPreviewTier(null)}
+          style={{
+            position: 'sticky', top: 0, zIndex: 9999, width: '100%',
+            backgroundColor: '#2A1A08', padding: '6px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+          }}
+        >
+          <span style={{ fontSize: '12px' }}>👁</span>
+          <span style={{ fontSize: '12px', color: '#D4591A', fontWeight: 600 }}>
+            Previewing as {previewTier.charAt(0).toUpperCase() + previewTier.slice(1)}
+          </span>
+          <span style={{ fontSize: '11px', color: '#9C7A5A' }}> — Exit preview</span>
+        </div>
+      )}
       <TopBar onNavigateToAuth={() => handleNavigateToAuth('login')} />
       <ProjectHub
         onCreateProject={handleCreateProject}
@@ -228,6 +260,9 @@ function ProjectView({
   const getProject = useProjectStore((s) => s.getProject);
   const project = getProject(projectId);
   const projectTitle = project?.title || 'Project';
+  const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
+  // userTier for feature flags uses effectiveTier (preview-aware)
+  const userTier = effectiveTier;
 
   // Connect to Supabase sync + Realtime subscriptions
   const { loading, saveStatus } = useProjectSync(projectId);
@@ -319,16 +354,16 @@ function ProjectView({
         {activePage === 'breakdown' && (
           <BreakdownSheet projectId={projectId} />
         )}
-        {activePage === 'character-design' && (
+        {activePage === 'character-design' && isFeatureEnabled('characterDesign', userTier) && (
           <CharacterDesign projectId={projectId} />
         )}
         {activePage === 'continuity' && (
           <ContinuityTracker projectId={projectId} />
         )}
-        {activePage === 'budget' && (
+        {activePage === 'budget' && isFeatureEnabled('budget', userTier) && (
           <Budget projectId={projectId} />
         )}
-        {activePage === 'timesheet' && (
+        {activePage === 'timesheet' && isFeatureEnabled('timesheets', userTier) && (
           <Timesheet projectId={projectId} />
         )}
         {activePage === 'schedule' && (
@@ -337,7 +372,7 @@ function ProjectView({
         {activePage === 'call-sheets' && (
           <CallSheets projectId={projectId} />
         )}
-        {activePage === 'team' && (
+        {activePage === 'team' && isFeatureEnabled('teamManagement', userTier) && (
           <Team projectId={projectId} />
         )}
       </ProjectLayout>

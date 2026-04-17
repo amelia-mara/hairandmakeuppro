@@ -18,7 +18,8 @@ initChangeTracking();
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
-import { Scenes } from '@/components/scenes';
+// Scenes page retired — functionality merged into Breakdown
+// import { Scenes } from '@/components/scenes';
 import { Breakdown } from '@/components/breakdown';
 import { Lookbooks } from '@/components/lookbooks';
 import { Timesheet } from '@/components/timesheet';
@@ -27,6 +28,9 @@ import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/co
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AccessRestricted } from '@/components/AccessRestricted';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { isFeatureEnabled } from '@/utils/featureFlags';
 import {
   WelcomeScreen,
   SignInScreen,
@@ -100,6 +104,9 @@ function AppContent() {
     settingsProjectId,
     setSettingsProjectId,
     setAutoOpenProject,
+    getEffectiveTier,
+    previewTier,
+    setPreviewTier,
   } = useAuthStore();
 
   // Tutorial state — shown after first project creation
@@ -108,6 +115,9 @@ function AppContent() {
   } = useTutorialStore();
 
   // Tutorial is triggered from CreateProjectScreen after first project creation
+
+  // Access toggles for the active project (owner always has full access)
+  const access = useProjectAccess();
 
   // Track if we're showing the home/setup screen
   // Start as false - will be set true explicitly when needed
@@ -413,7 +423,7 @@ function AppContent() {
 
   // Handler for skipping plan selection (continue with free)
   const handleSkipPlanSelection = async () => {
-    await selectTier('trainee', 'monthly');
+    await selectTier('daily', 'monthly');
   };
 
   // Auth flow - show auth screens for new users or logged out users
@@ -571,8 +581,8 @@ function AppContent() {
 
   // Render content based on active tab and current view
   const renderContent = () => {
-    // If viewing a specific scene (from Today or Breakdown tabs)
-    if (currentSceneId && (activeTab === 'today' || activeTab === 'scenes')) {
+    // If viewing a specific scene (from Today, Scenes, or Breakdown tabs)
+    if (currentSceneId && (activeTab === 'today' || activeTab === 'scenes' || activeTab === 'breakdown')) {
       return (
         <SceneView
           sceneId={currentSceneId}
@@ -586,9 +596,8 @@ function AppContent() {
       case 'today':
         return <Today onSceneSelect={handleSceneSelect} onNavigateToTab={handleNavigateToTab} />;
       case 'scenes':
-        return <Scenes onSceneSelect={handleSceneSelect} />;
       case 'breakdown':
-        return <Breakdown />;
+        return <Breakdown onSceneSelect={handleSceneSelect} />;
       case 'lookbook':
         return <Lookbooks />;
       case 'hours':
@@ -598,8 +607,12 @@ function AppContent() {
       // These tabs are handled by the More component internally,
       // but if user navigates directly (e.g., from customized nav), show the specific view
       case 'script':
-      case 'schedule':
+        if (!access.script) return <AccessRestricted />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
       case 'callsheets':
+        if (!access.callsheets) return <AccessRestricted />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
+      case 'schedule':
       case 'settings':
       case 'more':
         return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
@@ -613,6 +626,25 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Tier preview banner */}
+      {previewTier && (
+        <div
+          onClick={() => setPreviewTier(null)}
+          style={{
+            position: 'sticky', top: 0, zIndex: 9999, width: '100%',
+            backgroundColor: '#2A1A08', padding: '6px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: '11px' }}>👁</span>
+          <span style={{ fontSize: '11px', color: '#D4591A', fontWeight: 600 }}>
+            Previewing as {previewTier.charAt(0).toUpperCase() + previewTier.slice(1)}
+          </span>
+          <span style={{ fontSize: '10px', color: '#9C7A5A' }}> — tap to exit</span>
+        </div>
+      )}
+
       {/* Lifecycle Banner (shows when project is wrapped/archived) */}
       {lifecycle.state !== 'active' && (
         <LifecycleBanner onExport={() => setShowExport(true)} />
@@ -636,8 +668,8 @@ function AppContent() {
 
       {/* Sync bottom sheet — hidden while auto-save handles solo users */}
 
-      {/* AI Chat Assistant */}
-      <ChatAssistant />
+      {/* AI Chat Assistant — owner-only until released */}
+      {isFeatureEnabled('aiAssistantChat', getEffectiveTier()) && <ChatAssistant />}
 
       {/* Wrap Popup Modal (shows when project completion is triggered) */}
       <WrapPopupModal onExport={() => setShowExport(true)} />

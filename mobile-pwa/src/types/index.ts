@@ -379,10 +379,10 @@ export interface NavItemConfig {
 export type NavIconName = 'calendar' | 'grid' | 'table' | 'book' | 'clock' | 'wallet' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
 
 // All available nav items (except 'more' which is fixed)
+// 'scenes' renders the merged Breakdown page — 'breakdown' as a separate item is retired
 export const ALL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'today', label: 'Today', iconName: 'calendar' },
-  { id: 'scenes', label: 'Scenes', iconName: 'grid' },
-  { id: 'breakdown', label: 'Breakdown', iconName: 'table' },
+  { id: 'scenes', label: 'Breakdown', iconName: 'table' },
   { id: 'lookbook', label: 'Lookbook', iconName: 'book' },
   { id: 'hours', label: 'Hours', iconName: 'clock' },
   { id: 'budget', label: 'Budget', iconName: 'wallet' },
@@ -419,9 +419,9 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
   'not-filmed': {
     label: 'Incomplete',
     shortLabel: 'Incomplete',
-    bgClass: 'bg-red-100',
-    textClass: 'text-red-600',
-    borderClass: 'border-red-400',
+    bgClass: 'bg-orange-100',
+    textClass: 'text-orange-700',
+    borderClass: 'border-orange-300',
     color: '#E8621A',
     glassOverlay: 'rgba(232, 98, 26, 0.15)',
   },
@@ -429,17 +429,17 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
     label: 'Part Complete',
     shortLabel: 'Part Complete',
     bgClass: 'bg-amber-100',
-    textClass: 'text-amber-600',
-    borderClass: 'border-amber-400',
+    textClass: 'text-amber-700',
+    borderClass: 'border-amber-300',
     color: '#F5A623',
     glassOverlay: 'rgba(245, 166, 35, 0.15)',
   },
   'complete': {
     label: 'Complete',
     shortLabel: 'Complete',
-    bgClass: 'bg-green-100',
-    textClass: 'text-green-600',
-    borderClass: 'border-green-400',
+    bgClass: 'bg-teal-100',
+    textClass: 'text-teal-700',
+    borderClass: 'border-teal-300',
     color: '#4ABFB0',
     glassOverlay: 'rgba(74, 191, 176, 0.15)',
   },
@@ -1374,8 +1374,8 @@ export const calculateDaysUntilDeletion = (wrappedAt: Date): number => {
 // Authentication & User Types
 // ============================================
 
-// User subscription tiers - 'trainee' is the free tier (renamed from 'free')
-export type UserTier = 'trainee' | 'artist' | 'supervisor' | 'designer';
+// User subscription tiers - 'daily' is the free tier (renamed from 'free')
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner';
 
 // Re-export subscription types
 export * from './subscription';
@@ -1423,6 +1423,18 @@ export interface ProjectMembership {
   status: ProjectStatus;
   ownerName?: string;
   pendingDeletionAt?: Date | null;
+  // Per-member access toggles (set by project owner)
+  access_breakdown?: boolean;
+  access_script?: boolean;
+  access_lookbook?: boolean;
+  access_callsheets?: boolean;
+  access_chat?: boolean;
+  access_continuity?: boolean;
+  access_hours?: boolean;
+  access_receipts?: boolean;
+  access_budget?: boolean;
+  access_export_hours?: boolean;
+  access_export_invoice?: boolean;
 }
 
 // Auth screen types for navigation
@@ -1472,10 +1484,11 @@ export const formatProjectCode = (input: string): string => {
 
 // Tier feature limits (basic version - see subscription.ts for full feature details)
 export const TIER_LIMITS: Record<UserTier, { maxProjects: number; maxArchivedProjects: number; canCreateProjects: boolean }> = {
-  trainee: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
-  artist: { maxProjects: 10, maxArchivedProjects: -1, canCreateProjects: false },
+  daily: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
+  artist: { maxProjects: 1, maxArchivedProjects: -1, canCreateProjects: true },
   supervisor: { maxProjects: 25, maxArchivedProjects: 15, canCreateProjects: true },
   designer: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true }, // -1 = unlimited
+  owner: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true },
 };
 
 // Helper to check if project should trigger wrap
@@ -1522,7 +1535,7 @@ export const TEAM_MEMBER_ROLES: { value: TeamMemberRole; label: string; level: n
   { value: 'makeup', label: 'Makeup Artist', level: 4 },
   { value: 'sfx', label: 'Special Effects Artist', level: 3 },
   { value: 'daily', label: 'Daily', level: 2 },
-  { value: 'trainee', label: 'Trainee', level: 1 },
+  { value: 'daily', label: 'Trainee', level: 1 },
 ];
 
 // Get display label for a role
@@ -1537,6 +1550,7 @@ export const getTeamMemberRoleLevel = (role: TeamMemberRole): number => {
 
 // Team member with full details
 export interface TeamMember {
+  membershipId: string; // project_members PK (for access toggle updates)
   userId: string;
   projectId: string;
   name: string;
@@ -1547,6 +1561,18 @@ export interface TeamMember {
   joinedAt: Date;
   lastActiveAt: Date;
   editCount: number;
+  // Per-member access toggles (set by project owner)
+  accessBreakdown: boolean;
+  accessScript: boolean;
+  accessLookbook: boolean;
+  accessCallsheets: boolean;
+  accessChat: boolean;
+  accessContinuity: boolean;
+  accessHours: boolean;
+  accessReceipts: boolean;
+  accessBudget: boolean;
+  accessExportHours: boolean;
+  accessExportInvoice: boolean;
 }
 
 // Permission levels for project settings

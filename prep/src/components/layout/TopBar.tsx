@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
+import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
+import { isOwnerTier } from '@/utils/tierUtils';
 
 interface TopBarProps {
   title?: string;
@@ -11,18 +13,18 @@ interface TopBarProps {
   onNavigateToAuth?: () => void;
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { id: string; label: string; icon: any; flag?: FeatureFlag }[] = [
   { id: 'projects', label: 'Projects', icon: ProjectsIcon },
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
-  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon },
+  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon, flag: 'characterDesign' },
   { id: 'continuity', label: 'Continuity', icon: ContinuityIcon },
-  { id: 'budget', label: 'Budget', icon: BudgetIcon },
-  { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon },
+  { id: 'budget', label: 'Budget', icon: BudgetIcon, flag: 'budget' },
+  { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon, flag: 'timesheets' },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
   { id: 'call-sheets', label: 'Call Sheets', icon: CallSheetsIcon },
-  { id: 'team', label: 'Team', icon: TeamIcon },
+  { id: 'team', label: 'Team', icon: TeamIcon, flag: 'teamManagement' },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
@@ -99,7 +101,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
 
           {navOpen && onNavigate && (
             <div className="topbar-nav-dropdown">
-              {NAV_ITEMS.map((item) => (
+              {NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, useAuthStore.getState().getEffectiveTier())).map((item) => (
                 <button
                   key={item.id}
                   className={`topbar-nav-item ${activePage === item.id ? 'active' : ''}`}
@@ -123,6 +125,21 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         <div ref={accountRef} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {isAuthenticated ? (
             <>
+              {/* Owner badge */}
+              {isOwnerTier(user?.tier ?? '') && (
+                <div style={{
+                  backgroundColor: '#2A1A08',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  color: '#E8621A',
+                  letterSpacing: '0.1em',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  OWNER
+                </div>
+              )}
               {/* Avatar — THE SUN */}
               <div className="avatar-wrap">
                 <div className="avatar-halo avatar-halo--outer" />
@@ -143,7 +160,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                         <div className="account-info">
                           <div className="account-name">{user?.name || 'User'}</div>
                           <div className="account-email">{user?.email || ''}</div>
-                          <span className="account-badge">Beta Tester</span>
+                          <span className="account-badge">{isOwnerTier(user?.tier ?? '') ? 'Internal' : 'Beta Tester'}</span>
                         </div>
                       </div>
                       <div className="account-divider" />
@@ -204,6 +221,39 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                         ))}
                       </div>
                     </div>
+
+                    {/* Tier Preview — owner only */}
+                    {isOwnerTier(user?.tier ?? '') && (() => {
+                      const previewTier = useAuthStore.getState().previewTier;
+                      const setPreview = useAuthStore.getState().setPreviewTier;
+                      const options: { value: string | null; label: string }[] = [
+                        { value: null, label: 'Owner (you)' },
+                        { value: 'designer', label: 'Designer' },
+                      ];
+                      return (
+                        <>
+                          <div className="account-section-label">Preview As</div>
+                          <div className="account-card">
+                            {options.map(o => (
+                              <button
+                                key={o.value ?? 'owner'}
+                                className="account-row"
+                                onClick={() => { setPreview(o.value as any); setAccountOpen(false); }}
+                              >
+                                <div style={{
+                                  width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
+                                  border: '2px solid var(--border-medium)',
+                                  backgroundColor: (o.value === previewTier) ? 'var(--accent-gold)' : 'transparent',
+                                }} />
+                                <div className="account-row-text">
+                                  <span className="account-row-title">{o.label}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {/* Sign out */}
                     <button className="account-signout" onClick={() => { setAccountOpen(false); logout(); }}>

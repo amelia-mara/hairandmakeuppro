@@ -4,6 +4,7 @@ import { useBillingStore } from '@/stores/billingStore';
 import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { calculateInvoiceWithVAT, type WeekSummary } from '@/types';
 
 interface ExportModalProps {
@@ -16,6 +17,7 @@ interface ExportModalProps {
 type ExportFormat = 'pdf' | 'csv' | 'invoice';
 
 export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: ExportModalProps) {
+  const access = useProjectAccess();
   const { entries, calculateEntry, rateCard } = useTimesheetStore();
   const { billingDetails } = useBillingStore();
   const storeProjectId = useProjectStore((s) => s.currentProject?.id ?? '');
@@ -34,6 +36,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   const [exportSuccess, setExportSuccess] = useState(false);
 
   if (!isOpen) return null;
+  if (!access.exportHours) return null;
 
   // Get entries for the current week
   const getWeekEntries = () => {
@@ -683,7 +686,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
               </div>
             </button>
 
-            <button
+            {access.exportInvoice && <button
               onClick={() => setExportFormat('invoice')}
               className={`w-full p-3 rounded-card border-2 text-left transition-all ${
                 exportFormat === 'invoice'
@@ -704,7 +707,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
                   <div className="text-xs text-text-muted">Ready to send to production</div>
                 </div>
               </div>
-            </button>
+            </button>}
           </div>
 
           {/* Summary preview */}

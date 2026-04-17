@@ -136,17 +136,27 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
         const prepAccess = !!(project as any).has_prep_access;
         setHasPrepAccess(true); // Always true in Prep — this is the Prep app
 
-        // Auto-fix: if project doesn't have has_prep_access, set it now
-        // so data syncs survive across sessions
+        // Only auto-enable has_prep_access if the current user is a
+        // designer (by tier) or the project owner. Other users opening
+        // the project in Prep should not silently upgrade it.
         if (!prepAccess) {
-          supabase
-            .from('projects')
-            .update({ has_prep_access: true })
-            .eq('id', projectId!)
-            .then(({ error }) => {
-              if (error) console.warn('[useProjectSync] Failed to set has_prep_access:', error);
-              else console.log('[useProjectSync] Auto-enabled has_prep_access for project', projectId);
-            });
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            const [{ data: profile }, { data: membership }] = await Promise.all([
+              supabase.from('users').select('tier').eq('id', authUser.id).single(),
+              supabase.from('project_members').select('is_owner').eq('project_id', projectId!).eq('user_id', authUser.id).single(),
+            ]);
+            if (profile?.tier === 'designer' || membership?.is_owner) {
+              supabase
+                .from('projects')
+                .update({ has_prep_access: true })
+                .eq('id', projectId!)
+                .then(({ error }) => {
+                  if (error) console.warn('[useProjectSync] Failed to set has_prep_access:', error);
+                  else console.log('[useProjectSync] Auto-enabled has_prep_access for project', projectId);
+                });
+            }
+          }
         }
 
         // Build scene → character ID map
@@ -588,9 +598,12 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               handleLookRealtimeUpdate(projectId!, payload);
             },
             onContinuityInsert: (payload) => {
-              console.log('[PrepSync] Continuity entry from app:', payload);
-              // Continuity data from the app updates the continuity tracker store
+              handleContinuityRealtimeInsert(payload);
             },
+            // NOTE: Mobile timesheets are local-only. Prep stores timesheet
+            // state in a sentinel row (week_starting='1970-01-01') with a
+            // different structure. Full two-way timesheet sync requires a
+            // design decision on shared format. Log for now.
             onTimesheetInsert: (payload) => {
               console.log('[PrepSync] Timesheet entry from app:', payload);
             },
@@ -1201,9 +1214,94 @@ function handleCharacterRealtimeUpdate(projectId: string, payload: ChangePayload
   }
 }
 
-function handleLookRealtimeUpdate(_projectId: string, payload: ChangePayload) {
+function handleLookRealtimeUpdate(projectId: string, payload: ChangePayload) {
   if ((payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') && payload.new) {
     const look = dbToLook(payload.new as Record<string, unknown>);
-    console.log('[PrepSync] Look changed from app:', look.name);
+    const parsed = useParsedScriptStore.getState().getParsedData(projectId);
+    if (!parsed) return;
+
+    const existing = parsed.looks.find(l => l.id === look.id);
+    if (existing) {
+      useParsedScriptStore.getState().updateLook(projectId, look.id, look as any);
+      console.log('[PrepSync] Look updated from app:', look.name);
+    } else {
+      // New look from the app — add it
+      useParsedScriptStore.getState().setParsedData(projectId, {
+        ...parsed,
+        looks: [...parsed.looks, look as any],
+      });
+      console.log('[PrepSync] Look inserted from app:', look.name);
+    }
+  } else if (payload.eventType === 'DELETE' && payload.old) {
+    const oldLookId = (payload.old as Record<string, unknown>).id as string;
+    if (!oldLookId) return;
+    const parsed = useParsedScriptStore.getState().getParsedData(projectId);
+    if (!parsed) return;
+    useParsedScriptStore.getState().setParsedData(projectId, {
+      ...parsed,
+      looks: parsed.looks.filter(l => l.id !== oldLookId),
+    });
+    console.log('[PrepSync] Look deleted from app:', oldLookId);
   }
+}
+
+function handleContinuityRealtimeInsert(payload: ChangePayload) {
+  if (!((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new)) return;
+
+  const entry = payload.new as Record<string, unknown>;
+  const sceneId = entry.scene_id as string;
+  const characterId = entry.character_id as string;
+  if (!sceneId || !characterId) return;
+
+  const flags = (entry.continuity_flags as Record<string, boolean>) || {};
+
+  // Extract costume lookbook from JSONB if present
+  const rawEventsData = entry.continuity_events_data as unknown;
+  let costumeLookbook: { outfit?: string; accessories?: string; breakdown?: string } | undefined;
+  if (rawEventsData && typeof rawEventsData === 'object' && !Array.isArray(rawEventsData)) {
+    const obj = rawEventsData as Record<string, unknown>;
+    if (obj.costume_lookbook) {
+      costumeLookbook = obj.costume_lookbook as typeof costumeLookbook;
+    }
+  }
+
+  useContinuityTrackerStore.getState().setEntry(sceneId, characterId, {
+    sceneId,
+    characterId,
+    status: (entry.status as 'pending' | 'in-progress' | 'complete') || 'pending',
+    flags: {
+      sweat: flags.sweat || false,
+      dishevelled: flags.dishevelled || false,
+      blood: flags.blood || false,
+      dirt: flags.dirt || false,
+      wetHair: flags.wetHair || false,
+      tears: flags.tears || false,
+    },
+    notes: (entry.general_notes as string) || '',
+    costumeLookbook,
+  });
+
+  // Restore continuity photos from stored metadata
+  const evData = rawEventsData as Record<string, any> | null;
+  if (evData?.prep_photos) {
+    const pp = evData.prep_photos;
+    const photosStore = useContinuityPhotosStore.getState();
+    if (pp.masterRef) {
+      photosStore.setMasterRef(sceneId, characterId, pp.masterRef);
+    }
+    if (pp.anglePhotos) {
+      for (const [angle, photo] of Object.entries(pp.anglePhotos)) {
+        if (photo) {
+          photosStore.setAnglePhoto(sceneId, characterId, angle as any, photo as any);
+        }
+      }
+    }
+    if (pp.additional && Array.isArray(pp.additional)) {
+      for (const photo of pp.additional) {
+        photosStore.addAdditionalPhoto(sceneId, characterId, photo);
+      }
+    }
+  }
+
+  console.log('[PrepSync] Continuity entry from app:', sceneId, characterId);
 }
