@@ -386,16 +386,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                 {/* Scene header — matches Prep aesthetic */}
                 <div className="px-4 pt-4 pb-3">
                   <div className="flex items-center gap-2.5">
-                    {/* SC number in accent color, no pill */}
-                    <span className="text-base font-extrabold flex-shrink-0" style={{ color: '#E8621A', letterSpacing: '0.02em' }}>
+                    {/* SC number in accent color, no pill — matches Prep .bs-scene-num */}
+                    <span className="flex-shrink-0" style={{ color: '#E8621A', fontSize: '1.125rem', fontWeight: 800, letterSpacing: '0.02em' }}>
                       SC {scene.sceneNumber}
                     </span>
                     {storyDay && (
-                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-teal text-white text-[10px] font-bold flex-shrink-0">
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-teal text-white text-[0.6875rem] font-bold flex-shrink-0">
                         {storyDay}
                       </span>
                     )}
-                    <span className="text-[0.8125rem] font-semibold text-foreground truncate flex-1" style={{ letterSpacing: '0.01em' }}>
+                    <span className="truncate flex-1" style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-heading, #2A2013)', letterSpacing: '0.01em' }}>
                       {scene.intExt}. {scene.slugline?.replace(/^(INT\.|EXT\.)\s*/i, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\s*$/i, '') || 'UNKNOWN'} — {scene.timeOfDay}
                     </span>
 
@@ -479,9 +479,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                               }}
                             >
                               <td className="px-4 py-3">
-                                <div className="text-[0.8125rem] font-semibold leading-tight" style={{ color: '#E8621A' }}>{ch.name}</div>
+                                <div
+                                  className="uppercase leading-tight"
+                                  style={{ color: '#A0522D', fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.02em' }}
+                                >
+                                  {ch.name}
+                                </div>
                                 {ch.actorNumber && !charUnconfirmed && (
-                                  <span className="text-[10px] text-text-muted">{ch.actorNumber}{ch.actorNumber === 1 ? 'st' : ch.actorNumber === 2 ? 'nd' : ch.actorNumber === 3 ? 'rd' : 'th'}</span>
+                                  <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: 'rgba(80, 60, 30, 0.5)' }}>
+                                    {ch.actorNumber}{ch.actorNumber === 1 ? 'st' : ch.actorNumber === 2 ? 'nd' : ch.actorNumber === 3 ? 'rd' : 'th'}
+                                  </span>
                                 )}
                                 {charUnconfirmed && (
                                   <span className="text-[9px] text-amber-500 font-medium">unconfirmed</span>
