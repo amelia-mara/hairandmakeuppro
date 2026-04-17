@@ -443,7 +443,11 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr style={{ borderTop: '1px solid rgba(0,0,0,0.08)', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+                      <tr style={{
+                        borderTop: '1px solid rgba(180, 160, 120, 0.25)',
+                        borderBottom: '1px solid rgba(180, 160, 120, 0.25)',
+                        backgroundColor: 'rgba(210, 195, 165, 0.22)',
+                      }}>
                         {COLUMNS.map((col) => (
                           <th
                             key={col.key}
