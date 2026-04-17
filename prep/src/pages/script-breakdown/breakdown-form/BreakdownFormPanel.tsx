@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CONTINUITY_EVENT_TYPES,
   useSynopsisStore,
@@ -11,8 +11,6 @@ import {
 } from '@/stores/breakdownStore';
 import { FInput, FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
-
-const LazyDirectorQueries = lazy(() => import('./DirectorQueriesSection').then(m => ({ default: m.DirectorQueriesSection })));
 import { CharBlock } from './CharBlock';
 
 /**
@@ -203,10 +201,7 @@ export function BreakdownFormPanel({ projectId, scene, characters, breakdown, ac
             </div>
           ))}
         </div>
-        {/* ── Director Queries (lazy-loaded to avoid blocking page render) ── */}
-        <Suspense fallback={null}>
-          <LazyDirectorQueries projectId={projectId} sceneId={scene.id} />
-        </Suspense>
+        {/* ── Director Queries ── */}
 
         <div ref={sentinelRef} className="fp-scroll-sentinel" />
       </div>
