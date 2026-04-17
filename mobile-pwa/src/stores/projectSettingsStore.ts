@@ -16,6 +16,7 @@ import {
 } from '@/types';
 import { useAuthStore } from './authStore';
 import { useProjectStore } from './projectStore';
+import { supabase } from '@/lib/supabase';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import type { Database } from '@/types/supabase';
 
@@ -72,6 +73,7 @@ interface ProjectSettingsState {
   loadTeamMembers: (projectId: string) => Promise<void>;
   changeTeamMemberRole: (userId: string, newRole: TeamMemberRole) => Promise<void>;
   removeTeamMember: (userId: string) => Promise<void>;
+  updateMemberAccess: (membershipId: string, field: string, value: boolean) => Promise<void>;
 
   // Stats
   refreshProjectStats: (projectId: string) => void;
@@ -92,6 +94,7 @@ const getTeamFromCurrentUser = (projectId: string): TeamMember[] => {
   if (!user) return [];
 
   return [{
+    membershipId: '',
     userId: user.id,
     projectId,
     name: user.name,
@@ -102,6 +105,10 @@ const getTeamFromCurrentUser = (projectId: string): TeamMember[] => {
     joinedAt: user.createdAt,
     lastActiveAt: new Date(),
     editCount: 0,
+    accessBreakdown: true, accessScript: true, accessLookbook: true,
+    accessCallsheets: true, accessChat: true, accessContinuity: true,
+    accessHours: true, accessReceipts: true, accessBudget: true,
+    accessExportHours: true, accessExportInvoice: true,
   }];
 };
 
@@ -402,7 +409,8 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
       const { members, error } = await supabaseProjects.getProjectMembers(projectId);
 
       if (!error && members.length > 0) {
-        const teamMembers: TeamMember[] = members.map((m) => ({
+        const teamMembers: TeamMember[] = members.map((m: any) => ({
+          membershipId: m.id,
           userId: m.user_id,
           projectId: m.project_id,
           name: m.user?.name || 'Unknown',
@@ -412,6 +420,17 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
           joinedAt: new Date(m.joined_at),
           lastActiveAt: new Date(),
           editCount: 0,
+          accessBreakdown: m.access_breakdown ?? true,
+          accessScript: m.access_script ?? true,
+          accessLookbook: m.access_lookbook ?? true,
+          accessCallsheets: m.access_callsheets ?? true,
+          accessChat: m.access_chat ?? true,
+          accessContinuity: m.access_continuity ?? true,
+          accessHours: m.access_hours ?? true,
+          accessReceipts: m.access_receipts ?? true,
+          accessBudget: m.access_budget ?? false,
+          accessExportHours: m.access_export_hours ?? true,
+          accessExportInvoice: m.access_export_invoice ?? true,
         }));
         set({ teamMembers, isLoading: false });
       } else {
@@ -471,6 +490,46 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
       });
     } catch {
       set({ isLoading: false, error: 'Failed to remove team member' });
+    }
+  },
+
+  // Update a single access toggle for a team member
+  updateMemberAccess: async (membershipId, field, value) => {
+    const columnMap: Record<string, string> = {
+      accessBreakdown: 'access_breakdown',
+      accessScript: 'access_script',
+      accessLookbook: 'access_lookbook',
+      accessCallsheets: 'access_callsheets',
+      accessChat: 'access_chat',
+      accessContinuity: 'access_continuity',
+      accessHours: 'access_hours',
+      accessReceipts: 'access_receipts',
+      accessBudget: 'access_budget',
+      accessExportHours: 'access_export_hours',
+      accessExportInvoice: 'access_export_invoice',
+    };
+    const column = columnMap[field];
+    if (!column) return;
+
+    // Optimistic update
+    set((state) => ({
+      teamMembers: state.teamMembers.map((m) =>
+        m.membershipId === membershipId ? { ...m, [field]: value } : m
+      ),
+    }));
+
+    const { error } = await supabase
+      .from('project_members')
+      .update({ [column]: value })
+      .eq('id', membershipId);
+
+    if (error) {
+      // Roll back
+      set((state) => ({
+        teamMembers: state.teamMembers.map((m) =>
+          m.membershipId === membershipId ? { ...m, [field]: !value } : m
+        ),
+      }));
     }
   },
 

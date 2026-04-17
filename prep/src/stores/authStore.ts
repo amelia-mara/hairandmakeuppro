@@ -5,11 +5,14 @@ import { useProjectStore } from './projectStore';
 import { loadUserProjects, type SupabaseProject } from '@/services/projectService';
 import { flushPrepSync } from '@/services/supabaseSync';
 
+export type UserTier = 'daily' | 'artist' | 'supervisor' | 'designer' | 'owner';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   initials: string;
+  tier: UserTier;
 }
 
 function getInitials(name: string): string {
@@ -21,17 +24,22 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function toAppUser(supabaseUser: SupabaseUser, profileName?: string): User {
+function toAppUser(supabaseUser: SupabaseUser, profileName?: string, profileTier?: string): User {
   const name =
     profileName ||
     supabaseUser.user_metadata?.name ||
     supabaseUser.email?.split('@')[0]?.replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ||
     'User';
+  const validTiers: UserTier[] = ['daily', 'artist', 'supervisor', 'designer', 'owner'];
+  const tier: UserTier = validTiers.includes(profileTier as UserTier)
+    ? (profileTier as UserTier)
+    : 'daily';
   return {
     id: supabaseUser.id,
     name,
     email: supabaseUser.email || '',
     initials: getInitials(name),
+    tier,
   };
 }
 
@@ -101,11 +109,23 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+
+  // Tier preview mode (owner only, local state only, not persisted)
+  previewTier: UserTier | null;
+  setPreviewTier: (tier: UserTier | null) => void;
+  getEffectiveTier: () => UserTier;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   session: null,
+  previewTier: null,
+  setPreviewTier: (tier) => set({ previewTier: tier }),
+  getEffectiveTier: () => {
+    const { user, previewTier } = get();
+    if (previewTier && user?.tier === 'owner') return previewTier;
+    return user?.tier ?? 'daily';
+  },
   isAuthenticated: false,
   isLoading: true, // Start true — getSession will resolve on init
   error: null,
@@ -120,19 +140,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ isLoading: false, error: error.message });
       throw error;
     }
-    // Fetch profile name from users table
+    // Fetch profile from users table
     let profileName: string | undefined;
+    let profileTier: string | undefined;
     try {
       const { data: profile } = await supabase
         .from('users')
-        .select('name')
+        .select('name, tier')
         .eq('id', data.user.id)
         .single();
       if (profile?.name) profileName = profile.name;
+      if (profile?.tier) profileTier = profile.tier as string;
     } catch { /* use metadata fallback */ }
 
     set({
-      user: toAppUser(data.user, profileName),
+      user: toAppUser(data.user, profileName, profileTier),
       session: data.session,
       isAuthenticated: true,
       isLoading: false,
@@ -169,20 +191,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   getSession: async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
-      // Fetch profile name
+      // Fetch profile
       let profileName: string | undefined;
+      let profileTier: string | undefined;
       try {
         const { data: profile } = await supabase
           .from('users')
-          .select('name')
+          .select('name, tier')
           .eq('id', data.session.user.id)
           .single();
         if (profile?.name) profileName = profile.name;
+        if (profile?.tier) profileTier = profile.tier as string;
       } catch { /* use metadata fallback */ }
 
       set({
         session: data.session,
-        user: toAppUser(data.session.user, profileName),
+        user: toAppUser(data.session.user, profileName, profileTier),
         isAuthenticated: true,
         isLoading: false,
       });
@@ -226,6 +250,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
 
     // Write beta access for new signups (same as mobile flow)
+    let signupTier: string = 'designer';
     try {
       await supabase
         .from('users')
@@ -239,8 +264,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       console.error('Failed to write beta_access:', betaErr);
     }
 
+    // Fetch the tier back from DB to ensure local state matches
+    try {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('tier')
+        .eq('id', data.user.id)
+        .single();
+      if (profile?.tier) signupTier = profile.tier as string;
+    } catch { /* use the written value */ }
+
     set({
-      user: toAppUser(data.user, name),
+      user: toAppUser(data.user, name, signupTier),
       session: data.session,
       isAuthenticated: !!data.session,
       isLoading: false,
@@ -262,17 +297,36 @@ supabase.auth.onAuthStateChange((_event, session) => {
     if (current.user?.id === session.user.id) {
       useAuthStore.setState({ session, isAuthenticated: true });
     } else {
-      useAuthStore.setState({
-        session,
-        user: {
-          id: session.user.id,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          email: session.user.email || '',
-          initials: getInitials(session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'U'),
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      // New user session — fetch tier from DB so the Prep gate works correctly
+      const userId = session.user.id;
+      const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
+      (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('name, tier')
+            .eq('id', userId)
+            .single();
+          useAuthStore.setState({
+            session,
+            user: toAppUser(
+              session.user,
+              profile?.name || userName,
+              (profile?.tier as string) || undefined,
+            ),
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } catch {
+          // Fallback without tier — user will get 'daily' default
+          useAuthStore.setState({
+            session,
+            user: toAppUser(session.user, userName),
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        }
+      })();
     }
   } else {
     useAuthStore.setState({

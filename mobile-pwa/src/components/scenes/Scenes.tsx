@@ -1,3 +1,9 @@
+/**
+ * @deprecated This component is retired. All functionality has been merged
+ * into components/breakdown/Breakdown.tsx. The Scenes tab now routes to the
+ * merged Breakdown page. This file is kept for reference only — delete in
+ * a future cleanup pass.
+ */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';

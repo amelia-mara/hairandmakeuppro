@@ -25,7 +25,7 @@ export function TierCard({
 
   // Determine price to display based on billing period
   const getDisplayPrice = (): string => {
-    if (id === 'trainee') return 'Free';
+    if (id === 'daily') return 'Free';
 
     if (billingPeriod === 'per_project' && id === 'designer' && pricing.perProject) {
       return formatPrice(pricing.perProject, pricing.currencySymbol);
@@ -40,7 +40,7 @@ export function TierCard({
 
   // Get billing period label
   const getBillingLabel = (): string => {
-    if (id === 'trainee') return 'forever';
+    if (id === 'daily') return 'forever';
 
     if (billingPeriod === 'per_project' && id === 'designer') {
       return 'per project';
@@ -55,14 +55,14 @@ export function TierCard({
 
   // Get monthly equivalent for yearly billing
   const getMonthlyEquivalent = (): string | null => {
-    if (id === 'trainee' || billingPeriod !== 'yearly') return null;
+    if (id === 'daily' || billingPeriod !== 'yearly') return null;
     return `${formatMonthlyEquivalent(pricing.yearly, pricing.currencySymbol)}/mo`;
   };
 
   // Determine button text
   const getButtonText = (): string => {
     if (isCurrentPlan) return 'Current Plan';
-    if (id === 'trainee') return 'Start Free';
+    if (id === 'daily') return 'Start Free';
     return 'Subscribe';
   };
 
@@ -141,7 +141,7 @@ export function TierCard({
           <div className="flex items-baseline gap-1">
             <span className={clsx(
               'text-3xl font-bold',
-              id === 'trainee' ? 'text-text-primary' : 'text-gold'
+              id === 'daily' ? 'text-text-primary' : 'text-gold'
             )}>
               {getDisplayPrice()}
             </span>

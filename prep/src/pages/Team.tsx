@@ -1,19 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useTeamStore,
   TEAM_ROLES,
-  PERMISSION_LEVELS,
   type TeamMember,
   type TeamRole,
-  type PermissionLevel,
-  type ProjectPermissions,
 } from '@/stores/teamStore';
+import { ACCESS_TOGGLE_LABELS, type AccessToggles } from '@/utils/projectAccess';
 
 interface TeamProps {
   projectId: string;
 }
-
-type Panel = 'members' | 'permissions' | 'invite';
 
 const AVATAR_COLORS = [
   { bg: '#E8D5C0', color: '#8B5E3C' },
@@ -23,501 +19,288 @@ const AVATAR_COLORS = [
   { bg: '#E8D5D5', color: '#6B3A3A' },
 ];
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TEAM PAGE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function getAccessSummary(member: TeamMember): { label: string; tint: string } {
+  if (member.isOwner) return { label: 'Owner', tint: 'var(--accent-gold, #D4943A)' };
+  const fields: (keyof AccessToggles)[] = Object.keys(ACCESS_TOGGLE_LABELS) as (keyof AccessToggles)[];
+  const camelFields = fields.map(f => f.replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
+  const offCount = camelFields.filter(f => !(member as any)[f]).length;
+  if (offCount === 0) return { label: 'Full access', tint: '#3A6B5A' };
+  if (offCount <= 3) return { label: 'Custom', tint: '#B8860B' };
+  return { label: 'Limited', tint: 'var(--text-muted, #9C9488)' };
+}
+
 export function Team({ projectId }: TeamProps) {
   const store = useTeamStore(projectId);
   const members = store((s) => s.members);
   const inviteCode = store((s) => s.inviteCode);
-  const permissions = store((s) => s.permissions);
-  const addMember = store((s) => s.addMember);
-  const removeMember = store((s) => s.removeMember);
-  const updateRole = store((s) => s.updateRole);
-  const updatePermissions = store((s) => s.updatePermissions);
-  const regenerateCode = store((s) => s.regenerateCode);
+  const isLoading = store((s) => s.isLoading);
+  const loadFromSupabase = store((s) => s.loadFromSupabase);
+  const updateMemberAccess = store((s) => s.updateMemberAccess);
+  const removeMemberFromSupabase = store((s) => s.removeMemberFromSupabase);
 
-  const [panel, setPanel] = useState<Panel>('members');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [savedField, setSavedField] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
-  // Group members by role
-  const grouped = groupByRole(members);
+  useEffect(() => {
+    loadFromSupabase(projectId);
+  }, [projectId, loadFromSupabase]);
+
+  const selected = members.find(m => m.membershipId === selectedId || m.id === selectedId);
+  const roleLabel = (role: TeamRole) => TEAM_ROLES.find(r => r.value === role)?.label || role;
+
+  const handleToggle = async (field: string, value: boolean) => {
+    if (!selected) return;
+    await updateMemberAccess(selected.membershipId, field, value);
+    setSavedField(field);
+    setTimeout(() => setSavedField(null), 1500);
+  };
+
+  const handleRemove = async () => {
+    if (!confirmRemoveId) return;
+    const member = members.find(m => m.membershipId === confirmRemoveId || m.id === confirmRemoveId);
+    if (!member) return;
+    await removeMemberFromSupabase(member.membershipId, projectId);
+    setConfirmRemoveId(null);
+    if (selectedId === confirmRemoveId) setSelectedId(null);
+  };
 
   return (
-    <div className="tm-page">
-      {/* Header */}
-      <div className="tm-header">
-        <div>
-          <h1 className="tm-title">
-            <span className="tm-title-italic">Team</span>{' '}
-            <span className="tm-title-regular">Management</span>
-          </h1>
-          <p className="tm-subtitle">
-            {members.length} member{members.length !== 1 ? 's' : ''}
-          </p>
+    <div className="tm-page" style={{ display: 'flex', gap: '24px', padding: '24px', minHeight: 'calc(100vh - 80px)' }}>
+      {/* Left panel — member list */}
+      <div style={{
+        width: '320px', flexShrink: 0,
+        backgroundColor: 'var(--bg-secondary, #F0EBE0)', borderRadius: '12px',
+        padding: '16px', overflow: 'auto', maxHeight: 'calc(100vh - 128px)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div>
+            <h1 style={{ fontSize: '0.8125rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-heading)', margin: 0 }}>
+              <span style={{ fontStyle: 'italic' }}>Team</span>{' '}
+              <span style={{ fontWeight: 400 }}>Members</span>
+            </h1>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+              {members.length} member{members.length !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
-        <button className="tm-add-btn" onClick={() => setShowAddModal(true)}>
-          <PlusIcon />
-          Add Member
-        </button>
+
+        {/* Invite code */}
+        <div style={{
+          padding: '10px 12px', marginBottom: '12px', borderRadius: '8px',
+          backgroundColor: 'var(--bg-primary, #FAF5EB)', border: '1px dashed var(--border-subtle)',
+          fontSize: '0.6875rem', color: 'var(--text-muted)',
+        }}>
+          Invite code: <span style={{ fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>{inviteCode}</span>
+        </div>
+
+        {isLoading && members.length === 0 ? (
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '24px 0' }}>Loading...</p>
+        ) : members.length === 0 ? (
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '24px 0' }}>No team members yet</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {members.map(m => {
+              const ac = AVATAR_COLORS[m.avatarColor % AVATAR_COLORS.length];
+              const summary = getAccessSummary(m);
+              const isSelected = (m.membershipId === selectedId || m.id === selectedId);
+              return (
+                <button
+                  key={m.membershipId || m.id}
+                  onClick={() => setSelectedId(m.membershipId || m.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 12px', borderRadius: '8px', border: 'none',
+                    backgroundColor: isSelected ? 'var(--bg-primary, #FAF5EB)' : 'transparent',
+                    cursor: 'pointer', textAlign: 'left', width: '100%',
+                    boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                  }}
+                >
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    backgroundColor: ac.bg, color: ac.color,
+                    fontSize: '0.6875rem', fontWeight: 700,
+                  }}>
+                    {m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.name}
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                      {roleLabel(m.role)}
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '0.5625rem', fontWeight: 600, padding: '2px 6px',
+                    borderRadius: '4px', color: summary.tint,
+                    backgroundColor: `${summary.tint}15`,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {summary.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div className="tm-tabs">
-        <button
-          className={`tm-tab ${panel === 'members' ? 'tm-tab--active' : ''}`}
-          onClick={() => setPanel('members')}
-        >
-          <UsersIcon /> Members
-        </button>
-        <button
-          className={`tm-tab ${panel === 'permissions' ? 'tm-tab--active' : ''}`}
-          onClick={() => setPanel('permissions')}
-        >
-          <ShieldIcon /> Permissions
-        </button>
-        <button
-          className={`tm-tab ${panel === 'invite' ? 'tm-tab--active' : ''}`}
-          onClick={() => setPanel('invite')}
-        >
-          <LinkIcon /> Invite Code
-        </button>
-      </div>
+      {/* Right panel — member detail */}
+      <div style={{
+        flex: 1, backgroundColor: 'var(--bg-primary, #FAF5EB)', borderRadius: '12px',
+        padding: '24px', overflow: 'auto', maxHeight: 'calc(100vh - 128px)',
+      }}>
+        {!selected ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            Select a team member
+          </div>
+        ) : selected.isOwner ? (
+          <div>
+            <MemberHeader member={selected} />
+            <div style={{ marginTop: '24px', padding: '16px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary, #F0EBE0)', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              Project owner — full access
+            </div>
+          </div>
+        ) : (
+          <div>
+            <MemberHeader member={selected} />
 
-      {/* ── Members Panel ── */}
-      {panel === 'members' && (
-        <div className="tm-members">
-          {members.length === 0 ? (
-            <div className="tm-empty">
-              <div className="tm-empty-icon"><UsersIcon /></div>
-              <p>No team members yet</p>
-              <p className="tm-empty-hint">Add members or share the invite code to get started</p>
-              <button className="tm-empty-btn" onClick={() => setShowAddModal(true)}>
-                Add First Member
+            {/* Access toggles */}
+            <div style={{ marginTop: '24px' }}>
+              <div style={{
+                fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px',
+              }}>
+                Access Settings
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {(Object.keys(ACCESS_TOGGLE_LABELS) as (keyof AccessToggles)[]).map(dbField => {
+                  const label = ACCESS_TOGGLE_LABELS[dbField];
+                  const camelField = dbField.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+                  const value = (selected as any)[camelField] ?? true;
+                  return (
+                    <div
+                      key={dbField}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 12px', borderRadius: '6px',
+                        backgroundColor: 'var(--bg-secondary, #F0EBE0)',
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)' }}>{label.name}</div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '1px' }}>{label.description}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {savedField === camelField && (
+                          <span style={{ fontSize: '0.625rem', color: '#3A6B5A' }}>Saved ✓</span>
+                        )}
+                        <button
+                          onClick={() => handleToggle(camelField, !value)}
+                          style={{
+                            width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                            backgroundColor: value ? '#D4691E' : '#D5CFC3',
+                            position: 'relative', transition: 'background-color 0.2s',
+                          }}
+                        >
+                          <span style={{
+                            position: 'absolute', top: 2, left: value ? 20 : 2,
+                            width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.15)', transition: 'left 0.2s',
+                          }} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Remove from project */}
+            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+              <button
+                onClick={() => setConfirmRemoveId(selected.membershipId || selected.id)}
+                style={{
+                  background: 'none', border: 'none', color: '#C4522A',
+                  fontSize: '0.8125rem', cursor: 'pointer', padding: '8px 0',
+                }}
+              >
+                Remove from project
               </button>
             </div>
-          ) : (
-            grouped.map((group) => (
-              <div key={group.role} className="tm-role-group">
-                <div className="tm-role-header">
-                  <span className="tm-role-label">{group.label}</span>
-                  <span className="tm-role-count">{group.members.length}</span>
-                </div>
-                {group.members.map((m) => (
-                  <MemberCard
-                    key={m.id}
-                    member={m}
-                    onChangeRole={(role) => updateRole(m.id, role)}
-                    onRemove={() => setConfirmRemove(m.id)}
-                  />
-                ))}
+          </div>
+        )}
+      </div>
+
+      {/* Remove confirmation */}
+      {confirmRemoveId && (() => {
+        const member = members.find(m => m.membershipId === confirmRemoveId || m.id === confirmRemoveId);
+        if (!member) return null;
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)',
+          }} onClick={() => setConfirmRemoveId(null)}>
+            <div style={{
+              backgroundColor: 'var(--bg-primary, #FAF5EB)', borderRadius: '12px',
+              padding: '24px', maxWidth: '400px', width: '100%',
+            }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-heading)', margin: '0 0 8px' }}>
+                Remove {member.name}?
+              </h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 20px' }}>
+                Their continuity entries and logged hours will be preserved. They will lose access immediately.
+              </p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setConfirmRemoveId(null)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-card)',
+                    background: 'none', color: 'var(--text-secondary)', fontSize: '0.8125rem', cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRemove}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px', border: 'none',
+                    backgroundColor: '#C4522A', color: '#fff', fontSize: '0.8125rem',
+                    fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  Remove
+                </button>
               </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* ── Permissions Panel ── */}
-      {panel === 'permissions' && (
-        <PermissionsPanel
-          permissions={permissions}
-          onChange={updatePermissions}
-        />
-      )}
-
-      {/* ── Invite Code Panel ── */}
-      {panel === 'invite' && (
-        <InvitePanel
-          code={inviteCode}
-          onRegenerate={regenerateCode}
-        />
-      )}
-
-      {/* ── Add Member Modal ── */}
-      {showAddModal && (
-        <AddMemberModal
-          onAdd={(name, email, role) => {
-            addMember({ name, email, role, isOwner: false });
-            setShowAddModal(false);
-          }}
-          onClose={() => setShowAddModal(false)}
-        />
-      )}
-
-      {/* ── Confirm Remove Modal ── */}
-      {confirmRemove && (
-        <ConfirmModal
-          title="Remove team member?"
-          message="This person will lose access to all project data. This action cannot be undone."
-          confirmLabel="Remove"
-          onConfirm={() => { removeMember(confirmRemove); setConfirmRemove(null); }}
-          onCancel={() => setConfirmRemove(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ━━━ Member Card ━━━ */
-
-function MemberCard({
-  member,
-  onChangeRole,
-  onRemove,
-}: {
-  member: TeamMember;
-  onChangeRole: (role: TeamRole) => void;
-  onRemove: () => void;
-}) {
-  const avatarColor = AVATAR_COLORS[member.avatarColor % AVATAR_COLORS.length];
-  const initials = member.name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-  const roleLabel = TEAM_ROLES.find((r) => r.value === member.role)?.label || member.role;
-
-  return (
-    <div className="tm-card">
-      <div
-        className="tm-card-avatar"
-        style={{ background: avatarColor.bg, color: avatarColor.color }}
-      >
-        {initials}
-      </div>
-
-      <div className="tm-card-info">
-        <div className="tm-card-name">
-          {member.name}
-          {member.isOwner && <span className="tm-owner-badge">Owner</span>}
-        </div>
-        <div className="tm-card-email">{member.email}</div>
-        <div className="tm-card-meta">
-          Joined {formatDate(member.joinedAt)}
-        </div>
-      </div>
-
-      <div className="tm-card-actions">
-        {!member.isOwner && (
-          <>
-            <select
-              className="tm-role-select"
-              value={member.role}
-              onChange={(e) => onChangeRole(e.target.value as TeamRole)}
-            >
-              {TEAM_ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-            <button className="tm-remove-btn" onClick={onRemove} title="Remove member">
-              <XIcon />
-            </button>
-          </>
-        )}
-        {member.isOwner && (
-          <span className="tm-role-label-static">{roleLabel}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ━━━ Permissions Panel ━━━ */
-
-const PERMISSION_ITEMS: { key: keyof ProjectPermissions; label: string; description: string }[] = [
-  { key: 'editScript', label: 'Edit Script', description: 'Upload and modify the script breakdown' },
-  { key: 'editBreakdown', label: 'Edit Breakdown', description: 'Modify scene breakdowns and tags' },
-  { key: 'editCharacterDesign', label: 'Edit Character Design', description: 'Create and modify character looks' },
-  { key: 'editContinuity', label: 'Edit Continuity', description: 'Update continuity notes and photos' },
-  { key: 'editBudget', label: 'Edit Budget', description: 'Modify budget entries and categories' },
-  { key: 'viewBudget', label: 'View Budget', description: 'See budget information and totals' },
-  { key: 'editTimesheet', label: 'Edit Timesheet', description: 'Submit and approve timesheets' },
-  { key: 'editSchedule', label: 'Edit Schedule', description: 'Upload and modify the production schedule' },
-  { key: 'manageTeam', label: 'Manage Team', description: 'Add/remove members and change roles' },
-];
-
-function PermissionsPanel({
-  permissions,
-  onChange,
-}: {
-  permissions: ProjectPermissions;
-  onChange: (perms: Partial<ProjectPermissions>) => void;
-}) {
-  return (
-    <div className="tm-perms">
-      <p className="tm-perms-intro">
-        Control which team members can access and edit different parts of the project.
-        The project owner always has full access.
-      </p>
-      <div className="tm-perms-grid">
-        {PERMISSION_ITEMS.map((item) => (
-          <div key={item.key} className="tm-perm-row">
-            <div className="tm-perm-info">
-              <span className="tm-perm-label">{item.label}</span>
-              <span className="tm-perm-desc">{item.description}</span>
             </div>
-            <select
-              className="tm-perm-select"
-              value={permissions[item.key]}
-              onChange={(e) =>
-                onChange({ [item.key]: e.target.value as PermissionLevel })
-              }
-            >
-              {PERMISSION_LEVELS.map((l) => (
-                <option key={l.value} value={l.value}>{l.label}</option>
-              ))}
-            </select>
           </div>
-        ))}
-      </div>
+        );
+      })()}
     </div>
   );
 }
 
-/* ━━━ Invite Panel ━━━ */
-
-function InvitePanel({
-  code,
-  onRegenerate,
-}: {
-  code: string;
-  onRegenerate: () => string;
-}) {
-  const [copied, setCopied] = useState(false);
-  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
-
-  const copyCode = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = code;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [code]);
-
+function MemberHeader({ member }: { member: TeamMember }) {
+  const ac = AVATAR_COLORS[member.avatarColor % AVATAR_COLORS.length];
+  const roleLabel = TEAM_ROLES.find(r => r.value === member.role)?.label || member.role;
   return (
-    <div className="tm-invite">
-      <p className="tm-invite-intro">
-        Share this code with team members so they can join the project from the Checks Happy app.
-      </p>
-
-      <div className="tm-invite-code-wrap">
-        <span className="tm-invite-code">{code}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: '50%', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        backgroundColor: ac.bg, color: ac.color,
+        fontSize: '0.875rem', fontWeight: 700,
+      }}>
+        {member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
       </div>
-
-      <div className="tm-invite-actions">
-        <button className="tm-invite-btn" onClick={copyCode}>
-          {copied ? (
-            <><CheckIcon /> Copied!</>
-          ) : (
-            <><CopyIcon /> Copy Code</>
-          )}
-        </button>
-        <button className="tm-invite-btn tm-invite-btn--share" onClick={async () => {
-          if (navigator.share) {
-            try {
-              await navigator.share({
-                title: 'Join my project on Checks Happy',
-                text: `Use code ${code} to join my production on Checks Happy!`,
-              });
-            } catch { /* cancelled */ }
-          } else {
-            copyCode();
-          }
-        }}>
-          <ShareIcon /> Share
-        </button>
-      </div>
-
-      <div className="tm-invite-regen">
-        <div className="tm-invite-regen-info">
-          <span className="tm-invite-regen-title">Regenerate Code</span>
-          <span className="tm-invite-regen-desc">
-            Create a new code if the current one has been shared too widely.
-            Existing team members won't be affected.
-          </span>
-        </div>
-        <button
-          className="tm-invite-regen-btn"
-          onClick={() => setShowRegenConfirm(true)}
-        >
-          Regenerate
-        </button>
-      </div>
-
-      {showRegenConfirm && (
-        <ConfirmModal
-          title="Regenerate invite code?"
-          message={`The current code (${code}) will stop working immediately. Team members already joined won't be affected.`}
-          confirmLabel="Regenerate"
-          onConfirm={() => { onRegenerate(); setShowRegenConfirm(false); }}
-          onCancel={() => setShowRegenConfirm(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ━━━ Add Member Modal ━━━ */
-
-function AddMemberModal({
-  onAdd,
-  onClose,
-}: {
-  onAdd: (name: string, email: string, role: TeamRole) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<TeamRole>('makeup');
-
-  return (
-    <div className="tm-modal-overlay" onClick={onClose}>
-      <div className="tm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="tm-modal-header">
-          <h2 className="tm-modal-title">Add Team Member</h2>
-          <button className="tm-modal-close" onClick={onClose}><XIcon /></button>
-        </div>
-
-        <div className="tm-modal-body">
-          <div className="tm-form-group">
-            <label className="tm-form-label">Name</label>
-            <input
-              className="tm-form-input"
-              type="text"
-              placeholder="Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="tm-form-group">
-            <label className="tm-form-label">Email</label>
-            <input
-              className="tm-form-input"
-              type="email"
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="tm-form-group">
-            <label className="tm-form-label">Role</label>
-            <select
-              className="tm-form-input"
-              value={role}
-              onChange={(e) => setRole(e.target.value as TeamRole)}
-            >
-              {TEAM_ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="tm-modal-footer">
-          <button className="tm-modal-cancel" onClick={onClose}>Cancel</button>
-          <button
-            className="tm-modal-confirm"
-            disabled={!name.trim() || !email.trim()}
-            onClick={() => onAdd(name.trim(), email.trim(), role)}
-          >
-            Add Member
-          </button>
+      <div>
+        <div style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-heading)' }}>{member.name}</div>
+        <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+          {roleLabel} · joined {new Date(member.joinedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
         </div>
       </div>
     </div>
   );
-}
-
-/* ━━━ Confirm Modal ━━━ */
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="tm-modal-overlay" onClick={onCancel}>
-      <div className="tm-modal tm-modal--sm" onClick={(e) => e.stopPropagation()}>
-        <div className="tm-modal-header">
-          <h2 className="tm-modal-title">{title}</h2>
-        </div>
-        <div className="tm-modal-body">
-          <p className="tm-modal-message">{message}</p>
-        </div>
-        <div className="tm-modal-footer">
-          <button className="tm-modal-cancel" onClick={onCancel}>Cancel</button>
-          <button className="tm-modal-confirm tm-modal-confirm--danger" onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ━━━ Helpers ━━━ */
-
-function groupByRole(members: TeamMember[]) {
-  const groups: Map<TeamRole, TeamMember[]> = new Map();
-  TEAM_ROLES.forEach((r) => groups.set(r.value, []));
-  members.forEach((m) => {
-    groups.get(m.role)?.push(m);
-  });
-  groups.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)));
-
-  return TEAM_ROLES
-    .filter((r) => (groups.get(r.value)?.length ?? 0) > 0)
-    .map((r) => ({
-      role: r.value,
-      label: r.label + (groups.get(r.value)!.length > 1 ? 's' : ''),
-      members: groups.get(r.value)!,
-    }));
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-/* ━━━ Icons ━━━ */
-
-function PlusIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-}
-function UsersIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-}
-function ShieldIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
-}
-function LinkIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
-}
-function XIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-}
-function CopyIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
-}
-function CheckIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-}
-function ShareIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
 }

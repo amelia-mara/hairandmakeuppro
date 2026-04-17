@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { SyncIcon } from '@/components/sync';
+
 import { getAutoSaveFailureCount, getLastAutoSaveError } from '@/services/autoSave';
 import { parseScriptRevision } from '@/utils/parseScriptRevision';
 import type { ProjectRole, ProductionType } from '@/types';
@@ -140,6 +141,7 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
             </button>
 
             <div className="flex items-center gap-1">
+
               {/* Sync icon */}
               {onSyncTap && <SyncIcon onClick={onSyncTap} />}
 

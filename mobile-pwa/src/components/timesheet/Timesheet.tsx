@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTimesheetStore, getWeekStart, addDays } from '@/stores/timesheetStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { AccessRestricted } from '@/components/AccessRestricted';
 import { WeekView } from './WeekView';
 import { TimesheetDocument } from './TimesheetDocument';
 import { SummaryCard } from './SummaryCard';
@@ -7,6 +9,8 @@ import { ExportModal } from './ExportModal';
 import { RateCardSettings } from './RateCardSettings';
 
 export function Timesheet() {
+  const access = useProjectAccess();
+  if (!access.hours) return <AccessRestricted />;
   const {
     viewMode,
     setViewMode,

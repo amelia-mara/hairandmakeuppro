@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChatStore } from '@/stores/chatStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 
 // Suggestion prompts — quick-fire questions for on-set use
 const SUGGESTIONS = [
@@ -20,6 +21,7 @@ const SUGGESTIONS = [
 type ChatMode = 'team' | 'scriptie';
 
 export function ChatAssistant() {
+  const access = useProjectAccess();
   const {
     messages,
     isOpen,
@@ -126,6 +128,8 @@ export function ChatAssistant() {
   };
 
   const hasMessages = messages.length > 0;
+
+  if (!access.chat) return null;
 
   return (
     <>

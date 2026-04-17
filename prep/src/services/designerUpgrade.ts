@@ -56,6 +56,38 @@ export async function isDesigner(userId: string): Promise<boolean> {
 }
 
 /**
+ * Downgrade a user from Designer and revoke Prep access on all owned projects.
+ */
+export async function downgradeFromDesigner(userId: string, newTier: string): Promise<void> {
+  const { error: tierError } = await supabase
+    .from('users')
+    .update({ tier: newTier })
+    .eq('id', userId);
+
+  if (tierError) throw tierError;
+
+  // Revoke Prep access on all owned projects
+  const { data: ownedProjects, error: fetchError } = await supabase
+    .from('project_members')
+    .select('project_id')
+    .eq('user_id', userId)
+    .eq('is_owner', true);
+
+  if (fetchError) throw fetchError;
+
+  if (ownedProjects && ownedProjects.length > 0) {
+    const projectIds = ownedProjects.map(p => p.project_id);
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ has_prep_access: false })
+      .in('id', projectIds);
+
+    if (updateError) throw updateError;
+    console.log(`[DesignerUpgrade] Revoked Prep for ${projectIds.length} projects`);
+  }
+}
+
+/**
  * Ensure a specific project has prep access enabled.
  * Called when creating a project from Prep (always has_prep_access=true).
  */

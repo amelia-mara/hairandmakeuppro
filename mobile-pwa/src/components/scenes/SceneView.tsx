@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '@/stores/projectStore';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
+import { AccessRestricted } from '@/components/AccessRestricted';
 import { Header } from '../navigation';
 import { CharacterProfile } from '../characters/CharacterProfile';
 import { Button } from '../ui';
@@ -11,6 +13,7 @@ interface SceneViewProps {
 }
 
 export function SceneView({ sceneId, onBack }: SceneViewProps) {
+  const access = useProjectAccess();
   const {
     currentProject,
     currentCharacterId,
@@ -55,6 +58,18 @@ export function SceneView({ sceneId, onBack }: SceneViewProps) {
     }
   }, [isCharacterInBreakdown, currentCharacterId, onBack]);
 
+  // Memoize character lookups to avoid recalculating on every render
+  const sceneCharacters = useMemo(() => {
+    if (!scene) return [];
+    return scene.characters
+      .map(id => getCharacter(id))
+      .filter(Boolean);
+  }, [scene, getCharacter]);
+
+  // ALL hooks above this line — conditional returns below are now safe
+
+  if (!access.continuity) return <AccessRestricted />;
+
   if (!scene || !currentProject) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -67,13 +82,6 @@ export function SceneView({ sceneId, onBack }: SceneViewProps) {
       </div>
     );
   }
-
-  // Memoize character lookups to avoid recalculating on every render
-  const sceneCharacters = useMemo(() => {
-    return scene.characters
-      .map(id => getCharacter(id))
-      .filter(Boolean);
-  }, [scene.characters, getCharacter]);
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">

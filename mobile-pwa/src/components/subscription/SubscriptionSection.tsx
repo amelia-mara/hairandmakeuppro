@@ -5,6 +5,7 @@ import {
   formatPrice,
 } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
+import { isOwnerTier } from '@/utils/tierUtils';
 
 export interface SubscriptionSectionProps {
   onChangePlan: () => void;
@@ -15,13 +16,29 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
 
   if (!user) return null;
 
+  // Owner tier — show minimal label, no billing UI
+  if (isOwnerTier(user.tier)) {
+    return (
+      <div className="bg-card rounded-xl p-4 border border-border">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium text-text-primary">Current Plan</span>
+            <div className="mt-1">
+              <Badge variant="default">Internal</Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const currentTier = getTierById(user.tier as SubscriptionTier);
 
   if (!currentTier) return null;
 
   // Format the billing period
   const getBillingInfo = () => {
-    if (!subscription.billingPeriod || user.tier === 'trainee') {
+    if (!subscription.billingPeriod || user.tier === 'daily') {
       return 'Free forever';
     }
 
@@ -42,7 +59,7 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
 
   // Format next billing date
   const getNextBillingDate = () => {
-    if (!subscription.currentPeriodEndsAt || user.tier === 'trainee') {
+    if (!subscription.currentPeriodEndsAt || user.tier === 'daily') {
       return null;
     }
 
@@ -119,10 +136,10 @@ export function SubscriptionSection({ onChangePlan }: SubscriptionSectionProps) 
             onClick={onChangePlan}
             className="w-full py-2.5 px-4 bg-gold-50/50 border border-gold/20 rounded-lg text-sm font-medium text-gold hover:bg-gold-100/50 transition-colors"
           >
-            {user.tier === 'trainee' ? 'Upgrade Plan' : 'Change Plan'}
+            {user.tier === 'daily' ? 'Upgrade Plan' : 'Change Plan'}
           </button>
 
-          {user.tier !== 'trainee' && subscription.status === 'active' && (
+          {user.tier !== 'daily' && subscription.status === 'active' && (
             <button className="w-full py-2.5 px-4 text-sm text-text-muted hover:text-text-secondary transition-colors">
               Manage Billing
             </button>

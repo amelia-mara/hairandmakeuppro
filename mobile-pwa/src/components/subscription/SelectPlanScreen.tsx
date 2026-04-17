@@ -13,6 +13,9 @@ import {
 } from '@/types/subscription';
 import type { SubscriptionTier, BillingPeriod } from '@/types/subscription';
 
+// Owner tier is never shown on the pricing screen
+const DISPLAYED_TIERS = SUBSCRIPTION_TIERS.filter(t => t.id !== 'owner');
+
 export interface SelectPlanScreenProps {
   // For onboarding flow - no current tier
   isOnboarding?: boolean;
@@ -74,7 +77,7 @@ export function SelectPlanScreen({
     if (onSkip) {
       onSkip();
     } else if (onSelectTier) {
-      onSelectTier('trainee', 'monthly');
+      onSelectTier('daily', 'monthly');
     }
   };
 
@@ -140,7 +143,7 @@ export function SelectPlanScreen({
       {/* Tier cards - scrollable */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="space-y-4 max-w-md mx-auto">
-          {SUBSCRIPTION_TIERS.map((tier) => (
+          {DISPLAYED_TIERS.map((tier) => (
             <TierCard
               key={tier.id}
               tier={tier}
@@ -229,7 +232,7 @@ export function SelectPlanScreen({
                 </svg>
                 Processing...
               </span>
-            ) : selectedTier === 'trainee' ? (
+            ) : selectedTier === 'daily' ? (
               'Start Free'
             ) : isDowngrade ? (
               'Downgrade Plan'
@@ -254,7 +257,7 @@ export function SelectPlanScreen({
           )}
 
           {/* Manage billing link for existing subscribers */}
-          {!isOnboarding && currentTier && currentTier !== 'trainee' && (
+          {!isOnboarding && currentTier && currentTier !== 'daily' && (
             <button className="w-full text-center text-sm text-gold hover:underline">
               Manage billing
             </button>

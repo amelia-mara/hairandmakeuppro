@@ -1,4 +1,6 @@
 import { useProjectStore } from '@/stores/projectStore';
+import { useAuthStore } from '@/stores/authStore';
+import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
 
 interface ProjectSidebarProps {
   projectId: string;
@@ -6,22 +8,24 @@ interface ProjectSidebarProps {
   onNavigate: (page: string) => void;
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { id: string; label: string; icon: any; flag?: FeatureFlag }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'script', label: 'Script', icon: ScriptIcon },
   { id: 'breakdown', label: 'Breakdown', icon: BreakdownIcon },
-  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon },
+  { id: 'character-design', label: 'Character Design', icon: CharacterDesignIcon, flag: 'characterDesign' },
   { id: 'continuity', label: 'Continuity', icon: ContinuityIcon },
-  { id: 'budget', label: 'Budget', icon: BudgetIcon },
-  { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon },
+  { id: 'budget', label: 'Budget', icon: BudgetIcon, flag: 'budget' },
+  { id: 'timesheet', label: 'Timesheet', icon: TimesheetIcon, flag: 'timesheets' },
   { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
   { id: 'call-sheets', label: 'Call Sheets', icon: CallSheetsIcon },
-  { id: 'team', label: 'Team', icon: TeamIcon },
+  { id: 'team', label: 'Team', icon: TeamIcon, flag: 'teamManagement' },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
 export function ProjectSidebar({ projectId, activePage, onNavigate }: ProjectSidebarProps) {
   const project = useProjectStore((s) => s.getProject(projectId));
+  const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
+  const visibleNavItems = NAV_ITEMS.filter(item => !item.flag || isFeatureEnabled(item.flag, effectiveTier));
 
   if (!project) return null;
 
@@ -49,7 +53,7 @@ export function ProjectSidebar({ projectId, activePage, onNavigate }: ProjectSid
 
       {/* Nav items */}
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
+        {visibleNavItems.map((item) => (
           <button
             key={item.id}
             className={`sidebar-nav-item ${activePage === item.id ? 'active' : ''}`}

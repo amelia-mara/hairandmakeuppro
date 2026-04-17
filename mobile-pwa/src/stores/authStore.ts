@@ -86,16 +86,20 @@ interface AuthState {
   setPinnedProject: (projectId: string) => void;
   setSettingsProjectId: (projectId: string | null) => void;
   setAutoOpenProject: (projectId: string | null) => void;
+  // Tier preview mode (owner only, local state only, not persisted)
+  previewTier: UserTier | null;
+  setPreviewTier: (tier: UserTier | null) => void;
+  getEffectiveTier: () => UserTier;
 }
 
 // Valid tiers for lookup safety
-const VALID_TIERS: UserTier[] = ['trainee', 'artist', 'supervisor', 'designer'];
+const VALID_TIERS: UserTier[] = ['daily', 'artist', 'supervisor', 'designer', 'owner'];
 
 // Convert Supabase user profile to app User type
 function toAppUser(profile: supabaseAuth.UserProfile): User {
   const tier = VALID_TIERS.includes(profile.tier as UserTier)
     ? (profile.tier as UserTier)
-    : 'trainee';
+    : 'daily';
   return {
     id: profile.id,
     email: profile.email,
@@ -123,6 +127,17 @@ function toProjectMembership(
     status: (project.status as ProjectMembership['status']) || 'active',
     ownerName: project.owner_name,
     pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
+    access_breakdown: project.access_breakdown,
+    access_script: project.access_script,
+    access_lookbook: project.access_lookbook,
+    access_callsheets: project.access_callsheets,
+    access_chat: project.access_chat,
+    access_continuity: project.access_continuity,
+    access_hours: project.access_hours,
+    access_receipts: project.access_receipts,
+    access_budget: project.access_budget,
+    access_export_hours: project.access_export_hours,
+    access_export_invoice: project.access_export_invoice,
   };
 }
 
@@ -161,6 +176,13 @@ export const useAuthStore = create<AuthState>()(
       pinnedProjectId: null,
       settingsProjectId: null,
       autoOpenProjectId: null,
+      previewTier: null,
+      setPreviewTier: (tier) => set({ previewTier: tier }),
+      getEffectiveTier: () => {
+        const { user, previewTier } = get();
+        if (previewTier && user?.tier === 'owner') return previewTier;
+        return user?.tier ?? 'daily';
+      },
 
       // Initialize auth state from Supabase session
       initializeAuth: async () => {
@@ -338,14 +360,14 @@ export const useAuthStore = create<AuthState>()(
               id: authUser.id,
               email: authUser.email!,
               name: authUser.user_metadata?.name || email.split('@')[0],
-              tier: 'trainee',
+              tier: 'daily',
             });
 
             appUser = {
               id: authUser.id,
               email: authUser.email!,
               name: authUser.user_metadata?.name || email.split('@')[0],
-              tier: 'trainee',
+              tier: 'daily',
               createdAt: new Date(),
             };
           } else {
@@ -420,7 +442,7 @@ export const useAuthStore = create<AuthState>()(
             email: authUser.email!,
             name,
             // Beta-validated users get Designer tier
-            tier: betaValidated || BETA_MODE ? 'designer' : 'trainee',
+            tier: betaValidated || BETA_MODE ? 'designer' : 'daily',
             createdAt: new Date(),
           };
 
@@ -842,10 +864,10 @@ export const useAuthStore = create<AuthState>()(
 
           const updatedSubscription: SubscriptionData = {
             tier,
-            status: tier === 'trainee' ? null : 'active',
-            billingPeriod: tier === 'trainee' ? null : billingPeriod,
-            subscriptionStartedAt: tier !== 'trainee' ? new Date() : undefined,
-            currentPeriodEndsAt: tier !== 'trainee'
+            status: tier === 'daily' ? null : 'active',
+            billingPeriod: tier === 'daily' ? null : billingPeriod,
+            subscriptionStartedAt: tier !== 'daily' ? new Date() : undefined,
+            currentPeriodEndsAt: tier !== 'daily'
               ? new Date(Date.now() + (billingPeriod === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
               : undefined,
           };
