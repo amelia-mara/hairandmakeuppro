@@ -486,10 +486,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                               )}
                               style={{
                                 borderBottom: '1px solid rgba(180, 160, 120, 0.18)',
-                                backgroundColor: 'rgba(210, 195, 165, 0.12)',
                               }}
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(210, 195, 165, 0.25)'; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(210, 195, 165, 0.12)'; }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(210, 195, 165, 0.18)'; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = ''; }}
                               onClick={() => {
                                 if (charUnconfirmed) {
                                   setConfirmSceneId(scene.id);
