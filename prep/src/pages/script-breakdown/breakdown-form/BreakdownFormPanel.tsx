@@ -46,7 +46,7 @@ export function BreakdownFormPanel({ projectId, scene, characters, breakdown, ac
 }) {
   const charOverrides = useCharacterOverridesStore();
   const queriesStore = useDirectorQueriesStore(projectId);
-  const sceneQueries = queriesStore((s) => s.getQueries(scene.id));
+  const sceneQueries = queriesStore((s) => s.queries[scene.id] || []);
   const addQuery = queriesStore((s) => s.addQuery);
   const updateQuery = queriesStore((s) => s.updateQuery);
   const toggleResolved = queriesStore((s) => s.toggleResolved);
