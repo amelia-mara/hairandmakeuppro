@@ -53,7 +53,7 @@ function supabaseToLocal(sp: SupabaseProject) {
     department: (sp.department as 'hmu' | 'costume') || 'hmu',
     status: 'setup' as const,
     progress: 0,
-    lastActive: sp.created_at,
+    lastActive: sp.last_updated_at ?? sp.created_at,
     scenes: sp.scene_count ?? 0,
     characters: sp.character_count ?? 0,
     scriptFilename: sp.script_filename,
@@ -91,6 +91,8 @@ async function hydrateProjects(userId: string) {
       scenes: sp.scene_count ?? local.scenes,
       characters: sp.character_count ?? local.characters,
       scriptFilename: sp.script_filename ?? local.scriptFilename,
+      lastActive: sp.last_updated_at ?? local.lastActive,
+      createdAt: local.createdAt || sp.created_at,
     });
   }
 }

@@ -239,6 +239,7 @@ export function useScriptUploadProcessor({
         scenes: scenesWithStoryDays.length,
         characters: characters.length,
         scriptFilename: selectedFile.name,
+        lastActive: new Date().toISOString(),
       });
 
       // Upload PDF to Supabase storage and create script_uploads record
