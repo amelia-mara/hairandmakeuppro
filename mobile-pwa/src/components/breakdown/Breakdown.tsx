@@ -146,12 +146,12 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 
   /* ─── Filtered scenes ─── */
 
+  // When no character filter is active, show every scene — including scenes
+  // whose cast is still empty. The per-scene table already renders a
+  // "No characters confirmed" row so the user can add characters inline.
   const scenesWithCast = useMemo(() => {
-    return sortedScenes.filter((s) => {
-      if (s.characters.length === 0) return false;
-      if (filterChar && !s.characters.includes(filterChar)) return false;
-      return true;
-    });
+    if (!filterChar) return sortedScenes;
+    return sortedScenes.filter((s) => s.characters.includes(filterChar));
   }, [sortedScenes, filterChar]);
 
   /* ─── Find prior scene ─── */
@@ -355,7 +355,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       <div className="px-3 py-3 space-y-4">
         {scenesWithCast.length === 0 ? (
           <p className="text-sm text-text-muted text-center py-8">
-            No scenes with characters{filterChar ? ' for this character' : ''}.
+            {filterChar ? 'No scenes for this character.' : 'No scenes yet.'}
           </p>
         ) : (
           scenesWithCast.map((scene) => {
