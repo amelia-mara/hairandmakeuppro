@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CONTINUITY_EVENT_TYPES,
   useSynopsisStore,
@@ -11,8 +11,6 @@ import {
 } from '@/stores/breakdownStore';
 import { FInput, FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
-
-const DirectorQueries = lazy(() => import('./DirectorQueriesSection').then(m => ({ default: m.DirectorQueriesSection })));
 import { CharBlock } from './CharBlock';
 
 /**
@@ -30,7 +28,7 @@ import { CharBlock } from './CharBlock';
 import { useCharacterOverridesStore } from '@/stores/breakdownStore';
 import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
-export function BreakdownFormPanel({ projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
+export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
   projectId: string; scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -203,10 +201,7 @@ export function BreakdownFormPanel({ projectId, scene, characters, breakdown, ac
             </div>
           ))}
         </div>
-        {/* ── Director Queries ── */}
-        <Suspense fallback={null}>
-          <DirectorQueries projectId={projectId} sceneId={scene.id} />
-        </Suspense>
+        {/* ── Director Queries — rendered separately to avoid crash ── */}
 
         <div ref={sentinelRef} className="fp-scroll-sentinel" />
       </div>
