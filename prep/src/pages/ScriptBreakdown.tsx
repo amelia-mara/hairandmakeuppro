@@ -424,19 +424,21 @@ export function ScriptBreakdown({ projectId }: Props) {
 
         {/* ━━━ RIGHT — Breakdown Form or Full Breakdown Table ━━━ */}
         <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
-          <div className="fp-panel-header">
-            <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
-            {splitView && (
-              <button
-                className="btn-ghost bd-btn bd-split-close"
-                onClick={() => setSplitView(false)}
-                aria-label="Close breakdown view"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-                </svg>
-              </button>
-            )}
+          <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {splitView && (
+                  <button
+                    className="btn-ghost bd-btn bd-split-close"
+                    onClick={() => setSplitView(false)}
+                    aria-label="Close breakdown view"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                  </button>
+                )}
             <ToolsMenu
               open={toolsOpen}
               onToggle={() => setToolsOpen(!toolsOpen)}
@@ -456,6 +458,13 @@ export function ScriptBreakdown({ projectId }: Props) {
               onLoadDraft={handleLoadDraft}
               onViewDraftPdf={handleViewDraftPdf}
             />
+              </div>
+            </div>
+            {scene && !splitView && (
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
+              </div>
+            )}
           </div>
           {splitView ? (
             <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
