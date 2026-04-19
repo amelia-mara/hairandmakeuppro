@@ -102,15 +102,14 @@ export function SceneListPanel({
         <span className="sl-header-label">Scenes</span>
         <span className="sl-header-count">{totalSceneCount}</span>
       </div>
-      <div className="sl-search">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-        </svg>
-        <input className="sl-search-input" placeholder="Search scenes, script, characters..."
-          value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} />
-      </div>
-      {/* Jump to scene */}
-      <div style={{ padding: '0 12px 8px' }}>
+      <div style={{ display: 'flex', gap: '6px', padding: '0 12px 8px' }}>
+        <div className="sl-search" style={{ flex: 1, marginBottom: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input className="sl-search-input" placeholder="Search..."
+            value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} />
+        </div>
         <select
           value=""
           onChange={(e) => {
@@ -120,7 +119,7 @@ export function SceneListPanel({
             }
           }}
           style={{
-            width: '100%', padding: '6px 8px', borderRadius: '6px',
+            flex: 1, padding: '0 8px', borderRadius: '6px',
             fontSize: '0.6875rem', fontWeight: 500,
             backgroundColor: 'var(--bg-secondary, #F0EBE0)',
             border: '1px solid rgba(0,0,0,0.06)',
@@ -132,9 +131,9 @@ export function SceneListPanel({
             paddingRight: '24px',
           }}
         >
-          <option value="">Jump to scene...</option>
+          <option value="">Jump to...</option>
           {filteredScenes.map(s => (
-            <option key={s.id} value={s.id}>SC {s.number} — {s.intExt}. {s.location}</option>
+            <option key={s.id} value={s.id}>SC {s.number}</option>
           ))}
         </select>
       </div>
