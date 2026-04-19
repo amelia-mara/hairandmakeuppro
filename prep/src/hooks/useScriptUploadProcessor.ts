@@ -12,6 +12,7 @@ import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
 import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
 import { supabase } from '@/lib/supabase';
+import { useProjectStore } from '@/stores/projectStore';
 
 interface UseScriptUploadProcessorArgs {
   projectId: string;
@@ -231,6 +232,13 @@ export function useScriptUploadProcessor({
         uploadedAt: new Date().toISOString(),
         sceneCount: scenes.length,
         rawText: parsed.rawText,
+      });
+
+      // Refresh the ProjectHub card counts so they update without a reload
+      useProjectStore.getState().updateProject(projectId, {
+        scenes: scenesWithStoryDays.length,
+        characters: characters.length,
+        scriptFilename: selectedFile.name,
       });
 
       // Upload PDF to Supabase storage and create script_uploads record
