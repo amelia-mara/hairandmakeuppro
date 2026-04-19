@@ -9,7 +9,7 @@ import {
   type ContinuityEvent,
   type SceneBreakdown,
 } from '@/stores/breakdownStore';
-import { FInput, FSelect } from './form-primitives';
+import { FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
 
 /* Simple per-scene notes stored in localStorage — avoids the Zustand persist
