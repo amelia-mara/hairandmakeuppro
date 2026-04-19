@@ -72,19 +72,19 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
 
   return (
     <div className="fp-wrap">
-      {/* Notes & queries — pinned section */}
+      {/* Synopsis — pinned */}
       <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Notes</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Synopsis</span>
           <span className={`fp-save fp-save--${saveStatus}`}>
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
           </span>
         </div>
         <textarea
-          className="fi-input"
+          className="fi-input fp-synopsis-input"
           value={synopsis}
           onChange={(e) => setSynopsis(e.target.value)}
-          placeholder="Scene notes, queries for director..."
+          placeholder="Write a synopsis for this scene..."
           rows={2}
           style={{ fontSize: '0.8125rem', resize: 'vertical', minHeight: '40px' }}
         />
@@ -113,11 +113,17 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
           </div>
         </div>
 
-        {/* Notes */}
+        {/* Notes / Director Queries */}
         <div className="fp-section fp-section--pill">
-          <div className="fp-section-title">Notes</div>
-          <FInput label="" value={breakdown.timeline.note} placeholder="e.g. 3 weeks later"
-            onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, note: v })} />
+          <div className="fp-section-title" style={{ color: '#C4522A' }}>Notes &amp; Queries</div>
+          <textarea
+            className="fi-input"
+            value={breakdown.timeline.note}
+            onChange={(e) => onUpdateTimeline({ ...breakdown.timeline, note: e.target.value })}
+            placeholder="Notes, queries for director, continuity flags..."
+            rows={3}
+            style={{ fontSize: '0.8125rem', resize: 'vertical', minHeight: '48px' }}
+          />
         </div>
 
         {/* Characters in Scene */}
