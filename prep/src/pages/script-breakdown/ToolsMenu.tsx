@@ -27,6 +27,7 @@ interface ToolsMenuProps {
   onExportLookbooks: () => void;
   onExportTimeline: () => void;
   onExportBible: () => void;
+  onExportQueries: () => void;
 
   // Drafts sub-dropdown — piped through from useScriptDrafts.
   drafts: ScriptDraft[];
@@ -64,6 +65,7 @@ export function ToolsMenu({
   onExportLookbooks,
   onExportTimeline,
   onExportBible,
+  onExportQueries,
   drafts,
   draftsLoading,
   draftsExpanded,
@@ -175,6 +177,9 @@ export function ToolsMenu({
             </button>
             <button className="tools-dropdown-item" onClick={() => { onExportBible(); onClose(); }}>
               <ExportIcon /> <span>Bible</span>
+            </button>
+            <button className="tools-dropdown-item" onClick={() => { onExportQueries(); onClose(); }} style={{ color: '#C4522A' }}>
+              <ExportIcon /> <span>Director Queries</span>
             </button>
           </div>
         </div>

@@ -9,8 +9,33 @@ import {
   type ContinuityEvent,
   type SceneBreakdown,
 } from '@/stores/breakdownStore';
-import { FInput, FSelect } from './form-primitives';
+import { FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
+
+/* Simple per-scene notes stored in localStorage — avoids the Zustand persist
+   issue that crashed DirectorQueriesSection. Data keyed by projectId:sceneId. */
+function useSceneNotes(projectId: string, sceneId: string) {
+  const key = `prep-scene-notes-${projectId}`;
+  const [allNotes, setAllNotes] = useState<Record<string, { text: string; flagged: boolean }>>(() => {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+  });
+  const note = allNotes[sceneId] || { text: '', flagged: false };
+
+  const save = useCallback((updated: Record<string, { text: string; flagged: boolean }>) => {
+    setAllNotes(updated);
+    localStorage.setItem(key, JSON.stringify(updated));
+  }, [key]);
+
+  const setText = useCallback((text: string) => {
+    save({ ...allNotes, [sceneId]: { ...note, text } });
+  }, [allNotes, sceneId, note, save]);
+
+  const toggleFlag = useCallback(() => {
+    save({ ...allNotes, [sceneId]: { ...note, flagged: !note.flagged } });
+  }, [allNotes, sceneId, note, save]);
+
+  return { text: note.text, flagged: note.flagged, setText, toggleFlag };
+}
 import { CharBlock } from './CharBlock';
 
 /**
@@ -28,8 +53,8 @@ import { CharBlock } from './CharBlock';
 import { useCharacterOverridesStore } from '@/stores/breakdownStore';
 import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
-export function BreakdownFormPanel({ scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
-  scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
+export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
+  projectId: string; scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
   onNavigate: (id: string) => void;
@@ -44,6 +69,7 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();
+  const sceneNotes = useSceneNotes(_projectId, scene.id);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
@@ -72,15 +98,42 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
 
   return (
     <div className="fp-wrap">
-      {/* Scene info — pinned */}
-      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <span className="fp-scene-num">{`Scene ${scene.number}`}</span>
-          <span className={`fp-save fp-save--${saveStatus}`}>
-            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
+      {/* Notes & Queries — pinned */}
+      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: sceneNotes.flagged ? '#C4522A' : 'var(--text-muted)' }}>
+            {sceneNotes.flagged ? '⚑ Query' : 'Notes'}
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={sceneNotes.toggleFlag}
+              title={sceneNotes.flagged ? 'Resolve query' : 'Flag as query'}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                fontSize: '14px', lineHeight: 1,
+                color: sceneNotes.flagged ? '#C4522A' : 'var(--text-muted)',
+                opacity: sceneNotes.flagged ? 1 : 0.5,
+              }}
+            >
+              ⚑
+            </button>
+            <span className={`fp-save fp-save--${saveStatus}`}>
+              {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
+            </span>
+          </div>
         </div>
-        <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+        <textarea
+          className="fi-input"
+          value={sceneNotes.text}
+          onChange={(e) => sceneNotes.setText(e.target.value)}
+          placeholder="Production notes, questions for director..."
+          rows={2}
+          style={{
+            fontSize: '0.8125rem', resize: 'vertical', minHeight: '36px',
+            borderColor: sceneNotes.flagged ? 'rgba(196, 82, 42, 0.3)' : undefined,
+            backgroundColor: sceneNotes.flagged ? 'rgba(196, 82, 42, 0.04)' : undefined,
+          }}
+        />
       </div>
 
       <div className="fp-scroll" ref={scrollRef}>
@@ -116,13 +169,6 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
               options={['', 'Normal', 'Flashback', 'Flash Fwd', 'Time Jump', 'Dream', 'Montage']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, type: v })} />
           </div>
-        </div>
-
-        {/* Notes */}
-        <div className="fp-section fp-section--pill">
-          <div className="fp-section-title">Notes</div>
-          <FInput label="" value={breakdown.timeline.note} placeholder="e.g. 3 weeks later"
-            onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, note: v })} />
         </div>
 
         {/* Characters in Scene */}
@@ -201,6 +247,8 @@ export function BreakdownFormPanel({ scene, characters, breakdown, activeCharact
             </div>
           ))}
         </div>
+        {/* ── Director Queries — rendered separately to avoid crash ── */}
+
         <div ref={sentinelRef} className="fp-scroll-sentinel" />
       </div>
 

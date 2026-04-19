@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   useBreakdownStore,
   useSynopsisStore,
@@ -85,6 +85,22 @@ export function SceneListPanel({
   const synopsisStore = useSynopsisStore();
   const revisedStore = useRevisedScenesStore();
 
+  // Read scene query flags from localStorage
+  const [sceneFlags, setSceneFlags] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`prep-scene-notes-${projectId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, { flagged?: boolean }>;
+        const flags: Record<string, boolean> = {};
+        for (const [id, v] of Object.entries(parsed)) {
+          if (v.flagged) flags[id] = true;
+        }
+        setSceneFlags(flags);
+      }
+    } catch { /* ignore */ }
+  }, [projectId, selectedSceneId]);
+
   /* Scroll the active scene card into view in the left panel */
   const sceneListRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -102,12 +118,39 @@ export function SceneListPanel({
         <span className="sl-header-label">Scenes</span>
         <span className="sl-header-count">{totalSceneCount}</span>
       </div>
-      <div className="sl-search">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-        </svg>
-        <input className="sl-search-input" placeholder="Search scenes, script, characters..."
-          value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} />
+      <div style={{ display: 'flex', gap: '4px', padding: '0 14px 8px', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
+        <div className="sl-search" style={{ flex: 1, margin: 0, minWidth: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input className="sl-search-input" placeholder="Search..."
+            value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} />
+        </div>
+        <select
+          value=""
+          onChange={(e) => {
+            if (e.target.value) {
+              onSelectScene(e.target.value);
+              e.target.value = '';
+            }
+          }}
+          style={{
+            width: '80px', flexShrink: 0, padding: '0 20px 0 6px', borderRadius: '6px',
+            fontSize: '0.625rem', fontWeight: 500,
+            backgroundColor: 'var(--bg-secondary, #F0EBE0)',
+            border: '1px solid rgba(0,0,0,0.06)',
+            color: 'var(--text-muted)', outline: 'none',
+            cursor: 'pointer', appearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239C9488' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 6px center',
+          }}
+        >
+          <option value="">Jump to</option>
+          {filteredScenes.map(s => (
+            <option key={s.id} value={s.id}>SC {s.number}</option>
+          ))}
+        </select>
       </div>
       <div className="sl-list" ref={sceneListRef}>
         {filteredScenes.map((s) => {
@@ -128,6 +171,9 @@ export function SceneListPanel({
                 <span className="sl-card-detail">{s.intExt}</span>
                 {s.characterIds.length > 0 && (
                   <span className="sl-card-cast">{s.characterIds.length}</span>
+                )}
+                {sceneFlags[s.id] && (
+                  <span style={{ fontSize: '10px', color: '#C4522A' }} title="Has query">⚑</span>
                 )}
                 <span className={`sl-card-status sl-card-status--${status}`} />
               </div>

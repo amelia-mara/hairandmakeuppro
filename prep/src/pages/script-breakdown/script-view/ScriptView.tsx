@@ -433,7 +433,19 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
 
   return (
     <div className="sv-scroll" ref={scrollRef} style={{ position: 'relative' }}>
-      {scenes.map((scene, idx) => (
+      {/* Title page — rendered as its own paper before scenes */}
+      {preambleScene && (
+        <div
+          className="sv-paper"
+          style={{ fontSize: `${fontSize}px` }}
+        >
+          <div className="sv-content sv-preamble-content">
+            {renderPreambleContent(preambleScene)}
+          </div>
+        </div>
+      )}
+
+      {scenes.map((scene) => (
         <div
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
@@ -442,11 +454,6 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
-          {idx === 0 && preambleScene && (
-            <div className="sv-content sv-preamble-content">
-              {renderPreambleContent(preambleScene)}
-            </div>
-          )}
           <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
           <div className="sv-content">
             {memoRenderSceneContent(scene)}

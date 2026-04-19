@@ -260,6 +260,7 @@ function ProjectView({
   const getProject = useProjectStore((s) => s.getProject);
   const project = getProject(projectId);
   const projectTitle = project?.title || 'Project';
+  const scriptFilename = project?.scriptFilename;
   const effectiveTier = useAuthStore((s) => s.getEffectiveTier)();
   // userTier for feature flags uses effectiveTier (preview-aware)
   const userTier = effectiveTier;
@@ -303,6 +304,7 @@ function ProjectView({
         activePage={activePage}
         onNavigate={onNavigate}
         projectType={project?.type}
+        scriptFilename={scriptFilename}
         onBackToHub={onBackToHub}
         onNavigateToAuth={onNavigateToAuth}
       />

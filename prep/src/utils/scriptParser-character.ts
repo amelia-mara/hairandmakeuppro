@@ -244,17 +244,17 @@ export function isCharacterCue(line: string): boolean {
   if (trimmed.length > 50) return false;
 
   const nonCharPatterns = [
-    /^(INT\.|EXT\.|INT\/EXT|EXT\/INT|I\/E\.)/i,
-    /^(CUT TO|FADE|DISSOLVE|SMASH|MATCH|WIPE)/i,
-    /^(THE END|CONTINUED|MORE|\(MORE\))/i,
+    /^\[?(INT\.|EXT\.|INT\/EXT|EXT\/INT|I\/E\.)/i,
+    /^\[?(CUT TO|FADE|DISSOLVE|SMASH|MATCH|WIPE)\]?(\s|$)/i,
+    /^\[?(THE END|CONTINUED|MORE|\(MORE\))\]?(\s|$)/i,
     /^\d+\s*$/,
     /^\s*$/,
-    /^(TITLE:|SUPER:|CHYRON:|CARD:|INSERT:|INTERCUT)/i,
-    /^(FLASHBACK|END FLASHBACK|FLASH BACK|DREAM SEQUENCE)/i,
-    /^(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)/i,
-    /^(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)/i,
-    /^(SUPERIMPOSE|SUBTITLE|CAPTION)/i,
-    /^(EPISODE|CHAPTER|PART|ACT|SCENE|PILOT)\s*\d*\s*$/i,
+    /^\[?(TITLE:|SUPER:|CHYRON:|CARD:|INSERT:|INTERCUT)\]?(\s|$)/i,
+    /^\[?(FLASHBACK|END FLASHBACK|FLASH BACK|FLASH FORWARD|DREAM SEQUENCE|DREAM|MONTAGE|END MONTAGE|INTERCUT|END INTERCUT|PRESENT DAY|PRESENT|LATER|TIME CUT|TITLE CARD)\]?(\s|$)/i,
+    /^\[?(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)\]?(\s|$)/i,
+    /^\[?(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)\]?(\s|$)/i,
+    /^\[?(SUPERIMPOSE|SUBTITLE|CAPTION)\]?(\s|$)/i,
+    /^\[?(EPISODE|CHAPTER|PART|ACT|SCENE|PILOT)\]?\s*\d*\s*$/i,
   ];
 
   for (const pattern of nonCharPatterns) {
