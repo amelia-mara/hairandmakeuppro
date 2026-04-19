@@ -22,6 +22,12 @@ export interface ProjectWithRole extends Project {
   access_budget?: boolean;
   access_export_hours?: boolean;
   access_export_invoice?: boolean;
+  /**
+   * Timestamp of the most recent meaningful project activity we can observe
+   * from tables the hub already queries. Currently the latest active
+   * `script_uploads.created_at`; undefined when no script has been uploaded.
+   */
+  last_edited_at?: string;
 }
 
 // Generate a unique invite code
@@ -177,6 +183,34 @@ export async function getUserProjects(
     // Remove the nested users object from the project data
     for (const p of projects) {
       delete (p as unknown as Record<string, unknown>).users;
+    }
+
+    // Attach last_edited_at from the active script upload per project so the
+    // hub can show an "Edited" date next to "Created".
+    if (projects.length > 0) {
+      const projectIds = projects.map((p) => p.id);
+      const { data: uploads, error: uploadsError } = await supabase
+        .from('script_uploads')
+        .select('project_id, created_at')
+        .in('project_id', projectIds)
+        .eq('is_active', true);
+      if (uploadsError) {
+        console.warn('[supabaseProjects] failed to load script_uploads timestamps:', uploadsError);
+      } else if (uploads) {
+        const byProject = new Map<string, string>();
+        for (const u of uploads) {
+          const pid = u.project_id as string;
+          const ts = u.created_at as string;
+          const existing = byProject.get(pid);
+          if (!existing || new Date(ts).getTime() > new Date(existing).getTime()) {
+            byProject.set(pid, ts);
+          }
+        }
+        for (const p of projects) {
+          const ts = byProject.get(p.id);
+          if (ts) p.last_edited_at = ts;
+        }
+      }
     }
 
     return { projects, error: null };

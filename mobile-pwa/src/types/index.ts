@@ -1417,6 +1417,13 @@ export interface ProjectMembership {
   role: ProjectRole;
   joinedAt: Date;
   lastAccessedAt: Date;
+  /** When the project was created (from `projects.created_at`). */
+  createdAt?: Date;
+  /**
+   * When the project was last meaningfully edited. Derived from the
+   * active `script_uploads.created_at`, falling back to `createdAt`.
+   */
+  lastEditedAt?: Date;
   teamMemberCount: number;
   sceneCount: number;
   projectCode: string;

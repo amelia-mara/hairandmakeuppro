@@ -15,21 +15,12 @@ import { savePhotoBlob } from '@/db';
 import { detectCharactersForScene } from '@/utils/scriptParser';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
-// Format relative time
-const formatRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const then = new Date(date);
-  const diffMs = now.getTime() - then.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return then.toLocaleDateString();
+// Format an absolute calendar date for project metadata lines.
+const formatCardDate = (date?: Date): string => {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const getRoleLabel = (role: ProjectRole): string => {
@@ -1134,7 +1125,9 @@ export function ProjectHubScreen() {
                     </p>
                   )}
                   <p className="text-[11px] text-text-light mt-2">
-                    Last active {formatRelativeTime(currentProject.lastAccessedAt)}
+                    Created {formatCardDate(currentProject.createdAt)}
+                    <span className="mx-1.5 text-text-light">&middot;</span>
+                    Edited {formatCardDate(currentProject.lastEditedAt)}
                   </p>
                 </button>
               </section>
@@ -1177,7 +1170,9 @@ export function ProjectHubScreen() {
                               {getMembershipLabel(project)}
                             </p>
                             <p className="text-[11px] text-text-light mt-0.5">
-                              Last active {formatRelativeTime(project.lastAccessedAt)}
+                              Created {formatCardDate(project.createdAt)}
+                              <span className="mx-1.5 text-text-light">&middot;</span>
+                              Edited {formatCardDate(project.lastEditedAt)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 ml-3 flex-shrink-0">
