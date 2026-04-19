@@ -72,30 +72,25 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
 
   return (
     <div className="fp-wrap">
-      {/* Scene info — pinned */}
-      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <span className="fp-scene-num">{`Scene ${scene.number}`}</span>
+      {/* Notes & queries — pinned section */}
+      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Notes</span>
           <span className={`fp-save fp-save--${saveStatus}`}>
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
           </span>
         </div>
-        <div className="fp-scene-tagline">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+        <textarea
+          className="fi-input"
+          value={synopsis}
+          onChange={(e) => setSynopsis(e.target.value)}
+          placeholder="Scene notes, queries for director..."
+          rows={2}
+          style={{ fontSize: '0.8125rem', resize: 'vertical', minHeight: '40px' }}
+        />
       </div>
 
       <div className="fp-scroll" ref={scrollRef}>
-        {/* Synopsis */}
-        <div className="fp-section fp-section--pill">
-          <div className="fp-section-title">Synopsis</div>
-          <textarea
-            className="fi-input fp-synopsis-input"
-            value={synopsis}
-            onChange={(e) => setSynopsis(e.target.value)}
-            placeholder="Write a synopsis for this scene..."
-            rows={3}
-          />
-        </div>
-
         {/* Timeline */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>
