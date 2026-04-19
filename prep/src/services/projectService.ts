@@ -21,6 +21,13 @@ export interface SupabaseProject {
   scene_count?: number;
   character_count?: number;
   script_filename?: string;
+  /**
+   * Timestamp of the most recent activity on the project we can observe from
+   * tables the hub already queries. Currently the latest active
+   * `script_uploads.created_at`; falls back to `projects.created_at` when no
+   * script has been uploaded.
+   */
+  last_updated_at?: string;
 }
 
 // ---------- Create ----------
@@ -120,19 +127,25 @@ export async function loadUserProjects(
     const projectIds = projects.map((p) => p.id);
     const { data: uploads, error: uploadsError } = await supabase
       .from('script_uploads')
-      .select('project_id, scene_count, character_count, file_name')
+      .select('project_id, scene_count, character_count, file_name, created_at')
       .in('project_id', projectIds)
       .eq('is_active', true);
 
     if (uploadsError) {
       console.warn('[ProjectService] failed to load script_uploads counts:', uploadsError);
     } else if (uploads) {
-      const byProject = new Map<string, { scenes: number; characters: number; filename?: string }>();
+      const byProject = new Map<string, {
+        scenes: number;
+        characters: number;
+        filename?: string;
+        createdAt?: string;
+      }>();
       for (const u of uploads) {
         byProject.set(u.project_id as string, {
           scenes: (u.scene_count as number) || 0,
           characters: (u.character_count as number) || 0,
           filename: (u.file_name as string) || undefined,
+          createdAt: (u.created_at as string) || undefined,
         });
       }
       for (const p of projects) {
@@ -141,6 +154,9 @@ export async function loadUserProjects(
           p.scene_count = c.scenes;
           p.character_count = c.characters;
           p.script_filename = c.filename;
+          p.last_updated_at = c.createdAt ?? p.created_at;
+        } else {
+          p.last_updated_at = p.created_at;
         }
       }
     }
