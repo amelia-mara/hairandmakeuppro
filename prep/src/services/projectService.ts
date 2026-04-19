@@ -18,6 +18,9 @@ export interface SupabaseProject {
   created_by: string;
   created_at: string;
   has_prep_access?: boolean;
+  scene_count?: number;
+  character_count?: number;
+  script_filename?: string;
 }
 
 // ---------- Create ----------
@@ -106,6 +109,41 @@ export async function loadUserProjects(
     const projects: SupabaseProject[] = (data || [])
       .map((pm: any) => pm.projects)
       .filter(Boolean);
+
+    if (projects.length === 0) {
+      return { projects, error: null };
+    }
+
+    // Fetch scene/character counts from the active script upload per project.
+    // The ProjectHub cards show these counts and need them before the user
+    // opens a project (useProjectSync only populates them on project open).
+    const projectIds = projects.map((p) => p.id);
+    const { data: uploads, error: uploadsError } = await supabase
+      .from('script_uploads')
+      .select('project_id, scene_count, character_count, file_name')
+      .in('project_id', projectIds)
+      .eq('is_active', true);
+
+    if (uploadsError) {
+      console.warn('[ProjectService] failed to load script_uploads counts:', uploadsError);
+    } else if (uploads) {
+      const byProject = new Map<string, { scenes: number; characters: number; filename?: string }>();
+      for (const u of uploads) {
+        byProject.set(u.project_id as string, {
+          scenes: (u.scene_count as number) || 0,
+          characters: (u.character_count as number) || 0,
+          filename: (u.file_name as string) || undefined,
+        });
+      }
+      for (const p of projects) {
+        const c = byProject.get(p.id);
+        if (c) {
+          p.scene_count = c.scenes;
+          p.character_count = c.characters;
+          p.script_filename = c.filename;
+        }
+      }
+    }
 
     return { projects, error: null };
   } catch (err) {

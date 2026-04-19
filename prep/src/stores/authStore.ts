@@ -54,8 +54,9 @@ function supabaseToLocal(sp: SupabaseProject) {
     status: 'setup' as const,
     progress: 0,
     lastActive: sp.created_at,
-    scenes: 0,
-    characters: 0,
+    scenes: sp.scene_count ?? 0,
+    characters: sp.character_count ?? 0,
+    scriptFilename: sp.script_filename,
     createdAt: sp.created_at,
   };
 }
@@ -83,13 +84,14 @@ async function hydrateProjects(userId: string) {
   const existingFromSupa = sbProjects.filter((sp) => existingIds.has(sp.id));
   for (const sp of existingFromSupa) {
     const local = store.projects.find((p) => p.id === sp.id);
-    if (local && !local.scenes && !local.characters) {
-      // Project exists locally but has no data — will be populated by useProjectSync
-      useProjectStore.getState().updateProject(sp.id, {
-        title: sp.name,
-        type: sp.production_type || local.type,
-      });
-    }
+    if (!local) continue;
+    useProjectStore.getState().updateProject(sp.id, {
+      title: sp.name,
+      type: sp.production_type || local.type,
+      scenes: sp.scene_count ?? local.scenes,
+      characters: sp.character_count ?? local.characters,
+      scriptFilename: sp.script_filename ?? local.scriptFilename,
+    });
   }
 }
 
