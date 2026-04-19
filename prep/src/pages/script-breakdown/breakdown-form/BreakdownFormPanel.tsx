@@ -171,19 +171,6 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
           </div>
         </div>
 
-        {/* Notes / Director Queries */}
-        <div className="fp-section fp-section--pill">
-          <div className="fp-section-title" style={{ color: '#C4522A' }}>Notes &amp; Queries</div>
-          <textarea
-            className="fi-input"
-            value={breakdown.timeline.note}
-            onChange={(e) => onUpdateTimeline({ ...breakdown.timeline, note: e.target.value })}
-            placeholder="Notes, queries for director, continuity flags..."
-            rows={3}
-            style={{ fontSize: '0.8125rem', resize: 'vertical', minHeight: '48px' }}
-          />
-        </div>
-
         {/* Characters in Scene */}
         <div className="fp-section fp-section--bordered">
           <div className="fp-section-title">
