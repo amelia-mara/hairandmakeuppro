@@ -209,10 +209,24 @@ export function parseScriptText(text: string): ParsedScript {
     scenes.push(currentScene);
   }
 
+  // Known-character action-line scan: if a known character's name appears
+  // in a scene's content but they weren't detected via dialogue cues, add them.
+  const knownNames = Array.from(characterMap.keys()).filter(n => n.length >= 3);
+  for (const scene of scenes) {
+    const contentLower = scene.content.toLowerCase();
+    for (const name of knownNames) {
+      if (scene.characters.includes(name)) continue;
+      if (contentLower.includes(name.toLowerCase())) {
+        scene.characters.push(name);
+      }
+    }
+    scene.characters = [...new Set(scene.characters)];
+  }
+
   // Convert character map to array and update dialogue counts
   const characters = Array.from(characterMap.values())
-    .filter(c => c.sceneCount >= 1) // Only include characters that appear in scenes
-    .sort((a, b) => b.sceneCount - a.sceneCount); // Sort by appearance count
+    .filter(c => c.sceneCount >= 1)
+    .sort((a, b) => b.sceneCount - a.sceneCount);
 
   // Update dialogue counts based on variants
   characters.forEach(char => {

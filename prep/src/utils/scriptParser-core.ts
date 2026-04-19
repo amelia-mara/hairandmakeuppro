@@ -437,6 +437,29 @@ export function parseScriptText(text: string): ParsedScript {
      only physically present characters matter. The pre-scan + main parse +
      dedup safety net above handle detection accurately. */
 
+  /* ── Known-character action-line scan ──
+     If a known character's name appears in a scene's content (action lines)
+     in any case (Title Case, ALL CAPS, etc.) and they aren't already in the
+     scene's character list, add them. This catches characters introduced in
+     action text like "Young Bry, (hollow eyed...) stands on the bridge."
+     where the name isn't in the standard ALL-CAPS dialogue cue format.
+     Only checks against already-confirmed characters to avoid false positives. */
+  const knownNames = Array.from(characterMap.keys()).filter(n => n.length >= 3);
+  for (const scene of scenes) {
+    const contentLower = scene.content.toLowerCase();
+    for (const name of knownNames) {
+      if (scene.characters.includes(name)) continue;
+      if (contentLower.includes(name.toLowerCase())) {
+        scene.characters.push(name);
+      }
+    }
+  }
+
+  // Re-deduplicate after the scan
+  for (const scene of scenes) {
+    scene.characters = [...new Set(scene.characters)];
+  }
+
   const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
 
