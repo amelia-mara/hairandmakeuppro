@@ -11,6 +11,31 @@ import {
 } from '@/stores/breakdownStore';
 import { FInput, FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
+
+/* Simple per-scene notes stored in localStorage — avoids the Zustand persist
+   issue that crashed DirectorQueriesSection. Data keyed by projectId:sceneId. */
+function useSceneNotes(projectId: string, sceneId: string) {
+  const key = `prep-scene-notes-${projectId}`;
+  const [allNotes, setAllNotes] = useState<Record<string, { text: string; flagged: boolean }>>(() => {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+  });
+  const note = allNotes[sceneId] || { text: '', flagged: false };
+
+  const save = useCallback((updated: Record<string, { text: string; flagged: boolean }>) => {
+    setAllNotes(updated);
+    localStorage.setItem(key, JSON.stringify(updated));
+  }, [key]);
+
+  const setText = useCallback((text: string) => {
+    save({ ...allNotes, [sceneId]: { ...note, text } });
+  }, [allNotes, sceneId, note, save]);
+
+  const toggleFlag = useCallback(() => {
+    save({ ...allNotes, [sceneId]: { ...note, flagged: !note.flagged } });
+  }, [allNotes, sceneId, note, save]);
+
+  return { text: note.text, flagged: note.flagged, setText, toggleFlag };
+}
 import { CharBlock } from './CharBlock';
 
 /**
@@ -44,6 +69,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();
+  const sceneNotes = useSceneNotes(_projectId, scene.id);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
@@ -72,25 +98,57 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
 
   return (
     <div className="fp-wrap">
-      {/* Synopsis — pinned */}
-      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '6px' }}>
+      {/* Notes & Queries — pinned */}
+      <div className="fp-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Synopsis</span>
-          <span className={`fp-save fp-save--${saveStatus}`}>
-            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: sceneNotes.flagged ? '#C4522A' : 'var(--text-muted)' }}>
+            {sceneNotes.flagged ? '⚑ Query' : 'Notes'}
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={sceneNotes.toggleFlag}
+              title={sceneNotes.flagged ? 'Resolve query' : 'Flag as query'}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                fontSize: '14px', lineHeight: 1,
+                color: sceneNotes.flagged ? '#C4522A' : 'var(--text-muted)',
+                opacity: sceneNotes.flagged ? 1 : 0.5,
+              }}
+            >
+              ⚑
+            </button>
+            <span className={`fp-save fp-save--${saveStatus}`}>
+              {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : ''}
+            </span>
+          </div>
         </div>
         <textarea
-          className="fi-input fp-synopsis-input"
-          value={synopsis}
-          onChange={(e) => setSynopsis(e.target.value)}
-          placeholder="Write a synopsis for this scene..."
+          className="fi-input"
+          value={sceneNotes.text}
+          onChange={(e) => sceneNotes.setText(e.target.value)}
+          placeholder="Production notes, questions for director..."
           rows={2}
-          style={{ fontSize: '0.8125rem', resize: 'vertical', minHeight: '40px' }}
+          style={{
+            fontSize: '0.8125rem', resize: 'vertical', minHeight: '36px',
+            borderColor: sceneNotes.flagged ? 'rgba(196, 82, 42, 0.3)' : undefined,
+            backgroundColor: sceneNotes.flagged ? 'rgba(196, 82, 42, 0.04)' : undefined,
+          }}
         />
       </div>
 
       <div className="fp-scroll" ref={scrollRef}>
+        {/* Synopsis */}
+        <div className="fp-section fp-section--pill">
+          <div className="fp-section-title">Synopsis</div>
+          <textarea
+            className="fi-input fp-synopsis-input"
+            value={synopsis}
+            onChange={(e) => setSynopsis(e.target.value)}
+            placeholder="Write a synopsis for this scene..."
+            rows={3}
+          />
+        </div>
+
         {/* Timeline */}
         <div className="fp-section fp-section--pill">
           <div className="fp-section-title">Timeline</div>

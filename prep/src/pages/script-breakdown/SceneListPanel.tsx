@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   useBreakdownStore,
   useSynopsisStore,
@@ -85,6 +85,22 @@ export function SceneListPanel({
   const synopsisStore = useSynopsisStore();
   const revisedStore = useRevisedScenesStore();
 
+  // Read scene query flags from localStorage
+  const [sceneFlags, setSceneFlags] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`prep-scene-notes-${projectId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, { flagged?: boolean }>;
+        const flags: Record<string, boolean> = {};
+        for (const [id, v] of Object.entries(parsed)) {
+          if (v.flagged) flags[id] = true;
+        }
+        setSceneFlags(flags);
+      }
+    } catch { /* ignore */ }
+  }, [projectId, selectedSceneId]);
+
   /* Scroll the active scene card into view in the left panel */
   const sceneListRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -155,6 +171,9 @@ export function SceneListPanel({
                 <span className="sl-card-detail">{s.intExt}</span>
                 {s.characterIds.length > 0 && (
                   <span className="sl-card-cast">{s.characterIds.length}</span>
+                )}
+                {sceneFlags[s.id] && (
+                  <span style={{ fontSize: '10px', color: '#C4522A' }} title="Has query">⚑</span>
                 )}
                 <span className={`sl-card-status sl-card-status--${status}`} />
               </div>
