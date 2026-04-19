@@ -11,6 +11,7 @@ import {
 } from '@/stores/breakdownStore';
 import { FInput, FSelect } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
+import { DirectorQueriesSection } from './DirectorQueriesSection';
 import { CharBlock } from './CharBlock';
 
 /**
@@ -28,7 +29,7 @@ import { CharBlock } from './CharBlock';
 import { useCharacterOverridesStore } from '@/stores/breakdownStore';
 import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
-export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
+export function BreakdownFormPanel({ projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
   projectId: string; scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -202,6 +203,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
           ))}
         </div>
         {/* ── Director Queries ── */}
+        <DirectorQueriesSection projectId={projectId} sceneId={scene.id} />
 
         <div ref={sentinelRef} className="fp-scroll-sentinel" />
       </div>
