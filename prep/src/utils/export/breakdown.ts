@@ -167,13 +167,3 @@ export function exportBreakdownXLSX(projectId: string): void {
     buildFilename(meta.projectName, SECTION, 'xlsx'),
   );
 }
-
-/**
- * Fire both formats back-to-back. Matches the "PDF + spreadsheet"
- * contract the user asked for: the tools menu button produces both
- * artefacts in a single click.
- */
-export function exportBreakdown(projectId: string): void {
-  exportBreakdownPDF(projectId);
-  exportBreakdownXLSX(projectId);
-}

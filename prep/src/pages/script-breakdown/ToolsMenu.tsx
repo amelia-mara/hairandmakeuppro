@@ -8,6 +8,9 @@ import {
   ExportIcon,
 } from '@/components/icons/ScriptBreakdownIcons';
 
+/** Document formats an export row can produce. */
+export type ExportFormat = 'pdf' | 'xlsx' | 'pptx' | 'docx';
+
 interface ToolsMenuProps {
   // Menu open/close — parent still owns this state because
   // useScriptDrafts subscribes to it for cache-reset semantics.
@@ -19,15 +22,14 @@ interface ToolsMenuProps {
   onImportScript: () => void;
   onOpenBreakdownView: () => void;
 
-  // Export section actions. Currently stubbed in the parent as
-  // inline console.log callbacks — keeping them as parent-owned
-  // callbacks lets the real implementations land later without
-  // touching this component.
-  onExportBreakdown: () => void;
-  onExportLookbooks: () => void;
-  onExportTimeline: () => void;
-  onExportBible: () => void;
-  onExportQueries: () => void;
+  // Export callbacks. Each takes the chosen format chip the user
+  // clicked — the parent decides which renderer to invoke (or
+  // whether to no-op while the renderer is still a stub).
+  onExportBreakdown: (format: ExportFormat) => void;
+  onExportLookbooks: (format: ExportFormat) => void;
+  onExportTimeline: (format: ExportFormat) => void;
+  onExportBible: (format: ExportFormat) => void;
+  onExportQueries: (format: ExportFormat) => void;
 
   // Drafts sub-dropdown — piped through from useScriptDrafts.
   drafts: ScriptDraft[];
@@ -39,10 +41,23 @@ interface ToolsMenuProps {
   onViewDraftPdf: (e: React.MouseEvent, draft: ScriptDraft) => void;
 }
 
+/** Static format pairings per section — appears to the right of each row. */
+const EXPORT_SECTIONS: ReadonlyArray<{
+  key: 'breakdown' | 'lookbooks' | 'timeline' | 'bible' | 'queries';
+  label: string;
+  formats: ReadonlyArray<ExportFormat>;
+}> = [
+  { key: 'breakdown', label: 'Breakdown', formats: ['pdf', 'xlsx'] },
+  { key: 'lookbooks', label: 'Lookbooks', formats: ['pdf', 'pptx'] },
+  { key: 'timeline', label: 'Timeline', formats: ['pdf', 'xlsx'] },
+  { key: 'bible', label: 'Bible', formats: ['pdf', 'docx'] },
+  { key: 'queries', label: 'Director Queries', formats: ['pdf', 'xlsx'] },
+];
+
 /**
  * Tools menu for the ScriptBreakdown page — the chevron button at the
  * top of the right panel plus its dropdown of actions (Import Script,
- * Script Drafts sub-dropdown, View Breakdown, and four Export items).
+ * Script Drafts sub-dropdown, View Breakdown, and the Export rows).
  *
  * Owns its own outside-click-to-close behaviour via a local ref and
  * effect, so the parent doesn't need to manage the click listener.
@@ -50,10 +65,10 @@ interface ToolsMenuProps {
  * `useScriptDrafts` needs to read it for cache-reset semantics — the
  * hook clears its fetched drafts list when the tools menu closes.
  *
- * Every terminal action (Import, View Breakdown, each Export) calls
- * its action callback and then `onClose()`, preserving the inline
- * `{ setX(true); setToolsOpen(false); }` pattern from the parent
- * exactly.
+ * Each Export row renders a label plus one chip per supported format.
+ * Clicking a chip fires the parent callback with that format and
+ * closes the menu, matching the close-on-terminal-action convention
+ * of the non-export items above.
  */
 export function ToolsMenu({
   open,
@@ -87,6 +102,14 @@ export function ToolsMenu({
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open, onClose]);
+
+  const handlerByKey: Record<(typeof EXPORT_SECTIONS)[number]['key'], (f: ExportFormat) => void> = {
+    breakdown: onExportBreakdown,
+    lookbooks: onExportLookbooks,
+    timeline: onExportTimeline,
+    bible: onExportBible,
+    queries: onExportQueries,
+  };
 
   return (
     <div className="fp-panel-actions" ref={toolsRef} style={{ position: 'relative' }}>
@@ -166,21 +189,24 @@ export function ToolsMenu({
           <div className="tools-dropdown-divider" />
           <div className="tools-dropdown-section">
             <div className="tools-dropdown-label">Export</div>
-            <button className="tools-dropdown-item" onClick={() => { onExportBreakdown(); onClose(); }}>
-              <ExportIcon /> <span>Breakdown</span>
-            </button>
-            <button className="tools-dropdown-item" onClick={() => { onExportLookbooks(); onClose(); }}>
-              <ExportIcon /> <span>Lookbooks</span>
-            </button>
-            <button className="tools-dropdown-item" onClick={() => { onExportTimeline(); onClose(); }}>
-              <ExportIcon /> <span>Timeline</span>
-            </button>
-            <button className="tools-dropdown-item" onClick={() => { onExportBible(); onClose(); }}>
-              <ExportIcon /> <span>Bible</span>
-            </button>
-            <button className="tools-dropdown-item" onClick={() => { onExportQueries(); onClose(); }} style={{ color: '#C4522A' }}>
-              <ExportIcon /> <span>Director Queries</span>
-            </button>
+            {EXPORT_SECTIONS.map((section) => (
+              <div key={section.key} className="tools-export-row">
+                <span className="tools-export-row-label">
+                  <ExportIcon /> <span>{section.label}</span>
+                </span>
+                <span className="tools-export-chips">
+                  {section.formats.map((format) => (
+                    <button
+                      key={format}
+                      className="tools-export-chip"
+                      onClick={() => { handlerByKey[section.key](format); onClose(); }}
+                    >
+                      {format.toUpperCase()}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

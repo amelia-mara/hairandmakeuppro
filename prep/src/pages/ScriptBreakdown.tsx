@@ -445,14 +445,22 @@ export function ScriptBreakdown({ projectId }: Props) {
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
               onOpenBreakdownView={() => setSplitView(true)}
-              onExportBreakdown={async () => {
-                const { exportBreakdown } = await import('@/utils/export/breakdown');
-                exportBreakdown(projectId);
+              onExportBreakdown={async (format) => {
+                const { exportBreakdownPDF, exportBreakdownXLSX } =
+                  await import('@/utils/export/breakdown');
+                if (format === 'pdf') exportBreakdownPDF(projectId);
+                else if (format === 'xlsx') exportBreakdownXLSX(projectId);
               }}
-              onExportLookbooks={() => console.log('Export lookbooks')}
-              onExportTimeline={() => console.log('Export timeline')}
-              onExportBible={() => console.log('Export bible')}
-              onExportQueries={() => exportDirectorQueries()}
+              onExportLookbooks={(format) => console.log('Export lookbooks', format)}
+              onExportTimeline={(format) => console.log('Export timeline', format)}
+              onExportBible={(format) => console.log('Export bible', format)}
+              onExportQueries={(format) => {
+                // PDF/XLSX renderers land with the Queries export work;
+                // for now any chip click falls back to the existing TXT
+                // export so clicking is never a dead end.
+                console.log('Export queries', format);
+                exportDirectorQueries();
+              }}
               drafts={drafts}
               draftsLoading={draftsLoading}
               draftsExpanded={draftsExpanded}
