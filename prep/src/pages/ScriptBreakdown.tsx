@@ -445,7 +445,10 @@ export function ScriptBreakdown({ projectId }: Props) {
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
               onOpenBreakdownView={() => setSplitView(true)}
-              onExportBreakdown={() => console.log('Export breakdown')}
+              onExportBreakdown={async () => {
+                const { exportBreakdown } = await import('@/utils/export/breakdown');
+                exportBreakdown(projectId);
+              }}
               onExportLookbooks={() => console.log('Export lookbooks')}
               onExportTimeline={() => console.log('Export timeline')}
               onExportBible={() => console.log('Export bible')}
