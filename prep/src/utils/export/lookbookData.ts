@@ -9,6 +9,7 @@
 
 import {
   useParsedScriptStore,
+  useBreakdownStore,
   useCharacterOverridesStore,
   type Look,
   type ParsedCharacterData,
@@ -25,6 +26,8 @@ export interface LookbookExportMeta {
 export interface LookbookCharacterEntry {
   character: ParsedCharacterData;
   looks: Look[];
+  /** Scene numbers assigned to each look via the breakdown store. */
+  scenesByLookId: Record<string, number[]>;
 }
 
 export interface LookbookExportPayload {
@@ -36,12 +39,14 @@ export function buildLookbookExport(projectId: string): LookbookExportPayload {
   const project = useProjectStore.getState().getProject(projectId);
   const parsed = useParsedScriptStore.getState().getParsedData(projectId);
   const overrides = useCharacterOverridesStore.getState();
+  const breakdownStore = useBreakdownStore.getState();
 
   const characters = (parsed?.characters ?? []).map((c) => {
     const ovr = overrides.overrides[c.id];
     return ovr ? { ...c, ...ovr } : c;
   });
   const looks = parsed?.looks ?? [];
+  const scenes = parsed?.scenes ?? [];
 
   const looksByCharacter = new Map<string, Look[]>();
   for (const look of looks) {
@@ -50,16 +55,33 @@ export function buildLookbookExport(projectId: string): LookbookExportPayload {
     else looksByCharacter.set(look.characterId, [look]);
   }
 
-  // Sort: characters with looks first (by billing asc), then unlooked
-  // characters (by billing asc).
+  // Build lookId → scene numbers map by walking breakdowns (mirrors the
+  // on-screen `lookSceneMap` in LookbookTab).
+  const scenesByLookGlobal: Record<string, Set<number>> = {};
+  for (const s of scenes) {
+    const bd = breakdownStore.getBreakdown(s.id);
+    if (!bd) continue;
+    for (const cb of bd.characters) {
+      if (!cb.lookId) continue;
+      const set = scenesByLookGlobal[cb.lookId] ?? new Set<number>();
+      set.add(s.number);
+      scenesByLookGlobal[cb.lookId] = set;
+    }
+  }
+
   const sortedCharacters = [...characters].sort((a, b) => a.billing - b.billing);
   const withLooks = sortedCharacters.filter((c) => (looksByCharacter.get(c.id)?.length ?? 0) > 0);
   const withoutLooks = sortedCharacters.filter((c) => (looksByCharacter.get(c.id)?.length ?? 0) === 0);
 
-  const entries: LookbookCharacterEntry[] = [...withLooks, ...withoutLooks].map((character) => ({
-    character,
-    looks: looksByCharacter.get(character.id) ?? [],
-  }));
+  const entries: LookbookCharacterEntry[] = [...withLooks, ...withoutLooks].map((character) => {
+    const charLooks = looksByCharacter.get(character.id) ?? [];
+    const scenesByLookId: Record<string, number[]> = {};
+    for (const lk of charLooks) {
+      const set = scenesByLookGlobal[lk.id];
+      if (set) scenesByLookId[lk.id] = [...set].sort((a, b) => a - b);
+    }
+    return { character, looks: charLooks, scenesByLookId };
+  });
 
   return {
     meta: {
@@ -81,8 +103,12 @@ export function billingLabel(billing: number | undefined): string {
   return `${billing}th`;
 }
 
-/** Comma-joined metadata pills (matches the on-screen character header). */
-export function characterMetaLine(c: ParsedCharacterData): string {
+/**
+ * Pill labels for a character (matches the on-screen header).
+ * The first entry — billing — is rendered in the accent colour; the rest
+ * share a muted cream pill style. Returned in on-screen order.
+ */
+export function characterPills(c: ParsedCharacterData): string[] {
   const parts: string[] = [];
   const bill = billingLabel(c.billing);
   if (bill) parts.push(bill);
@@ -91,5 +117,10 @@ export function characterMetaLine(c: ParsedCharacterData): string {
   if (c.build) parts.push(`${c.build} build`);
   if (c.age) parts.push(`Age ${c.age}`);
   if (c.distinguishingFeatures) parts.push(c.distinguishingFeatures);
-  return parts.join(' · ');
+  return parts;
+}
+
+/** Comma-joined pill line — kept for compact summaries (e.g. PPTX meta line). */
+export function characterMetaLine(c: ParsedCharacterData): string {
+  return characterPills(c).join(' · ');
 }

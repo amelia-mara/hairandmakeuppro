@@ -1,16 +1,14 @@
 /**
  * Lookbook export — PDF + PPTX.
  *
- * The PDF mirrors the on-screen Lookbook aesthetic: per-character
- * sections with an italic-serif name, a teal accent rule, and the
- * character's looks laid out as a compact table. The PPTX targets a
- * pitch / design-meeting workflow — one slide per character with up
- * to four looks per slide; characters with more than four looks
- * continue on a second slide, preserving ordering.
+ * Both formats mirror the on-screen Lookbook aesthetic: per-character
+ * sections with the character name, billing/appearance pills, a teal
+ * accent rule, and the character's looks laid out as bordered cards
+ * (name + italic description + teal rule + stacked H/M/W + scene
+ * pills at the bottom, matching lb-look-card in the prep UI).
  */
 
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import pptxgen from 'pptxgenjs';
 import {
   BRAND,
@@ -21,7 +19,7 @@ import {
 } from './common';
 import {
   buildLookbookExport,
-  characterMetaLine,
+  characterPills,
   type LookbookCharacterEntry,
 } from './lookbookData';
 
@@ -82,90 +80,255 @@ export function exportLookbookPDF(projectId: string): ExportPreview {
   return finalizePDF(doc, meta.projectName, formatExportDate(meta.generatedAt));
 }
 
+/* ── PDF card-layout helpers ─────────────────────────────── */
+
+const CARD_GAP = 6;
+const CARD_COLS = 2;
+const CARD_RADIUS = 2.5;
+const CARD_MIN_BOTTOM = 14; // keep clear of footer rule
+
 function drawCharacterSection(
   doc: jsPDF,
   entry: LookbookCharacterEntry,
   startY: number,
 ): number {
-  const { character, looks } = entry;
+  const { character, looks, scenesByLookId } = entry;
 
-  // Page-break if there's not enough room for even the header.
+  // Character name — italic serif terracotta (matches LookbookTab header).
   if (startY > PAGE.height - 55) {
     doc.addPage();
     startY = 18;
   }
 
-  // Character name — italic serif, terracotta
   doc.setFont('times', 'italic');
   doc.setFontSize(18);
   doc.setTextColor(BRAND.terracotta);
   doc.text(character.name.toUpperCase(), PAGE.margin, startY + 4);
 
-  // Meta line — small muted
-  const metaLine = characterMetaLine(character);
-  if (metaLine) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(BRAND.muted);
-    doc.text(metaLine, PAGE.margin, startY + 9);
+  // Pills row (billing in accent, rest in muted cream).
+  const pills = characterPills(character);
+  let pillsEndY = startY + 6;
+  if (pills.length > 0) {
+    pillsEndY = drawPillRow(doc, PAGE.margin, startY + 7.5, pills, { accentFirst: true });
   }
 
-  // Teal accent rule
+  // Teal rule — limits to a short accent line under the pills.
   doc.setDrawColor(BRAND.teal);
-  doc.setLineWidth(0.4);
-  doc.line(PAGE.margin, startY + 12, PAGE.margin + 60, startY + 12);
+  doc.setLineWidth(0.5);
+  doc.line(PAGE.margin, pillsEndY + 1.5, PAGE.margin + 60, pillsEndY + 1.5);
 
-  let bodyY = startY + 16;
+  let cursorY = pillsEndY + 5;
 
   if (looks.length === 0) {
     doc.setFont('times', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(BRAND.muted);
-    doc.text('No looks assigned yet.', PAGE.margin, bodyY + 4);
-    return bodyY + 12;
+    doc.text('No looks assigned yet.', PAGE.margin, cursorY + 3);
+    return cursorY + 10;
   }
 
-  const body = looks.map((lk) => [
-    lk.name,
-    lk.description || '',
-    lk.hair || '',
-    lk.makeup || '',
-    lk.wardrobe || '',
-  ]);
+  // Card grid — 2 per row. Each card sized to fit its content; the
+  // width is fixed, height is measured before drawing so cards on
+  // the same row line up (height = row max).
+  const usableW = PAGE.width - PAGE.margin * 2;
+  const cardW = (usableW - CARD_GAP * (CARD_COLS - 1)) / CARD_COLS;
 
-  autoTable(doc, {
-    head: [['Look', 'Description', 'Hair', 'Makeup', 'Wardrobe']],
-    body,
-    startY: bodyY,
-    margin: { left: PAGE.margin, right: PAGE.margin, top: 18, bottom: 15 },
-    styles: {
-      font: 'helvetica',
-      fontSize: 8,
-      cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 3 },
-      textColor: BRAND.ink,
-      lineColor: BRAND.creamDark,
-      lineWidth: 0.1,
-    },
-    headStyles: {
-      fillColor: BRAND.terracotta,
-      textColor: BRAND.cream,
-      fontStyle: 'bold',
-      fontSize: 7.5,
-    },
-    bodyStyles: { fillColor: '#FFFFFF' },
-    alternateRowStyles: { fillColor: BRAND.cream },
-    columnStyles: {
-      0: { cellWidth: 30, fontStyle: 'bold', textColor: BRAND.terracotta },
-      1: { cellWidth: 42, fontStyle: 'italic' },
-      2: { cellWidth: 'auto' },
-      3: { cellWidth: 'auto' },
-      4: { cellWidth: 'auto' },
-    },
+  for (let i = 0; i < looks.length; i += CARD_COLS) {
+    const row = looks.slice(i, i + CARD_COLS);
+    // Measure each card's height first so the row has a uniform height.
+    const heights = row.map((lk) => measureCardHeight(doc, lk, scenesByLookId[lk.id] ?? [], cardW));
+    const rowHeight = Math.max(...heights);
+
+    // Page break if this row won't fit.
+    if (cursorY + rowHeight > PAGE.height - CARD_MIN_BOTTOM) {
+      doc.addPage();
+      cursorY = 18;
+    }
+
+    row.forEach((lk, j) => {
+      const x = PAGE.margin + j * (cardW + CARD_GAP);
+      drawLookCard(doc, lk, scenesByLookId[lk.id] ?? [], x, cursorY, cardW, rowHeight);
+    });
+    cursorY += rowHeight + CARD_GAP;
+  }
+
+  return cursorY + 6;
+}
+
+/** Draw a sequence of rounded-rect pills. Returns the baseline y of the last row. */
+function drawPillRow(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  labels: string[],
+  opts: { accentFirst?: boolean } = {},
+): number {
+  const fontSize = 7.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(fontSize);
+  const padX = 2.3;
+  const padY = 1.1;
+  const height = 4.5;
+  const gap = 2;
+  const availableW = PAGE.width - PAGE.margin - x;
+  let cursorX = x;
+  let cursorY = y;
+
+  labels.forEach((label, idx) => {
+    const textW = doc.getTextWidth(label);
+    const pillW = textW + padX * 2;
+    if (cursorX + pillW > x + availableW) {
+      cursorX = x;
+      cursorY += height + 1.8;
+    }
+    const isAccent = opts.accentFirst && idx === 0;
+    doc.setFillColor(isAccent ? BRAND.terracotta : BRAND.cream);
+    doc.setDrawColor(isAccent ? BRAND.terracotta : BRAND.creamDark);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(cursorX, cursorY - height + padY, pillW, height, 1, 1, 'FD');
+    doc.setTextColor(isAccent ? BRAND.cream : BRAND.brown);
+    doc.text(label, cursorX + padX, cursorY - 0.6);
+    cursorX += pillW + gap;
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nextY = (doc as any).lastAutoTable?.finalY ?? bodyY + 10;
-  return nextY + 10;
+  return cursorY;
+}
+
+/**
+ * Measure the final height of a look card so sibling cards on the
+ * same row can share a consistent height.
+ */
+function measureCardHeight(
+  doc: jsPDF,
+  look: LookbookCharacterEntry['looks'][number],
+  sceneNumbers: number[],
+  cardW: number,
+): number {
+  const inner = cardW - 8;
+  let h = 5; // top padding
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  h += doc.getTextDimensions(look.name, { maxWidth: inner }).h + 1.5;
+
+  if (look.description) {
+    doc.setFont('times', 'italic');
+    doc.setFontSize(9);
+    h += doc.getTextDimensions(look.description, { maxWidth: inner }).h + 1;
+  }
+
+  h += 2.5; // teal rule margin
+
+  for (const value of [look.hair, look.makeup, look.wardrobe]) {
+    if (!value) continue;
+    // Label line
+    h += 3.4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    h += doc.getTextDimensions(value, { maxWidth: inner }).h + 1.5;
+  }
+
+  if (sceneNumbers.length > 0) {
+    h += 5.5; // scene strip
+  }
+
+  return h + 5; // bottom padding
+}
+
+function drawLookCard(
+  doc: jsPDF,
+  look: LookbookCharacterEntry['looks'][number],
+  sceneNumbers: number[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  // Card background + border
+  doc.setFillColor('#FFFFFF');
+  doc.setDrawColor(BRAND.creamDark);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, 'FD');
+
+  const innerX = x + 4;
+  const innerW = w - 8;
+  let cursorY = y + 6;
+
+  // Name — bold, uppercase-ish via font
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(BRAND.ink);
+  const nameDim = doc.getTextDimensions(look.name, { maxWidth: innerW });
+  doc.text(look.name, innerX, cursorY, { maxWidth: innerW });
+  cursorY += nameDim.h + 1.5;
+
+  // Description — italic muted
+  if (look.description) {
+    doc.setFont('times', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(BRAND.brownLight);
+    const descDim = doc.getTextDimensions(look.description, { maxWidth: innerW });
+    doc.text(look.description, innerX, cursorY, { maxWidth: innerW });
+    cursorY += descDim.h + 1;
+  }
+
+  // Teal gradient-approximation rule (solid thin line)
+  doc.setDrawColor(BRAND.teal);
+  doc.setLineWidth(0.3);
+  doc.line(innerX, cursorY + 0.5, innerX + 22, cursorY + 0.5);
+  cursorY += 2.5;
+
+  // H / M / W rows — label uppercase teal, value on next line
+  const rows: Array<[string, string]> = [];
+  if (look.hair) rows.push(['HAIR', look.hair]);
+  if (look.makeup) rows.push(['MAKEUP', look.makeup]);
+  if (look.wardrobe) rows.push(['WARDROBE', look.wardrobe]);
+
+  for (const [label, value] of rows) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(BRAND.teal);
+    doc.text(label, innerX, cursorY);
+    cursorY += 3.4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(BRAND.ink);
+    const valDim = doc.getTextDimensions(value, { maxWidth: innerW });
+    doc.text(value, innerX, cursorY, { maxWidth: innerW });
+    cursorY += valDim.h + 1.5;
+  }
+
+  // Scene pills strip (matches on-screen lb-scene-pill)
+  if (sceneNumbers.length > 0) {
+    const labels = sceneNumbers.map((n) => `Sc ${n}`);
+    drawScenePills(doc, innerX, y + h - 3.5, innerW, labels);
+  }
+}
+
+function drawScenePills(doc: jsPDF, x: number, y: number, w: number, labels: string[]): void {
+  const fontSize = 7;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(fontSize);
+  const padX = 2;
+  const padY = 0.8;
+  const height = 3.8;
+  const gap = 1.5;
+  let cursorX = x;
+
+  for (const label of labels) {
+    const textW = doc.getTextWidth(label);
+    const pillW = textW + padX * 2;
+    if (cursorX + pillW > x + w) break; // overflow — drop rest rather than wrap
+    doc.setFillColor('rgba(74, 191, 176, 0.12)' as unknown as string);
+    doc.setFillColor(BRAND.cream);
+    doc.setDrawColor(BRAND.teal);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(cursorX, y - height + padY, pillW, height, 1, 1, 'FD');
+    doc.setTextColor(BRAND.teal);
+    doc.text(label, cursorX + padX, y - 0.8);
+    cursorX += pillW + gap;
+  }
 }
 
 function finalizePDF(doc: jsPDF, projectName: string, footerLeft: string): ExportPreview {
@@ -343,22 +506,15 @@ function addCharacterSlide(
     fontSize: 32,
     color: 'C4522A',
   });
-  const metaLine = characterMetaLine(entry.character);
-  if (metaLine) {
-    slide.addText(metaLine, {
-      x: 0.5,
-      y: 1.3,
-      w: 12.3,
-      h: 0.3,
-      fontFace: 'Helvetica',
-      fontSize: 10,
-      color: '9A8068',
-    });
-  }
+
+  // Pills row (matches the on-screen lb-pill row).
+  const pills = characterPills(entry.character);
+  addPptxPills(slide, pills, 0.5, 1.35, 12.3, { accentFirst: true });
+
   // Teal rule under the header
   slide.addShape(pptx.ShapeType.rect, {
     x: 0.5,
-    y: 1.65,
+    y: 1.72,
     w: 4,
     h: 0.02,
     fill: { color: '4ABFB0' },
@@ -381,7 +537,7 @@ function addCharacterSlide(
 
   // Grid of up to 4 looks — 2 columns × 2 rows
   const gridX = 0.5;
-  const gridY = 1.9;
+  const gridY = 2.0;
   const cardW = 6.2;
   const cardH = 2.6;
   const gapX = 0.3;
@@ -471,7 +627,110 @@ function addCharacterSlide(
       });
       cursor += 0.26;
     }
+
+    // Scene pills along the bottom of the card.
+    const sceneNumbers = entry.scenesByLookId[lk.id] ?? [];
+    if (sceneNumbers.length > 0) {
+      addPptxScenePills(
+        slide,
+        sceneNumbers.map((n) => `Sc ${n}`),
+        x + 0.25,
+        y + cardH - 0.35,
+        cardW - 0.5,
+      );
+    }
   });
+}
+
+/* ── PPTX pill helpers ─────────────────────────────────────── */
+
+function addPptxPills(
+  slide: pptxgen.Slide,
+  labels: string[],
+  startX: number,
+  startY: number,
+  maxWidth: number,
+  opts: { accentFirst?: boolean } = {},
+): void {
+  if (labels.length === 0) return;
+  const height = 0.3;
+  const gap = 0.08;
+  const padX = 0.12;
+  // Estimate width by character count (Helvetica 10pt ≈ 0.075" per char).
+  const charW = 0.075;
+  let cursorX = startX;
+  let cursorY = startY;
+
+  labels.forEach((label, idx) => {
+    const w = Math.max(0.55, label.length * charW + padX * 2);
+    if (cursorX + w > startX + maxWidth) {
+      cursorX = startX;
+      cursorY += height + 0.08;
+    }
+    const isAccent = opts.accentFirst && idx === 0;
+    slide.addShape('roundRect', {
+      x: cursorX,
+      y: cursorY,
+      w,
+      h: height,
+      fill: { color: isAccent ? 'C4522A' : 'F5EFE0' },
+      line: { color: isAccent ? 'C4522A' : 'EDE4D0', width: 0.5 },
+      rectRadius: 0.15,
+    });
+    slide.addText(label, {
+      x: cursorX,
+      y: cursorY,
+      w,
+      h: height,
+      fontFace: 'Helvetica',
+      fontSize: 9,
+      color: isAccent ? 'F5EFE0' : '4A3020',
+      align: 'center',
+      valign: 'middle',
+    });
+    cursorX += w + gap;
+  });
+}
+
+function addPptxScenePills(
+  slide: pptxgen.Slide,
+  labels: string[],
+  startX: number,
+  startY: number,
+  maxWidth: number,
+): void {
+  const height = 0.24;
+  const gap = 0.06;
+  const padX = 0.08;
+  const charW = 0.06;
+  let cursorX = startX;
+
+  for (const label of labels) {
+    const w = Math.max(0.45, label.length * charW + padX * 2);
+    if (cursorX + w > startX + maxWidth) break;
+    slide.addShape('roundRect', {
+      x: cursorX,
+      y: startY,
+      w,
+      h: height,
+      fill: { color: 'F5EFE0' },
+      line: { color: '4ABFB0', width: 0.5 },
+      rectRadius: 0.12,
+    });
+    slide.addText(label, {
+      x: cursorX,
+      y: startY,
+      w,
+      h: height,
+      fontFace: 'Helvetica',
+      bold: true,
+      fontSize: 7,
+      color: '4ABFB0',
+      align: 'center',
+      valign: 'middle',
+    });
+    cursorX += w + gap;
+  }
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
