@@ -457,7 +457,15 @@ export function ScriptBreakdown({ projectId }: Props) {
                   : null;
                 if (preview) setExportPreview(preview);
               }}
-              onExportLookbooks={(format) => console.log('Export lookbooks', format)}
+              onExportLookbooks={async (format) => {
+                const { exportLookbookPDF, exportLookbookPPTX } =
+                  await import('@/utils/export/lookbook');
+                const preview =
+                  format === 'pdf' ? exportLookbookPDF(projectId)
+                  : format === 'pptx' ? await exportLookbookPPTX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
+              }}
               onExportTimeline={async (format) => {
                 const { exportTimelinePDF, exportTimelineXLSX } =
                   await import('@/utils/export/timeline');
