@@ -113,6 +113,53 @@
   background: rgba(var(--a), 0.06);
 }
 
+/* ━━━ Export rows with per-format chips ━━━ */
+
+.tools-export-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 14px;
+}
+.tools-export-row-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-label);
+}
+.tools-export-chips {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.tools-export-chip {
+  padding: 3px 9px;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid rgba(var(--a), 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tools-export-chip:hover {
+  color: var(--accent);
+  border-color: rgba(var(--a), 0.5);
+  background: rgba(var(--a), 0.08);
+}
+.tools-export-chip:active {
+  background: rgba(var(--a), 0.14);
+}
+
 /* ━━━ Drafts Sub-Dropdown (inline within Tools) ━━━ */
 
 .tools-drafts-sub {
