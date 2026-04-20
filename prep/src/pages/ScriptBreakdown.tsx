@@ -152,32 +152,6 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [validSceneId, store, scene]);
 
-  const exportDirectorQueries = useCallback(async () => {
-    const { useDirectorQueriesStore } = await import('@/stores/directorQueriesStore');
-    const store = useDirectorQueriesStore(projectId);
-    const allUnresolved = store.getState().getAllUnresolved();
-    if (allUnresolved.length === 0) {
-      alert('No unresolved director queries to export.');
-      return;
-    }
-    const sceneMap = new Map(ALL_SCENES.map(s => [s.id, s]));
-    const lines = ['DIRECTOR QUERIES', '================', ''];
-    for (const { sceneId, query } of allUnresolved) {
-      const sc = sceneMap.get(sceneId);
-      const sceneLabel = sc ? `SC ${sc.number} — ${sc.intExt}. ${sc.location} — ${sc.dayNight}` : `Scene ${sceneId}`;
-      lines.push(`${sceneLabel}`);
-      lines.push(`  Q: ${query.text}`);
-      lines.push('');
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'director-queries.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [projectId, ALL_SCENES]);
-
   const triggerSave = useCallback(() => {
     setSaveStatus('saving');
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -476,12 +450,14 @@ export function ScriptBreakdown({ projectId }: Props) {
                 if (preview) setExportPreview(preview);
               }}
               onExportBible={(format) => console.log('Export bible', format)}
-              onExportQueries={(format) => {
-                // PDF/XLSX renderers land with the Queries export work;
-                // for now any chip click falls back to the existing TXT
-                // export so clicking is never a dead end.
-                console.log('Export queries', format);
-                exportDirectorQueries();
+              onExportQueries={async (format) => {
+                const { exportQueriesPDF, exportQueriesXLSX } =
+                  await import('@/utils/export/queries');
+                const preview =
+                  format === 'pdf' ? exportQueriesPDF(projectId)
+                  : format === 'xlsx' ? exportQueriesXLSX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
               }}
               drafts={drafts}
               draftsLoading={draftsLoading}
