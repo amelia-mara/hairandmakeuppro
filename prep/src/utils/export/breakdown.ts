@@ -56,7 +56,7 @@ export function exportBreakdownPDF(projectId: string): ExportPreview {
     head: [headers],
     body: rows.length > 0 ? rows : [['—', '—', 'No breakdown data', ...headers.slice(3).map(() => '')]],
     startY: coverY + 2,
-    margin: { left: PAGE.margin, right: PAGE.margin, bottom: 15 },
+    margin: { left: PAGE.margin, right: PAGE.margin, top: 12, bottom: 15 },
     styles: {
       font: 'helvetica',
       fontSize: 8,
@@ -85,34 +85,17 @@ export function exportBreakdownPDF(projectId: string): ExportPreview {
       2: { cellWidth: 28, fontStyle: 'bold' }, // Character
       3: { cellWidth: 26 }, // Look
     },
-    didDrawPage: () => {
-      // Re-draw the header band on each page (page chrome is painted
-      // again at the end of the build via `stampPdfChromeOnAllPages`).
-      doc.setFillColor(BRAND.terracotta);
-      doc.rect(0, 0, pageWidth, 14, 'F');
-    },
   });
 
-  // ── Unified page chrome (header + footer, with correct page totals). ──
-  // Note: we pass the landscape page geometry by temporarily overriding
-  // PAGE; the chrome helper reads PAGE.width/height which are portrait.
-  // We re-paint manually here to respect the landscape layout.
+  // ── Unified page chrome ──
+  // Page 1 gets the full terracotta title band from the cover code
+  // above; subsequent pages stay clean — just the footer rule so the
+  // title-band stamp lands only once per export.
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
-    // Re-stamp header band (autoTable may have covered part of it on
-    // continuation pages).
-    doc.setFillColor(BRAND.terracotta);
-    doc.rect(0, 0, pageWidth, 14, 'F');
-    doc.setTextColor(BRAND.cream);
-    doc.setFont('times', 'italic');
-    doc.setFontSize(13);
-    doc.text(meta.projectName, PAGE.margin, 9);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(SECTION.toUpperCase(), pageWidth - PAGE.margin, 9, { align: 'right' });
 
-    // Footer
+    // Footer (all pages)
     doc.setDrawColor(BRAND.creamDark);
     doc.setLineWidth(0.2);
     doc.line(PAGE.margin, pageHeight - 10, pageWidth - PAGE.margin, pageHeight - 10);
