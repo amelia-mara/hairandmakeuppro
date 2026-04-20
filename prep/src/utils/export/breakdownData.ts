@@ -91,7 +91,9 @@ export function buildBreakdownExport(projectId: string): BreakdownExportPayload 
   const breakdownStore = useBreakdownStore.getState();
   const tagStore = useTagStore.getState();
 
-  const scenes: ParsedSceneData[] = parsed?.scenes ?? [];
+  const scenes: ParsedSceneData[] = [...(parsed?.scenes ?? [])].sort(
+    (a, b) => a.number - b.number,
+  );
   const characters = parsed?.characters ?? [];
   const looks = parsed?.looks ?? [];
 
