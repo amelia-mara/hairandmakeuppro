@@ -28,6 +28,26 @@ export const BRAND = {
   muted: '#9A8068',
 } as const;
 
+/**
+ * Preview payload returned by every renderer. The caller decides what
+ * to do with it — the default flow is to show it in ExportPreviewModal
+ * before triggering a download.
+ */
+export interface ExportPreview {
+  /** Generated file, not yet persisted anywhere. */
+  blob: Blob;
+  /** Suggested filename the Download button uses. */
+  filename: string;
+  /** MIME string — also used to decide whether an iframe preview is viable. */
+  mime: string;
+  /** Section label shown in the modal header (e.g. "Breakdown"). */
+  section: string;
+  /** Short line under the filename — page / sheet / row counts, size, etc. */
+  subtitle: string;
+  /** Format kind for the modal's preview pane routing. */
+  kind: 'pdf' | 'spreadsheet' | 'document' | 'presentation';
+}
+
 /** PDF page geometry (A4 portrait, mm units) and margins. */
 export const PAGE = {
   width: 210,

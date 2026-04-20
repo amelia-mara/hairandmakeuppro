@@ -15,17 +15,17 @@ import {
   BRAND,
   PAGE,
   buildFilename,
-  downloadBlob,
   formatExportDate,
   paintPdfCover,
   stampPdfChromeOnAllPages,
+  type ExportPreview,
 } from './common';
 import { buildBreakdownExport } from './breakdownData';
 
 const SECTION = 'Breakdown';
 
-/** Download the Breakdown as a formatted PDF. */
-export function exportBreakdownPDF(projectId: string): void {
+/** Build a preview-ready PDF payload — caller handles display + download. */
+export function exportBreakdownPDF(projectId: string): ExportPreview {
   const { meta, headers, rows } = buildBreakdownExport(projectId);
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -129,11 +129,21 @@ export function exportBreakdownPDF(projectId: string): void {
   // portrait helpers are re-used by other sections (Bible, Queries).
   void stampPdfChromeOnAllPages;
 
-  doc.save(buildFilename(meta.projectName, SECTION, 'pdf'));
+  const blob = doc.output('blob');
+  const filename = buildFilename(meta.projectName, SECTION, 'pdf');
+  const sizeKb = Math.max(1, Math.round(blob.size / 1024));
+  return {
+    blob,
+    filename,
+    mime: 'application/pdf',
+    section: SECTION,
+    subtitle: `${total} page${total !== 1 ? 's' : ''} · PDF · ${sizeKb} KB`,
+    kind: 'pdf',
+  };
 }
 
-/** Download the Breakdown as a styled XLSX workbook. */
-export function exportBreakdownXLSX(projectId: string): void {
+/** Build a preview-ready XLSX payload — caller handles display + download. */
+export function exportBreakdownXLSX(projectId: string): ExportPreview {
   const { meta, headers, rows } = buildBreakdownExport(projectId);
 
   // Build a top-of-sheet summary block above the headers so Excel users
@@ -161,9 +171,17 @@ export function exportBreakdownXLSX(projectId: string): void {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Breakdown');
 
+  const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const out = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
-  downloadBlob(
-    new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-    buildFilename(meta.projectName, SECTION, 'xlsx'),
-  );
+  const blob = new Blob([out], { type: mime });
+  const filename = buildFilename(meta.projectName, SECTION, 'xlsx');
+  const sizeKb = Math.max(1, Math.round(blob.size / 1024));
+  return {
+    blob,
+    filename,
+    mime,
+    section: SECTION,
+    subtitle: `${rows.length} row${rows.length !== 1 ? 's' : ''} · ${headers.length} columns · XLSX · ${sizeKb} KB`,
+    kind: 'spreadsheet',
+  };
 }

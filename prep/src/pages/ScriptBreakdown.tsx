@@ -20,6 +20,8 @@ import { SceneListPanel } from './script-breakdown/SceneListPanel';
 import { BreakdownFormPanel } from './script-breakdown/breakdown-form/BreakdownFormPanel';
 import { CharacterView } from './script-breakdown/character-view/CharacterView';
 import { ScriptView } from './script-breakdown/script-view/ScriptView';
+import { ExportPreviewModal } from '@/components/ExportPreviewModal';
+import type { ExportPreview } from '@/utils/export/common';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
@@ -39,6 +41,7 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [fontSize, setFontSize] = useState(16);
   const [showLegend, setShowLegend] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
 
@@ -448,8 +451,11 @@ export function ScriptBreakdown({ projectId }: Props) {
               onExportBreakdown={async (format) => {
                 const { exportBreakdownPDF, exportBreakdownXLSX } =
                   await import('@/utils/export/breakdown');
-                if (format === 'pdf') exportBreakdownPDF(projectId);
-                else if (format === 'xlsx') exportBreakdownXLSX(projectId);
+                const preview =
+                  format === 'pdf' ? exportBreakdownPDF(projectId)
+                  : format === 'xlsx' ? exportBreakdownXLSX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
               }}
               onExportLookbooks={(format) => console.log('Export lookbooks', format)}
               onExportTimeline={(format) => console.log('Export timeline', format)}
@@ -575,6 +581,9 @@ export function ScriptBreakdown({ projectId }: Props) {
           }}
         />
       )}
+
+      {/* Export preview — previews PDF in iframe; XLSX/DOCX/PPTX show a summary card. */}
+      <ExportPreviewModal preview={exportPreview} onClose={() => setExportPreview(null)} />
     </div>
   );
 }
