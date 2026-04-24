@@ -307,6 +307,11 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     setExportPreview(await exportLookbookPPTX(projectId));
   }, [projectId]);
 
+  const handleBiblePDF = useCallback(async () => {
+    const { exportBiblePDF } = await import('@/utils/export/bible');
+    setExportPreview(exportBiblePDF(projectId));
+  }, [projectId]);
+
   /* Handle scene click from script panel → scroll breakdown to that scene */
   const handleScriptSceneClick = useCallback((sceneId: string) => {
     setActiveSceneId(sceneId);
@@ -375,7 +380,7 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               <button className="bs-action-btn" onClick={() => { /* future share */ }}>
                 <ShareIcon /> Share
               </button>
-              <button className="bs-action-btn bs-action-btn--primary" onClick={() => { /* Bible export — renderer pending */ }}>
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleBiblePDF}>
                 <ExportIcon /> PDF
               </button>
             </>
