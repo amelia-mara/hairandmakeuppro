@@ -179,7 +179,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
-  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const scenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
   /* Detect time jumps: scenes where the story day differs from the previous scene */
@@ -624,7 +627,10 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
   const sceneRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const parsedData = parsedScriptStore.getParsedData(projectId);
-  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const scenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 
