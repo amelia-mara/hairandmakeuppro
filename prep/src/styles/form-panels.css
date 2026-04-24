@@ -188,8 +188,8 @@
   margin-bottom: 4px;
 }
 .export-preview-filename {
-  font-family: var(--font-display);
-  font-style: italic;
+  font-family: var(--font-sans);
+  font-weight: 700;
   font-size: 1.375rem;
   line-height: 1.2;
   color: var(--text-heading);
@@ -256,8 +256,8 @@
   margin-bottom: 14px;
 }
 .export-preview-placeholder-title {
-  font-family: var(--font-display);
-  font-style: italic;
+  font-family: var(--font-sans);
+  font-weight: 700;
   font-size: 1.125rem;
   color: var(--text-heading);
   margin-bottom: 4px;

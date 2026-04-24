@@ -41,7 +41,7 @@ export function exportBiblePDF(projectId: string): ExportPreview {
 
   const coverY = 30;
   doc.setTextColor(BRAND.ink);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(32);
   doc.text('Bible', PAGE.margin, coverY);
 
@@ -110,7 +110,7 @@ function paintTopBand(doc: jsPDF, projectName: string): void {
   doc.setFillColor(BRAND.terracotta);
   doc.rect(0, 0, PAGE.width, 14, 'F');
   doc.setTextColor(BRAND.cream);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.text(projectName, PAGE.margin, 9);
   doc.setFont('helvetica', 'normal');
@@ -161,7 +161,7 @@ function drawSectionHeader(doc: jsPDF, num: string, title: string, y: number): n
   doc.setFontSize(8);
   doc.setTextColor(BRAND.terracotta);
   doc.text(num, PAGE.margin, safeY);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(16);
   doc.setTextColor(BRAND.ink);
   doc.text(title, PAGE.margin + 8, safeY);
@@ -185,7 +185,7 @@ function drawTealRule(doc: jsPDF, y: number): number {
 
 function drawPlaceholder(doc: jsPDF, text: string, y: number): number {
   const safeY = ensurePageSpace(doc, y, 14);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(10);
   doc.setTextColor(BRAND.muted);
   doc.text(text, PAGE.margin, safeY + 4);
@@ -441,7 +441,7 @@ function drawCharacterProfile(
   doc.setFontSize(9);
   doc.text(characterInitials(entry.character.name), avatarX, avatarY + 1.8, { align: 'center' });
 
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(16);
   doc.setTextColor(BRAND.terracotta);
   doc.text(entry.character.name, PAGE.margin + avatarSize + 5, safeY + 5);

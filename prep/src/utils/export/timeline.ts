@@ -33,7 +33,7 @@ export function exportTimelinePDF(projectId: string): ExportPreview {
   doc.setFillColor(BRAND.terracotta);
   doc.rect(0, 0, pageWidth, 14, 'F');
   doc.setTextColor(BRAND.cream);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.text(meta.projectName, PAGE.margin, 9);
   doc.setFont('helvetica', 'normal');
@@ -43,7 +43,7 @@ export function exportTimelinePDF(projectId: string): ExportPreview {
   // ── Cover ──
   const coverY = 30;
   doc.setTextColor(BRAND.ink);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(28);
   doc.text('Timeline', PAGE.margin, coverY);
 
@@ -69,7 +69,7 @@ export function exportTimelinePDF(projectId: string): ExportPreview {
 
   // ── Empty state ──
   if (!meta.hasSchedule) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(13);
     doc.setTextColor(BRAND.muted);
     doc.text('No shooting schedule has been uploaded for this project yet.', PAGE.margin, coverY + 30);
@@ -98,7 +98,7 @@ function drawCastList(
   castList: ReturnType<typeof buildTimelineExport>['castList'],
   startY: number,
 ): number {
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(14);
   doc.setTextColor(BRAND.ink);
   doc.text('Cast List', PAGE.margin, startY);
@@ -159,7 +159,7 @@ function drawDayBlock(
   doc.setLineWidth(0.6);
   doc.line(PAGE.margin, startY - 2, PAGE.width - PAGE.margin, startY - 2);
 
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(16);
   doc.setTextColor(BRAND.terracotta);
   doc.text(`Day ${day.dayNumber}`, PAGE.margin, startY + 5);
@@ -196,7 +196,7 @@ function drawDayBlock(
   ]);
 
   if (scenesBody.length === 0) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(BRAND.muted);
     doc.text('No scenes scheduled for this day.', PAGE.margin + 2, metaY + 6);

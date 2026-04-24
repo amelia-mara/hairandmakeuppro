@@ -37,7 +37,7 @@ export function exportQueriesPDF(projectId: string): ExportPreview {
   doc.setFillColor(BRAND.terracotta);
   doc.rect(0, 0, pageWidth, 14, 'F');
   doc.setTextColor(BRAND.cream);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.text(meta.projectName, PAGE.margin, 9);
   doc.setFont('helvetica', 'normal');
@@ -47,7 +47,7 @@ export function exportQueriesPDF(projectId: string): ExportPreview {
   // ── Cover ──
   const coverY = 30;
   doc.setTextColor(BRAND.ink);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(28);
   doc.text('Director Queries', PAGE.margin, coverY);
 
@@ -61,7 +61,7 @@ export function exportQueriesPDF(projectId: string): ExportPreview {
   );
 
   if (meta.totalCount === 0) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(13);
     doc.setTextColor(BRAND.muted);
     doc.text('No director queries logged for this project yet.', PAGE.margin, coverY + 30);
@@ -85,7 +85,7 @@ function drawSceneGroup(doc: jsPDF, group: QueryExportGroup, startY: number): nu
   }
 
   // Scene header — italic serif terracotta
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(14);
   doc.setTextColor(BRAND.terracotta);
   doc.text(group.sceneHeader, PAGE.margin, startY + 4);
