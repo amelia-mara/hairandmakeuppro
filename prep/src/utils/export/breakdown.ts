@@ -38,7 +38,7 @@ export function exportBreakdownPDF(projectId: string): ExportPreview {
   doc.setFillColor(BRAND.terracotta);
   doc.rect(0, 0, pageWidth, 14, 'F');
   doc.setTextColor(BRAND.cream);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.text(meta.projectName, PAGE.margin, 9);
   doc.setFont('helvetica', 'normal');

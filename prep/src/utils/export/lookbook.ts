@@ -40,7 +40,7 @@ export function exportLookbookPDF(projectId: string): ExportPreview {
   doc.setFillColor(BRAND.terracotta);
   doc.rect(0, 0, pageWidth, 14, 'F');
   doc.setTextColor(BRAND.cream);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.text(meta.projectName, PAGE.margin, 9);
   doc.setFont('helvetica', 'normal');
@@ -50,7 +50,7 @@ export function exportLookbookPDF(projectId: string): ExportPreview {
   // ── Cover ──
   const coverY = 30;
   doc.setTextColor(BRAND.ink);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(28);
   doc.text('Lookbook', PAGE.margin, coverY);
 
@@ -64,7 +64,7 @@ export function exportLookbookPDF(projectId: string): ExportPreview {
   );
 
   if (characters.length === 0) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(13);
     doc.setTextColor(BRAND.muted);
     doc.text('No characters yet for this project.', PAGE.margin, coverY + 30);
@@ -100,7 +100,7 @@ function drawCharacterSection(
     startY = 18;
   }
 
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(18);
   doc.setTextColor(BRAND.terracotta);
   doc.text(character.name.toUpperCase(), PAGE.margin, startY + 4);
@@ -120,7 +120,7 @@ function drawCharacterSection(
   let cursorY = pillsEndY + 5;
 
   if (looks.length === 0) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(BRAND.muted);
     doc.text('No looks assigned yet.', PAGE.margin, cursorY + 3);
@@ -212,7 +212,7 @@ function measureCardHeight(
   h += doc.getTextDimensions(look.name, { maxWidth: inner }).h + 1.5;
 
   if (look.description) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
     h += doc.getTextDimensions(look.description, { maxWidth: inner }).h + 1;
   }
@@ -264,7 +264,7 @@ function drawLookCard(
 
   // Description — italic muted
   if (look.description) {
-    doc.setFont('times', 'italic');
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
     doc.setTextColor(BRAND.brownLight);
     const descDim = doc.getTextDimensions(look.description, { maxWidth: innerW });
@@ -386,7 +386,7 @@ export async function exportLookbookPPTX(projectId: string): Promise<ExportPrevi
     y: 0.15,
     w: 12,
     h: 0.6,
-    fontFace: 'Times New Roman',
+    fontFace: 'DM Sans',
     italic: true,
     fontSize: 22,
     color: 'F5EFE0',
@@ -406,7 +406,7 @@ export async function exportLookbookPPTX(projectId: string): Promise<ExportPrevi
     y: 2.2,
     w: 12,
     h: 1.6,
-    fontFace: 'Times New Roman',
+    fontFace: 'DM Sans',
     italic: true,
     fontSize: 60,
     color: '2A2013',
@@ -478,7 +478,7 @@ function addCharacterSlide(
     y: 0.04,
     w: 8,
     h: 0.42,
-    fontFace: 'Times New Roman',
+    fontFace: 'DM Sans',
     italic: true,
     fontSize: 14,
     color: 'F5EFE0',
@@ -501,7 +501,7 @@ function addCharacterSlide(
     y: 0.7,
     w: 12.3,
     h: 0.6,
-    fontFace: 'Times New Roman',
+    fontFace: 'DM Sans',
     italic: true,
     fontSize: 32,
     color: 'C4522A',
@@ -527,7 +527,7 @@ function addCharacterSlide(
       y: 3.5,
       w: 12.3,
       h: 0.5,
-      fontFace: 'Times New Roman',
+      fontFace: 'DM Sans',
       italic: true,
       fontSize: 16,
       color: '9A8068',
@@ -579,7 +579,7 @@ function addCharacterSlide(
         y: cursor,
         w: cardW - 0.5,
         h: 0.4,
-        fontFace: 'Times New Roman',
+        fontFace: 'DM Sans',
         italic: true,
         fontSize: 11,
         color: '7A5C3A',

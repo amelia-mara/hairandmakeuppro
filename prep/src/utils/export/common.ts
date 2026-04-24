@@ -113,7 +113,7 @@ export function paintPdfChrome(doc: jsPDF, page: number, total: number, opts: Pd
   doc.setFillColor(BRAND.terracotta);
   doc.rect(0, 0, PAGE.width, 14, 'F');
   doc.setTextColor(BRAND.cream);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.text(projectName, PAGE.margin, 9);
   doc.setFont('helvetica', 'normal');
@@ -152,7 +152,7 @@ export function stampPdfChromeOnAllPages(doc: jsPDF, opts: PdfChromeOptions): vo
 export function paintPdfCover(doc: jsPDF, title: string, subtitle: string | undefined): number {
   const topY = 30;
   doc.setTextColor(BRAND.ink);
-  doc.setFont('times', 'italic');
+  doc.setFont('helvetica', 'italic');
   doc.setFontSize(28);
   doc.text(title, PAGE.margin, topY);
 
