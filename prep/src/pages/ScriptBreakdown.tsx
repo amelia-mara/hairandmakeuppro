@@ -449,7 +449,14 @@ export function ScriptBreakdown({ projectId }: Props) {
                   : null;
                 if (preview) setExportPreview(preview);
               }}
-              onExportBible={(format) => console.log('Export bible', format)}
+              onExportBible={async (format) => {
+                if (format !== 'pdf') {
+                  console.log('Export bible', format);
+                  return;
+                }
+                const { exportBiblePDF } = await import('@/utils/export/bible');
+                setExportPreview(exportBiblePDF(projectId));
+              }}
               onExportQueries={async (format) => {
                 const { exportQueriesPDF, exportQueriesXLSX } =
                   await import('@/utils/export/queries');
