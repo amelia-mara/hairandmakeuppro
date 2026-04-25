@@ -240,6 +240,26 @@
   color: #E8621A;
 }
 
+/* In-script change highlight — applied per word/phrase only when the
+   scene has unreviewed revisions. Disappears once the user clicks
+   "✓ Reviewed" (the parent stops passing revisedDiff). Tone matches
+   the brand terracotta accent so the highlight reads as an inline
+   "edited" marker rather than as red-pen criticism. */
+.sv-changed {
+  background: rgba(196, 82, 42, 0.18);
+  color: #C4522A;
+  border-radius: 2px;
+  padding: 0 2px;
+  margin: 0 -2px;
+  box-shadow: inset 0 -2px 0 0 #C4522A;
+}
+.sv-cue .sv-changed,
+.sv-dialogue .sv-changed {
+  /* Cues and dialogue lines already centre or shift, keep the box
+     visible without bleeding into the line above. */
+  box-shadow: inset 0 -2px 0 0 #C4522A;
+}
+
 /* Scene page break gap */
 .sv-paper + .sv-paper {
   margin-top: 20px;
