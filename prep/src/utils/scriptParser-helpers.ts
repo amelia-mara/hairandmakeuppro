@@ -57,7 +57,14 @@ export function parseSceneHeadingLine(line: string): ParsedSceneHeading {
     workingLine = workingLine.slice(0, -trailingMatch[0].length).trim();
   }
 
-  const intExtPattern = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.?|EXT\.?)\s*/i;
+  // INT / EXT detection. Crucially, the bare "INT" / "EXT" forms (no
+  // trailing period) require a non-letter boundary after them — without
+  // this lookahead, the parser was matching the "INT" inside words like
+  // "INTERVIEWER" or "EXTERIOR" and treating those lines as scene
+  // headings (location "ERVIEWER", "ERIOR", etc.). The bug duplicated
+  // scene numbers and silently sliced surrounding action / dialogue
+  // into phantom scenes.
+  const intExtPattern = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.|EXT\.|INT(?=\s|[-–—/]|$)|EXT(?=\s|[-–—/]|$))\s*/i;
   const intExtMatch = workingLine.match(intExtPattern);
 
   if (!intExtMatch) return invalidResult;
