@@ -125,7 +125,21 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [validSceneId, selectedSceneId]);
 
   const scene = ALL_SCENES.find((s) => s.id === validSceneId);
-  const sceneCharacters = scene ? scene.characterIds.map((id) => ALL_CHARACTERS.find((c) => c.id === id)).filter((c): c is Character => !!c) : [];
+  // Sort the scene's characters by billing ascending — leads (1st)
+  // first, then 2nd, 3rd, etc. — so the chip row and the per-character
+  // blocks below mirror the project's overall billing order rather than
+  // the parser's discovery order. Characters without a billing (or 0)
+  // sink to the end so principal leads are always at the top.
+  const sceneCharacters = scene
+    ? scene.characterIds
+        .map((id) => ALL_CHARACTERS.find((c) => c.id === id))
+        .filter((c): c is Character => !!c)
+        .sort((a, b) => {
+          const ba = a.billing && a.billing > 0 ? a.billing : Number.POSITIVE_INFINITY;
+          const bb = b.billing && b.billing > 0 ? b.billing : Number.POSITIVE_INFINITY;
+          return ba - bb;
+        })
+    : [];
   const scenePrincipals = sceneCharacters.filter((c) => c.category !== 'supporting_artist');
   const sceneSupportingArtists = sceneCharacters.filter((c) => c.category === 'supporting_artist');
   const breakdown = store.getBreakdown(validSceneId);
