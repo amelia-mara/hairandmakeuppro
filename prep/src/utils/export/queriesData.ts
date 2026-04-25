@@ -1,53 +1,65 @@
 /**
  * Pure data extractor for the Director Queries export (PDF + XLSX).
  *
- * Flattens the per-scene queries map into a scene-ordered array with
- * the surrounding scene context (SC N · INT. LOCATION · DAY etc.).
- * Includes both resolved and unresolved queries — downstream
- * renderers decide how to visually distinguish them.
+ * Pulls every non-empty Notes & Queries entry from the Script
+ * Breakdown panel — the pinned "Notes" textarea at the top of each
+ * scene's breakdown — and pairs it with the scene's heading + the
+ * synopsis from useSynopsisStore. This is the same data the on-screen
+ * 🚩 query indicator surfaces on the scene list, just exported.
+ *
+ * Notes are persisted to localStorage under
+ * `prep-scene-notes-${projectId}` as a record keyed by scene id with
+ * `{ text, flagged }`. We sort flagged scenes first, then by scene
+ * number — so the urgent stuff is at the top of the document.
  */
 
 import {
   useParsedScriptStore,
+  useSynopsisStore,
   type ParsedSceneData,
 } from '@/stores/breakdownStore';
-import {
-  useDirectorQueriesStore,
-  type DirectorQuery,
-} from '@/stores/directorQueriesStore';
 import { useProjectStore } from '@/stores/projectStore';
 
 export interface QueryExportMeta {
   projectName: string;
   generatedAt: Date;
   totalCount: number;
-  unresolvedCount: number;
-  resolvedCount: number;
+  flaggedCount: number;
+  unflaggedCount: number;
 }
 
 export interface QueryExportEntry {
   sceneId: string;
   sceneNumber: number;
+  sceneHeader: string;
   intExt: 'INT' | 'EXT' | '';
   location: string;
   dayNight: string;
   storyDay: string;
-  query: DirectorQuery;
-}
-
-export interface QueryExportGroup {
-  sceneId: string;
-  sceneNumber: number;
-  sceneHeader: string;
-  queries: DirectorQuery[];
+  synopsis: string;
+  noteText: string;
+  flagged: boolean;
 }
 
 export interface QueryExportPayload {
   meta: QueryExportMeta;
-  /** Flat rows for the XLSX sheet. */
   entries: QueryExportEntry[];
-  /** Scene-grouped structure for the PDF rendering. */
-  groups: QueryExportGroup[];
+}
+
+interface SceneNoteEntry {
+  text: string;
+  flagged: boolean;
+}
+
+function readSceneNotes(projectId: string): Record<string, SceneNoteEntry> {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(`prep-scene-notes-${projectId}`);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, SceneNoteEntry>;
+  } catch { /* corrupt JSON — treat as empty */ }
+  return {};
 }
 
 function makeSceneHeader(s: ParsedSceneData): string {
@@ -61,87 +73,52 @@ function makeSceneHeader(s: ParsedSceneData): string {
 export function buildQueriesExport(projectId: string): QueryExportPayload {
   const project = useProjectStore.getState().getProject(projectId);
   const parsed = useParsedScriptStore.getState().getParsedData(projectId);
-  const queriesStore = useDirectorQueriesStore(projectId).getState();
+  const synopsisStore = useSynopsisStore.getState();
+  const notesByScene = readSceneNotes(projectId);
 
   const scenes = [...(parsed?.scenes ?? [])].sort((a, b) => a.number - b.number);
-  const sceneById = new Map(scenes.map((s) => [s.id, s]));
 
-  const groups: QueryExportGroup[] = [];
   const entries: QueryExportEntry[] = [];
-  let resolvedCount = 0;
-  let unresolvedCount = 0;
+  let flaggedCount = 0;
+  let unflaggedCount = 0;
 
-  // Walk scenes in numeric order, then any orphan queries (scenes not
-  // in the parsed set — e.g. mock sceneIds).
-  const seenSceneIds = new Set<string>();
   for (const scene of scenes) {
-    const queries = queriesStore.getQueries(scene.id);
-    if (queries.length === 0) continue;
-    seenSceneIds.add(scene.id);
-    const header = makeSceneHeader(scene);
-    groups.push({
+    const note = notesByScene[scene.id];
+    if (!note) continue;
+    const text = (note.text || '').trim();
+    if (!text) continue;
+    const flagged = !!note.flagged;
+    if (flagged) flaggedCount++;
+    else unflaggedCount++;
+    const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis || '');
+    entries.push({
       sceneId: scene.id,
       sceneNumber: scene.number,
-      sceneHeader: header,
-      queries: [...queries].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      ),
+      sceneHeader: makeSceneHeader(scene),
+      intExt: scene.intExt,
+      location: scene.location,
+      dayNight: scene.dayNight,
+      storyDay: scene.storyDay,
+      synopsis: synopsis.trim(),
+      noteText: text,
+      flagged,
     });
-    for (const query of queries) {
-      if (query.resolved) resolvedCount++;
-      else unresolvedCount++;
-      entries.push({
-        sceneId: scene.id,
-        sceneNumber: scene.number,
-        intExt: scene.intExt,
-        location: scene.location,
-        dayNight: scene.dayNight,
-        storyDay: scene.storyDay,
-        query,
-      });
-    }
   }
 
-  // Orphan queries — the scene record isn't available (happens for mock
-  // sceneIds). Tack them on at the end so nothing is lost.
-  const allQueries = queriesStore.queries;
-  for (const [sceneId, queries] of Object.entries(allQueries)) {
-    if (seenSceneIds.has(sceneId) || queries.length === 0) continue;
-    groups.push({
-      sceneId,
-      sceneNumber: Number.POSITIVE_INFINITY,
-      sceneHeader: `Scene ${sceneId.slice(0, 8)}`,
-      queries: [...queries].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      ),
-    });
-    for (const query of queries) {
-      if (query.resolved) resolvedCount++;
-      else unresolvedCount++;
-      entries.push({
-        sceneId,
-        sceneNumber: 0,
-        intExt: '',
-        location: '',
-        dayNight: '',
-        storyDay: '',
-        query,
-      });
-    }
-    void sceneById; // retained — future work may annotate the orphan entry
-  }
-
-  const totalCount = resolvedCount + unresolvedCount;
+  // Flagged scenes first, then by scene number ascending.
+  entries.sort((a, b) => {
+    if (a.flagged !== b.flagged) return a.flagged ? -1 : 1;
+    return a.sceneNumber - b.sceneNumber;
+  });
 
   return {
     meta: {
       projectName: project?.title || 'Untitled Project',
       generatedAt: new Date(),
-      totalCount,
-      unresolvedCount,
-      resolvedCount,
+      totalCount: entries.length,
+      flaggedCount,
+      unflaggedCount,
     },
     entries,
-    groups,
   };
 }
