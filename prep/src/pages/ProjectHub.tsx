@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { deleteProjectFromSupabase } from '@/services/projectService';
@@ -29,6 +29,15 @@ interface ProjectHubProps {
 export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth }: ProjectHubProps) {
   const projects = useProjectStore((s) => s.projects);
   const deleteProject = useProjectStore((s) => s.deleteProject);
+
+  // Newest first — keeps the most recent project sitting next to the
+  // "+ New Project" card. createdAt is an ISO timestamp so the
+  // lexicographic sort is correct; falls back to lastActive when
+  // createdAt is missing on legacy entries.
+  const sortedProjects = useMemo(() => {
+    const ts = (p: typeof projects[number]) => p.createdAt || p.lastActive || '';
+    return [...projects].sort((a, b) => ts(b).localeCompare(ts(a)));
+  }, [projects]);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -85,7 +94,7 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
               </span>
             </button>
 
-            {projects.map((project) => {
+            {sortedProjects.map((project) => {
               const Icon = TYPE_ICONS[project.type as ProjectType] || Film;
               return (
                 <button

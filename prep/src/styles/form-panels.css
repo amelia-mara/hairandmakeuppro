@@ -395,6 +395,31 @@
   background: rgba(212, 148, 58, 0.08);
 }
 
+/* Delete button on the drafts row — same size as the eye, terracotta on
+   hover so the destructive intent reads at a glance. Only renders when
+   the draft is not currently active (deleting the active draft would
+   orphan its breakdown / synopses / story-day data). */
+.tools-draft-trash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: none;
+  border: 1px solid rgba(196, 82, 42, 0.18);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.tools-draft-trash:hover {
+  color: var(--brand-terracotta);
+  border-color: rgba(196, 82, 42, 0.5);
+  background: rgba(196, 82, 42, 0.08);
+}
+
 .tools-draft-spinner {
   width: 14px;
   height: 14px;
