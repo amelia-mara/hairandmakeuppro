@@ -6,6 +6,40 @@
  * causing false positives when scanning for first/last name mentions.
  * e.g. A character named "Will Grace" should not match every "will" or "grace" in the script.
  */
+/**
+ * Single-word common nouns the screenplay parser should never treat as
+ * a character — transitions, sound effects, sensory beats, weather,
+ * elemental words, etc. Used both inside `isCharacterCue` and as a
+ * final-pass denylist in `scriptParser-core.ts` so any one-word
+ * character that slips past the upstream filters is dropped before the
+ * project loads.
+ */
+export const NON_CHARACTER_SINGLE_WORDS = new Set([
+  // Transitions / scene directions
+  'CUT', 'FADE', 'DISSOLVE', 'INTERCUT', 'MONTAGE', 'CONTINUED',
+  'ANGLE', 'SHOT', 'VIEW', 'CLOSE', 'WIDE', 'POV', 'BACK', 'RESUME',
+  'BEGIN', 'END', 'STOP', 'START', 'PAUSE', 'BEAT', 'PRELAP', 'OVERLAP',
+  // Sound / sensory beats
+  'SOUND', 'NOISE', 'MUSIC', 'VOICE', 'WHISPER', 'SCREAM', 'ECHO',
+  'SILENCE', 'LIGHT', 'DARKNESS', 'SHADOW',
+  // Weather + elements + ambient
+  'RAIN', 'WIND', 'SNOW', 'FOG', 'MIST', 'HAIL', 'SLEET', 'BREEZE',
+  'THUNDER', 'LIGHTNING', 'STORM', 'EXPLOSION', 'CRASH', 'BANG', 'BOOM',
+  'WATER', 'WAVES', 'OCEAN', 'SEA', 'RIVER', 'LAKE', 'STREAM',
+  'AIR', 'EARTH', 'GROUND', 'SKY', 'SUN', 'MOON', 'STARS', 'CLOUD',
+  'FIRE', 'SMOKE', 'DUST', 'SAND', 'MUD', 'ICE', 'BLOOD',
+  // Time + place markers
+  'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON', 'DAWN', 'DUSK',
+  'LATER', 'CONTINUOUS', 'MIDNIGHT', 'NOON', 'TWILIGHT', 'SUNRISE', 'SUNSET',
+  'INT', 'EXT', 'ROOM', 'HOUSE', 'OFFICE', 'STREET', 'ROAD', 'BUILDING',
+  // Generic abstractions
+  'TIME', 'SPACE', 'PLACE', 'HOME', 'WORLD', 'LIFE', 'DEATH', 'LOVE',
+  'HATE', 'FEAR', 'HOPE', 'TRUTH', 'POWER',
+  // Title-card markers
+  'TITLE', 'SUBTITLE', 'CAPTION', 'CHAPTER', 'PART', 'ACT', 'SCENE',
+  'EPISODE', 'PILOT', 'CREDIT', 'CREDITS',
+]);
+
 export const NAME_SCAN_EXCLUSIONS = new Set([
   // Pronouns & determiners
   'HER', 'HIS', 'HERS', 'ITS', 'THEY', 'THEM', 'THEIR',
@@ -245,15 +279,15 @@ export function isCharacterCue(line: string): boolean {
 
   const nonCharPatterns = [
     /^\[?(INT\.|EXT\.|INT\/EXT|EXT\/INT|I\/E\.)/i,
-    /^\[?(CUT TO|FADE|DISSOLVE|SMASH|MATCH|WIPE)\]?(\s|$)/i,
-    /^\[?(THE END|CONTINUED|MORE|\(MORE\))\]?(\s|$)/i,
+    /^\[?(CUT TO|FADE|DISSOLVE|SMASH|MATCH|WIPE)\]?(:|\s|$)/i,
+    /^\[?(THE END|CONTINUED|MORE|\(MORE\))\]?(:|\s|$)/i,
     /^\d+\s*$/,
     /^\s*$/,
     /^\[?(TITLE:|SUPER:|CHYRON:|CARD:|INSERT:|INTERCUT)\]?(\s|$)/i,
-    /^\[?(FLASHBACK|END FLASHBACK|FLASH BACK|FLASH FORWARD|DREAM SEQUENCE|DREAM|MONTAGE|END MONTAGE|INTERCUT|END INTERCUT|PRESENT DAY|PRESENT|LATER|TIME CUT|TITLE CARD)\]?(\s|$)/i,
-    /^\[?(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)\]?(\s|$)/i,
-    /^\[?(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)\]?(\s|$)/i,
-    /^\[?(SUPERIMPOSE|SUBTITLE|CAPTION)\]?(\s|$)/i,
+    /^\[?(FLASHBACK|END FLASHBACK|FLASH BACK|FLASH FORWARD|DREAM SEQUENCE|DREAM|MONTAGE|END MONTAGE|INTERCUT|END INTERCUT|PRESENT DAY|PRESENT|LATER|TIME CUT|TITLE CARD)\]?(:|\s|$)/i,
+    /^\[?(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)\]?(:|\s|$)/i,
+    /^\[?(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)\]?(:|\s|$)/i,
+    /^\[?(SUPERIMPOSE|SUBTITLE|CAPTION)\]?(:|\s|$)/i,
     /^\[?(EPISODE|CHAPTER|PART|ACT|SCENE|PILOT)\]?\s*\d*\s*$/i,
   ];
 
@@ -304,6 +338,13 @@ export function isCharacterCue(line: string): boolean {
     'BLOOD', 'FIRE', 'SMOKE', 'DUST', 'SAND', 'MUD', 'ICE',
     'THUNDER', 'LIGHTNING', 'STORM', 'EXPLOSION', 'CRASH', 'BANG', 'BOOM',
     'SCREAM', 'WHISPER', 'ECHO', 'VOICE', 'SOUND', 'NOISE', 'MUSIC',
+    // Weather, elemental and ambient sound cues — these recur in scripts
+    // as ALL-CAPS sensory beats ("RAIN batters her face") and slip past
+    // the general filter without an explicit denylist entry.
+    'RAIN', 'WIND', 'SNOW', 'FOG', 'MIST', 'HAIL', 'SLEET', 'BREEZE',
+    'WATER', 'WAVES', 'OCEAN', 'SEA', 'RIVER', 'LAKE', 'STREAM',
+    'AIR', 'EARTH', 'GROUND', 'SKY', 'SUN', 'MOON', 'STARS', 'CLOUD',
+    'SHADOW', 'LIGHT', 'DARKNESS',
     'CONTINUED', 'FADE', 'CUT', 'DISSOLVE', 'ANGLE', 'SHOT', 'VIEW', 'CLOSE', 'WIDE',
     'RESUME', 'BEGIN', 'END', 'STOP', 'START', 'PAUSE', 'BEAT',
     'PRELAP', 'OVERLAP', 'INTERCUT', 'MONTAGE', 'SERIES', 'SEQUENCE',
