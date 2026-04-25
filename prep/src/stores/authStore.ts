@@ -63,11 +63,26 @@ function supabaseToLocal(sp: SupabaseProject) {
 
 /** Fetch user's projects from Supabase and merge into the project store. */
 async function hydrateProjects(userId: string) {
-  const { projects: sbProjects } = await loadUserProjects(userId);
-  if (sbProjects.length === 0) return;
+  const { projects: sbProjects, error: loadError } = await loadUserProjects(userId);
+  // Bail on network/RLS errors — `loadUserProjects` returns
+  // { projects: [], error } when it fails, and reconciling against
+  // an empty list would wipe every locally-cached project.
+  if (loadError) return;
 
   const store = useProjectStore.getState();
+  const sbIds = new Set(sbProjects.map((p) => p.id));
   const existingIds = new Set(store.projects.map((p) => p.id));
+
+  // Reconcile: drop any local project that Supabase no longer returns
+  // (deleted in another app, soft-deleted via pending_deletion_at, or
+  // membership revoked). Without this step, prep keeps stale entries
+  // forever in localStorage even after mobile deletes the project.
+  const stale = store.projects.filter((p) => !sbIds.has(p.id));
+  for (const p of stale) {
+    useProjectStore.getState().deleteProject(p.id);
+  }
+
+  if (sbProjects.length === 0) return;
 
   // Merge: keep any local projects that already exist, add new ones from Supabase
   const newProjects = sbProjects
@@ -76,14 +91,14 @@ async function hydrateProjects(userId: string) {
 
   if (newProjects.length > 0) {
     useProjectStore.setState({
-      projects: [...store.projects, ...newProjects],
+      projects: [...useProjectStore.getState().projects, ...newProjects],
     });
   }
 
   // Update existing projects with Supabase data (restores metadata after re-login)
   const existingFromSupa = sbProjects.filter((sp) => existingIds.has(sp.id));
   for (const sp of existingFromSupa) {
-    const local = store.projects.find((p) => p.id === sp.id);
+    const local = useProjectStore.getState().getProject(sp.id);
     if (!local) continue;
     useProjectStore.getState().updateProject(sp.id, {
       title: sp.name,
