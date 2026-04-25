@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+import { diffWords } from 'diff';
 import type { Character, Scene, ScriptTag } from '@/stores/breakdownStore';
 import { BREAKDOWN_CATEGORIES } from '@/stores/breakdownStore';
 import { buildTaggedSegments } from '@/utils/buildTaggedSegments';
@@ -96,6 +98,14 @@ interface RenderSceneContentParams {
   highlightCharNames: (text: string, keyPrefix: string) => React.ReactNode;
   handleTagClick: (e: React.MouseEvent, sceneId: string, tagIds: string[]) => void;
   sceneTags: ScriptTag[];
+  /**
+   * When the active scene has unreviewed script revisions, the parent
+   * passes the old + new script bodies so this renderer can highlight
+   * the words that changed in terracotta. Tag overlays are skipped
+   * while review-mode is active (they reappear once the user marks the
+   * scene reviewed and `isSceneRevised` becomes false).
+   */
+  revisedDiff?: { oldContent: string; newContent: string } | null;
 }
 
 /** Strip parentheticals from a line to get the bare cue name */
@@ -120,6 +130,7 @@ export function renderSceneContent({
   highlightCharNames: highlight,
   handleTagClick,
   sceneTags,
+  revisedDiff,
 }: RenderSceneContentParams): React.ReactNode[] {
   const lines = scene.scriptContent.split('\n');
 
@@ -148,6 +159,42 @@ export function renderSceneContent({
         dialogueSet.add(i);
       }
     }
+  }
+
+  /* Revision review — highlight changed words in terracotta. Tag overlays
+     are temporarily replaced by diff highlights so the user can spot the
+     edits at a glance; once the scene is marked reviewed (isSceneRevised
+     flips to false), the parent stops passing `revisedDiff` and the
+     normal rendering path returns. */
+  if (revisedDiff) {
+    const linesWithDiff = buildDiffLines(
+      revisedDiff.oldContent,
+      revisedDiff.newContent,
+      lines.length,
+    );
+    return linesWithDiff.map((segs, i) => {
+      const lineText = lines[i] ?? '';
+      const trimmed = lineText.trim();
+      const ch = cueCharMap.get(i);
+      const baseClass = ch
+        ? 'sv-line sv-cue'
+        : dialogueSet.has(i)
+          ? 'sv-line sv-dialogue'
+          : 'sv-line';
+      const hasContent = segs.some((s) => s.text.trim().length > 0);
+      const onClickProp = ch ? { onClick: () => onCharClick(ch.id) } : {};
+      return (
+        <div key={`${scene.id}-r${i}`} className={baseClass} {...onClickProp}>
+          {hasContent
+            ? segs.map((s, j) =>
+                s.added
+                  ? <span key={j} className="sv-changed">{s.text}</span>
+                  : <Fragment key={j}>{s.text}</Fragment>,
+              )
+            : trimmed}
+        </div>
+      );
+    });
   }
 
   if (sceneTags.length === 0) {
@@ -254,4 +301,54 @@ export function renderSceneContent({
       </div>
     );
   });
+}
+
+/* ─── Word-diff helpers (for revision review) ─── */
+
+interface DiffSegment {
+  added: boolean;
+  text: string;
+}
+
+/**
+ * Word-level diff between the old and new script bodies, split into
+ * lines so the existing per-line layout (cue / dialogue / action)
+ * still applies. Each output entry is one line; each segment in the
+ * line is `{ added, text }` — `added: true` means the words were
+ * inserted by the new draft and should render in terracotta.
+ *
+ * `expectedLineCount` mirrors the line count of `scene.scriptContent`,
+ * which is the same as the new content. We pad / truncate so the
+ * caller can index by line number safely.
+ */
+function buildDiffLines(
+  oldContent: string,
+  newContent: string,
+  expectedLineCount: number,
+): DiffSegment[][] {
+  const parts = diffWords(oldContent || '', newContent || '');
+  // Drop removed segments — we render the new content, not the old.
+  const visible = parts.filter((p) => !p.removed);
+
+  const lines: DiffSegment[][] = [[]];
+  for (const p of visible) {
+    const text = p.value;
+    let cursor = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '\n') {
+        if (cursor < i) {
+          lines[lines.length - 1].push({ added: !!p.added, text: text.slice(cursor, i) });
+        }
+        lines.push([]);
+        cursor = i + 1;
+      }
+    }
+    if (cursor < text.length) {
+      lines[lines.length - 1].push({ added: !!p.added, text: text.slice(cursor) });
+    }
+  }
+
+  while (lines.length < expectedLineCount) lines.push([]);
+  if (lines.length > expectedLineCount) lines.length = expectedLineCount;
+  return lines;
 }
