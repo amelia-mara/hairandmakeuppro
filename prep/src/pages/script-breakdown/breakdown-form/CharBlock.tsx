@@ -28,7 +28,7 @@ import { CostumeBreakdownFields, type CostumeSceneBreakdown } from './CostumeBre
  * Everything else flows through the props received from
  * BreakdownFormPanel.
  */
-export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onSetLook, department, costumeData, onCostumeUpdate }: {
+export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onUpdateLookField, department, costumeData, onCostumeUpdate }: {
   char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -40,13 +40,28 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
   sceneId: string;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
-  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
+  /**
+   * Called when the user types into hair / makeup / wardrobe and a
+   * look is currently selected. Updates the look's saved value so the
+   * next scene that selects the same look auto-fills the latest text.
+   * Replaces the old explicit "Set Look" button — the look is kept
+   * in sync continuously with whatever was last typed in any scene
+   * where it was active.
+   */
+  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => void;
   department?: 'hmu' | 'costume';
   costumeData?: CostumeSceneBreakdown;
   onCostumeUpdate?: (data: CostumeSceneBreakdown) => void;
 }) {
-  const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) =>
+  const ue = (f: 'entersWith' | 'exitsWith', k: keyof HMWEntry, v: string) => {
     onUpdate({ [f]: { ...cb[f], [k]: v } });
+    // Mirror entersWith edits onto the active look — the next scene
+    // that selects this look will auto-fill from the saved value.
+    // exitsWith reflects post-change state, so it doesn't write back.
+    if (f === 'entersWith' && cb.lookId && (k === 'hair' || k === 'makeup' || k === 'wardrobe')) {
+      onUpdateLookField(cb.lookId, k, v);
+    }
+  };
 
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
@@ -197,17 +212,31 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
           }}>
             <option value="">Select look...</option>
             <option value="__new">+ New Look</option>
-            {looks.slice().sort((a, b) => {
-              const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
-              const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
-              return tsB - tsA;
-            }).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {looks
+              .filter((l) => {
+                // Hide untouched auto-generated "Day N / Flashback"
+                // presets from earlier uploads — recognised by the
+                // generator's auto description ("Scenes: 1-3,7") and
+                // empty hair/makeup/wardrobe. Once the user has put
+                // any content in, the look becomes a real one and
+                // shows up like any user-created look. New uploads
+                // skip preset generation entirely (lookGenerator).
+                if (l.id === cb.lookId) return true;
+                const isPreset =
+                  /^Scenes:/.test(l.description ?? '') &&
+                  !l.hair &&
+                  !l.makeup &&
+                  !l.wardrobe;
+                return !isPreset;
+              })
+              .slice()
+              .sort((a, b) => {
+                const tsA = parseInt(a.id.replace('look-', '').split('-')[0]) || 0;
+                const tsB = parseInt(b.id.replace('look-', '').split('-')[0]) || 0;
+                return tsB - tsA;
+              })
+              .map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
-        )}
-        {cb.lookId && (
-          <button className="cb-set-look-btn" onClick={() => {
-            onSetLook(cb.lookId, cb.entersWith.hair, cb.entersWith.makeup, cb.entersWith.wardrobe);
-          }}>Set Look</button>
         )}
       </div>
 

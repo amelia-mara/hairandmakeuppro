@@ -54,7 +54,7 @@ import { CharBlock } from './CharBlock';
 import { useCharacterOverridesStore } from '@/stores/breakdownStore';
 import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
-export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
+export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onUpdateLookField, department }: {
   projectId: string; scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -66,7 +66,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
   onRemoveEvent: (id: string) => void;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
-  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
+  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => void;
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();
@@ -203,7 +203,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
                 onAddLook={onAddLook}
-                onSetLook={onSetLook}
+                onUpdateLookField={onUpdateLookField}
                 department={department}
                 costumeData={department === 'costume' ? costumeData : undefined}
                 onCostumeUpdate={department === 'costume' ? (data) => {
