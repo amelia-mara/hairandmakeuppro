@@ -65,10 +65,10 @@ export function ContinuityTracker({ projectId }: Props) {
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
 
-  const scenes: Scene[] = useMemo(
-    () => parsedData ? parsedData.scenes : MOCK_SCENES,
-    [parsedData],
-  );
+  const scenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
 
   const characters: Character[] = useMemo(() => {
     const raw = parsedData

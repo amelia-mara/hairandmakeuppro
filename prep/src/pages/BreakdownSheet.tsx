@@ -8,6 +8,8 @@ import { LookbookTab, useLookbookMeta } from './LookbookTab';
 import { BibleTab } from './BibleTab';
 import { ordinal } from '@/utils/ordinal';
 import { ExportIcon } from '@/components/icons/ScriptBreakdownIcons';
+import { ExportPreviewModal } from '@/components/ExportPreviewModal';
+import type { ExportPreview } from '@/utils/export/common';
 
 /* ━━━ Helpers ━━━ */
 
@@ -53,20 +55,6 @@ function buildContinuityNotes(
   }
 
   return parts.join('; ');
-}
-
-/* ━━━ Export ━━━ */
-
-function exportCSV(rows: string[][], filename: string) {
-  const esc = (v: string) => {
-    if (v.includes(',') || v.includes('"') || v.includes('\n')) return `"${v.replace(/"/g, '""')}"`;
-    return v;
-  };
-  const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
 }
 
 /* ━━━ Icons ━━━ */
@@ -191,7 +179,10 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
-  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const scenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
   /* Detect time jumps: scenes where the story day differs from the previous scene */
@@ -296,11 +287,33 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     setTimeout(() => setCopied(false), 2000);
   }, [buildExportRows]);
 
-  /* Export CSV */
-  const handleExport = useCallback(() => {
-    const rows = buildExportRows();
-    exportCSV(rows, 'breakdown.csv');
-  }, [buildExportRows]);
+  /* ━━━ In-page export buttons (match the Tools menu) ━━━ */
+  const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
+
+  const handleBreakdownPDF = useCallback(async () => {
+    const { exportBreakdownPDF } = await import('@/utils/export/breakdown');
+    setExportPreview(exportBreakdownPDF(projectId));
+  }, [projectId]);
+
+  const handleBreakdownXLSX = useCallback(async () => {
+    const { exportBreakdownXLSX } = await import('@/utils/export/breakdown');
+    setExportPreview(exportBreakdownXLSX(projectId));
+  }, [projectId]);
+
+  const handleLookbookPDF = useCallback(async () => {
+    const { exportLookbookPDF } = await import('@/utils/export/lookbook');
+    setExportPreview(exportLookbookPDF(projectId));
+  }, [projectId]);
+
+  const handleLookbookPPTX = useCallback(async () => {
+    const { exportLookbookPPTX } = await import('@/utils/export/lookbook');
+    setExportPreview(await exportLookbookPPTX(projectId));
+  }, [projectId]);
+
+  const handleBiblePDF = useCallback(async () => {
+    const { exportBiblePDF } = await import('@/utils/export/bible');
+    setExportPreview(exportBiblePDF(projectId));
+  }, [projectId]);
 
   /* Handle scene click from script panel → scroll breakdown to that scene */
   const handleScriptSceneClick = useCallback((sceneId: string) => {
@@ -346,16 +359,22 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               <button className="bs-action-btn" onClick={handleCopy}>
                 <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
               </button>
-              <button className="bs-action-btn bs-action-btn--primary" onClick={handleExport}>
-                <ExportIcon /> Export CSV
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleBreakdownPDF}>
+                <ExportIcon /> PDF
+              </button>
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleBreakdownXLSX}>
+                <ExportIcon /> XLSX
               </button>
             </>
           )}
           {activeTab === 'lookbook' && (
             <>
               <span className="bs-subtitle">{lookbookMeta.characterCount} characters · {lookbookMeta.lookCount} looks</span>
-              <button className="bs-action-btn bs-action-btn--primary" onClick={() => { /* future PDF export */ }}>
-                <ExportIcon /> Export PDF
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleLookbookPDF}>
+                <ExportIcon /> PDF
+              </button>
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleLookbookPPTX}>
+                <ExportIcon /> PPTX
               </button>
             </>
           )}
@@ -364,8 +383,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               <button className="bs-action-btn" onClick={() => { /* future share */ }}>
                 <ShareIcon /> Share
               </button>
-              <button className="bs-action-btn bs-action-btn--primary" onClick={() => { /* future PDF export */ }}>
-                <ExportIcon /> Export PDF
+              <button className="bs-action-btn bs-action-btn--primary" onClick={handleBiblePDF}>
+                <ExportIcon /> PDF
               </button>
             </>
           )}
@@ -591,6 +610,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
         )}
       </div>
       </div>}
+
+      <ExportPreviewModal preview={exportPreview} onClose={() => setExportPreview(null)} />
     </div>
   );
 }
@@ -606,7 +627,10 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
   const sceneRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const parsedData = parsedScriptStore.getParsedData(projectId);
-  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const scenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 

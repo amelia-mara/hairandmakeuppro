@@ -136,7 +136,10 @@ export function CharacterDesign({ projectId }: Props) {
     }));
   }, [parsedData]);
 
-  const allScenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const allScenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
 
   // Map characters with their design data
   const charactersWithDesign = useMemo(() => {

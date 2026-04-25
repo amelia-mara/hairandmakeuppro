@@ -121,6 +121,10 @@ function toProjectMembership(
     role: project.is_owner ? 'owner' : (project.role as ProjectRole),
     joinedAt: new Date(project.created_at),
     lastAccessedAt: new Date(),
+    createdAt: new Date(project.created_at),
+    lastEditedAt: project.last_edited_at
+      ? new Date(project.last_edited_at)
+      : new Date(project.created_at),
     teamMemberCount: 0, // Will be fetched separately if needed
     sceneCount: 0, // Will be fetched separately if needed
     projectCode: project.invite_code,
@@ -583,6 +587,8 @@ export const useAuthStore = create<AuthState>()(
             role: joinRole as ProjectRole,
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
+            createdAt: new Date(joinedProject.created_at),
+            lastEditedAt: new Date(joinedProject.created_at),
             teamMemberCount: 1,
             sceneCount: 0,
             projectCode: joinedProject.invite_code,
@@ -787,6 +793,8 @@ export const useAuthStore = create<AuthState>()(
             role: 'owner',
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
+            createdAt: new Date(),
+            lastEditedAt: new Date(),
             teamMemberCount: 1,
             sceneCount: 0,
             projectCode: inviteCode,

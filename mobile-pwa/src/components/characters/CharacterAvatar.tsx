@@ -12,7 +12,8 @@ export function CharacterAvatar({
   size = 'md',
   className,
 }: CharacterAvatarProps) {
-  const bgColor = character.avatarColour ?? '#E8621A';
+  // Uniform teal badge — ignore the legacy per-character `avatarColour` cycle.
+  const bgColor = '#4ABFB0';
 
   return (
     <div

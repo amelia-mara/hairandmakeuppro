@@ -37,7 +37,10 @@ export function BibleTab({ projectId }: { projectId: string }) {
 
   /* Resolve data source */
   const parsedData = parsedScriptStore.getParsedData(projectId);
-  const scenes: Scene[] = useMemo(() => parsedData ? parsedData.scenes : MOCK_SCENES, [parsedData]);
+  const scenes: Scene[] = useMemo(() => {
+    const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
+    return [...arr].sort((a, b) => a.number - b.number);
+  }, [parsedData]);
   const rawCharacters: Character[] = useMemo(() => {
     if (!parsedData) return MOCK_CHARACTERS;
     return parsedData.characters.map((c) => ({ ...c, category: c.category || 'principal' as const }));

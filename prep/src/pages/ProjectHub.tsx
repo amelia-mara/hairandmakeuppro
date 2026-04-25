@@ -13,6 +13,13 @@ const TYPE_ICONS: Record<ProjectType, typeof Film> = {
   'Short Film': Video,
 };
 
+function formatCardDate(iso?: string): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 interface ProjectHubProps {
   onCreateProject: () => void;
   onSelectProject: (id: string) => void;
@@ -138,6 +145,23 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
                       textTransform: 'capitalize',
                     }}>
                       {project.status}
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: '2px',
+                        fontSize: '0.6875rem',
+                        fontWeight: 500,
+                        color: 'var(--text-muted)',
+                        lineHeight: 1.3,
+                        textAlign: 'right',
+                      }}
+                    >
+                      <span>Created {formatCardDate(project.createdAt)}</span>
+                      <span>Updated {formatCardDate(project.lastActive)}</span>
                     </span>
                   </div>
                 </button>
