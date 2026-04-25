@@ -169,6 +169,24 @@ export function normalizeCharacterName(name: string): string {
   return normalized.replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * True if the first ALL-CAPS word in `name` is something the parser
+ * should never treat as a character — transitions ("CUT", "FADE"),
+ * scene-heading prefixes ("INT", "EXT", "SCENE", "TITLE"), conjunctions
+ * ("AND", "BUT"), and any single-word non-character noun on the shared
+ * denylist. Replaces the old hand-rolled `/^(INT|EXT|CUT|FADE...)\b/`
+ * inline regex so the four inline call sites in
+ * `extractCharactersFromActionLine` stay in sync with the rest of the
+ * parser.
+ */
+function isExcludedFirstWord(name: string): boolean {
+  const firstWord = name.split(/\s+/)[0];
+  if (!firstWord) return true;
+  if (NON_CHARACTER_SINGLE_WORDS.has(firstWord)) return true;
+  if (NAME_SCAN_EXCLUSIONS.has(firstWord)) return true;
+  return false;
+}
+
 export function extractCharactersFromActionLine(line: string): string[] {
   const characters: string[] = [];
   const trimmed = line.trim();
@@ -185,7 +203,7 @@ export function extractCharactersFromActionLine(line: string): string[] {
   const introMatch = trimmed.match(introPattern);
   if (introMatch) {
     const name = introMatch[1].trim();
-    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE)\b/.test(name)) {
+    if (name.length >= 3 && !isExcludedFirstWord(name)) {
       characters.push(name);
     }
   }
@@ -196,7 +214,7 @@ export function extractCharactersFromActionLine(line: string): string[] {
   const capsCommaMatch = trimmed.match(capsCommaPattern);
   if (capsCommaMatch) {
     const name = capsCommaMatch[1].trim();
-    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE)\b/.test(name)) {
+    if (name.length >= 3 && !isExcludedFirstWord(name)) {
       characters.push(name);
     }
   }
@@ -210,7 +228,7 @@ export function extractCharactersFromActionLine(line: string): string[] {
   const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*(?:\d{1,3}\b|[a-z])|\s+\d{1,3}\s*,)/g;
   while ((match = midLineIntroRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
-    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
+    if (name.length >= 3 && !isExcludedFirstWord(name)) {
       characters.push(name);
     }
   }
@@ -261,7 +279,7 @@ export function extractCharactersFromActionLine(line: string): string[] {
   const catchAllIntroRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
   while ((match = catchAllIntroRe.exec(trimmed)) !== null) {
     const name = match[1].trim();
-    if (name.length >= 3 && !/^(INT|EXT|CUT|FADE|THE|SCENE|AND|BUT|FOR|NOR|YET)\b/.test(name)) {
+    if (name.length >= 3 && !isExcludedFirstWord(name)) {
       characters.push(name);
     }
   }
