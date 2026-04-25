@@ -531,6 +531,32 @@ export function parseScriptText(text: string): ParsedScript {
     }
   }
 
+  /* ── Per-scene content-length sanity check ──
+     Flag any scene whose body text is unusually short relative to the
+     median scene size. This is the strongest signal we have that the
+     parser dropped the middle of a scene — e.g. PDF extraction missed
+     part of a page, or a downstream regex over-matched and ate text
+     before the next heading. Logs the affected scene numbers + slugs
+     so the issue can be reproduced from the console output rather
+     than guessed at from a screenshot. */
+  const realScenes = outputScenes.filter((s) => s.content.length > 0);
+  if (realScenes.length >= 5) {
+    const lengths = realScenes.map((s) => s.content.length).sort((a, b) => a - b);
+    const median = lengths[Math.floor(lengths.length / 2)];
+    const threshold = Math.max(80, Math.floor(median * 0.15));
+    const stubby = realScenes
+      .filter((s) => s.content.length < threshold)
+      .slice(0, 10);
+    if (stubby.length > 0) {
+      console.warn(
+        `[scriptParser] ${stubby.length} scene(s) have unusually short content ` +
+        `(< ${threshold} chars vs median ${median}). This often means the parser ` +
+        `dropped part of the scene. Affected scenes:\n` +
+        stubby.map((s) => `  Sc ${s.sceneNumber} · ${s.slugline} · ${s.content.length} chars`).join('\n')
+      );
+    }
+  }
+
   return { title, scenes, characters, rawText: text };
 }
 
