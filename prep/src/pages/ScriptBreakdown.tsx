@@ -522,7 +522,34 @@ export function ScriptBreakdown({ projectId }: Props) {
               allLooks={ALL_LOOKS}
               onNavigate={selectScene}
               onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
-              onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
+              onUpdateTimeline={(tl) => {
+                store.updateTimeline(validSceneId, tl);
+                // If the user just confirmed a numeric story day on
+                // this scene, shift every later scene's *suggested*
+                // story day by the same delta so the placeholders
+                // moving forward stay consistent with the anchor.
+                // Skipped automatically when the anchor or new value
+                // isn't a clean integer day, or when either is on a
+                // Flashback / Dream / Memory timeline.
+                if (scene && tl.dayConfirmed && tl.day && tl.day !== scene.storyDay) {
+                  (async () => {
+                    const { cascadeStoryDays } = await import('@/utils/cascadeStoryDays');
+                    const result = cascadeStoryDays({
+                      scenes: ALL_SCENES as never,
+                      anchorSceneNumber: scene.number,
+                      newDayValue: tl.day,
+                      anchorOriginalLabel: scene.storyDay,
+                    });
+                    if (result.changed.length > 0 && parsedData) {
+                      parsedScriptStore.setParsedData(projectId, {
+                        ...parsedData,
+                        scenes: result.scenes as never,
+                      });
+                    }
+                  })();
+                }
+                triggerSave();
+              }}
               onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
               onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
               onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
