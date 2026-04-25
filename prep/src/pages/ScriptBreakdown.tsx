@@ -546,20 +546,13 @@ export function ScriptBreakdown({ projectId }: Props) {
                 });
                 return newId;
               }}
-              onSetLook={(lookId, hair, makeup, wardrobe) => {
-                // Update the look template with current entersWith values
-                parsedScriptStore.updateLook(projectId, lookId, { hair, makeup, wardrobe });
-                // Propagate to all scenes that use this look
-                const allBreakdowns = store.breakdowns;
-                for (const [sceneId, bd] of Object.entries(allBreakdowns)) {
-                  for (const ch of bd.characters) {
-                    if (ch.lookId === lookId) {
-                      store.updateCharacterBreakdown(sceneId, ch.characterId, {
-                        entersWith: { hair, makeup, wardrobe },
-                      });
-                    }
-                  }
-                }
+              onUpdateLookField={(lookId, field, value) => {
+                // Auto-save: every entersWith edit on a scene with a
+                // look selected mirrors back onto the look itself, so
+                // the next scene that picks the same look auto-fills
+                // from the latest text. Replaces the old "Set Look"
+                // button — no explicit save action required.
+                parsedScriptStore.updateLook(projectId, lookId, { [field]: value });
                 triggerSave();
               }}
               department={department}
