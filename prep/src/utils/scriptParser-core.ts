@@ -1,6 +1,7 @@
 import { extractTextFromPDF, extractTextFromFDX, normalizeScriptText } from './scriptParser-pdf';
 import {
   NAME_SCAN_EXCLUSIONS,
+  NON_CHARACTER_SINGLE_WORDS,
   isSupportingArtistRole,
   normalizeCharacterName,
   extractCharactersFromActionLine,
@@ -414,6 +415,45 @@ export function parseScriptText(text: string): ParsedScript {
   }
 
   for (const name of locationFalsePositives) {
+    characterMap.delete(name);
+    for (const scene of scenes) {
+      const idx = scene.characters.indexOf(name);
+      if (idx !== -1) scene.characters.splice(idx, 1);
+    }
+  }
+
+  /* ── Common-noun false-positive filter ──
+     Drop any "character" whose name is composed of generic nouns the
+     screenplay parser can mistake for a cue — sound effects (SOUND,
+     RAIN, WIND), transitions (CUT, FADE), time markers (LATER,
+     CONTINUOUS, MORNING), or sensory beats (LIGHT, SHADOW). Three
+     conditions land a name in the drop set:
+       - the whole name is one denylisted word ("LATER", "RAIN")
+       - every non-digit word is on the denylist ("LATER 9",
+         "DAY LATER", "TIME CUT")
+       - the FIRST word is on the denylist ("LATER ALICE",
+         "FLASHBACK 12") — these are scene/time markers the parser
+         occasionally sweeps into a multi-word "name". Real characters
+         never start with one of these words, so this is safe.
+     Genuine multi-word characters like "OLD MAN" or "YOUNG BRY"
+     survive because their first word ("OLD", "YOUNG") is not on
+     the denylist. */
+  const commonNounFalsePositives = new Set<string>();
+  for (const [name] of characterMap) {
+    const words = name.split(/\s+/).filter((w) => !/^\d+$/.test(w));
+    if (words.length === 0) {
+      commonNounFalsePositives.add(name);
+      continue;
+    }
+    if (NON_CHARACTER_SINGLE_WORDS.has(words[0])) {
+      commonNounFalsePositives.add(name);
+      continue;
+    }
+    if (words.every((w) => NON_CHARACTER_SINGLE_WORDS.has(w))) {
+      commonNounFalsePositives.add(name);
+    }
+  }
+  for (const name of commonNounFalsePositives) {
     characterMap.delete(name);
     for (const scene of scenes) {
       const idx = scene.characters.indexOf(name);
