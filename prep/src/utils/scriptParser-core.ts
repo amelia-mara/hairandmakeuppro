@@ -1,6 +1,7 @@
 import { extractTextFromPDF, extractTextFromFDX, normalizeScriptText } from './scriptParser-pdf';
 import {
   NAME_SCAN_EXCLUSIONS,
+  NON_CHARACTER_SINGLE_WORDS,
   isSupportingArtistRole,
   normalizeCharacterName,
   extractCharactersFromActionLine,
@@ -414,6 +415,27 @@ export function parseScriptText(text: string): ParsedScript {
   }
 
   for (const name of locationFalsePositives) {
+    characterMap.delete(name);
+    for (const scene of scenes) {
+      const idx = scene.characters.indexOf(name);
+      if (idx !== -1) scene.characters.splice(idx, 1);
+    }
+  }
+
+  /* ── Common-noun false-positive filter ──
+     Drop any single-word "character" whose name is a generic noun the
+     screenplay parser can mistake for a cue — sound effects (SOUND,
+     RAIN, WIND), transitions (CUT, FADE), or sensory beats (LIGHT,
+     SHADOW). Multi-word names are left alone because something like
+     "OLD MAN" can legitimately be a character. */
+  const commonNounFalsePositives = new Set<string>();
+  for (const [name] of characterMap) {
+    if (name.includes(' ')) continue;
+    if (NON_CHARACTER_SINGLE_WORDS.has(name)) {
+      commonNounFalsePositives.add(name);
+    }
+  }
+  for (const name of commonNounFalsePositives) {
     characterMap.delete(name);
     for (const scene of scenes) {
       const idx = scene.characters.indexOf(name);
