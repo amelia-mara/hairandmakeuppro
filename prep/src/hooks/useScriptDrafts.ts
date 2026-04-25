@@ -2,11 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   useParsedScriptStore,
   useScriptUploadStore,
+  useBreakdownStore,
+  useSynopsisStore,
+  useCharacterOverridesStore,
   type ParsedCharacterData,
   type ParsedSceneData,
   type Look,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { diffScripts } from '@/utils/scriptDiff';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -125,18 +129,108 @@ export function useScriptDrafts({
     if (!draft.parsed_data) return;
     // Allow re-loading the active draft when the store is empty (e.g. after
     // switching devices or clearing cache)
-    const storeHasData = !!parsedScriptStore.getParsedData(projectId);
+    const previousParsed = parsedScriptStore.getParsedData(projectId);
+    const storeHasData = !!previousParsed;
     if (draft.is_active && storeHasData) return;
     setLoadingDraftId(draft.id);
     try {
-      // Load the draft's parsed data into the parsedScriptStore
-      parsedScriptStore.setParsedData(projectId, {
-        scenes: draft.parsed_data.scenes,
-        characters: draft.parsed_data.characters,
-        looks: draft.parsed_data.looks,
-        filename: draft.parsed_data.filename,
-        parsedAt: draft.parsed_data.parsedAt,
-      });
+      // ── Preserve breakdown work across the draft swap ──
+      // Each upload mints fresh UUIDs for every scene + character, so
+      // switching drafts orphans every scene-keyed entry in the
+      // breakdown / synopsis / scene-notes stores even when the
+      // content is identical between drafts. Mirror the revision
+      // pipeline in useScriptUploadProcessor: diff old vs new scenes
+      // by content, then remap breakdowns, synopses, story days,
+      // scene notes (localStorage), and character profile overrides
+      // from the previously-active scene IDs onto the loaded
+      // draft's IDs.
+      if (previousParsed && previousParsed.scenes.length > 0) {
+        const diff = diffScripts(
+          previousParsed.scenes,
+          draft.parsed_data.scenes,
+          previousParsed.characters,
+          draft.parsed_data.characters,
+        );
+
+        const breakdownStore = useBreakdownStore.getState();
+        const synopsisStore = useSynopsisStore.getState();
+        const overridesStore = useCharacterOverridesStore.getState();
+
+        // Scene-keyed: breakdowns + synopses
+        for (const [oldSceneId, newSceneId] of diff.idMap) {
+          if (oldSceneId === newSceneId) continue;
+
+          const oldBd = breakdownStore.getBreakdown(oldSceneId);
+          if (oldBd) {
+            const remappedChars = oldBd.characters.map((cb) => {
+              const newCharId = diff.characterIdMap.get(cb.characterId);
+              return newCharId ? { ...cb, characterId: newCharId } : cb;
+            });
+            breakdownStore.setBreakdown(newSceneId, {
+              ...oldBd,
+              sceneId: newSceneId,
+              characters: remappedChars,
+            });
+          }
+
+          const oldSynopsis = synopsisStore.getSynopsis(oldSceneId, '');
+          if (oldSynopsis) {
+            synopsisStore.setSynopsis(newSceneId, oldSynopsis);
+          }
+        }
+
+        // Preserve story-day labels on scenes that map cleanly.
+        const remappedScenes = draft.parsed_data.scenes.map((s) => {
+          const oldId = [...diff.idMap.entries()].find(([, n]) => n === s.id)?.[0];
+          if (!oldId) return s;
+          const oldScene = previousParsed.scenes.find((p) => p.id === oldId);
+          if (!oldScene?.storyDay) return s;
+          return { ...s, storyDay: oldScene.storyDay };
+        });
+
+        // Character profile overrides
+        for (const [oldCharId, newCharId] of diff.characterIdMap) {
+          if (oldCharId === newCharId) continue;
+          const existing = overridesStore.overrides[oldCharId];
+          if (existing) overridesStore.updateCharacter(newCharId, existing);
+        }
+
+        // Notes & Queries (localStorage `prep-scene-notes-{projectId}`)
+        try {
+          const key = `prep-scene-notes-${projectId}`;
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Record<string, { text: string; flagged: boolean }>;
+            const next: Record<string, { text: string; flagged: boolean }> = { ...parsed };
+            for (const [oldSceneId, newSceneId] of diff.idMap) {
+              if (oldSceneId === newSceneId) continue;
+              const oldNote = parsed[oldSceneId];
+              if (oldNote && (oldNote.text || oldNote.flagged) && !next[newSceneId]) {
+                next[newSceneId] = oldNote;
+              }
+            }
+            localStorage.setItem(key, JSON.stringify(next));
+          }
+        } catch (err) {
+          console.warn('[useScriptDrafts] failed to remap scene notes:', err);
+        }
+
+        parsedScriptStore.setParsedData(projectId, {
+          scenes: remappedScenes,
+          characters: draft.parsed_data.characters,
+          looks: draft.parsed_data.looks,
+          filename: draft.parsed_data.filename,
+          parsedAt: draft.parsed_data.parsedAt,
+        });
+      } else {
+        parsedScriptStore.setParsedData(projectId, {
+          scenes: draft.parsed_data.scenes,
+          characters: draft.parsed_data.characters,
+          looks: draft.parsed_data.looks,
+          filename: draft.parsed_data.filename,
+          parsedAt: draft.parsed_data.parsedAt,
+        });
+      }
 
       // Update script upload store
       scriptUpload.setScript(projectId, {
