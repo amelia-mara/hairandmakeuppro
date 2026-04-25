@@ -479,6 +479,11 @@ export function prescanCharacterIntros(lines: string[]): Map<string, string> {
     if (raw.length < 3) return;
     const firstWord = raw.split(/\s+/)[0];
     if (INTRO_EXCLUDED_STARTS.has(firstWord)) return;
+    // Same denylist the action-line extractor uses — keeps "LATER ALICE,
+    // 25" or "DAY MARCUS, 30" out of the prescan's full-name pool so
+    // the resolveMap never points a fragment ("ALICE", "MARCUS") at a
+    // bogus parent name starting with a transition / time marker.
+    if (NON_CHARACTER_SINGLE_WORDS.has(firstWord)) return;
     // Strip leading modifiers: "YOUNG BRY TYRELL" → "BRY TYRELL"
     let cleaned = raw;
     const words = raw.split(/\s+/);
