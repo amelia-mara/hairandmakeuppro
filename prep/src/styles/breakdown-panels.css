@@ -175,6 +175,55 @@
   color: #E8621A;
 }
 
+/* Persistent REV pill on every revised card so the change flag is
+   visible at a glance, not only when the card is selected. */
+.sl-card-rev-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(232, 98, 26, 0.15);
+  color: #E8621A;
+  font-family: var(--font-sans);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(232, 98, 26, 0.35);
+}
+
+/* Header "to review" pill — re-opens the changes summary modal so the
+   user can revisit the flagged list any time after the post-upload
+   pop-up has been dismissed. */
+.sl-revisions-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #E8621A;
+  border: 1px solid #E8621A;
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.sl-revisions-pill:hover {
+  background: #C4522A;
+  border-color: #C4522A;
+}
+.sl-revisions-pill:active {
+  transform: scale(0.97);
+}
+.sl-revisions-pill-label {
+  font-weight: 600;
+  opacity: 0.95;
+}
+
 .sl-card-top {
   display: flex;
   align-items: baseline;

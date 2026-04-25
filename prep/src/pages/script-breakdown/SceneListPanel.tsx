@@ -47,6 +47,13 @@ interface SceneListPanelProps {
    *  filteredScenes derives from it and is consumed elsewhere. */
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
+
+  /** Optional callback to re-open the Changes Summary modal. The
+   *  parent synthesises a DiffResult from the persisted revised-scenes
+   *  store so the user can revisit the flagged list any time, not
+   *  just on first upload. The button only renders when there are
+   *  unreviewed changes left for this project. */
+  onShowRevisions?: () => void;
 }
 
 /**
@@ -80,6 +87,7 @@ export function SceneListPanel({
   projectId,
   searchQuery,
   onSearchQueryChange,
+  onShowRevisions,
 }: SceneListPanelProps) {
   const store = useBreakdownStore();
   const synopsisStore = useSynopsisStore();
@@ -112,11 +120,29 @@ export function SceneListPanel({
     }
   }, [selectedSceneId]);
 
+  const unreviewedChanges = revisedStore.getUnreviewedChanges(projectId);
+  const unreviewedCount = unreviewedChanges.length;
+
   return (
     <div className="bd-left bd-panel-surface" style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH }}>
       <div className="sl-header">
         <span className="sl-header-label">Scenes</span>
         <span className="sl-header-count">{totalSceneCount}</span>
+        {onShowRevisions && unreviewedCount > 0 && (
+          <button
+            type="button"
+            className="sl-revisions-pill"
+            onClick={onShowRevisions}
+            title="Open the changes summary for this revision"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 9v4"/><path d="M12 17h.01"/>
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            </svg>
+            <span>{unreviewedCount}</span>
+            <span className="sl-revisions-pill-label">to review</span>
+          </button>
+        )}
       </div>
       <div style={{ display: 'flex', gap: '4px', padding: '0 14px 8px', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
         <div className="sl-search" style={{ flex: 1, margin: 0, minWidth: 0 }}>
@@ -174,6 +200,11 @@ export function SceneListPanel({
                 )}
                 {sceneFlags[s.id] && (
                   <span style={{ fontSize: '10px', color: '#C4522A' }} title="Has query">⚑</span>
+                )}
+                {isRevised && (
+                  <span className="sl-card-rev-pill" title="Scene changed in latest revision — reassess the breakdown">
+                    REV
+                  </span>
                 )}
                 <span className={`sl-card-status sl-card-status--${status}`} />
               </div>
