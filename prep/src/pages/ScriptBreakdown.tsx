@@ -555,10 +555,29 @@ export function ScriptBreakdown({ projectId }: Props) {
                       anchorOriginalLabel: scene.storyDay,
                     });
                     if (result.changed.length > 0 && parsedData) {
+                      // Update placeholder source so unbroken-down
+                      // scenes show the new suggestion.
                       parsedScriptStore.setParsedData(projectId, {
                         ...parsedData,
                         scenes: result.scenes as never,
                       });
+                      // Critically: also push the new value into each
+                      // affected scene's breakdown.timeline.day
+                      // whenever the user hasn't manually confirmed
+                      // it. The breakdown is created with timeline.day
+                      // pre-filled from scene.storyDay, so without
+                      // this step the input keeps showing the stale
+                      // initial value even though the placeholder
+                      // beneath it has updated.
+                      for (const updated of result.changed) {
+                        const bd = store.getBreakdown(updated.id);
+                        if (!bd) continue;
+                        if (bd.timeline.dayConfirmed) continue;
+                        store.updateTimeline(updated.id, {
+                          ...bd.timeline,
+                          day: updated.storyDay,
+                        });
+                      }
                     }
                   })();
                 }
