@@ -423,15 +423,22 @@ export function parseScriptText(text: string): ParsedScript {
   }
 
   /* ── Common-noun false-positive filter ──
-     Drop any single-word "character" whose name is a generic noun the
-     screenplay parser can mistake for a cue — sound effects (SOUND,
-     RAIN, WIND), transitions (CUT, FADE), or sensory beats (LIGHT,
-     SHADOW). Multi-word names are left alone because something like
-     "OLD MAN" can legitimately be a character. */
+     Drop any "character" whose name is composed entirely of generic
+     nouns the screenplay parser can mistake for a cue — sound effects
+     (SOUND, RAIN, WIND), transitions (CUT, FADE), time markers (LATER,
+     CONTINUOUS, MORNING), or sensory beats (LIGHT, SHADOW). Multi-word
+     phrases like "DAY LATER" or "LATER 9" are also dropped when every
+     non-digit word is on the denylist. Genuine multi-word characters
+     like "OLD MAN" or "YOUNG BRY" survive because at least one word
+     ("MAN", "BRY") is not on the list. */
   const commonNounFalsePositives = new Set<string>();
   for (const [name] of characterMap) {
-    if (name.includes(' ')) continue;
-    if (NON_CHARACTER_SINGLE_WORDS.has(name)) {
+    const words = name.split(/\s+/).filter((w) => !/^\d+$/.test(w));
+    if (words.length === 0) {
+      commonNounFalsePositives.add(name);
+      continue;
+    }
+    if (words.every((w) => NON_CHARACTER_SINGLE_WORDS.has(w))) {
       commonNounFalsePositives.add(name);
     }
   }
