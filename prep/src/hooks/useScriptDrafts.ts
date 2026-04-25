@@ -192,6 +192,39 @@ export function useScriptDrafts({
     }
   }, [onCloseToolsMenu]);
 
+  /* Delete an inactive draft */
+  const handleDeleteDraft = useCallback(async (e: React.MouseEvent, draft: ScriptDraft) => {
+    e.stopPropagation();
+    if (draft.is_active) {
+      // Refuse to delete the currently-active draft — it would orphan the
+      // breakdown / synopses / story-day work that's live for it. The user
+      // would need to switch to another draft first, or upload a new one.
+      alert('Switch to a different draft first — you can\'t delete the active script.');
+      return;
+    }
+    const ok = window.confirm(`Delete draft "${draft.file_name}"? The original PDF and parsed data will be removed permanently.`);
+    if (!ok) return;
+    try {
+      // Storage cleanup is best-effort — proceed with the row delete even
+      // if the file is missing (it may have been pruned independently).
+      if (draft.storage_path) {
+        const { error: storageErr } = await supabase.storage
+          .from('project-documents')
+          .remove([draft.storage_path]);
+        if (storageErr) console.warn('[useScriptDrafts] storage remove failed:', storageErr);
+      }
+      const { error: dbErr } = await supabase
+        .from('script_uploads')
+        .delete()
+        .eq('id', draft.id);
+      if (dbErr) throw dbErr;
+      setDrafts((prev) => prev.filter((d) => d.id !== draft.id));
+    } catch (err) {
+      console.error('Failed to delete draft:', err);
+      alert('Could not delete the draft. Check the console for details.');
+    }
+  }, []);
+
   /* Auto-recover: if parsedScriptStore is empty but the active draft in
      script_uploads has parsed_data, load it. This handles the case where
      the scenes/characters tables are empty AND localStorage was cleared. */
@@ -245,6 +278,7 @@ export function useScriptDrafts({
     loadingDraftId,
     handleLoadDraft,
     handleViewDraftPdf,
+    handleDeleteDraft,
     viewingDraftPdf,
     setViewingDraftPdf,
   };

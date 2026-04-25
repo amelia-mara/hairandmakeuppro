@@ -18,6 +18,9 @@ export interface SupabaseProject {
   created_by: string;
   created_at: string;
   has_prep_access?: boolean;
+  /** When set, the project has been soft-deleted by the owner from the
+   *  mobile app. Hidden from the prep project list. */
+  pending_deletion_at?: string | null;
   scene_count?: number;
   character_count?: number;
   script_filename?: string;
@@ -115,7 +118,13 @@ export async function loadUserProjects(
 
     const projects: SupabaseProject[] = (data || [])
       .map((pm: any) => pm.projects)
-      .filter(Boolean);
+      .filter(Boolean)
+      // Hide soft-deleted projects so a deletion in mobile (which sets
+      // `pending_deletion_at` instead of hard-deleting) propagates to
+      // prep on the next hydrate. The 48-hour grace period is for the
+      // owner-app to download things before the row is removed
+      // permanently — prep's job is just not to show them.
+      .filter((p: SupabaseProject) => !p.pending_deletion_at);
 
     if (projects.length === 0) {
       return { projects, error: null };

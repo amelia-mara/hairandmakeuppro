@@ -76,6 +76,7 @@ export function ScriptBreakdown({ projectId }: Props) {
     loadingDraftId,
     handleLoadDraft,
     handleViewDraftPdf,
+    handleDeleteDraft,
     viewingDraftPdf,
     setViewingDraftPdf,
   } = useScriptDrafts({
@@ -496,6 +497,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               loadingDraftId={loadingDraftId}
               onLoadDraft={handleLoadDraft}
               onViewDraftPdf={handleViewDraftPdf}
+              onDeleteDraft={handleDeleteDraft}
             />
               </div>
             </div>
