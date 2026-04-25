@@ -20,6 +20,8 @@ import { SceneListPanel } from './script-breakdown/SceneListPanel';
 import { BreakdownFormPanel } from './script-breakdown/breakdown-form/BreakdownFormPanel';
 import { CharacterView } from './script-breakdown/character-view/CharacterView';
 import { ScriptView } from './script-breakdown/script-view/ScriptView';
+import { ExportPreviewModal } from '@/components/ExportPreviewModal';
+import type { ExportPreview } from '@/utils/export/common';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCRIPT BREAKDOWN PAGE
@@ -39,6 +41,7 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [fontSize, setFontSize] = useState(16);
   const [showLegend, setShowLegend] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
 
@@ -149,32 +152,6 @@ export function ScriptBreakdown({ projectId }: Props) {
     }
   }, [validSceneId, store, scene]);
 
-  const exportDirectorQueries = useCallback(async () => {
-    const { useDirectorQueriesStore } = await import('@/stores/directorQueriesStore');
-    const store = useDirectorQueriesStore(projectId);
-    const allUnresolved = store.getState().getAllUnresolved();
-    if (allUnresolved.length === 0) {
-      alert('No unresolved director queries to export.');
-      return;
-    }
-    const sceneMap = new Map(ALL_SCENES.map(s => [s.id, s]));
-    const lines = ['DIRECTOR QUERIES', '================', ''];
-    for (const { sceneId, query } of allUnresolved) {
-      const sc = sceneMap.get(sceneId);
-      const sceneLabel = sc ? `SC ${sc.number} — ${sc.intExt}. ${sc.location} — ${sc.dayNight}` : `Scene ${sceneId}`;
-      lines.push(`${sceneLabel}`);
-      lines.push(`  Q: ${query.text}`);
-      lines.push('');
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'director-queries.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [projectId, ALL_SCENES]);
-
   const triggerSave = useCallback(() => {
     setSaveStatus('saving');
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -247,6 +224,29 @@ export function ScriptBreakdown({ projectId }: Props) {
           projectId={projectId}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
+          onShowRevisions={() => {
+            // Re-open the changes modal from the revised-scenes store
+            // so the user can revisit the flagged list any time, not
+            // just on first upload. The store keeps changes around
+            // until the user has reviewed each one.
+            const rev = revisedStore.revisions[projectId];
+            if (!rev || rev.changes.length === 0) return;
+            const stats = rev.changes.reduce(
+              (acc, c) => {
+                if (c.changeType === 'modified') acc.modified++;
+                else if (c.changeType === 'added') acc.added++;
+                else if (c.changeType === 'omitted') acc.omitted++;
+                return acc;
+              },
+              { modified: 0, added: 0, omitted: 0, unchanged: 0 },
+            );
+            setShowChangesModal({
+              changes: rev.changes,
+              stats,
+              idMap: new Map<string, string>(),
+              characterIdMap: new Map<string, string>(),
+            });
+          }}
         />
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
@@ -445,11 +445,50 @@ export function ScriptBreakdown({ projectId }: Props) {
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
               onOpenBreakdownView={() => setSplitView(true)}
-              onExportBreakdown={() => console.log('Export breakdown')}
-              onExportLookbooks={() => console.log('Export lookbooks')}
-              onExportTimeline={() => console.log('Export timeline')}
-              onExportBible={() => console.log('Export bible')}
-              onExportQueries={() => exportDirectorQueries()}
+              onExportBreakdown={async (format) => {
+                const { exportBreakdownPDF, exportBreakdownXLSX } =
+                  await import('@/utils/export/breakdown');
+                const preview =
+                  format === 'pdf' ? exportBreakdownPDF(projectId)
+                  : format === 'xlsx' ? exportBreakdownXLSX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
+              }}
+              onExportLookbooks={async (format) => {
+                const { exportLookbookPDF, exportLookbookPPTX } =
+                  await import('@/utils/export/lookbook');
+                const preview =
+                  format === 'pdf' ? exportLookbookPDF(projectId)
+                  : format === 'pptx' ? await exportLookbookPPTX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
+              }}
+              onExportTimeline={async (format) => {
+                const { exportTimelinePDF, exportTimelineXLSX } =
+                  await import('@/utils/export/timeline');
+                const preview =
+                  format === 'pdf' ? exportTimelinePDF(projectId)
+                  : format === 'xlsx' ? exportTimelineXLSX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
+              }}
+              onExportBible={async (format) => {
+                if (format !== 'pdf') {
+                  console.log('Export bible', format);
+                  return;
+                }
+                const { exportBiblePDF } = await import('@/utils/export/bible');
+                setExportPreview(exportBiblePDF(projectId));
+              }}
+              onExportQueries={async (format) => {
+                const { exportQueriesPDF, exportQueriesXLSX } =
+                  await import('@/utils/export/queries');
+                const preview =
+                  format === 'pdf' ? exportQueriesPDF(projectId)
+                  : format === 'xlsx' ? exportQueriesXLSX(projectId)
+                  : null;
+                if (preview) setExportPreview(preview);
+              }}
               drafts={drafts}
               draftsLoading={draftsLoading}
               draftsExpanded={draftsExpanded}
@@ -558,12 +597,17 @@ export function ScriptBreakdown({ projectId }: Props) {
           diffResult={showChangesModal}
           onClose={() => setShowChangesModal(null)}
           onGoToScene={(sceneId) => {
-            setShowChangesModal(null);
-            setSelectedSceneId(sceneId);
-            setScrollTrigger((n) => n + 1);
+            // Select the scene + scroll + switch the right panel back to
+            // the script tab. Leave the modal open so the user can keep
+            // clicking through the change list one item at a time; the
+            // modal still closes via the X / Esc / backdrop / footer.
+            selectScene(sceneId);
           }}
         />
       )}
+
+      {/* Export preview — previews PDF in iframe; XLSX/DOCX/PPTX show a summary card. */}
+      <ExportPreviewModal preview={exportPreview} onClose={() => setExportPreview(null)} />
     </div>
   );
 }
