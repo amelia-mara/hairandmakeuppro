@@ -1,11 +1,12 @@
 /**
  * Director Queries export — PDF + XLSX.
  *
- * The PDF mirrors the on-screen Director Queries aesthetic: a warm
- * terracotta accent, italic-serif section title, scene-grouped lists
- * with a checkbox-style marker and muted strikethrough typography for
- * resolved items. The XLSX is a flat sheet suitable for filtering by
- * Status in Excel / Sheets / Numbers.
+ * Pulls every non-empty Notes & Queries entry from the Script
+ * Breakdown panel (the pinned "Notes" textarea on each scene). Each
+ * entry shows scene number + heading, the synopsis, and the note
+ * text. Flagged scenes (the 🚩 toggle on the panel) are sorted to
+ * the top and rendered with a terracotta accent so the urgent
+ * questions land first.
  */
 
 import { jsPDF } from 'jspdf';
@@ -18,7 +19,7 @@ import {
   formatExportDate,
   type ExportPreview,
 } from './common';
-import { buildQueriesExport, type QueryExportGroup } from './queriesData';
+import { buildQueriesExport, type QueryExportEntry } from './queriesData';
 
 const SECTION = 'Director Queries';
 const FILE_STEM = 'director-queries';
@@ -28,7 +29,7 @@ const FILE_STEM = 'director-queries';
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 export function exportQueriesPDF(projectId: string): ExportPreview {
-  const { meta, groups } = buildQueriesExport(projectId);
+  const { meta, entries } = buildQueriesExport(projectId);
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = PAGE.width;
@@ -54,93 +55,99 @@ export function exportQueriesPDF(projectId: string): ExportPreview {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(BRAND.muted);
-  doc.text(
-    `${meta.unresolvedCount} unresolved · ${meta.resolvedCount} resolved · ${formatExportDate(meta.generatedAt)}`,
-    PAGE.margin,
-    coverY + 7,
-  );
+  const subtitleParts: string[] = [];
+  if (meta.flaggedCount > 0) subtitleParts.push(`${meta.flaggedCount} flagged`);
+  subtitleParts.push(`${meta.totalCount} total`);
+  subtitleParts.push(formatExportDate(meta.generatedAt));
+  doc.text(subtitleParts.join(' · '), PAGE.margin, coverY + 7);
 
   if (meta.totalCount === 0) {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(13);
     doc.setTextColor(BRAND.muted);
-    doc.text('No director queries logged for this project yet.', PAGE.margin, coverY + 30);
+    doc.text(
+      'No notes or queries logged for any scene yet.',
+      PAGE.margin,
+      coverY + 30,
+    );
     return finalizePDF(doc, meta.projectName);
   }
 
-  // ── Groups ──
+  // ── Entries ──
   let cursorY = coverY + 20;
-  for (const group of groups) {
-    cursorY = drawSceneGroup(doc, group, cursorY);
+  for (const entry of entries) {
+    cursorY = drawEntry(doc, entry, cursorY);
   }
 
   return finalizePDF(doc, meta.projectName);
 }
 
-function drawSceneGroup(doc: jsPDF, group: QueryExportGroup, startY: number): number {
-  // Page-break guard
-  if (startY > PAGE.height - 40) {
+function drawEntry(doc: jsPDF, entry: QueryExportEntry, startY: number): number {
+  // Page-break guard so the heading + body of a single entry stay
+  // together when there's only a sliver left at the bottom of a page.
+  if (startY > PAGE.height - 50) {
     doc.addPage();
     startY = 18;
   }
 
-  // Scene header — italic serif terracotta
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(14);
+  // Scene heading — terracotta with a flag pill if the user has
+  // marked this note as a query on the breakdown panel.
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
   doc.setTextColor(BRAND.terracotta);
-  doc.text(group.sceneHeader, PAGE.margin, startY + 4);
+  doc.text(entry.sceneHeader, PAGE.margin, startY + 4);
 
-  // Thin rule under the header
+  if (entry.flagged) {
+    const labelW = 18;
+    doc.setFillColor(BRAND.terracotta);
+    doc.roundedRect(PAGE.width - PAGE.margin - labelW, startY, labelW, 5.5, 1.4, 1.4, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(BRAND.cream);
+    doc.text('FLAGGED', PAGE.width - PAGE.margin - labelW / 2, startY + 3.8, { align: 'center' });
+  }
+
+  // Thin rule under the heading
   doc.setDrawColor(BRAND.creamDark);
   doc.setLineWidth(0.2);
-  doc.line(PAGE.margin, startY + 6.2, PAGE.width - PAGE.margin, startY + 6.2);
+  doc.line(PAGE.margin, startY + 6.5, PAGE.width - PAGE.margin, startY + 6.5);
 
-  // Queries table — two columns: status marker + text
-  const body = group.queries.map((q) => [q.resolved ? '■' : '□', q.text]);
+  let cursorY = startY + 11;
+  const innerWidth = PAGE.width - PAGE.margin * 2;
 
-  autoTable(doc, {
-    body,
-    startY: startY + 8,
-    margin: { left: PAGE.margin, right: PAGE.margin, top: 18, bottom: 15 },
-    styles: {
-      font: 'helvetica',
-      fontSize: 9.5,
-      cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
-      textColor: BRAND.ink,
-      lineColor: BRAND.creamDark,
-      lineWidth: 0.08,
-    },
-    bodyStyles: { fillColor: '#FFFFFF' },
-    columnStyles: {
-      0: {
-        cellWidth: 8,
-        halign: 'center',
-        fontStyle: 'bold',
-        textColor: BRAND.terracotta,
-      },
-      1: { cellWidth: 'auto' },
-    },
-    didParseCell: (data) => {
-      const q = group.queries[data.row.index];
-      if (!q) return;
-      if (q.resolved) {
-        // Resolved = muted + teal marker
-        if (data.column.index === 0) {
-          data.cell.styles.textColor = BRAND.teal;
-        } else {
-          data.cell.styles.textColor = BRAND.muted;
-          data.cell.styles.fontStyle = 'italic';
-        }
-      }
-    },
-  });
+  // Synopsis (italic muted) — only if present
+  if (entry.synopsis) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(BRAND.muted);
+    const synopsisLines = doc.splitTextToSize(entry.synopsis, innerWidth);
+    doc.text(synopsisLines, PAGE.margin, cursorY);
+    cursorY += synopsisLines.length * 4.2 + 2;
+  }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nextY = (doc as any).lastAutoTable?.finalY ?? startY + 10;
-  return nextY + 8;
+  // Note label
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(entry.flagged ? BRAND.terracotta : BRAND.muted);
+  doc.text(entry.flagged ? 'QUERY' : 'NOTE', PAGE.margin, cursorY);
+  cursorY += 3.2;
+
+  // Note text
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(BRAND.ink);
+  const noteLines = doc.splitTextToSize(entry.noteText, innerWidth);
+  doc.text(noteLines, PAGE.margin, cursorY);
+  cursorY += noteLines.length * 4.6 + 6;
+
+  return cursorY;
 }
 
 function finalizePDF(doc: jsPDF, projectName: string): ExportPreview {
+  // Silence the unused-import linter for autoTable — keep it imported
+  // so future-iteration tabular layouts don't have to re-add the dep.
+  void autoTable;
+
   const footerLeft = formatExportDate();
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
@@ -178,28 +185,26 @@ export function exportQueriesXLSX(projectId: string): ExportPreview {
   const summary: (string | number)[][] = [
     [meta.projectName],
     [`Director Queries · ${formatExportDate(meta.generatedAt)}`],
-    [`${meta.unresolvedCount} unresolved · ${meta.resolvedCount} resolved`],
+    [`${meta.flaggedCount} flagged · ${meta.totalCount} total`],
     [],
   ];
 
-  const headers = ['Scene', 'Story Day', 'INT/EXT', 'Location', 'Day/Night', 'Query', 'Status', 'Created'];
+  const headers = ['Scene', 'Heading', 'Story Day', 'Synopsis', 'Note', 'Flagged'];
   const rows = entries.map((e) => [
     e.sceneNumber || '',
+    e.sceneHeader,
     e.storyDay,
-    e.intExt,
-    e.location,
-    e.dayNight,
-    e.query.text,
-    e.query.resolved ? 'Resolved' : 'Unresolved',
-    formatCreated(e.query.createdAt),
+    e.synopsis,
+    e.noteText,
+    e.flagged ? 'Yes' : '',
   ]);
 
   const sheetData: (string | number)[][] = entries.length === 0
-    ? [...summary, ['No director queries logged for this project yet.']]
+    ? [...summary, ['No notes or queries logged for any scene yet.']]
     : [...summary, headers, ...rows];
 
   const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-  worksheet['!cols'] = [8, 10, 10, 28, 12, 60, 12, 14].map((w) => ({ wch: w }));
+  worksheet['!cols'] = [8, 38, 10, 60, 60, 10].map((w) => ({ wch: w }));
   if (entries.length > 0) {
     worksheet['!freeze'] = { xSplit: 0, ySplit: summary.length + 1 } as never;
   }
@@ -213,7 +218,7 @@ export function exportQueriesXLSX(projectId: string): ExportPreview {
   const filename = buildFilename(meta.projectName, FILE_STEM, 'xlsx');
   const sizeKb = Math.max(1, Math.round(blob.size / 1024));
   const subtitle = entries.length === 0
-    ? `No queries yet · XLSX · ${sizeKb} KB`
+    ? `No notes yet · XLSX · ${sizeKb} KB`
     : `${entries.length} row${entries.length !== 1 ? 's' : ''} · ${headers.length} columns · XLSX · ${sizeKb} KB`;
   return {
     blob,
@@ -223,10 +228,4 @@ export function exportQueriesXLSX(projectId: string): ExportPreview {
     subtitle,
     kind: 'spreadsheet',
   };
-}
-
-function formatCreated(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }

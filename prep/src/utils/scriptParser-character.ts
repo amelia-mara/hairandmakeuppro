@@ -160,6 +160,10 @@ export function isSupportingArtistRole(normalizedName: string): boolean {
 export function normalizeCharacterName(name: string): string {
   let normalized = name.toUpperCase();
   normalized = normalized.replace(/\s*\(.*?\)\s*/g, '');
+  // Drop leading non-letter punctuation / dashes so a line like
+  // "- LATER 9" becomes "LATER 9" before downstream filters check
+  // the first word against the denylist.
+  normalized = normalized.replace(/^[^A-Z]+/, '');
   if (normalized.includes('/') && !normalized.startsWith('INT') && !normalized.startsWith('EXT')) {
     const parts = normalized.split('/');
     if (parts[0].length >= 2 && parts[0].length <= 20) {
@@ -314,6 +318,13 @@ export function isCharacterCue(line: string): boolean {
   }
 
   if (!/[A-Z]/.test(trimmed)) return false;
+
+  // Character cues are character names — they always start with a
+  // letter. Leading punctuation (dashes, slashes, numbers) is a signal
+  // that the line is a transition marker like "- LATER 9", not a cue.
+  // The bracket-prefixed cases (`[FLASHBACK]` etc.) were already caught
+  // above in nonCharPatterns.
+  if (!/^[A-Z]/.test(trimmed)) return false;
 
   const actionPatterns = [
     /^(A |AN |THE |HE |SHE |THEY |WE |IT |HIS |HER |THEIR )/,
