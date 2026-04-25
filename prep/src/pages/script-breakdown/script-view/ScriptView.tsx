@@ -358,6 +358,16 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
 
   const memoRenderSceneContent = useCallback((scene: Scene) => {
     const sceneTags = tagStore.getTagsForScene(scene.id);
+    // If this scene has unreviewed script changes, hand the renderer
+    // the old and new content so it can highlight the diff in terracotta.
+    // Cleared automatically when the user clicks "✓ Reviewed".
+    let revisedDiff: { oldContent: string; newContent: string } | null = null;
+    if (projectRevisions && !projectRevisions.reviewedSceneIds.includes(scene.id)) {
+      const change = projectRevisions.changes.find((c) => c.sceneId === scene.id);
+      if (change && change.oldContent && change.newContent) {
+        revisedDiff = { oldContent: change.oldContent, newContent: change.newContent };
+      }
+    }
     return renderSceneContent({
       scene,
       charNames,
@@ -367,8 +377,9 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
       highlightCharNames,
       handleTagClick,
       sceneTags,
+      revisedDiff,
     });
-  }, [tagStore, charNames, cueNameToChar, characters, onCharClick, highlightCharNames, handleTagClick]);
+  }, [tagStore, charNames, cueNameToChar, characters, onCharClick, highlightCharNames, handleTagClick, projectRevisions]);
 
   /* Scroll to scene when selected from the scene list */
   useEffect(() => {
