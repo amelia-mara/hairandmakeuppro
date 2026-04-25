@@ -224,6 +224,29 @@ export function ScriptBreakdown({ projectId }: Props) {
           projectId={projectId}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
+          onShowRevisions={() => {
+            // Re-open the changes modal from the revised-scenes store
+            // so the user can revisit the flagged list any time, not
+            // just on first upload. The store keeps changes around
+            // until the user has reviewed each one.
+            const rev = revisedStore.revisions[projectId];
+            if (!rev || rev.changes.length === 0) return;
+            const stats = rev.changes.reduce(
+              (acc, c) => {
+                if (c.changeType === 'modified') acc.modified++;
+                else if (c.changeType === 'added') acc.added++;
+                else if (c.changeType === 'omitted') acc.omitted++;
+                return acc;
+              },
+              { modified: 0, added: 0, omitted: 0, unchanged: 0 },
+            );
+            setShowChangesModal({
+              changes: rev.changes,
+              stats,
+              idMap: new Map<string, string>(),
+              characterIdMap: new Map<string, string>(),
+            });
+          }}
         />
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
@@ -574,9 +597,11 @@ export function ScriptBreakdown({ projectId }: Props) {
           diffResult={showChangesModal}
           onClose={() => setShowChangesModal(null)}
           onGoToScene={(sceneId) => {
-            setShowChangesModal(null);
-            setSelectedSceneId(sceneId);
-            setScrollTrigger((n) => n + 1);
+            // Select the scene + scroll + switch the right panel back to
+            // the script tab. Leave the modal open so the user can keep
+            // clicking through the change list one item at a time; the
+            // modal still closes via the X / Esc / backdrop / footer.
+            selectScene(sceneId);
           }}
         />
       )}
