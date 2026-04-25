@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CONTINUITY_EVENT_TYPES,
+  useBreakdownStore,
   useSynopsisStore,
   type Scene,
   type Character,
@@ -53,7 +54,7 @@ import { CharBlock } from './CharBlock';
 import { useCharacterOverridesStore } from '@/stores/breakdownStore';
 import { type CostumeSceneBreakdown } from './CostumeBreakdownFields';
 
-export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onSetLook, department }: {
+export function BreakdownFormPanel({ projectId: _projectId, scene, characters, breakdown, activeCharacterId, saveStatus, scenes, allScenes, allCharacters, allLooks, onNavigate, onUpdate, onUpdateTimeline, onAddEvent, onUpdateEvent, onRemoveEvent, onRemoveCharacter, onAddLook, onUpdateLookField, department }: {
   projectId: string; scene: Scene; characters: Character[]; breakdown: SceneBreakdown | undefined;
   activeCharacterId: string | null; saveStatus: 'idle' | 'saving' | 'saved';
   scenes: Scene[]; allScenes: Scene[]; allCharacters: Character[]; allLooks: Look[];
@@ -65,7 +66,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
   onRemoveEvent: (id: string) => void;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
-  onSetLook: (lookId: string, hair: string, makeup: string, wardrobe: string) => void;
+  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => void;
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();
@@ -196,13 +197,13 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
                 allCharacters={allCharacters}
                 onAddCharEvent={(charId) => onAddEvent({
                   id: crypto.randomUUID(), type: 'Wound', characterId: charId,
-                  description: '', sceneRange: `${scene.number}-${scene.number}`,
+                  description: '', sceneRange: `${scene.number}-`,
                 })}
                 onUpdateEvent={onUpdateEvent}
                 onRemoveEvent={onRemoveEvent}
                 onRemoveCharacter={onRemoveCharacter}
                 onAddLook={onAddLook}
-                onSetLook={onSetLook}
+                onUpdateLookField={onUpdateLookField}
                 department={department}
                 costumeData={department === 'costume' ? costumeData : undefined}
                 onCostumeUpdate={department === 'costume' ? (data) => {
@@ -215,13 +216,25 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
           })}
         </div>
 
+        {/* Active continuity events from earlier scenes — open events
+            (no end set) and events whose sceneRange still covers this
+            scene. The user can leave events open while they read on,
+            then close them here with a single click once the story
+            reaches the moment the event ends. */}
+        <ActiveContinuityEventsSection
+          currentSceneId={scene.id}
+          currentSceneNumber={scene.number}
+          allScenes={allScenes}
+          allCharacters={allCharacters}
+        />
+
         {/* Scene-level Continuity Events */}
         <div className="fp-section">
           <div className="fp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Scene Continuity Events</span>
             <button className="fp-add-btn" onClick={() => onAddEvent({
               id: crypto.randomUUID(), type: 'Wound', characterId: '',
-              description: '', sceneRange: `${scene.number}-${scene.number}`,
+              description: '', sceneRange: `${scene.number}-`,
             })}>+ Add</button>
           </div>
           {breakdown.continuityEvents.length === 0 ? (
@@ -268,6 +281,119 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Active continuity events from earlier scenes
+   ────────────────────────────────────────────────────────────────── */
+
+interface ActiveEventEntry {
+  /** Source scene id where the event was originally added. */
+  sourceSceneId: string;
+  /** Source scene number (parsed from sceneRange). */
+  startScene: number;
+  /** Numeric end scene, or null when the event is still open. */
+  endScene: number | null;
+  event: ContinuityEvent;
+}
+
+function ActiveContinuityEventsSection({
+  currentSceneId,
+  currentSceneNumber,
+  allScenes,
+  allCharacters,
+}: {
+  currentSceneId: string;
+  currentSceneNumber: number;
+  allScenes: Scene[];
+  allCharacters: Character[];
+}) {
+  const breakdowns = useBreakdownStore((s) => s.breakdowns);
+  const updateContinuityEvent = useBreakdownStore((s) => s.updateContinuityEvent);
+  const removeContinuityEvent = useBreakdownStore((s) => s.removeContinuityEvent);
+
+  const sceneIdByNumber = new Map<number, string>();
+  for (const s of allScenes) sceneIdByNumber.set(s.number, s.id);
+
+  const active: ActiveEventEntry[] = [];
+  for (const [sceneId, bd] of Object.entries(breakdowns)) {
+    if (sceneId === currentSceneId) continue; // current scene's events render below
+    if (!bd?.continuityEvents) continue;
+    for (const ev of bd.continuityEvents) {
+      const parts = (ev.sceneRange || '').split('-');
+      const start = Number.parseInt((parts[0] || '').trim(), 10);
+      const endRaw = (parts[1] || '').trim();
+      const end = endRaw === '' ? null : Number.parseInt(endRaw, 10);
+      if (Number.isNaN(start)) continue;
+      const stillActive =
+        start <= currentSceneNumber &&
+        (end === null || (Number.isFinite(end) && end >= currentSceneNumber));
+      if (stillActive) {
+        active.push({ sourceSceneId: sceneId, startScene: start, endScene: end, event: ev });
+      }
+    }
+  }
+  active.sort((a, b) => a.startScene - b.startScene);
+
+  if (active.length === 0) return null;
+
+  const charName = (id: string) => allCharacters.find((c) => c.id === id)?.name || '';
+
+  return (
+    <div className="fp-section">
+      <div className="fp-section-title">
+        <span>Active continuity events</span>
+      </div>
+      <p className="fp-empty" style={{ marginTop: -6 }}>
+        Events that started earlier and are either still open or scheduled to span this scene.
+      </p>
+      {active.map(({ sourceSceneId, startScene, endScene, event }) => {
+        const isOpen = endScene === null;
+        const status = isOpen
+          ? `Sc ${startScene} → open`
+          : `Sc ${startScene} → Sc ${endScene}`;
+        const charLabel = event.characterId ? charName(event.characterId) : 'Scene-wide';
+        return (
+          <div key={`${sourceSceneId}-${event.id}`} className="fp-event">
+            <div className="fp-event-top">
+              <span style={{
+                fontFamily: 'var(--font-sans)', fontSize: '0.6875rem', fontWeight: 700,
+                color: '#C4522A', textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>
+                {event.type}
+              </span>
+              <span style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {charLabel} · {status}
+              </span>
+              <button
+                className="fp-add-btn"
+                onClick={() =>
+                  updateContinuityEvent(sourceSceneId, event.id, {
+                    sceneRange: `${startScene}-${currentSceneNumber}`,
+                  })
+                }
+                title={`Mark Sc ${currentSceneNumber} as the closing scene for this event`}
+              >
+                {isOpen ? `End in Sc ${currentSceneNumber}` : `Move end to Sc ${currentSceneNumber}`}
+              </button>
+              <button
+                className="fp-remove-btn"
+                onClick={() => removeContinuityEvent(sourceSceneId, event.id)}
+                title="Remove this event"
+              >
+                Remove
+              </button>
+            </div>
+            {event.description && (
+              <p className="fp-empty" style={{ marginTop: 4, marginBottom: 0, color: 'var(--text-secondary)' }}>
+                {event.description}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

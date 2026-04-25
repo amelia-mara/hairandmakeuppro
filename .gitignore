@@ -38,3 +38,7 @@ coverage/
 android/app/build/
 ios/App/Pods/
 prep-dist/
+
+
+# local-only scratch dir for PDFs / debug fixtures
+.scratch/

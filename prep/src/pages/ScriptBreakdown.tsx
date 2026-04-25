@@ -522,7 +522,34 @@ export function ScriptBreakdown({ projectId }: Props) {
               allLooks={ALL_LOOKS}
               onNavigate={selectScene}
               onUpdate={(cid, data) => { store.updateCharacterBreakdown(validSceneId, cid, data); triggerSave(); }}
-              onUpdateTimeline={(tl) => { store.updateTimeline(validSceneId, tl); triggerSave(); }}
+              onUpdateTimeline={(tl) => {
+                store.updateTimeline(validSceneId, tl);
+                // If the user just confirmed a numeric story day on
+                // this scene, shift every later scene's *suggested*
+                // story day by the same delta so the placeholders
+                // moving forward stay consistent with the anchor.
+                // Skipped automatically when the anchor or new value
+                // isn't a clean integer day, or when either is on a
+                // Flashback / Dream / Memory timeline.
+                if (scene && tl.dayConfirmed && tl.day && tl.day !== scene.storyDay) {
+                  (async () => {
+                    const { cascadeStoryDays } = await import('@/utils/cascadeStoryDays');
+                    const result = cascadeStoryDays({
+                      scenes: ALL_SCENES as never,
+                      anchorSceneNumber: scene.number,
+                      newDayValue: tl.day,
+                      anchorOriginalLabel: scene.storyDay,
+                    });
+                    if (result.changed.length > 0 && parsedData) {
+                      parsedScriptStore.setParsedData(projectId, {
+                        ...parsedData,
+                        scenes: result.scenes as never,
+                      });
+                    }
+                  })();
+                }
+                triggerSave();
+              }}
               onAddEvent={(evt) => { store.addContinuityEvent(validSceneId, evt); triggerSave(); }}
               onUpdateEvent={(eventId, data) => { store.updateContinuityEvent(validSceneId, eventId, data); triggerSave(); }}
               onRemoveEvent={(id) => { store.removeContinuityEvent(validSceneId, id); triggerSave(); }}
@@ -546,20 +573,13 @@ export function ScriptBreakdown({ projectId }: Props) {
                 });
                 return newId;
               }}
-              onSetLook={(lookId, hair, makeup, wardrobe) => {
-                // Update the look template with current entersWith values
-                parsedScriptStore.updateLook(projectId, lookId, { hair, makeup, wardrobe });
-                // Propagate to all scenes that use this look
-                const allBreakdowns = store.breakdowns;
-                for (const [sceneId, bd] of Object.entries(allBreakdowns)) {
-                  for (const ch of bd.characters) {
-                    if (ch.lookId === lookId) {
-                      store.updateCharacterBreakdown(sceneId, ch.characterId, {
-                        entersWith: { hair, makeup, wardrobe },
-                      });
-                    }
-                  }
-                }
+              onUpdateLookField={(lookId, field, value) => {
+                // Auto-save: every entersWith edit on a scene with a
+                // look selected mirrors back onto the look itself, so
+                // the next scene that picks the same look auto-fills
+                // from the latest text. Replaces the old "Set Look"
+                // button — no explicit save action required.
+                parsedScriptStore.updateLook(projectId, lookId, { [field]: value });
                 triggerSave();
               }}
               department={department}
