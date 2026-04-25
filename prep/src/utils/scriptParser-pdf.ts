@@ -18,15 +18,32 @@ export async function extractTextFromPDF(file: File): Promise<string> {
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
   let fullText = '';
+  let totalItemsSeen = 0;
+  let totalItemsKept = 0;
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
-    const textContent = await page.getTextContent();
+    // `includeMarkedContent: true` makes PDF.js emit text from inside
+    // marked-content tags (tagged / accessibility-flagged PDFs that
+    // wrap dialogue or action text). Without it, some scripts had
+    // entire chunks of dialogue silently dropped because every line
+    // inside a tagged span was filtered out.
+    // `disableNormalization: true` keeps the original whitespace and
+    // ligatures so we don't have characters squashed together.
+    const textContent = await page.getTextContent({
+      includeMarkedContent: true,
+      disableNormalization: true,
+    });
 
     const lines: Map<number, Array<{ x: number; text: string; width: number }>> = new Map();
 
     for (const item of textContent.items as TextItem[]) {
-      if (!item.str || item.str.trim() === '') continue;
+      totalItemsSeen++;
+      // includeMarkedContent emits non-text "marked" events (no `str`,
+      // no `transform`). Skip those; they're metadata, not content.
+      if (!item.str || !item.transform) continue;
+      if (item.str.trim() === '') continue;
+      totalItemsKept++;
 
       const y = Math.round(item.transform[5] / 2) * 2;
       const x = item.transform[4];
@@ -68,6 +85,14 @@ export async function extractTextFromPDF(file: File): Promise<string> {
 
     fullText += '\n';
   }
+
+  // Visibility while debugging missing-content reports — logs are
+  // small and only fire on upload, not at runtime.
+  console.log(
+    `[scriptParser] PDF text extracted: ${pdf.numPages} pages, ` +
+    `${totalItemsKept}/${totalItemsSeen} items kept, ` +
+    `${fullText.length} characters of raw text.`,
+  );
 
   return normalizeScriptText(fullText);
 }
