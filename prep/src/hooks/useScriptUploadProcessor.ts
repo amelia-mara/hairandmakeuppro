@@ -11,6 +11,7 @@ import {
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
 import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
+import { inferTimelineType } from '@/utils/inferTimelineType';
 import { supabase } from '@/lib/supabase';
 import { useProjectStore } from '@/stores/projectStore';
 
@@ -128,6 +129,11 @@ export function useScriptUploadProcessor({
 
         const parsedNum = parseInt(sceneNum, 10);
         const isPreamble = ps.location === 'PREAMBLE';
+        // Infer the breakdown form's Timeline → Type from the script's
+        // own markers — `[FLASHBACK]`, `[MONTAGE]`, `[PRESENT]`, etc.
+        // appear in the slugline or on the title card line above the
+        // heading. Saves the user tagging every flagged scene by hand.
+        const timelineType = inferTimelineType(ps.slugline, ps.titleCardBefore);
         return {
           id: crypto.randomUUID(),
           number: isNaN(parsedNum) ? idx + 1 : parsedNum,
@@ -136,6 +142,7 @@ export function useScriptUploadProcessor({
           location: isPreamble ? 'PREAMBLE' : ps.location,
           storyDay: '',
           titleCardBefore: ps.titleCardBefore ?? null,
+          timelineType: timelineType || undefined,
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
@@ -212,6 +219,31 @@ export function useScriptUploadProcessor({
         }
       }
 
+      // ━━━ Preserve user-created looks across the upload ━━━
+      // Looks belong to the project, not to a specific draft snapshot.
+      // Each upload mints fresh character UUIDs, so remap any existing
+      // looks' characterId via the diff and merge them into the new
+      // looks list. Without this step, every "+ New Look" the user
+      // created since the last upload would silently disappear when
+      // they upload a revision.
+      let mergedLooks = generatedLooks;
+      if (isRevision && existingParsed && existingParsed.looks.length > 0) {
+        const generatedIds = new Set(generatedLooks.map((l) => l.id));
+        const remappedExistingLooks = existingParsed.looks
+          .map((lk) => {
+            const newCharId = diffResult?.characterIdMap.get(lk.characterId) ?? lk.characterId;
+            // Only keep the look if its character still exists in the
+            // new draft (either via the diff map, or because the
+            // character id matched directly).
+            const newCharIdValid = characters.some((c) => c.id === newCharId);
+            if (!newCharIdValid) return null;
+            if (generatedIds.has(lk.id)) return null;
+            return { ...lk, characterId: newCharId };
+          })
+          .filter((l): l is typeof generatedLooks[number] => !!l);
+        mergedLooks = [...generatedLooks, ...remappedExistingLooks];
+      }
+
       setProgress(95);
       setStatusText('Saving...');
       await new Promise(r => setTimeout(r, 200));
@@ -220,7 +252,7 @@ export function useScriptUploadProcessor({
       setParsedData(projectId, {
         scenes: scenesWithStoryDays,
         characters,
-        looks: generatedLooks,
+        looks: mergedLooks,
         filename: selectedFile.name,
         parsedAt: new Date().toISOString(),
       });
@@ -280,7 +312,7 @@ export function useScriptUploadProcessor({
             parsed_data: {
               scenes: scenesWithStoryDays,
               characters,
-              looks: generatedLooks,
+              looks: mergedLooks,
               filename: selectedFile.name,
               parsedAt: new Date().toISOString(),
             },
