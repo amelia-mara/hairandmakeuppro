@@ -13,6 +13,9 @@ export interface Scene {
   storyDaySignal?: string;
   storyDayGapNote?: string | null;
   titleCardBefore?: string | null;
+  /** Timeline marker inferred from the slugline — drives the
+   *  Timeline → Type dropdown's default in the breakdown form. */
+  timelineType?: string;
   timeInfo: string;
   characterIds: string[];
   synopsis: string;
@@ -1250,6 +1253,14 @@ export interface ParsedSceneData {
   storyDaySignal?: string;
   storyDayGapNote?: string | null;
   titleCardBefore?: string | null;
+  /**
+   * Inferred timeline type from the slugline / title card —
+   * "Flashback", "Flash Fwd", "Present", "Dream", "Montage",
+   * or "Time Jump". Used as the default value for the breakdown
+   * form's Timeline → Type dropdown so scenes flagged in the
+   * script don't have to be tagged manually.
+   */
+  timelineType?: string;
   timeInfo: string;
   characterIds: string[];
   synopsis: string;

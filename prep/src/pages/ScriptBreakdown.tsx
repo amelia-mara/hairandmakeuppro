@@ -150,7 +150,15 @@ export function ScriptBreakdown({ projectId }: Props) {
     if (!existing) {
       store.setBreakdown(validSceneId, {
         sceneId: validSceneId,
-        timeline: { day: scene.storyDay || '', time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '', type: '', note: '' },
+        // Default timeline.type to whatever the script signals
+        // ([FLASHBACK], [MONTAGE], [PRESENT], etc.) so the user
+        // doesn't have to re-tag every flagged scene by hand.
+        timeline: {
+          day: scene.storyDay || '',
+          time: scene.dayNight === 'DAY' ? 'Day' : scene.dayNight === 'NIGHT' ? 'Night' : scene.dayNight === 'DAWN' ? 'Dawn' : scene.dayNight === 'DUSK' ? 'Dusk' : '',
+          type: scene.timelineType ?? '',
+          note: '',
+        },
         characters: scene.characterIds.map((cid) => ({
           characterId: cid, lookId: '',
           entersWith: { hair: '', makeup: '', wardrobe: '' },

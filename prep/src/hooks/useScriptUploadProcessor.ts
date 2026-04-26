@@ -11,6 +11,7 @@ import {
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
 import { diffScripts, type DiffResult } from '@/utils/scriptDiff';
+import { inferTimelineType } from '@/utils/inferTimelineType';
 import { supabase } from '@/lib/supabase';
 import { useProjectStore } from '@/stores/projectStore';
 
@@ -128,6 +129,11 @@ export function useScriptUploadProcessor({
 
         const parsedNum = parseInt(sceneNum, 10);
         const isPreamble = ps.location === 'PREAMBLE';
+        // Infer the breakdown form's Timeline → Type from the script's
+        // own markers — `[FLASHBACK]`, `[MONTAGE]`, `[PRESENT]`, etc.
+        // appear in the slugline or on the title card line above the
+        // heading. Saves the user tagging every flagged scene by hand.
+        const timelineType = inferTimelineType(ps.slugline, ps.titleCardBefore);
         return {
           id: crypto.randomUUID(),
           number: isNaN(parsedNum) ? idx + 1 : parsedNum,
@@ -136,6 +142,7 @@ export function useScriptUploadProcessor({
           location: isPreamble ? 'PREAMBLE' : ps.location,
           storyDay: '',
           titleCardBefore: ps.titleCardBefore ?? null,
+          timelineType: timelineType || undefined,
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
