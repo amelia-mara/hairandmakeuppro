@@ -167,7 +167,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
               options={['', 'Day', 'Night', 'Dawn', 'Dusk']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, time: v })} />
             <FSelect label="Type" value={breakdown.timeline.type}
-              options={['', 'Normal', 'Flashback', 'Flash Fwd', 'Time Jump', 'Dream', 'Montage']}
+              options={['', 'Present', 'Flashback', 'Flash Fwd', 'Time Jump', 'Dream', 'Montage']}
               onChange={(v) => onUpdateTimeline({ ...breakdown.timeline, type: v })} />
           </div>
         </div>
