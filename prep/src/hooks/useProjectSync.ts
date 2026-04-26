@@ -473,12 +473,21 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           if (sp && ((sp.scenes && sp.scenes.length > 0) || (sp.characters && sp.characters.length > 0))) {
             console.log('[useProjectSync] Restoring from script_uploads.parsed_data —',
               `scenes: ${sp.scenes?.length ?? 0}, characters: ${sp.characters?.length ?? 0}`);
+            // Preserve any locally-cached looks that aren't in the
+            // snapshot — looks created via "+ New Look" after the
+            // upload aren't part of script_uploads.parsed_data, so
+            // overwriting with sp.looks would silently drop them.
+            const localCachedLooks = useParsedScriptStore.getState().getParsedData(projectId!)?.looks ?? [];
+            const snapshotLookIds = new Set((sp.looks ?? []).map((l) => l.id));
+            const preservedLocalLooks = localCachedLooks.filter((l) => !snapshotLookIds.has(l.id));
+            const mergedLooks = [...(sp.looks ?? []), ...preservedLocalLooks];
+
             setReceivingFromRealtime(true);
             try {
               useParsedScriptStore.getState().setParsedData(projectId!, {
                 scenes: sp.scenes || [],
                 characters: sp.characters || [],
-                looks: sp.looks || [],
+                looks: mergedLooks,
                 filename: sp.filename || (data.scriptUpload.file_name as string) || 'script.pdf',
                 parsedAt: sp.parsedAt || new Date().toISOString(),
               });
@@ -505,9 +514,9 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               if (sp.characters && sp.characters.length > 0) {
                 saveCharacters(projectId!, sp.characters as any);
               }
-              if (sp.looks && sp.looks.length > 0) {
+              if (mergedLooks.length > 0) {
                 const lookSceneMap = buildLookSceneMap(projectId!);
-                saveLooks(projectId!, sp.looks as any, lookSceneMap);
+                saveLooks(projectId!, mergedLooks as any, lookSceneMap);
               }
             } finally {
               setReceivingFromRealtime(false);

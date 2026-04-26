@@ -215,10 +215,25 @@ export function useScriptDrafts({
           console.warn('[useScriptDrafts] failed to remap scene notes:', err);
         }
 
+        // Merge looks: looks belong to the project, not the draft
+        // snapshot. Remap any user-created look's characterId via the
+        // diff so the look stays attached to the equivalent character
+        // in the loaded draft. Drop looks whose character no longer
+        // exists in the loaded draft.
+        const draftLookIds = new Set((draft.parsed_data.looks ?? []).map((l) => l.id));
+        const draftCharIds = new Set(draft.parsed_data.characters.map((c) => c.id));
+        const preservedLooks = (previousParsed.looks ?? [])
+          .filter((l) => !draftLookIds.has(l.id))
+          .map((l) => {
+            const newCharId = diff.characterIdMap.get(l.characterId) ?? l.characterId;
+            return { ...l, characterId: newCharId };
+          })
+          .filter((l) => draftCharIds.has(l.characterId));
+
         parsedScriptStore.setParsedData(projectId, {
           scenes: remappedScenes,
           characters: draft.parsed_data.characters,
-          looks: draft.parsed_data.looks,
+          looks: [...(draft.parsed_data.looks ?? []), ...preservedLooks],
           filename: draft.parsed_data.filename,
           parsedAt: draft.parsed_data.parsedAt,
         });

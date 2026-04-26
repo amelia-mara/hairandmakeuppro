@@ -418,14 +418,14 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
           /* Timeline badges */
           const timelineType = bd?.timeline.type;
-          const showBadge = timelineType && timelineType !== 'Normal' && timelineType !== '';
+          const showBadge = timelineType && timelineType !== 'Normal' && timelineType !== 'Present' && timelineType !== '';
 
           /* Resolve story day: breakdown timeline → scene-level storyDay */
           const storyDay = bd?.timeline.day || scene.storyDay || '';
           const isTimeJump = timeJumpSceneIds.has(scene.id);
 
           /* Scene-type class for colour coding */
-          const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== ''
+          const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== 'Present' && timelineType !== ''
             ? `bs-scene-block--${timelineType.toLowerCase().replace(/\s+/g, '-')}`
             : '';
 

@@ -239,7 +239,7 @@ export function SceneListPanel({
                     <div className="sl-expand-pill">
                       <span className="sl-expand-label">Timeline</span>
                       <span className="sl-expand-value">
-                        {[bd.timeline.day, bd.timeline.type && bd.timeline.type !== 'Normal' ? bd.timeline.type : ''].filter(Boolean).join(' · ') || '—'}
+                        {[bd.timeline.day, bd.timeline.type && bd.timeline.type !== 'Normal' && bd.timeline.type !== 'Present' ? bd.timeline.type : ''].filter(Boolean).join(' · ') || '—'}
                       </span>
                     </div>
                   )}
