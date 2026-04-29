@@ -412,8 +412,14 @@
 
   /* ── Center (script) + right (breakdown) share screen 50/50 ── */
   .bd-page--mobile .bd-center {
-    flex: 1 1 50%;
+    flex: 1 1 auto;
     min-height: 0;
+  }
+  /* Script page has a bd-right beneath bd-center; cap each at 50%
+     and put a divider between them. Continuity has no bd-right so
+     this rule is skipped via :has and bd-center takes full height. */
+  .bd-page--mobile .bd-panels:has(.bd-right) .bd-center {
+    flex: 1 1 50%;
     border-bottom: 1px solid var(--border-card);
   }
   .bd-page--mobile .bd-right {
