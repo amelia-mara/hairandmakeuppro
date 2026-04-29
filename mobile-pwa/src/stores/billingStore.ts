@@ -7,10 +7,13 @@ interface BillingState {
   // Billing details (tied to user, persists across projects)
   billingDetails: BillingDetails;
 
-  // True once the user has skipped the post-signup / timesheet
-  // reminder. Used so we don't keep nagging — they can still open
-  // the prompt manually from the user-profile menu.
+  // True once the post-signup billing prompt has been shown to this
+  // user. Flipped to true the moment the modal closes (any path) so
+  // it never auto-fires again.
   signupNudgeDismissed: boolean;
+  // Same idea for the first-time-on-timesheet prompt — independent
+  // flag because the two prompts fire from different surfaces.
+  timesheetNudgeDismissed?: boolean;
 
   // Loading state
   isLoading: boolean;
@@ -19,8 +22,10 @@ interface BillingState {
 
   // Actions - Update entire billing details
   setBillingDetails: (details: BillingDetails) => void;
-  // Actions - Dismiss the auto-prompt (signup nudge / timesheet reminder).
+  /** Mark the post-signup nudge as already shown. Idempotent. */
   dismissSignupNudge: () => void;
+  /** Mark the first-time-on-timesheet nudge as already shown. */
+  dismissTimesheetNudge: () => void;
 
   // Actions - Update individual fields
   updatePersonalInfo: (updates: Partial<Pick<BillingDetails, 'fullName' | 'businessName' | 'address' | 'phone' | 'email'>>) => void;
@@ -46,11 +51,13 @@ export const useBillingStore = create<BillingState>()(
     (set, get) => ({
       billingDetails: createEmptyBillingDetails(),
       signupNudgeDismissed: false,
+      timesheetNudgeDismissed: false,
       isLoading: false,
       isSaving: false,
       lastError: null,
 
       dismissSignupNudge: () => set({ signupNudgeDismissed: true }),
+      dismissTimesheetNudge: () => set({ timesheetNudgeDismissed: true }),
 
       setBillingDetails: (details) => {
         set({
@@ -206,6 +213,7 @@ export const useBillingStore = create<BillingState>()(
       partialize: (state) => ({
         billingDetails: state.billingDetails,
         signupNudgeDismissed: state.signupNudgeDismissed,
+        timesheetNudgeDismissed: state.timesheetNudgeDismissed,
       }),
     }
   )

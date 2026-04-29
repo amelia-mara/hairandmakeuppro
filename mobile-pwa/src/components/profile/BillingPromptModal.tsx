@@ -1,5 +1,3 @@
-import { useBillingStore } from '@/stores/billingStore';
-
 interface BillingPromptModalProps {
   /** Pulled from where the prompt fired so the copy is contextual. */
   reason: 'signup' | 'timesheet';
@@ -23,12 +21,10 @@ interface BillingPromptModalProps {
  * details in is via the user profile menu (More → Billing).
  */
 export function BillingPromptModal({ reason, onFillIn, onClose }: BillingPromptModalProps) {
-  const dismissSignupNudge = useBillingStore((s) => s.dismissSignupNudge);
-
-  const handleSkip = () => {
-    dismissSignupNudge();
-    onClose();
-  };
+  // Whichever button closes the modal, the parent (App-level
+  // useEffects) is responsible for flipping the matching
+  // one-time-shown flag — Skip just calls onClose like the rest.
+  const handleSkip = () => onClose();
 
   const title = reason === 'signup' ? 'Add invoicing details?' : 'Finish your billing details';
   const body =
