@@ -200,12 +200,22 @@ interface TimesheetState {
   updateCrewRateCard: (crewId: string, updates: Partial<RateCard>) => void;
   /**
    * Ensure a "me" crew row exists in this project, prefilled from the
-   * caller-supplied user-profile fields. The rate-card defaults are
-   * left untouched so the user can adjust them per project. Returns
-   * the id of the matching crew row.
+   * caller-supplied user-profile fields. When the row is created for
+   * the first time we seed it with `me.rateCard` (the user's default
+   * rate card from their profile) when supplied, otherwise we fall
+   * back to createDefaultRateCard(). Existing rows keep their rate
+   * card untouched so per-project negotiations aren't overwritten by
+   * profile edits.
    */
   ensureSelfCrew: (
-    me: { userId: string; name: string; email: string; phone: string; crewType: CrewType },
+    me: {
+      userId: string;
+      name: string;
+      email: string;
+      phone: string;
+      crewType: CrewType;
+      rateCard?: RateCard;
+    },
   ) => string;
 
   // Entries
@@ -461,7 +471,7 @@ function createTimesheetStore(projectId: string) {
             crewType: me.crewType,
             email: me.email,
             phone: me.phone,
-            rateCard: createDefaultRateCard(),
+            rateCard: me.rateCard ?? createDefaultRateCard(),
             isMe: true,
             userId: me.userId,
           };

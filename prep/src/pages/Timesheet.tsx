@@ -160,12 +160,8 @@ export function Timesheet({ projectId }: TimesheetProps) {
     () => crew.find((c) => c.id === confirmRemoveId) ?? null,
     [crew, confirmRemoveId],
   );
-  const handleRemoveCrew = useCallback(() => {
-    if (!confirmRemoveId) return;
-    removeCrew(confirmRemoveId);
-    setConfirmRemoveId(null);
-    showToast('Crew member removed');
-  }, [confirmRemoveId, removeCrew, showToast]);
+  // handleRemoveCrew is declared further down once showToast exists —
+  // see below.
 
   const { currency } = production;
 
@@ -208,6 +204,10 @@ export function Timesheet({ projectId }: TimesheetProps) {
       email: p.email || authUser.email,
       phone: p.phone,
       crewType: p.crewType,
+      // Profile's default rate card seeds new "Me" rows. ensureSelfCrew
+      // ignores it on rows that already exist so we never overwrite a
+      // per-project rate the user already negotiated.
+      rateCard: p.rateCard,
     });
   }, [authUser, profile, ensureProfile, ensureSelfCrew]);
 
@@ -215,6 +215,13 @@ export function Timesheet({ projectId }: TimesheetProps) {
     setToast(msg);
     setTimeout(() => setToast(null), 2000);
   }, []);
+
+  const handleRemoveCrew = useCallback(() => {
+    if (!confirmRemoveId) return;
+    removeCrew(confirmRemoveId);
+    setConfirmRemoveId(null);
+    showToast('Crew member removed');
+  }, [confirmRemoveId, removeCrew, showToast]);
 
   /* Compute crew summaries — pin the "me" row to the top so the user
      always sees their own invoice ahead of the team list. */
