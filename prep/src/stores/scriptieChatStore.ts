@@ -6,7 +6,16 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { buildScriptieContext } from '@/services/scriptieContext';
+
+/**
+ * NOTE: scriptieContext is dynamically imported inside sendMessage
+ * rather than statically at the top of this file. The context
+ * builder pulls in the entire breakdownStore (1500+ lines, 10+
+ * sub-stores) which historically broke the app at module-load
+ * time when imported into App.tsx's tree (see commit defe77d).
+ * Lazy-loading keeps the project landing page fast and side-step
+ * the breakage entirely.
+ */
 
 export interface ScriptieMessage {
   id: string;
@@ -77,6 +86,9 @@ export const useScriptieChatStore = create<ScriptieState>()(
         });
 
         try {
+          // Lazy-import to avoid pulling breakdownStore into App.tsx's
+          // initial bundle (see header note).
+          const { buildScriptieContext } = await import('@/services/scriptieContext');
           const { prompt } = buildScriptieContext(projectId);
 
           // Conversation window — recent N messages including the
