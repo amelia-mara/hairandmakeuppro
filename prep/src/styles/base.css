@@ -325,6 +325,65 @@ body {
     grid-template-columns: 1fr;
     padding: 0 20px 40px;
   }
+
+  /* ── Landing-page hero ───────────────────────────────────
+     The desktop layout uses 80px vertical padding, a 3rem
+     heading, and a 600px rainbow swirl that overflows the
+     viewport. On a phone that becomes a giant blank zone
+     above the heading + horizontal scroll from the swirl.
+     Tighten the spacing, scale the type, and shrink the
+     decorative rings so the hero fits a single phone screen
+     without changing anything desktop sees. */
+  .hub-hero {
+    padding: 32px 20px 28px;
+  }
+  .hub-hero-badge {
+    padding: 6px 18px;
+    margin-bottom: 18px;
+    font-size: 0.625rem;
+  }
+  .hub-hero-heading {
+    font-size: 1.85rem;
+    line-height: 1.18;
+    margin-bottom: 14px;
+  }
+  .hub-hero-subtitle {
+    font-size: 0.9375rem;
+    max-width: 100%;
+    margin-bottom: 24px;
+  }
+  .hub-hero-cta {
+    font-size: 0.9375rem;
+    padding: 12px 32px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .hub-hero-rainbow {
+    width: 360px;
+    height: 360px;
+    top: -40px;
+    right: -100px;
+    opacity: 0.4;
+  }
+  .rainbow-ring--1 {
+    width: 360px;
+    height: 360px;
+    border-width: 18px;
+  }
+  .rainbow-ring--2 {
+    width: 320px;
+    height: 320px;
+    top: 20px;
+    left: 20px;
+    border-width: 16px;
+  }
+  .rainbow-ring--3 {
+    width: 280px;
+    height: 280px;
+    top: 40px;
+    left: 40px;
+    border-width: 16px;
+  }
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
