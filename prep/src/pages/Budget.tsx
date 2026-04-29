@@ -377,7 +377,6 @@ export function Budget({ projectId }: BudgetProps) {
             className={`bg-sidebar-item ${activePanel === s.id ? 'bg-sidebar-item--active' : ''}`}
             onClick={() => pickPanel(s.id)}
           >
-            <span className="bg-sidebar-num">{s.num}</span>
             <span className="bg-sidebar-text">{s.title}</span>
             <span className={`bg-sidebar-dot ${s.status === 'done' ? 'bg-sidebar-dot--done' : s.status === 'going' ? 'bg-sidebar-dot--going' : ''}`} />
           </button>
