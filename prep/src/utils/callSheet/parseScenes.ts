@@ -10,11 +10,33 @@ const HEADER_RE =
 
 const PAGES_RE = /^\d+(?:\s+\d+)?\/\d+$/;          // "1/8", "1 5/8"
 const PAGES_INT_RE = /^\d+(?:\.\d+)?$/;            // "2"
+// A small whole-number followed by a fractional pages cell ("1" + "5/8")
+// is split across two cells in some PDF extractions. Recognise the second
+// half so we can join them.
+const PAGES_FRAC_RE = /^\d+\/\d+$/;
 const DAYNIGHT_RE = /^(?:D|N|D\/N|EVE|MORN|MORNING|EVENING)\s*\d*$/i;
 const STORYDAY_RE = /^[A-Z]?\d{1,2}$/;             // story day code "5", "11", "D5"
 const SCENE_NUM_RE = /^(?:\d+(?:\/\d+)?(?:[A-Z]+)?(?:\s*-\s*\d+(?:\/\d+)?)?|PU)$/i;
 const TIME_RE = /\d{1,2}:\d{2}/;
-const CAST_LIST_RE = /\d+[A-Z]*\b(?:\s*[.,]\s*\d+[A-Z]*\b)*/;
+// A cell that is *only* cast IDs: starts with optional asterisk + digit,
+// the whole cell is digit-led tokens (with optional trailing letters and
+// optional ".Name" suffixes used by JJFC-style productions), separated by
+// commas. Trailing comma OK ("*2.Gordon, *3.Madison,").
+//
+// Critically, a lone numeric cell ("3" — the SD/story-day column on cs2)
+// must NOT match. We require either a comma (multiple IDs) or a ".Name"
+// suffix that signals a JJFC-style cast token.
+const CAST_CELL_RE =
+  /^\s*\*?\d+[A-Z]*(?:\.[A-Za-z][A-Za-z\s'’\-]*)?(?:\s*,\s*\*?\d+[A-Z]*(?:\.[A-Za-z][A-Za-z\s'’\-]*)?)*\s*,?\s*$/;
+function isCastCell(c: string): boolean {
+  if (!CAST_CELL_RE.test(c)) return false;
+  // Must have a comma or a ".Name" suffix to count.
+  return /,/.test(c) || /\d+[A-Z]*\.[A-Za-z]/.test(c);
+}
+// A cell that contains at least one cast-style token in *part* of its
+// content (used for soft fallbacks).
+const CAST_TOKEN_RE = /\*?\d+[A-Z]*\b/;
+const INTEXT_PREFIX_RE = /^(INT|EXT|INT\/EXT)\.?\s*[-:]?\s*(.*)$/i;
 const INTEXT_RE = /^(?:INT|EXT|INT\/EXT)\.?$/i;
 
 export function parseScenes(text: string): CallSheetScene[] {
@@ -93,6 +115,20 @@ export function parseScenes(text: string): CallSheetScene[] {
       finish();
       pending = consumeRow(cells);
       // Description column may have flowed onto previous/next lines — gather.
+      // Punishing-style call sheets put the slugline (INT/EXT. ...) on the
+      // line ABOVE the data row, so scoop it up retroactively.
+      if (!pending.setDescription) {
+        for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+          const prev = slice[j].trim();
+          if (!prev) continue;
+          if (/^(?:INT|EXT|INT\/EXT)\b/i.test(prev)) {
+            pending.setDescription = prev;
+            break;
+          }
+          // Stop scanning back if we hit anything that's clearly not a slug.
+          if (/^(?:LOC\s*\d+|RUNNING|MOVE|LUNCH|BRIEFING|#\d|\d)/.test(prev)) break;
+        }
+      }
       if (pending.setDescription) descBuffer.push(pending.setDescription);
       if (pending.action) descBuffer.push(pending.action);
       // Reset so we rebuild from descBuffer at finish().
@@ -113,15 +149,19 @@ export function parseScenes(text: string): CallSheetScene[] {
 
 function isLikelyNewRow(cells: string[]): boolean {
   if (!cells.length) return false;
-  // First cell is a scene number?
-  const first = cleanSceneNumber(cells[0]);
-  if (!SCENE_NUM_RE.test(first)) return false;
+  // The scene-number cell can be the first cell OR the second cell when
+  // the row carries a "LOC 1"-style location prefix. Find which.
+  let sceneIdx = 0;
+  if (/^LOC\s*\d+$/i.test(cells[0])) sceneIdx = 1;
+  if (sceneIdx >= cells.length) return false;
+  const sceneCell = cleanSceneNumber(cells[sceneIdx]);
+  if (!SCENE_NUM_RE.test(sceneCell)) return false;
   // Must also contain at least one classifier on the same row to count.
-  const tail = cells.slice(1).join(' ');
-  if (DAYNIGHT_RE.test(cells[2] ?? '') || DAYNIGHT_RE.test(cells[3] ?? '')) return true;
-  if (PAGES_RE.test(cells[3] ?? '') || PAGES_RE.test(cells[4] ?? '')) return true;
+  const tail = cells.slice(sceneIdx + 1).join(' ');
+  if (cells.slice(sceneIdx + 1).some((c) => DAYNIGHT_RE.test(c))) return true;
+  if (cells.slice(sceneIdx + 1).some((c) => PAGES_RE.test(c) || PAGES_INT_RE.test(c))) return true;
   if (/\b(?:INT|EXT)\b/i.test(tail)) return true;
-  if (CAST_LIST_RE.test(tail)) return true;
+  if (cells.slice(sceneIdx + 1).some((c) => isCastCell(c))) return true;
   return false;
 }
 
@@ -141,45 +181,105 @@ function consumeRow(cells: string[]): Partial<CallSheetScene> {
     i += 1;
   }
 
-  // Walk remaining cells and classify each.
+  // Walk remaining cells and classify each. classifyCell handles mixed
+  // content like "INT ABBI argues..." or "1 1/8 1, 2".
   for (; i < cells.length; i++) {
-    const c = cells[i];
-    if (!row.setDescription && (INTEXT_RE.test(c) || /^(?:INT|EXT|INT\/EXT)\b/i.test(c))) {
-      // Sometimes I/E is its own tiny cell, sometimes joined with the slug.
-      const next = cells[i + 1];
-      if (INTEXT_RE.test(c) && next) {
-        row.setDescription = `${c} ${next}`.replace(/\s+/g, ' ').trim();
-        i += 1;
-      } else {
-        row.setDescription = c;
-      }
-      continue;
+    const next = cells[i + 1];
+    const consumed = classifyCell(row, cells[i], next);
+    if (consumed) i += 1;
+  }
+  return row;
+}
+
+// Try to slot the cell's content into one of the row fields. Returns true
+// when the next cell was also consumed (e.g. pages "1" + "5/8" pair).
+function classifyCell(
+  row: Partial<CallSheetScene>,
+  cell: string,
+  next?: string,
+): boolean {
+  const c = cell.trim();
+  if (!c) return false;
+
+  // INT/EXT prefix split: "INT - ABBI argues" → I/E + description.
+  const ie = c.match(INTEXT_PREFIX_RE);
+  if (ie) {
+    const ePart = ie[1].toUpperCase();
+    const rest = ie[2].trim();
+    // If the prefix is the whole cell ("INT"), pair with next cell as desc.
+    if (!rest) {
+      row.setDescription = (row.setDescription ?? `${ePart}.${next ? ` ${next}` : ''}`).trim();
+      return Boolean(next);
     }
-    if (!row.dayNight && DAYNIGHT_RE.test(c)) {
-      row.dayNight = c.toUpperCase();
-      continue;
-    }
-    if (!row.pages && (PAGES_RE.test(c) || PAGES_INT_RE.test(c))) {
-      row.pages = c;
-      continue;
-    }
-    if (!row.estimatedTime && /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(c)) {
-      row.estimatedTime = c;
-      continue;
-    }
-    if (CAST_LIST_RE.test(c) && /[.,]/.test(c)) {
-      row.cast = mergeCast(row.cast, c);
-      continue;
-    }
-    if (!row.action && /[A-Za-z]/.test(c) && c.length > 3) {
-      row.action = (row.action ? `${row.action} ${c}` : c).trim();
-      continue;
+    // Otherwise treat the prefix as part of setDescription and the rest as
+    // the synopsis/action — different productions use either column.
+    if (!row.setDescription) row.setDescription = `${ePart}. ${rest}`;
+    else if (!row.action) row.action = rest;
+    return false;
+  }
+
+  if (!row.dayNight && DAYNIGHT_RE.test(c)) {
+    row.dayNight = c.toUpperCase();
+    return false;
+  }
+
+  if (!row.pages && (PAGES_RE.test(c) || PAGES_FRAC_RE.test(c))) {
+    row.pages = c;
+    return false;
+  }
+  if (!row.pages && PAGES_INT_RE.test(c) && next && PAGES_FRAC_RE.test(next.trim())) {
+    row.pages = `${c} ${next.trim()}`;
+    return true;
+  }
+
+  // Combined "pages + cast" cell: "1 1/8 1, 2" — the cell starts with a
+  // pages token and continues with comma-separated cast IDs.
+  if (!row.pages || !row.cast?.length) {
+    const split = splitPagesAndCast(c);
+    if (split) {
+      if (!row.pages && split.pages) row.pages = split.pages;
+      if (split.cast.length) row.cast = mergeCast(row.cast, split.cast.join(','));
+      return false;
     }
   }
 
-  // Single-token "story day" cells (like "D5") are already captured under
-  // dayNight by DAYNIGHT_RE; nothing to do.
-  return row;
+  if (!row.estimatedTime && /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(c)) {
+    row.estimatedTime = c;
+    return false;
+  }
+
+  // Strict cast cell: must be only digit-led tokens (with optional ".Name"
+  // suffix), comma-separated. Notes columns like "Game time, players take..."
+  // won't match because they don't start with digits.
+  if (isCastCell(c)) {
+    row.cast = mergeCast(row.cast, c);
+    return false;
+  }
+  // Once both dayNight and pages are filled, a lone digit-led token in the
+  // remaining cells is the cast column (cs4 single-cast scenes like "2").
+  if (row.dayNight && row.pages && /^\s*\*?\d+[A-Z]*\s*$/.test(c)) {
+    row.cast = mergeCast(row.cast, c);
+    return false;
+  }
+
+  // Anything else with substantial text becomes setDescription / action.
+  if (/[A-Za-z]/.test(c) && c.length > 3) {
+    if (!row.setDescription) row.setDescription = c;
+    else if (!row.action) row.action = c;
+    else row.action = `${row.action} ${c}`;
+  }
+  return false;
+}
+
+// Split a cell that holds both pages and cast (e.g. "1 1/8 1, 2") into
+// the pages portion and the cast tokens. Returns null if it doesn't look
+// like a combined cell.
+function splitPagesAndCast(c: string): { pages?: string; cast: string[] } | null {
+  const m = c.match(/^\s*(\d+(?:\s+\d+)?\/\d+|\d+)\s+(\d.*)$/);
+  if (!m) return null;
+  const cast = m[2].trim();
+  if (!isCastCell(cast)) return null;
+  return { pages: m[1].trim(), cast: cast.split(/\s*,\s*/).filter(Boolean) };
 }
 
 function mergeContinuation(
@@ -198,7 +298,7 @@ function mergeContinuation(
       pending.dayNight = c.toUpperCase();
       continue;
     }
-    if (!pending.pages && (PAGES_RE.test(c) || PAGES_INT_RE.test(c))) {
+    if (!pending.pages && (PAGES_RE.test(c) || PAGES_FRAC_RE.test(c) || PAGES_INT_RE.test(c))) {
       pending.pages = c;
       continue;
     }
@@ -206,16 +306,29 @@ function mergeContinuation(
       pending.estimatedTime = c;
       continue;
     }
-    if (CAST_LIST_RE.test(c) && /[.,]/.test(c)) {
+    // Combined "pages + cast" cell on a continuation line.
+    const split = splitPagesAndCast(c);
+    if (split) {
+      if (!pending.pages && split.pages) pending.pages = split.pages;
+      if (split.cast.length) pending.cast = mergeCast(pending.cast, split.cast.join(','));
+      continue;
+    }
+    if (isCastCell(c)) {
       pending.cast = mergeCast(pending.cast, c);
       continue;
     }
-    if (/\b(HMU|SFX|VFX|STUNT|AV|PROP|WARDROBE|SET|END\s+OF\s+EP)\b/i.test(c)) {
+    if (pending.dayNight && pending.pages && /^\s*\*?\d+[A-Z]*\s*$/.test(c)) {
+      pending.cast = mergeCast(pending.cast, c);
+      continue;
+    }
+    if (/\b(HMU|SFX|VFX|STUNT|AV|PROP|WARDROBE|END\s+OF\s+EP)\b/i.test(c)) {
       pending.notes = pending.notes ? `${pending.notes} ${c}` : c;
       continue;
     }
     if (/^(?:INT|EXT|INT\/EXT)\b/i.test(c)) {
-      descBuffer.push(c);
+      // Descriptive slug — keep the first one we see, ignore later dupes
+      // so we don't append the same slug twice.
+      if (!descBuffer.some((s) => s.trim() === c.trim())) descBuffer.push(c);
       continue;
     }
     if (/[A-Za-z]/.test(c) && c.length > 3) {
@@ -227,19 +340,22 @@ function mergeContinuation(
     const m = rawLine.match(/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/);
     if (m) pending.estimatedTime = m[0];
   }
-  // Whole-line cast list?
-  if ((!pending.cast || pending.cast.length === 0) && CAST_LIST_RE.test(rawLine)) {
-    const m = rawLine.match(/(?:\d+[A-Z]*\b)(?:\s*[.,]\s*\d+[A-Z]*\b)+/);
-    if (m) pending.cast = mergeCast(pending.cast, m[0]);
-  }
 }
 
+// Pull cast IDs from a "*2.Gordon, *3.Madison, 14C.Daniella" style cell.
+// Strict: each token must start with optional asterisk + digit, and we
+// ignore any name suffix after the dot. mergeCast preserves order.
 function mergeCast(existing: string[] | undefined, raw: string): string[] {
-  const found = (raw.match(/\d+[A-Z]*/g) ?? []).map((s) => s.toUpperCase());
+  const found: string[] = [];
+  for (const tok of raw.split(/\s*,\s*/)) {
+    const m = tok.match(/^\s*\*?(\d+[A-Z]*)\b/);
+    if (m) found.push(m[1].toUpperCase());
+  }
   const set = new Set([...(existing ?? []), ...found]);
   return Array.from(set);
 }
-// Mark TIME_RE/STORYDAY_RE/HEADER_RE as referenced for tooling that flags
-// unused exports — they're consulted via test mirrors.
+// Silence "unused" lint for regexes referenced only by test mirrors.
 void TIME_RE;
 void STORYDAY_RE;
+void INTEXT_RE;
+void CAST_TOKEN_RE;

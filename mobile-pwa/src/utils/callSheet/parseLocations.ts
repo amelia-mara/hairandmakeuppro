@@ -27,25 +27,41 @@ export function parseLocations(text: string): LocationsResult {
 
 // Find a location label in a line and assemble its address + W3W. The
 // address can spill across the same line (with tabs) or the next 1-2 lines.
+// Once we find a postcode-like token or a W3W, we stop collecting more.
 function pickLocation(text: string, labels: RegExp[]): CallSheetLocation | undefined {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const matched = labels.some((re) => re.test(line));
     if (!matched) continue;
+    // Skip if this is actually another section heading we share a regex
+    // with (e.g. "LOCATION REQUIREMENTS" matching /\bLOCATION\b/).
+    if (/\b(REQUIREMENTS|MOVE|MANAGER)\b/i.test(line)) continue;
 
     // Strip the label off the line and treat the rest as the start of the address.
     let body = line;
     for (const re of labels) body = body.replace(re, '');
     body = body.replace(/^[:\s\t]+/, '').trim();
 
-    // Look ahead 2 lines for continuation if the start is empty or looks short.
-    const collected = [body, lines[i + 1] || '', lines[i + 2] || '']
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .join(' ');
+    // Walk forward up to 3 lines, but stop when we hit a postcode + W3W
+    // pair, a new label, or an obvious unrelated row.
+    const parts: string[] = [body];
+    const W3W_TOKEN = /\/{0,3}[a-z]+\.[a-z]+\.[a-z]+/i;
+    const POSTCODE = /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/;
+    for (let j = 1; j <= 3; j++) {
+      const next = lines[i + j];
+      if (!next) break;
+      const t = next.trim();
+      if (!t) break;
+      // A new label means the previous location is finished.
+      if (/^[A-Z][A-Z\s&/]+:/.test(t)) break;
+      // A new section heading.
+      if (/^(?:UNIT\s*NOTES|UNIT\s*BASE|LOCATION|CREW|CAST|PRINCIPAL|SC\b|SHOOT|EP\/SC)/i.test(t)) break;
+      parts.push(t);
+      if (W3W_TOKEN.test(parts.join(' ')) || POSTCODE.test(parts.join(' '))) break;
+    }
 
-    return buildLocation(collected);
+    return buildLocation(parts.join(' '));
   }
   return undefined;
 }
