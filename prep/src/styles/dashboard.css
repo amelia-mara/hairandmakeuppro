@@ -287,3 +287,182 @@
     padding: 10px 12px 8px 14px;
   }
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCRIPT BREAKDOWN — phone (≤ 768px)
+
+   Three-panel desktop layout collapses to a stack:
+     - Sticky scene-strip header  (☰ + scene name + ◀ ▶)
+     - Script panel               (top half, scrollable)
+     - Breakdown form             (bottom half, scrollable)
+     - Scene list                 (slide-in left drawer, hidden by default)
+
+   The vertical-resize divider isn't reproduced on mobile — both
+   panels keep an internal scroll, which is what users expect on a
+   phone. Desktop dimensions are untouched.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .bd-page--mobile {
+    /* Phones: pin the page to the viewport so the inner panels can
+       scroll without dragging the whole page with them. */
+    height: calc(100vh - 80px);
+    height: calc(100dvh - 80px);
+  }
+
+  /* ── Scene navigator strip ───────────────────────── */
+  .bd-mobile-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-card);
+    flex-shrink: 0;
+    z-index: 5;
+  }
+  .bd-mobile-strip-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .bd-mobile-strip-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .bd-mobile-strip-btn:not(:disabled):hover,
+  .bd-mobile-strip-btn:not(:disabled):active {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+  }
+  .bd-mobile-strip-title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .bd-mobile-strip-num {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    flex-shrink: 0;
+  }
+  .bd-mobile-strip-loc {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Stack: script (top half) + breakdown (bottom half) ── */
+  .bd-page--mobile .bd-panels {
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Scene-list drawer ───────────────────────────── */
+  .bd-page--mobile .bd-left {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: min(85vw, 320px) !important;
+    min-width: 0 !important;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+    /* The desktop bd-left is transparent so the page rainbow shows
+       through; as a fixed drawer it needs an opaque surface or it
+       reveals the page behind it. */
+    background: var(--bg-surface) !important;
+  }
+  .bd-page--mobile .bd-panels--drawer-open .bd-left {
+    transform: translateX(0);
+  }
+  .bd-mobile-drawer-backdrop {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: bd-mobile-drawer-fade 0.18s ease-out;
+  }
+  @keyframes bd-mobile-drawer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ── Center (script) + right (breakdown) share screen 50/50 ── */
+  .bd-page--mobile .bd-center {
+    flex: 1 1 50%;
+    min-height: 0;
+    border-bottom: 1px solid var(--border-card);
+  }
+  .bd-page--mobile .bd-right {
+    flex: 1 1 50%;
+    min-height: 0;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    border-left: none;
+  }
+
+  /* Hide the desktop-only vertical divider (its mouse-only handlers
+     don't translate to touch and the stacked layout doesn't need it). */
+  .bd-page--mobile .bd-divider {
+    display: none;
+  }
+
+  /* Tighten center panel chrome so script gets more vertical room. */
+  .bd-page--mobile .cp-tabstrip {
+    padding-left: 4px;
+  }
+  .bd-page--mobile .cp-divider-tab {
+    padding: 8px 16px 6px;
+    font-size: 0.6875rem;
+  }
+  .bd-page--mobile .cp-toolbar {
+    padding: 4px 12px;
+  }
+  .bd-page--mobile .sv-paper {
+    padding: 18px 18px;
+    margin: 8px 8px 0;
+  }
+
+  /* Floating zoom isn't reachable on touch (no hover) — surface it
+     so users on phones can still adjust font size. */
+  .bd-page--mobile .bd-zoom-float {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Tighten the breakdown header so the title + ⋯ + scene subtitle
+     don't dominate the bottom-half on phones. */
+  .bd-page--mobile .fp-panel-header {
+    padding: 10px 14px;
+  }
+  .bd-page--mobile .fp-panel-title {
+    font-size: 0.75rem;
+  }
+
+  /* The Tools dropdown (position: fixed; right: 0; width: 320px) is
+     unchanged — it already overlays the viewport correctly on phones. */
+}
