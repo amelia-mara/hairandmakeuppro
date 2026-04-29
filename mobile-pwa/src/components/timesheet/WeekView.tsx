@@ -215,8 +215,25 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
                 {/* Hours + earnings */}
                 {calc && calc.totalHours > 0 && (
                   <div className="text-right ml-3 flex-shrink-0">
-                    <div className="text-[17px] font-bold text-gold leading-tight">
+                    <div className="text-[17px] font-bold text-gold leading-tight flex items-center justify-end gap-1.5">
                       {calc.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}h
+                      {/* Tiny status dot — green when designer has
+                          approved the day in prep, otherwise muted.
+                          Helps the team member spot at a glance which
+                          days are clear to invoice on. */}
+                      {entry?.status === 'approved' ? (
+                        <span
+                          title="Approved by designer"
+                          className="inline-block w-2 h-2 rounded-full"
+                          style={{ background: 'var(--brand-teal, #4ABFB0)' }}
+                        />
+                      ) : entry?.unitCall ? (
+                        <span
+                          title="Pending approval"
+                          className="inline-block w-2 h-2 rounded-full opacity-60"
+                          style={{ background: 'var(--accent-gold, #D4943A)' }}
+                        />
+                      ) : null}
                     </div>
                     {calc.totalEarnings > 0 && (
                       <div className="text-[11px] font-medium leading-tight" style={{ color: 'var(--color-text-muted)' }}>
