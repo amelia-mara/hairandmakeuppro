@@ -6,6 +6,7 @@ import {
   type TeamRole,
 } from '@/stores/teamStore';
 import { ACCESS_TOGGLE_LABELS, type AccessToggles } from '@/utils/projectAccess';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface TeamProps {
   projectId: string;
@@ -42,6 +43,15 @@ export function Team({ projectId }: TeamProps) {
   const [savedField, setSavedField] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
+  /* Mobile-only — phones use a master-detail pattern: when no member
+     is selected the list panel takes the full screen; tapping a
+     member swaps in the detail panel with a back arrow. The 320px
+     desktop list + flex-1 detail pair would otherwise need ≥600px
+     of horizontal room which a phone doesn't have. */
+  const isMobile = useIsMobile();
+  const showList = !isMobile || !selectedId;
+  const showDetail = !isMobile || !!selectedId;
+
   useEffect(() => {
     loadFromSupabase(projectId);
   }, [projectId, loadFromSupabase]);
@@ -66,12 +76,24 @@ export function Team({ projectId }: TeamProps) {
   };
 
   return (
-    <div className="tm-page" style={{ display: 'flex', gap: '24px', padding: '24px', minHeight: 'calc(100vh - 80px)' }}>
+    <div
+      className="tm-page"
+      style={{
+        display: 'flex',
+        gap: isMobile ? 0 : '24px',
+        padding: isMobile ? '16px' : '24px',
+        minHeight: 'calc(100vh - 80px)',
+      }}
+    >
       {/* Left panel — member list */}
+      {showList && (
       <div style={{
-        width: '320px', flexShrink: 0,
+        width: isMobile ? '100%' : '320px',
+        flexShrink: 0,
         backgroundColor: 'var(--bg-secondary, #F0EBE0)', borderRadius: '12px',
-        padding: '16px', overflow: 'auto', maxHeight: 'calc(100vh - 128px)',
+        padding: '16px',
+        overflow: 'auto',
+        maxHeight: isMobile ? undefined : 'calc(100vh - 128px)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div>
@@ -146,12 +168,42 @@ export function Team({ projectId }: TeamProps) {
           </div>
         )}
       </div>
+      )}
 
       {/* Right panel — member detail */}
+      {showDetail && (
       <div style={{
         flex: 1, backgroundColor: 'var(--bg-primary, #FAF5EB)', borderRadius: '12px',
-        padding: '24px', overflow: 'auto', maxHeight: 'calc(100vh - 128px)',
+        padding: isMobile ? '16px' : '24px',
+        overflow: 'auto',
+        maxHeight: isMobile ? undefined : 'calc(100vh - 128px)',
       }}>
+        {isMobile && selected && (
+          <button
+            type="button"
+            onClick={() => setSelectedId(null)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '12px',
+              padding: '6px 10px',
+              background: 'none',
+              border: '1px solid var(--border-card)',
+              borderRadius: '8px',
+              color: 'var(--text-secondary)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+            aria-label="Back to team list"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to list
+          </button>
+        )}
         {!selected ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
             Select a team member
@@ -233,6 +285,7 @@ export function Team({ projectId }: TeamProps) {
           </div>
         )}
       </div>
+      )}
 
       {/* Remove confirmation */}
       {confirmRemoveId && (() => {
