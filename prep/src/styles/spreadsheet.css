@@ -94,6 +94,75 @@
   background: rgba(var(--a), 0.18); border-color: rgba(var(--a), 0.35);
 }
 
+/* Sort-mode toggle — Scene / Shoot pair, sits between the
+   subtitle and the Script split-view button. */
+.bs-sort-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+.bs-sort-btn {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 7px 12px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bs-sort-btn + .bs-sort-btn {
+  border-left: 1px solid var(--border-card);
+}
+.bs-sort-btn:hover:not(:disabled):not(.bs-sort-btn--active) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+.bs-sort-btn--active {
+  background: rgba(var(--a), 0.12);
+  color: var(--accent);
+}
+.bs-sort-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Day divider — emitted between scene blocks when sorting by
+   shoot order. Shows the production day number, weekday + date,
+   and the day's location so the designer can scan continuity
+   problems day-by-day. */
+.bs-day-divider {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, rgba(var(--a), 0.10) 0%, rgba(var(--a), 0.02) 80%, transparent 100%);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px 14px 14px 6px;
+}
+.bs-day-divider-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.bs-day-divider-date {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.bs-day-divider-loc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* Scrollable content */
 .bs-scroll {
   flex: 1; overflow-y: auto; overflow-x: auto;

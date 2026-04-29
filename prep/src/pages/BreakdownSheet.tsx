@@ -4,6 +4,7 @@ import {
   useBreakdownStore, useTagStore, useSynopsisStore, useParsedScriptStore,
   type Scene, type Character, type Look, type CharacterBreakdown, type SceneBreakdown,
 } from '@/stores/breakdownStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { LookbookTab, useLookbookMeta } from './LookbookTab';
 import { BibleTab } from './BibleTab';
 import { ordinal } from '@/utils/ordinal';
@@ -58,6 +59,16 @@ function buildContinuityNotes(
 }
 
 /* ━━━ Icons ━━━ */
+
+/** Format an ISO date "2026-05-18" → "18 May" for the day
+ *  divider label. Falls back to the raw input if parsing fails. */
+function formatDayDate(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const d = new Date(`${iso}T00:00:00`);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
 
 function FilterIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
@@ -173,18 +184,92 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
   const [activeTab, setActiveTab] = useState<'breakdown' | 'lookbook' | 'bible'>('breakdown');
   const [splitView, setSplitView] = useState(false);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
+  /** 'scene' = ascending scene number (default).
+   *  'shoot' = ordered by the production schedule's shoot order so
+   *  the designer can spot continuity / look-change problems
+   *  against the planned shoot sequence. Disabled when no schedule
+   *  has been parsed for this project. */
+  const [sortMode, setSortMode] = useState<'scene' | 'shoot'>('scene');
   const scrollRef = useRef<HTMLDivElement>(null);
   const sceneBlockRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const lookbookMeta = useLookbookMeta(projectId);
 
+  // Schedule (optional) — drives the shoot-order sort and the
+  // "Day N" dividers that appear between scenes in shoot view.
+  const scheduleStore = useScheduleStore(projectId);
+  const schedule = scheduleStore((s) => s.current);
+  const hasSchedule = !!schedule && schedule.days.length > 0;
+
   /* Resolve data source: parsed script → mock data fallback */
   const parsedData = parsedScriptStore.getParsedData(projectId);
-  const scenes: Scene[] = useMemo(() => {
+  const baseScenes: Scene[] = useMemo(() => {
     const arr = parsedData ? parsedData.scenes : MOCK_SCENES;
     return [...arr].sort((a, b) => a.number - b.number);
   }, [parsedData]);
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
+
+  /** Sequence of scenes in the order the designer wants to read
+   *  the breakdown. In 'scene' mode this is the scene-number sort;
+   *  in 'shoot' mode we walk the schedule day-by-day and emit each
+   *  scheduled scene plus a synthetic divider whenever the day
+   *  number changes so the table picks up "Day 1", "Day 2", etc.
+   *  Scenes that aren't on the schedule (rare — usually omitted or
+   *  added after the schedule was parsed) tail at the end. */
+  type SequenceEntry =
+    | { kind: 'scene'; scene: Scene }
+    | { kind: 'day'; dayNumber: number; date?: string; dayOfWeek?: string; location?: string };
+  const sequence: SequenceEntry[] = useMemo(() => {
+    if (sortMode === 'shoot' && hasSchedule) {
+      const out: SequenceEntry[] = [];
+      const seen = new Set<string>();
+      // Scene-number → Scene lookup. Scenes with the same number
+      // (e.g. "69pt" appears twice when split across days) match by
+      // the FIRST unconsumed entry. A bag keyed by base number lets
+      // us pop the next match per day.
+      const byNumber = new Map<string, Scene[]>();
+      for (const s of baseScenes) {
+        const key = String(s.number);
+        if (!byNumber.has(key)) byNumber.set(key, []);
+        byNumber.get(key)!.push(s);
+      }
+      for (const day of schedule!.days) {
+        out.push({
+          kind: 'day',
+          dayNumber: day.dayNumber,
+          date: day.date,
+          dayOfWeek: day.dayOfWeek,
+          location: day.location,
+        });
+        for (const sched of day.scenes) {
+          // Strip alpha suffix to match parsed scenes ("45A" → 45,
+          // "69pt" → 69) and pick the next matching local scene.
+          const num = parseInt(sched.sceneNumber.replace(/[^\d]/g, ''), 10);
+          if (!Number.isFinite(num)) continue;
+          const bag = byNumber.get(String(num));
+          if (!bag || bag.length === 0) continue;
+          const scene = bag.shift()!;
+          if (seen.has(scene.id)) continue;
+          seen.add(scene.id);
+          out.push({ kind: 'scene', scene });
+        }
+      }
+      // Tail: any local scene not consumed by the schedule walk.
+      for (const s of baseScenes) {
+        if (!seen.has(s.id)) out.push({ kind: 'scene', scene: s });
+      }
+      return out;
+    }
+    // Default — scene-number order, no day dividers.
+    return baseScenes.map((s) => ({ kind: 'scene' as const, scene: s }));
+  }, [sortMode, hasSchedule, schedule, baseScenes]);
+
+  // Flat scene array preserving sort order — every existing
+  // .scenes[] iteration site keeps working without rewriting.
+  const scenes: Scene[] = useMemo(
+    () => sequence.filter((e): e is { kind: 'scene'; scene: Scene } => e.kind === 'scene').map((e) => e.scene),
+    [sequence],
+  );
   /* Detect time jumps: scenes where the story day differs from the previous scene */
   const timeJumpSceneIds = useMemo(() => {
     const jumpIds = new Set<string>();
@@ -346,6 +431,28 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           {activeTab === 'breakdown' && (
             <>
               <span className="bs-subtitle">{scenesWithCast.length} scenes · {characters.length} characters</span>
+              {/* Sort toggle — Scene order vs Shoot order. Shoot
+                  order requires a parsed schedule; the button is
+                  disabled with a tooltip otherwise so the user
+                  knows where to upload from. */}
+              <div className="bs-sort-toggle" role="group" aria-label="Sort order">
+                <button
+                  type="button"
+                  className={`bs-sort-btn ${sortMode === 'scene' ? 'bs-sort-btn--active' : ''}`}
+                  onClick={() => setSortMode('scene')}
+                >
+                  Scene order
+                </button>
+                <button
+                  type="button"
+                  className={`bs-sort-btn ${sortMode === 'shoot' ? 'bs-sort-btn--active' : ''}`}
+                  onClick={() => hasSchedule && setSortMode('shoot')}
+                  disabled={!hasSchedule}
+                  title={hasSchedule ? 'Order scenes the way they’ll shoot' : 'Upload a schedule to enable shoot order'}
+                >
+                  Shoot order
+                </button>
+              </div>
               <button
                 className={`bs-action-btn ${splitView ? 'bs-action-btn--active' : ''}`}
                 onClick={() => setSplitView((v) => !v)}
@@ -414,7 +521,30 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           />
         )}
         <div className="bs-scroll" ref={scrollRef}>
-        {scenesWithCast.map((scene) => {
+        {sequence.map((entry) => {
+          // Day divider — only emitted when sortMode === 'shoot'.
+          if (entry.kind === 'day') {
+            const dateLabel = entry.date && entry.dayOfWeek
+              ? `${entry.dayOfWeek} ${formatDayDate(entry.date)}`
+              : entry.date || entry.dayOfWeek || '';
+            return (
+              <div key={`day-${entry.dayNumber}`} className="bs-day-divider">
+                <span className="bs-day-divider-num">Day {entry.dayNumber}</span>
+                {dateLabel && <span className="bs-day-divider-date">{dateLabel}</span>}
+                {entry.location && <span className="bs-day-divider-loc">{entry.location}</span>}
+              </div>
+            );
+          }
+          const scene = entry.scene;
+          // Apply the same filters as scenesWithCast — skip
+          // anything that wouldn't have rendered in scene-number
+          // order so the shoot-order view stays consistent.
+          if (scene.isOmitted) {
+            if (filterChar) return null;
+          } else {
+            if (scene.characterIds.length === 0) return null;
+            if (filterChar && !scene.characterIds.includes(filterChar)) return null;
+          }
           if (scene.isOmitted) {
             return (
               <div
