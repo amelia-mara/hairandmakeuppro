@@ -226,8 +226,12 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     }
   }, [scenes, store]);
 
-  /* Filtered scenes: only those with characters */
+  /* Filtered scenes: only those with characters. Omitted scenes are
+     kept (with their empty character list) so the numbering gap
+     stays visible to anyone reading the breakdown — they render as
+     a thin "OMITTED" strip rather than a full scene block. */
   const scenesWithCast = scenes.filter((s) => {
+    if (s.isOmitted) return !filterChar;
     if (s.characterIds.length === 0) return false;
     if (filterChar && !s.characterIds.includes(filterChar)) return false;
     return true;
@@ -411,6 +415,22 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
         )}
         <div className="bs-scroll" ref={scrollRef}>
         {scenesWithCast.map((scene) => {
+          if (scene.isOmitted) {
+            return (
+              <div
+                key={scene.id}
+                ref={(el) => { sceneBlockRefs.current[scene.id] = el; }}
+                className={`bs-scene-block bs-scene-block--omitted ${splitView && activeSceneId === scene.id ? 'bs-scene-block--highlighted' : ''}`}
+                onClick={splitView ? () => handleBreakdownSceneClick(scene.id) : undefined}
+                style={splitView ? { cursor: 'pointer' } as CSSProperties : undefined}
+              >
+                <div className="bs-scene-header bs-scene-header--omitted">
+                  <span className="bs-scene-num">SC {scene.number}</span>
+                  <span className="bs-scene-omitted-label">OMITTED</span>
+                </div>
+              </div>
+            );
+          }
           const globalIdx = scenes.indexOf(scene);
           const bd = store.getBreakdown(scene.id);
           const synopsis = synopsisStore.getSynopsis(scene.id, scene.synopsis);

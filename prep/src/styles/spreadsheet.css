@@ -563,6 +563,32 @@
   max-width: none;
 }
 
+/* Omitted-scene strip in the breakdown table — a single thin row
+   that preserves the numbering gap without rendering a full scene
+   card for a scene that no longer exists. */
+.bs-scene-block--omitted {
+  margin-top: 16px;
+  opacity: 0.5;
+  background: transparent;
+  border: 1px dashed rgba(0, 0, 0, 0.10);
+  box-shadow: none;
+}
+.bs-scene-header--omitted {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 28px;
+  border-bottom: none;
+}
+.bs-scene-omitted-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-style: italic;
+}
+
 /* ━━━ Split-view layout ━━━ */
 
 .bs-split-wrap {

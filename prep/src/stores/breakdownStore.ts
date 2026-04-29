@@ -20,6 +20,11 @@ export interface Scene {
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  /** Marks a scene the script has dropped in this revision (e.g.
+   *  "12. OMITTED"). The scene stays in the list so numbering and
+   *  cross-references remain coherent, but it gets a thin grey
+   *  placeholder row rather than full breakdown UI. */
+  isOmitted?: boolean;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';

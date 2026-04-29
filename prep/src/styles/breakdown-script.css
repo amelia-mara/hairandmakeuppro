@@ -240,6 +240,23 @@
   color: #E8621A;
 }
 
+/* Omitted-scene placeholder in the continuous script viewer */
+.sv-paper--omitted {
+  padding: 14px 24px;
+  margin: 6px 12px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.10);
+  min-height: 0;
+  opacity: 0.55;
+}
+.sv-heading--omitted {
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #B8A98C;
+  font-size: 0.875em;
+}
+
 /* In-script change highlight — applied per word/phrase only when the
    scene has unreviewed revisions. Disappears once the user clicks
    "✓ Reviewed" (the parent stops passing revisedDiff). Tone matches
