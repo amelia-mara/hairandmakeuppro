@@ -246,3 +246,57 @@
   border: none;
   background: #fff;
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CALL SHEETS — phone (≤ 768px)
+
+   Single-column page with no sidebar. The desktop card grid uses
+   minmax(200px, 1fr) which produces a single 295px-wide card per
+   row on a phone (375px − 32px page padding − some margin). Two
+   cards per row makes much better use of phone real estate, and
+   the PDF viewer modal needs to drop its 40px padding so the iframe
+   isn't postage-stamp-sized.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .cs-page {
+    padding: 24px 16px 60px;
+  }
+
+  .cs-header {
+    margin-bottom: 20px;
+  }
+  .cs-title {
+    font-size: 1.375rem;
+  }
+
+  /* Two cards per row at phone width. */
+  .cs-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* PDF viewer overlay — let it use the full viewport. The
+     desktop's 40px gutter shrinks the iframe to nothing on a phone
+     and the panel's 90vh + max-width both stop being meaningful. */
+  .cs-viewer-overlay {
+    padding: 0;
+  }
+  .cs-viewer-panel {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+    border: none;
+  }
+  .cs-viewer-header {
+    padding: 14px 16px;
+  }
+  .cs-viewer-title {
+    font-size: 0.875rem;
+  }
+
+  /* Show the remove button always on phones — no hover state. */
+  .cs-card-remove {
+    opacity: 1;
+  }
+}
