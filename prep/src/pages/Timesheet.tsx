@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type RateCard, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
+import { useTimesheetStore, CURRENCY_SYMBOLS, createEmptyEntry as createEmptyEntryClient, type CrewMember, type CurrencyCode, type RateCard, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
 import { LogDayModal } from '@/components/timesheet/LogDayModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -48,6 +48,23 @@ const AVATAR_COLORS = [
 
 function getAvatarColor(index: number) {
   return AVATAR_COLORS[index % AVATAR_COLORS.length];
+}
+
+/** Add `n` days to an ISO YYYY-MM-DD string and return another ISO. */
+function addDaysIso(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** ISO Monday of the week containing today. */
+function thisWeekStart(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const m = new Date(d);
+  m.setDate(diff);
+  return m.toISOString().slice(0, 10);
 }
 
 /**
@@ -382,6 +399,8 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const production = store(s => s.production);
   const crew = store(s => s.crew);
   const selectedWeekStart = store(s => s.selectedWeekStart);
+  const setSelectedWeekStart = store(s => s.setSelectedWeekStart);
+  const navigateWeek = store(s => s.navigateWeek);
   const addCrew = store(s => s.addCrew);
   const removeCrew = store(s => s.removeCrew);
   const ensureSelfCrew = store(s => s.ensureSelfCrew);
@@ -637,6 +656,10 @@ export function Timesheet({ projectId }: TimesheetProps) {
             totalLabour={totalLabour}
             calculateEntry={calculateEntry}
             onLogDay={(member, entry) => openLogDay(member, entry)}
+            selectedWeekStart={selectedWeekStart}
+            onPrevWeek={() => navigateWeek('prev')}
+            onNextWeek={() => navigateWeek('next')}
+            onJumpToToday={() => setSelectedWeekStart(thisWeekStart())}
           />
         )}
 
@@ -900,9 +923,129 @@ function OverviewPanel({
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    PANEL: My Timesheets
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/**
+ * 7-day calendar-style timesheet for the current user. Renders one
+ * card per day Mon→Sun, prefilled when the user has logged hours
+ * and showing a tap-to-add affordance otherwise.
+ */
+function WeekGrid({
+  crew,
+  weekStartDate,
+  entries,
+  calculateEntry,
+  currency,
+  onPrevWeek,
+  onNextWeek,
+  onJumpToToday,
+  onAdd,
+  onEdit,
+}: {
+  crew: CrewMember;
+  weekStartDate: string;
+  entries: TimesheetEntry[];
+  calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
+  currency: CurrencyCode;
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
+  onJumpToToday: () => void;
+  onAdd: (date: string) => void;
+  onEdit: (entry: TimesheetEntry) => void;
+}) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = addDaysIso(weekStartDate, i);
+    const entry = entries.find((e) => e.date === date) ?? null;
+    const calc = entry && entry.unitCall && entry.wrapOut
+      ? calculateEntry(crew.id, entry, entry.previousWrapOut)
+      : null;
+    return { date, entry, calc, isToday: date === todayIso };
+  });
+
+  const weekEnd = addDaysIso(weekStartDate, 6);
+  const startLabel = new Date(weekStartDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const endLabel = new Date(weekEnd + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const weekHours = days.reduce((s, d) => s + (d.calc?.totalHours ?? 0), 0);
+  const weekEarnings = days.reduce((s, d) => s + (d.calc?.totalPay ?? 0), 0);
+  const daysLogged = days.filter((d) => d.entry?.unitCall).length;
+
+  return (
+    <div className="tsr-card flush tsr-wkg-card">
+      <div className="tsr-wkg-nav">
+        <button type="button" className="tsr-wkg-nav-btn" onClick={onPrevWeek} aria-label="Previous week">‹</button>
+        <div className="tsr-wkg-nav-label">
+          <div className="tsr-wkg-nav-range">{startLabel} – {endLabel}</div>
+          <div className="tsr-wkg-nav-sub">
+            {daysLogged} {daysLogged === 1 ? 'day' : 'days'} · {weekHours.toFixed(1)}h · {fmtDec(weekEarnings, currency)}
+          </div>
+        </div>
+        <button type="button" className="tsr-wkg-nav-btn" onClick={onNextWeek} aria-label="Next week">›</button>
+        <button type="button" className="tsr-wkg-today" onClick={onJumpToToday}>Today</button>
+      </div>
+
+      <div className="tsr-wkg-grid">
+        {days.map(({ date, entry, calc, isToday }) => {
+          const d = new Date(date + 'T12:00:00');
+          const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+          const dayNumber = d.getDate();
+          const month = d.toLocaleDateString('en-GB', { month: 'short' });
+          const filled = !!(entry && entry.unitCall);
+          const status = entry?.status;
+
+          return (
+            <button
+              key={date}
+              type="button"
+              className={`tsr-wkg-day${isToday ? ' is-today' : ''}${filled ? ' is-filled' : ''}`}
+              onClick={() => (filled && entry ? onEdit(entry) : onAdd(date))}
+            >
+              <div className="tsr-wkg-day-head">
+                <span className="tsr-wkg-day-name">{dayName}</span>
+                <span className="tsr-wkg-day-num">{dayNumber}</span>
+                <span className="tsr-wkg-day-month">{month}</span>
+              </div>
+              {filled && entry ? (
+                <div className="tsr-wkg-day-body">
+                  <div className="tsr-wkg-day-times">
+                    {entry.unitCall} <span className="tsr-wkg-arrow">→</span> {entry.wrapOut || '—'}
+                  </div>
+                  {entry.preCall && (
+                    <div className="tsr-wkg-day-pre">Pre {entry.preCall}</div>
+                  )}
+                  <div className="tsr-wkg-day-hrs">
+                    {calc ? calc.totalHours.toFixed(1) : '—'}<span className="tsr-wkg-unit">h</span>
+                    {calc && calc.otHours > 0 && (
+                      <span className="tsr-wkg-day-ot"> · {calc.otHours.toFixed(1)}h OT</span>
+                    )}
+                  </div>
+                  <div className="tsr-wkg-day-earn">
+                    {calc ? fmtDec(calc.totalPay, currency) : ''}
+                  </div>
+                  <div className="tsr-wkg-day-tags">
+                    <span className={`tsr-wkg-status ${
+                      status === 'approved' ? 'is-approved' :
+                      status === 'submitted' ? 'is-pending' : ''
+                    }`}>
+                      {status === 'approved' ? 'Approved' :
+                       status === 'submitted' ? 'Pending' : 'Draft'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="tsr-wkg-day-empty">
+                  <span className="tsr-wkg-day-add">+ Log day</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MyTimesheetsPanel({
   crew, crewSummaries, currency, totalHours: _totalHours, totalOtHours: _totalOtHours, totalDays: _totalDays, totalLabour: _totalLabour,
-  calculateEntry, onLogDay,
+  calculateEntry, onLogDay, selectedWeekStart, onPrevWeek, onNextWeek, onJumpToToday,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -913,7 +1056,12 @@ function MyTimesheetsPanel({
   totalLabour: number;
   calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
   onLogDay: (member: CrewMember, entry?: TimesheetEntry | null) => void;
+  selectedWeekStart: string;
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
+  onJumpToToday: () => void;
 }) {
+  const [view, setView] = useState<'week' | 'list'>('week');
   // Prefer the row marked isMe so the panel always reflects the auth
   // user, falling back to the first crew row when nothing is marked.
   const myCrew = crew.find((c) => c.isMe) ?? crew[0];
@@ -965,8 +1113,49 @@ function MyTimesheetsPanel({
         </div>
       </div>
 
-      {/* Hour Log */}
-      <div className="tsr-sh">Hour Log <div className="tsr-sh-line" /></div>
+      {/* Section heading + view toggle + week navigator. The toggle
+          flips between a 7-day calendar grid (Mon→Sun) and the
+          existing chronological list. The grid lives on top because
+          most users want to see "the whole week" at a glance. */}
+      <div className="tsr-sh tsr-hl-section-head">
+        <span>Hour Log</span>
+        <div className="tsr-hl-view-toggle" role="group" aria-label="Hour log view">
+          <button
+            type="button"
+            className={`tsr-hl-view-btn ${view === 'week' ? 'is-active' : ''}`}
+            onClick={() => setView('week')}
+          >
+            Week
+          </button>
+          <button
+            type="button"
+            className={`tsr-hl-view-btn ${view === 'list' ? 'is-active' : ''}`}
+            onClick={() => setView('list')}
+          >
+            List
+          </button>
+        </div>
+        <div className="tsr-sh-line" />
+      </div>
+
+      {view === 'week' && myCrew && (
+        <WeekGrid
+          crew={myCrew}
+          weekStartDate={selectedWeekStart}
+          entries={mySummary?.entries ?? []}
+          calculateEntry={calculateEntry}
+          currency={currency}
+          onPrevWeek={onPrevWeek}
+          onNextWeek={onNextWeek}
+          onJumpToToday={onJumpToToday}
+          onAdd={(date) => myCrew && onLogDay(myCrew, { ...createEmptyEntryClient(date) })}
+          onEdit={handleEdit}
+        />
+      )}
+
+      {view === 'list' && (
+      /* Existing chronological list view kept as an opt-in. */
+      <>
       <div className="tsr-card flush">
         {/* Inline log-day CTA sits above the rows so the "add" action
             is the first thing the user sees, not buried below the
@@ -1090,6 +1279,8 @@ function MyTimesheetsPanel({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
