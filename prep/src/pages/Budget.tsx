@@ -348,10 +348,11 @@ export function Budget({ projectId }: BudgetProps) {
       lineItemId: data.lineItemId,
       vat: data.vat,
       amount: data.amount,
+      notes: data.notes || undefined,
       receiptImageUri: data.imageUri,
     });
     setExpensePanelOpen(false);
-    showToast('Expense logged');
+    showToast('Receipt saved');
   }, [addExpense, showToast]);
 
   /* ── Tag variant class helper ── */
@@ -833,7 +834,10 @@ export function Budget({ projectId }: BudgetProps) {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div className="bg-receipt-name">{exp.supplier || '(no supplier)'}</div>
-                      <div className="bg-receipt-meta">{cat?.name || exp.category} · {exp.date}</div>
+                      <div className="bg-receipt-meta">
+                        {cat?.name || exp.category} · {exp.date}
+                        {exp.notes && <> · {exp.notes}</>}
+                      </div>
                     </div>
                     <div className="bg-receipt-amount">{fmt(exp.amount)}</div>
                     <span className="bg-status-dot bg-status-dot--ok" />
