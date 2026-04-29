@@ -39,7 +39,20 @@ const CAST_TOKEN_RE = /\*?\d+[A-Z]*\b/;
 const INTEXT_PREFIX_RE = /^(INT|EXT|INT\/EXT)\.?\s*[-:]?\s*(.*)$/i;
 const INTEXT_RE = /^(?:INT|EXT|INT\/EXT)\.?$/i;
 
-export function parseScenes(text: string): CallSheetScene[] {
+/**
+ * Optional project knowledge passed in by the caller. The parser uses it
+ * to filter cast tokens that look right in isolation but aren't in the
+ * project's actual cast list (e.g. stray timing values like "1330" on
+ * cs3-style call sheets), and to confirm/normalise scene numbers.
+ */
+export interface ParseContext {
+  /** Integer cast IDs that exist in the schedule/cast roster. */
+  validCastNumbers?: Set<number>;
+  /** Scene numbers known from the script/schedule (string form). */
+  validSceneNumbers?: Set<string>;
+}
+
+export function parseScenes(text: string, context?: ParseContext): CallSheetScene[] {
   const lines = text.split('\n').map((l) => l.trimEnd());
   const cutoff = findAdvanceCutoff(lines);
   const slice = lines.slice(0, cutoff);
@@ -63,6 +76,10 @@ export function parseScenes(text: string): CallSheetScene[] {
     const desc = descBuffer.map((s) => s.trim()).filter(Boolean);
     const setDescription = desc[0] ?? pending.setDescription ?? 'Scene';
     const action = desc.slice(1).join(' ').trim() || pending.action;
+    // Apply the validCastNumbers whitelist when available. Tokens that
+    // don't have an integer in the project's cast list (e.g. "1330" — a
+    // misclassified time) get dropped without affecting valid IDs.
+    const cast = filterCast(pending.cast ?? [], context?.validCastNumbers);
     out.push({
       sceneNumber: pending.sceneNumber,
       location: pending.location,
@@ -70,7 +87,7 @@ export function parseScenes(text: string): CallSheetScene[] {
       action,
       dayNight: pending.dayNight ?? 'D',
       pages: pending.pages,
-      cast: pending.cast ?? [],
+      cast,
       notes: pending.notes,
       estimatedTime: pending.estimatedTime,
       shootOrder: order++,
@@ -353,6 +370,19 @@ function mergeCast(existing: string[] | undefined, raw: string): string[] {
   }
   const set = new Set([...(existing ?? []), ...found]);
   return Array.from(set);
+}
+
+// Drop cast IDs whose integer prefix isn't in the project's known cast
+// list. Without a whitelist, return the list untouched. Letter suffixes
+// like "10C" / "20T" are preserved on the token; only the integer is
+// validated against the whitelist.
+function filterCast(ids: string[], valid?: Set<number>): string[] {
+  if (!valid || valid.size === 0) return ids;
+  return ids.filter((id) => {
+    const m = id.match(/^(\d+)/);
+    if (!m) return false;
+    return valid.has(parseInt(m[1], 10));
+  });
 }
 // Silence "unused" lint for regexes referenced only by test mirrors.
 void TIME_RE;
