@@ -287,6 +287,12 @@
   transform: scale(1.05);
   background: var(--accent-dark);
 }
+/* Owner-tier avatar — brown initials on the orange circle. Replaces
+   the older black "OWNER" badge that used to sit beside the avatar.
+   Every other tier keeps the standard cream initials. */
+.avatar-btn--owner {
+  color: #2A1A08;
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ACCOUNT PANEL

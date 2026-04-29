@@ -149,27 +149,19 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         <div ref={accountRef} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {isAuthenticated ? (
             <>
-              {/* Owner badge */}
-              {isOwnerTier(user?.tier ?? '') && (
-                <div style={{
-                  backgroundColor: '#2A1A08',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  color: '#E8621A',
-                  letterSpacing: '0.1em',
-                  fontFamily: 'DM Sans, sans-serif',
-                }}>
-                  OWNER
-                </div>
-              )}
-              {/* Avatar — THE SUN */}
+              {/* Avatar — THE SUN.
+                  Owner tier is signalled by brown initials on the orange
+                  circle (avatar-btn--owner) instead of the standard cream;
+                  the older black "OWNER" pill that used to sit beside it
+                  is gone. Other tiers keep the cream initials. */}
               <div className="avatar-wrap">
                 <div className="avatar-halo avatar-halo--outer" />
                 <div className="avatar-halo avatar-halo--mid" />
                 <div className="avatar-halo avatar-halo--inner" />
-                <button className="avatar-btn" onClick={() => setAccountOpen(!accountOpen)}>
+                <button
+                  className={`avatar-btn${isOwnerTier(user?.tier ?? '') ? ' avatar-btn--owner' : ''}`}
+                  onClick={() => setAccountOpen(!accountOpen)}
+                >
                   {user?.initials || 'U'}
                 </button>
               </div>

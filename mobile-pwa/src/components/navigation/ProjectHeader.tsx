@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { isOwnerTier } from '@/utils/tierUtils';
 import { useProjectStore } from '@/stores/projectStore';
 import { SyncIcon } from '@/components/sync';
 
@@ -145,10 +146,12 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
               {/* Sync icon */}
               {onSyncTap && <SyncIcon onClick={onSyncTap} />}
 
-              {/* Account icon */}
+              {/* Account icon — owner tier renders the initials in
+                  brown to signal owner status; every other tier keeps
+                  the standard cream-on-orange. */}
               <button
                 onClick={onNavigateToProfile}
-                className="w-8 h-8 rounded-full bg-gold flex items-center justify-center text-white text-xs font-bold active:scale-95 transition-transform"
+                className={`w-8 h-8 rounded-full bg-gold flex items-center justify-center text-xs font-bold active:scale-95 transition-transform ${isOwnerTier(user?.tier ?? '') ? 'text-[#2A1A08]' : 'text-white'}`}
               >
                 {getInitials()}
               </button>
