@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
+import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type RateCard, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
 import { LogDayModal } from '@/components/timesheet/LogDayModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -107,6 +107,207 @@ function RemoveCrewConfirm({
  * glance. Rendered alongside the member's name everywhere the crew
  * list shows up.
  */
+/**
+ * Inline rate-card editor used inside the team-manage Crew Roster
+ * card. Each input is autosaved on blur via the callback so a burst
+ * of edits doesn't spam triggerTsAutoSave. The base-contract picker
+ * keeps `baseDayHours` aligned to the contract so the calculator
+ * doesn't end up in an inconsistent state.
+ */
+function RateCardEditor({
+  member,
+  currency,
+  onUpdate,
+}: {
+  member: CrewMember;
+  currency: CurrencyCode;
+  onUpdate: (updates: Partial<RateCard>) => void;
+}) {
+  const rc = member.rateCard;
+  const sym = CURRENCY_SYMBOLS[currency] ?? '£';
+  const otRate = (rc.dailyRate / (rc.baseDayHours || 10)) * rc.otMultiplier;
+
+  return (
+    <div style={{ padding: '18px 20px 14px' }}>
+      <div
+        style={{
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: '0.13em',
+          textTransform: 'uppercase',
+          color: 'var(--accent)',
+          marginBottom: 14,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span>Rate Card</span>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'none' }}>
+          OT rate {sym}{Math.round(otRate)}/hr
+        </span>
+      </div>
+      <div className="tsr-rc-grid">
+        <RcField
+          label="Day rate"
+          value={rc.dailyRate}
+          step={10}
+          prefix={sym}
+          onCommit={(v) => onUpdate({ dailyRate: v })}
+        />
+        <RcSelect
+          label="Base contract"
+          value={rc.baseContract}
+          options={[
+            { value: '10+1', label: '10+1' },
+            { value: '11+1', label: '11+1' },
+            { value: '12+1', label: '12+1' },
+          ]}
+          onCommit={(v) => {
+            const bc = v as RateCard['baseContract'];
+            onUpdate({
+              baseContract: bc,
+              baseDayHours: bc === '10+1' ? 10 : bc === '11+1' ? 11 : 12,
+            });
+          }}
+        />
+        <RcField
+          label="OT multiplier"
+          value={rc.otMultiplier}
+          step={0.1}
+          min={1}
+          suffix="x"
+          onCommit={(v) => onUpdate({ otMultiplier: v })}
+        />
+        <RcField
+          label="Pre-call multiplier"
+          value={rc.preCallMultiplier}
+          step={0.1}
+          min={1}
+          suffix="x"
+          onCommit={(v) => onUpdate({ preCallMultiplier: v })}
+        />
+        <RcField
+          label="Late-night multiplier"
+          value={rc.lateNightMultiplier}
+          step={0.1}
+          min={1}
+          suffix="x"
+          onCommit={(v) => onUpdate({ lateNightMultiplier: v })}
+        />
+        <RcField
+          label="6th-day multiplier"
+          value={rc.sixthDayMultiplier}
+          step={0.1}
+          min={1}
+          suffix="x"
+          onCommit={(v) => onUpdate({ sixthDayMultiplier: v })}
+        />
+        <RcField
+          label="7th-day multiplier"
+          value={rc.seventhDayMultiplier}
+          step={0.1}
+          min={1}
+          suffix="x"
+          onCommit={(v) => onUpdate({ seventhDayMultiplier: v })}
+        />
+        <RcField
+          label="Kit rental / day"
+          value={rc.kitRental}
+          step={5}
+          prefix={sym}
+          onCommit={(v) => onUpdate({ kitRental: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Numeric rate-card input. Keeps a local string draft so partial
+ * edits don't churn the store; commits on blur and on Enter.
+ */
+function RcField({
+  label,
+  value,
+  step,
+  min = 0,
+  prefix,
+  suffix,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  step?: number;
+  min?: number;
+  prefix?: string;
+  suffix?: string;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  // Keep the input in sync if the underlying value changes from
+  // somewhere else (e.g. profile-seeded rate card).
+  useEffect(() => { setDraft(String(value)); }, [value]);
+
+  const commit = () => {
+    const n = Number(draft);
+    if (Number.isFinite(n) && n !== value) onCommit(Math.max(min, n));
+    else setDraft(String(value));
+  };
+
+  return (
+    <label className="tsr-rc-field">
+      <span className="tsr-rc-label">{label}</span>
+      <span className="tsr-rc-input-wrap">
+        {prefix && <span className="tsr-rc-affix">{prefix}</span>}
+        <input
+          className="tsr-rc-input"
+          type="number"
+          inputMode="decimal"
+          step={step}
+          min={min}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+          }}
+        />
+        {suffix && <span className="tsr-rc-affix">{suffix}</span>}
+      </span>
+    </label>
+  );
+}
+
+function RcSelect({
+  label,
+  value,
+  options,
+  onCommit,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onCommit: (value: string) => void;
+}) {
+  return (
+    <label className="tsr-rc-field">
+      <span className="tsr-rc-label">{label}</span>
+      <span className="tsr-rc-input-wrap">
+        <select
+          className="tsr-rc-input"
+          value={value}
+          onChange={(e) => onCommit(e.target.value)}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </span>
+    </label>
+  );
+}
+
 function YouPill() {
   return (
     <span
@@ -191,6 +392,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const saveEntry = store(s => s.saveEntry);
   const deleteEntry = store(s => s.deleteEntry);
   const setEntryStatus = store(s => s.setEntryStatus);
+  const updateCrewRateCard = store(s => s.updateCrewRateCard);
   const calculateEntry = store(s => s.calculateEntry);
   const getPreviousWrapOut = store(s => s.getPreviousWrapOut);
 
@@ -476,6 +678,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
             onAddCrew={() => setShowAddModal(true)}
             onNavTimesheets={() => setActivePanel('team-ts')}
             onRemoveCrew={(id) => setConfirmRemoveId(id)}
+            onUpdateRateCard={updateCrewRateCard}
           />
         )}
       </main>
@@ -1057,7 +1260,7 @@ function TeamTimesheetsPanel({
    PANEL: Team Management
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TeamManagePanel({
-  crew, crewSummaries, currency, totalLabour, totalDays, expandedRc, toggleRcExpand, onAddCrew, onNavTimesheets, onRemoveCrew,
+  crew, crewSummaries, currency, totalLabour, totalDays, expandedRc, toggleRcExpand, onAddCrew, onNavTimesheets, onRemoveCrew, onUpdateRateCard,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -1069,6 +1272,7 @@ function TeamManagePanel({
   onAddCrew: () => void;
   onNavTimesheets: () => void;
   onRemoveCrew: (id: string) => void;
+  onUpdateRateCard: (crewId: string, updates: Partial<RateCard>) => void;
 }) {
   return (
     <div>
@@ -1121,7 +1325,6 @@ function TeamManagePanel({
         const ac = getAvatarColor(colorIdx);
         const isOpen = expandedRc[member.id] ?? false;
         const rc = member.rateCard;
-        const otRate = rc.dailyRate / (rc.baseDayHours || 10) * rc.otMultiplier;
 
         return (
           <div key={member.id} className="tsr-card flush" style={{ marginBottom: 10 }}>
@@ -1164,17 +1367,11 @@ function TeamManagePanel({
 
             {/* Inline Rate Card */}
             <div className={`tsr-rc-expand ${isOpen ? 'open' : ''}`}>
-              <div style={{ padding: '18px 20px 6px' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: 'var(--accent)', marginBottom: 14 }}>Rate Card</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 8, overflow: 'hidden', marginBottom: 14 }}>
-                  <div className="tsr-od-cell"><div className="tsr-od-key">Day Rate</div><div className="tsr-od-val" style={{ fontSize: 15 }}>{fmt(rc.dailyRate, currency)}</div></div>
-                  <div className="tsr-od-cell"><div className="tsr-od-key">OT Rate</div><div className="tsr-od-val" style={{ fontSize: 15 }}>{fmt(Math.round(otRate), currency)}/hr</div></div>
-                  <div className="tsr-od-cell"><div className="tsr-od-key">Base Contract</div><div className="tsr-od-val" style={{ fontSize: 14 }}>{rc.baseContract}</div></div>
-                  <div className="tsr-od-cell"><div className="tsr-od-key">OT Multiplier</div><div className="tsr-od-val" style={{ fontSize: 14 }}>x{rc.otMultiplier}</div></div>
-                  <div className="tsr-od-cell"><div className="tsr-od-key">Kit Rental</div><div className="tsr-od-val" style={{ fontSize: 14 }}>{rc.kitRental > 0 ? fmt(rc.kitRental, currency) : 'None'}</div></div>
-                  <div className="tsr-od-cell"><div className="tsr-od-key">Contact</div><div className="tsr-od-val" style={{ fontSize: 13 }}>{member.email || '—'}</div></div>
-                </div>
-              </div>
+              <RateCardEditor
+                member={member}
+                currency={currency}
+                onUpdate={(updates) => onUpdateRateCard(member.id, updates)}
+              />
             </div>
           </div>
         );
