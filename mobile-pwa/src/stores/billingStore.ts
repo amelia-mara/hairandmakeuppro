@@ -7,6 +7,11 @@ interface BillingState {
   // Billing details (tied to user, persists across projects)
   billingDetails: BillingDetails;
 
+  // True once the user has skipped the post-signup / timesheet
+  // reminder. Used so we don't keep nagging — they can still open
+  // the prompt manually from the user-profile menu.
+  signupNudgeDismissed: boolean;
+
   // Loading state
   isLoading: boolean;
   isSaving: boolean;
@@ -14,6 +19,8 @@ interface BillingState {
 
   // Actions - Update entire billing details
   setBillingDetails: (details: BillingDetails) => void;
+  // Actions - Dismiss the auto-prompt (signup nudge / timesheet reminder).
+  dismissSignupNudge: () => void;
 
   // Actions - Update individual fields
   updatePersonalInfo: (updates: Partial<Pick<BillingDetails, 'fullName' | 'businessName' | 'address' | 'phone' | 'email'>>) => void;
@@ -38,9 +45,12 @@ export const useBillingStore = create<BillingState>()(
   persist(
     (set, get) => ({
       billingDetails: createEmptyBillingDetails(),
+      signupNudgeDismissed: false,
       isLoading: false,
       isSaving: false,
       lastError: null,
+
+      dismissSignupNudge: () => set({ signupNudgeDismissed: true }),
 
       setBillingDetails: (details) => {
         set({
@@ -195,6 +205,7 @@ export const useBillingStore = create<BillingState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         billingDetails: state.billingDetails,
+        signupNudgeDismissed: state.signupNudgeDismissed,
       }),
     }
   )

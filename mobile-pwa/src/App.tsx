@@ -43,6 +43,8 @@ import {
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
+import { BillingPromptModal } from '@/components/profile/BillingPromptModal';
+import { useBillingStore } from '@/stores/billingStore';
 import { ProjectSettingsScreen } from '@/components/project-settings';
 
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
@@ -181,6 +183,39 @@ function AppContent() {
   const [tabResetKey, setTabResetKey] = useState(0);
   // SubView for direct navigation to team, invite, stats, project settings, billing, or user profile
   const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | 'billing' | undefined>(undefined);
+
+  // Billing-prompt state: a small, dismissable modal that nudges
+  // the user to fill in invoicing details. Fires once after sign-up
+  // and again the first time the user opens the timesheet with
+  // incomplete details. Once skipped (signupNudgeDismissed) the
+  // user has to open it themselves via the profile menu.
+  const [billingPromptReason, setBillingPromptReason] =
+    useState<'signup' | 'timesheet' | null>(null);
+  const billingComplete = useBillingStore((s) => s.isBillingComplete());
+  const billingNudgeDismissed = useBillingStore((s) => s.signupNudgeDismissed);
+  const seenSignupNudgeRef = useRef(false);
+  const seenTimesheetNudgeRef = useRef(false);
+
+  // Fire the signup nudge once per session, the first time we see
+  // the user authenticated with no billing details.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (billingComplete || billingNudgeDismissed) return;
+    if (seenSignupNudgeRef.current) return;
+    seenSignupNudgeRef.current = true;
+    setBillingPromptReason('signup');
+  }, [isAuthenticated, billingComplete, billingNudgeDismissed]);
+
+  // Fire the timesheet reminder once per session when the user
+  // opens the Hours tab without complete billing details. They can
+  // skip and continue using the calculator without invoicing.
+  useEffect(() => {
+    if (activeTab !== 'hours') return;
+    if (billingComplete || billingNudgeDismissed) return;
+    if (seenTimesheetNudgeRef.current) return;
+    seenTimesheetNudgeRef.current = true;
+    setBillingPromptReason('timesheet');
+  }, [activeTab, billingComplete, billingNudgeDismissed]);
 
   // Validate state on mount - fix inconsistent persisted state that causes blank screens
   useEffect(() => {
@@ -780,6 +815,21 @@ function AppContent() {
             setTimeout(() => {
               setMoreSubView(undefined);
             }, 0);
+          }}
+        />
+      )}
+
+      {/* Billing-details prompt — signup nudge or timesheet reminder.
+          Only fires when the user is signed in, has incomplete details,
+          and hasn't already dismissed the prompt. */}
+      {billingPromptReason && (
+        <BillingPromptModal
+          reason={billingPromptReason}
+          onClose={() => setBillingPromptReason(null)}
+          onFillIn={() => {
+            setBillingPromptReason(null);
+            setActiveTab('more');
+            setMoreSubView('billing');
           }}
         />
       )}
