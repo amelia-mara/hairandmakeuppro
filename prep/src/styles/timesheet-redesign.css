@@ -908,3 +908,112 @@
   background: rgba(254, 252, 248, 0.85);
   border-color: rgba(180, 160, 120, 0.25);
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TIMESHEET — phone (≤ 768px)
+
+   210px sidebar collapses to a slide-in drawer; ☰ at the top of the
+   main panel opens it. The 4-up stat grid + 3-up earnings band drop
+   to two columns; the 2-col info grid stacks. The Earnings Breakdown
+   bar rows have name + bar + amount + days in fixed columns — on a
+   phone the bar disappears and the text rows wrap underneath.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .tsr-layout--mobile .tsr-sidebar {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: min(85vw, 280px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+    background: var(--bg-surface) !important;
+  }
+  .tsr-layout--drawer-open .tsr-sidebar {
+    transform: translateX(0);
+  }
+  .tsr-drawer-backdrop {
+    position: fixed;
+    inset: 80px 0 0 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: tsr-drawer-fade 0.18s ease-out;
+  }
+  @keyframes tsr-drawer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .tsr-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+
+  .tsr-layout--mobile .tsr-main {
+    padding: 14px 14px 60px;
+  }
+
+  /* Panel header — stack so the title gets a full row before
+     "Last updated"-style actions. */
+  .tsr-layout--mobile .tsr-ph {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .tsr-layout--mobile .tsr-ph-title {
+    font-size: 1.375rem;
+  }
+
+  /* Stat / earnings grids — 4-up & 3-up drop to 2-up. */
+  .tsr-layout--mobile .tsr-sg-4,
+  .tsr-layout--mobile .tsr-sg-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tsr-layout--mobile .tsr-earnings-band {
+    grid-template-columns: 1fr;
+  }
+  .tsr-layout--mobile .tsr-eb-cell:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid var(--border-card);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* Two-column info grid stacks. */
+  .tsr-layout--mobile .tsr-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Earnings breakdown rows — desktop layout pins the progress bar
+     between name and amount; on a phone there's not enough width,
+     so the bar drops below the row and the name + amount stay on
+     one line. */
+  .tsr-layout--mobile .tsr-earn-bar-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tsr-layout--mobile .tsr-ebr-name {
+    flex: 1;
+    min-width: 0;
+  }
+  .tsr-layout--mobile .tsr-ebr-bar {
+    order: 99;
+    flex-basis: 100%;
+  }
+}
