@@ -103,30 +103,47 @@ export function Timesheet({ projectId }: TimesheetProps) {
 
   const { currency } = production;
 
-  /* ── Personal-details gate ────────────────────────────────────────
-     The timesheet only makes sense once the signed-in user has
-     filled in their invoicing details. We show a forced modal until
-     the profile is complete; once it is, we auto-create / refresh
-     the user's "me" crew row in this project so their invoice and
-     the team's invoices live in the same crew list but are visually
-     separated. */
+  /* ── Personal-details reminder ────────────────────────────────────
+     Some users only want the timesheet calculator and never plan to
+     invoice from Checks Happy. We show the profile modal as a
+     dismissable reminder when the user opens the timesheet with an
+     incomplete profile, but they can skip and continue using the
+     page. The user can fill in details later from the account panel
+     (Edit Profile). The "me" crew row is created with whatever
+     identity we already know (auth name + email, defaults for the
+     rest) so the page is usable even without invoicing details. */
   const authUser = useAuthStore((s) => s.user);
   const profile = useUserProfileStore((s) =>
     authUser ? s.profiles[authUser.id] : undefined,
   );
+  const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
   const profileComplete = isProfileComplete(profile);
-  const showProfileGate = !!authUser && !profileComplete;
+  const reminderDismissed = profile?.signupNudgeDismissed ?? false;
+  const [showProfileReminder, setShowProfileReminder] = useState(
+    !!authUser && !profileComplete && !reminderDismissed,
+  );
+  // Re-fire the reminder if the user lands on the timesheet after
+  // dismissing it elsewhere — but never twice in the same session
+  // and never once they've completed the profile.
+  useEffect(() => {
+    if (!authUser) return;
+    setShowProfileReminder(!profileComplete && !reminderDismissed);
+  }, [authUser, profileComplete, reminderDismissed]);
 
   useEffect(() => {
-    if (!authUser || !profile || !profileComplete) return;
+    if (!authUser) return;
+    // Always make sure a "me" crew row exists, even when the user
+    // skipped the profile. We fall back to the auth user's name/email
+    // and a sensible default crew type.
+    const p = profile ?? ensureProfile(authUser.id, authUser.name, authUser.email);
     ensureSelfCrew({
       userId: authUser.id,
-      name: profile.fullName || authUser.name,
-      email: profile.email || authUser.email,
-      phone: profile.phone,
-      crewType: profile.crewType,
+      name: p.fullName || authUser.name,
+      email: p.email || authUser.email,
+      phone: p.phone,
+      crewType: p.crewType,
     });
-  }, [authUser, profile, profileComplete, ensureSelfCrew]);
+  }, [authUser, profile, ensureProfile, ensureSelfCrew]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -294,8 +311,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
         />
       )}
 
-      {showProfileGate && (
-        <UserProfileModal required onClose={() => { /* gate dismissal handled by save */ }} />
+      {showProfileReminder && (
+        <UserProfileModal
+          isSignupNudge
+          onClose={() => setShowProfileReminder(false)}
+        />
       )}
 
       {toast && <div className="tsr-toast">{toast}</div>}

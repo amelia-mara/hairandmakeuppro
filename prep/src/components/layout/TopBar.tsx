@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
 import { isOwnerTier } from '@/utils/tierUtils';
 import { parseScriptRevision } from '@/utils/parseScriptRevision';
+import { UserProfileModal } from '@/components/profile/UserProfileModal';
 
 interface TopBarProps {
   title?: string;
@@ -36,6 +37,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
   const draftDate = scriptRevision?.formattedDate || null;
   const [navOpen, setNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useThemeStore();
@@ -194,7 +196,15 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                         </div>
                       </div>
                       <div className="account-divider" />
-                      <button className="account-edit-btn" onClick={() => console.log('Edit profile')}>Edit Profile</button>
+                      <button
+                        className="account-edit-btn"
+                        onClick={() => {
+                          setProfileOpen(true);
+                          setAccountOpen(false);
+                        }}
+                      >
+                        Edit Profile
+                      </button>
                     </div>
 
                     {/* Account Settings */}
@@ -302,6 +312,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         </div>
       </div>
 
+      {profileOpen && <UserProfileModal onClose={() => setProfileOpen(false)} />}
     </header>
   );
 }
