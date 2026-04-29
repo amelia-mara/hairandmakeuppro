@@ -33,6 +33,11 @@ export interface ParsedScene {
   characters: string[]; // Character names appearing in scene
   content: string;
   titleCardBefore?: string | null; // ALL-CAPS title card found before this scene's slug
+  /** Set when the script marks a scene as removed in this revision
+   *  (e.g. "12. OMITTED"). The placeholder is preserved in the scene
+   *  list so numbering stays coherent — production crews need to know
+   *  scene 12 used to exist even if it's gone now. */
+  isOmitted?: boolean;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -105,6 +110,40 @@ export function parseScriptText(text: string): ParsedScript {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
+
+    // ── Omitted scene placeholder ──────────────────────────────
+    // Scripts mark deleted scenes with a stub line that retains the
+    // scene number, e.g. "12. OMITTED" or "12 OMITTED.". We emit a
+    // ParsedScene with isOmitted:true so the scene list keeps
+    // numbering coherent — without this the parser would silently
+    // merge the line into the previous scene's content and the gap
+    // would confuse anyone cross-referencing the breakdown.
+    const omittedMatch = trimmed.match(
+      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*$/i,
+    );
+    if (omittedMatch) {
+      // Close out the current scene first.
+      if (currentScene) {
+        currentScene.content = currentSceneContent.trim();
+        scenes.push(currentScene);
+        currentScene = null;
+        currentSceneContent = '';
+      }
+      fallbackSceneNumber++;
+      const sceneNum = (omittedMatch[1] || String(fallbackSceneNumber)).toUpperCase();
+      scenes.push({
+        sceneNumber: sceneNum,
+        slugline: trimmed,
+        intExt: 'INT',
+        location: 'OMITTED',
+        timeOfDay: 'DAY',
+        characters: [],
+        content: '',
+        isOmitted: true,
+      });
+      lastLineWasCharacter = false;
+      continue;
+    }
 
     const parsedHeading = parseSceneHeadingLine(trimmed);
 

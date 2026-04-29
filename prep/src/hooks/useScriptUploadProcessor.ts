@@ -147,6 +147,7 @@ export function useScriptUploadProcessor({
           characterIds: charIds,
           synopsis: '',
           scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
+          isOmitted: ps.isOmitted || undefined,
         };
       });
 

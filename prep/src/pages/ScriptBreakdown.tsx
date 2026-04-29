@@ -637,6 +637,16 @@ export function ScriptBreakdown({ projectId }: Props) {
           </div>
           {splitView ? (
             <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
+          ) : scene?.isOmitted ? (
+            <div className="bd-omitted-state">
+              <div className="bd-omitted-num">SC {scene.number}</div>
+              <div className="bd-omitted-label">Omitted</div>
+              <p className="bd-omitted-desc">
+                This scene was dropped in the current revision. The
+                placeholder is kept here so scene numbering stays
+                consistent — there's no breakdown to fill in.
+              </p>
+            </div>
           ) : (
             scene && (
             <BreakdownFormPanel
