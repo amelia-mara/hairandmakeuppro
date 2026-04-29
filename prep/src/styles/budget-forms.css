@@ -658,6 +658,54 @@
   background: rgba(200, 60, 60, 0.85);
 }
 
+/* "Reading receipt…" overlay shown while the Vision API is
+   parsing the image. */
+.receipt-image-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.receipt-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: receipt-spin 0.7s linear infinite;
+}
+@keyframes receipt-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Status banner above the form fields after extraction. */
+.receipt-banner {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  border: 1px solid;
+}
+.receipt-banner--ok {
+  background: rgba(74, 191, 176, 0.10);
+  border-color: rgba(74, 191, 176, 0.30);
+  color: var(--brand-teal);
+}
+.receipt-banner--warn {
+  background: rgba(232, 98, 26, 0.08);
+  border-color: rgba(232, 98, 26, 0.30);
+  color: #C4522A;
+}
+
 .receipt-upload-zone {
   display: flex;
   flex-direction: column;
