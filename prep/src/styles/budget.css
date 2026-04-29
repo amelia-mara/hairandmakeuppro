@@ -225,6 +225,63 @@
   box-shadow: var(--glass-shadow-stat);
 }
 
+/* Click-to-edit variant — used by the Approved Budget card on
+   Spend Tracking. Shows a subtle hover border so the user knows
+   the value is editable, and the inline input picks up the same
+   font + colour as the value text so the transition between read
+   and edit modes is seamless. */
+.bg-stat-card--editable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bg-stat-card--editable:hover {
+  border-color: rgba(var(--a), 0.35);
+  background: rgba(var(--a), 0.03);
+}
+.bg-stat-card--editable:focus {
+  outline: none;
+  border-color: rgba(var(--a), 0.45);
+  background: rgba(var(--a), 0.05);
+}
+.bg-stat-value-edit {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.1;
+}
+.bg-stat-value-symbol {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--brand-teal);
+}
+.bg-stat-value-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: 1.625rem;
+  font-weight: 400;
+  color: var(--brand-teal);
+  background: transparent;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+.bg-stat-value-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+/* Hide the spinner buttons so the input stays clean */
+.bg-stat-value-input::-webkit-outer-spin-button,
+.bg-stat-value-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.bg-stat-value-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .bg-stat-label {
   font-family: var(--font-sans);
   font-size: 0.5625rem;
