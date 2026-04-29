@@ -8,16 +8,21 @@ import type { CallSheet } from './callSheet/types';
 import { extractTextFromPDF } from './callSheet/extractText';
 import { parseHeader } from './callSheet/parseHeader';
 import { parseLocations } from './callSheet/parseLocations';
-import { parseScenes } from './callSheet/parseScenes';
+import { parseScenes, type ParseContext } from './callSheet/parseScenes';
 import { parseCastCalls, parseSupportingArtists } from './callSheet/parseCast';
 
 export type { CallSheet } from './callSheet/types';
+export type { ParseContext };
 export { extractTextFromPDF };
 
-export function parseCallSheetText(text: string, pdfUri?: string): CallSheet {
+export function parseCallSheetText(
+  text: string,
+  pdfUri?: string,
+  context?: ParseContext,
+): CallSheet {
   const header = parseHeader(text);
   const loc = parseLocations(text);
-  const scenes = parseScenes(text);
+  const scenes = parseScenes(text, context);
   const castCalls = parseCastCalls(text);
   const supportingArtists = parseSupportingArtists(text);
 
@@ -50,12 +55,15 @@ export function parseCallSheetText(text: string, pdfUri?: string): CallSheet {
   };
 }
 
-export async function parseCallSheetPDF(file: File): Promise<CallSheet> {
+export async function parseCallSheetPDF(
+  file: File,
+  context?: ParseContext,
+): Promise<CallSheet> {
   const pdfUri = await new Promise<string>((resolve) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.readAsDataURL(file);
   });
   const text = await extractTextFromPDF(file);
-  return parseCallSheetText(text, pdfUri);
+  return parseCallSheetText(text, pdfUri, context);
 }
