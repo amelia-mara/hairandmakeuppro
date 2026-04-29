@@ -65,16 +65,14 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
 };
 
 export const DEFAULT_CATEGORIES: BudgetCategory[] = [
-  { id: 'disposables', name: 'Disposables', items: [] },
-  { id: 'hygiene', name: 'Hygiene', items: [] },
-  { id: 'makeup', name: 'Makeup', items: [] },
-  { id: 'hair', name: 'Hair', items: [] },
-  { id: 'prosthetics', name: 'Prosthetics', items: [] },
-  { id: 'mouldmaking', name: 'Mould Making', items: [] },
-  { id: 'sfxmakeup', name: 'SFX Makeup', items: [] },
-  { id: 'accessories', name: 'Accessories', items: [] },
-  { id: 'actoressentials', name: 'Actor Essentials', items: [] },
-  { id: 'departmentsupplies', name: 'Department Supplies', items: [] },
+  { id: 'makeup',      name: 'Makeup',             items: [] },
+  { id: 'hair',        name: 'Hair',               items: [] },
+  { id: 'wigs',        name: 'Wigs and Postiche',  items: [] },
+  { id: 'sfx',         name: 'SFX',                items: [] },
+  { id: 'prosthetics', name: 'Prosthetics',        items: [] },
+  { id: 'disposables', name: 'Disposables',        items: [] },
+  { id: 'hygiene',     name: 'Hygiene',            items: [] },
+  { id: 'tools',       name: 'Tools',              items: [] },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -404,6 +402,21 @@ function createBudgetStore(projectId: string) {
           currency: state.currency,
           lastSaved: state.lastSaved,
         }),
+        onRehydrateStorage: () => (state) => {
+          // Migrate persisted projects to the latest preset category
+          // list. Existing categories are kept (so previously-entered
+          // items aren't orphaned), and any DEFAULT_CATEGORIES the
+          // project doesn't yet have are appended.
+          if (!state) return;
+          const have = new Set(state.categories.map((c) => c.id));
+          const missing = DEFAULT_CATEGORIES.filter((c) => !have.has(c.id));
+          if (missing.length > 0) {
+            state.categories = [
+              ...state.categories,
+              ...missing.map((c) => ({ ...c, items: [] })),
+            ];
+          }
+        },
       }
     )
   );
