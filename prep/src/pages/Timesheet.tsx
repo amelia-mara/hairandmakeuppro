@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { useTeamStore } from '@/stores/teamStore';
+import { fetchMemberTimesheets } from '@/services/supabaseSync';
 
 interface TimesheetProps {
   projectId: string;
@@ -127,6 +128,37 @@ function YouPill() {
   );
 }
 
+/** Marks a timesheet entry that arrived from a team member's mobile
+ *  log via Supabase. Helps the designer spot which rows are
+ *  authoritative team input vs. ones they keyed in themselves. */
+function SyncedPill() {
+  return (
+    <span
+      title="Synced from this team member's mobile timesheet"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        padding: '1px 6px',
+        fontSize: '0.5625rem',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        borderRadius: '999px',
+        background: 'rgba(74, 191, 176, 0.12)',
+        color: 'var(--brand-teal, #4ABFB0)',
+      }}
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Synced
+    </span>
+  );
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TIMESHEET PAGE — Redesigned with sidebar navigation
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -153,6 +185,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const removeCrew = store(s => s.removeCrew);
   const ensureSelfCrew = store(s => s.ensureSelfCrew);
   const ensureTeamCrew = store(s => s.ensureTeamCrew);
+  const mergeMemberEntries = store(s => s.mergeMemberEntries);
   const getCrewWeekSummary = store(s => s.getCrewWeekSummary);
   const getTotalLabourCost = store(s => s.getTotalLabourCost);
   const saveEntry = store(s => s.saveEntry);
@@ -254,6 +287,27 @@ export function Timesheet({ projectId }: TimesheetProps) {
       }));
     ensureTeamCrew(synced, { removeOrphans: true });
   }, [authUser, teamMembers, ensureTeamCrew]);
+
+  // Pull every team member's timesheet rows from Supabase and merge
+  // them onto the synced crew rows. Re-runs when the membership list
+  // changes so a freshly-added team member's history surfaces too.
+  // (Phase 1: pull-only — designer edits don't write back yet.)
+  useEffect(() => {
+    let cancelled = false;
+    if (!projectId || teamMembers.length === 0) return;
+    fetchMemberTimesheets(projectId)
+      .then((rows) => {
+        if (cancelled) return;
+        const applied = mergeMemberEntries(rows);
+        if (applied > 0) {
+          console.log(`[Timesheet] pulled ${applied} entries from team`);
+        }
+      })
+      .catch((err) =>
+        console.warn('[Timesheet] fetchMemberTimesheets failed', err),
+      );
+    return () => { cancelled = true; };
+  }, [projectId, teamMembers, mergeMemberEntries]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -399,6 +453,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
             totalLabour={totalLabour}
             expandedTeam={expandedTeam}
             toggleTeamExpand={toggleTeamExpand}
+            calculateEntry={calculateEntry}
           />
         )}
 
@@ -849,7 +904,7 @@ function InvoicesPanel({ currency, totalLabour, crew }: { currency: CurrencyCode
    PANEL: Team Timesheets
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TeamTimesheetsPanel({
-  crew, crewSummaries, currency, totalHours, totalLabour, expandedTeam, toggleTeamExpand,
+  crew, crewSummaries, currency, totalHours, totalLabour, expandedTeam, toggleTeamExpand, calculateEntry,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -858,8 +913,15 @@ function TeamTimesheetsPanel({
   totalLabour: number;
   expandedTeam: Record<string, boolean>;
   toggleTeamExpand: (id: string) => void;
+  calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
 }) {
-  const pendingCount = 0; // future: count entries with status !== 'approved'
+  // Count entries that arrived from a team member's mobile and
+  // haven't been touched by the designer yet.
+  const pendingCount = crewSummaries.reduce(
+    (sum, { summary }) =>
+      sum + summary.entries.filter((e) => e.sourceUserId && e.status !== 'approved').length,
+    0,
+  );
 
   return (
     <div>
@@ -923,16 +985,42 @@ function TeamTimesheetsPanel({
                   const d = new Date(entry.date + 'T12:00:00');
                   const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
                   const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                  const calc = entry.unitCall && entry.wrapOut
+                    ? calculateEntry(member.id, entry, entry.previousWrapOut)
+                    : null;
+                  const fromMobile = !!entry.sourceUserId;
                   return (
                     <div key={entry.date} className="tsr-tte">
-                      <div className="tsr-tte-date">{dateStr}</div>
+                      <div className="tsr-tte-date" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {dateStr}
+                        {fromMobile && <SyncedPill />}
+                      </div>
                       <div className="tsr-tte-day">{dayName}</div>
-                      <div className="tsr-tte-dtype"><span className="tsr-tag orange">Shoot</span></div>
-                      <div className="tsr-tte-wday"><span className="tsr-tag gold" style={{ fontSize: 9 }}>{member.rateCard.baseContract}</span></div>
-                      <div className="tsr-tte-hrs">—</div>
-                      <div className="tsr-tte-ot">—</div>
-                      <div className="tsr-tte-earn">{fmt(member.rateCard.dailyRate, currency)}</div>
-                      <div className="tsr-tte-appr"><span className="tsr-appr-btn done">Approved</span></div>
+                      <div className="tsr-tte-dtype">
+                        <span className="tsr-tag orange">
+                          {entry.dayType === 'SCWD' ? 'Semi-cont' :
+                           entry.dayType === 'CWD' ? 'Continuous' : 'Shoot'}
+                        </span>
+                      </div>
+                      <div className="tsr-tte-wday">
+                        <span className="tsr-tag gold" style={{ fontSize: 9 }}>
+                          {member.rateCard.baseContract}
+                        </span>
+                      </div>
+                      <div className="tsr-tte-hrs">
+                        {calc ? calc.totalHours.toFixed(1) : '—'}
+                      </div>
+                      <div className="tsr-tte-ot">
+                        {calc ? calc.otHours.toFixed(1) : '—'}
+                      </div>
+                      <div className="tsr-tte-earn">
+                        {calc ? fmtDec(calc.totalPay, currency) : fmt(member.rateCard.dailyRate, currency)}
+                      </div>
+                      <div className="tsr-tte-appr">
+                        <span className={`tsr-appr-btn ${entry.status === 'approved' ? 'done' : ''}`}>
+                          {entry.status === 'approved' ? 'Approved' : entry.status === 'submitted' ? 'Pending' : 'Draft'}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

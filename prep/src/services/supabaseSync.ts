@@ -232,6 +232,28 @@ export async function fetchTimesheetEntries(projectId: string) {
   return data || [];
 }
 
+/**
+ * Fetch every team member's per-week timesheet rows for this project.
+ * Excludes the sentinel prep-state row (week_starting='1970-01-01')
+ * which holds prep's own crew/production blob — that's read elsewhere.
+ *
+ * Each row's `entries` is expected to be an array of TimesheetEntry
+ * (the shape mobile pushes). Returns the raw rows so the caller can
+ * group / merge as they need.
+ */
+export async function fetchMemberTimesheets(projectId: string) {
+  const { data, error } = await supabase
+    .from('timesheets')
+    .select('user_id, week_starting, entries, updated_at')
+    .eq('project_id', projectId)
+    .neq('week_starting', '1970-01-01');
+  if (error) {
+    console.warn('[PrepSync] fetchMemberTimesheets failed:', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
 export async function fetchScriptUpload(projectId: string) {
   const { data, error } = await supabase
     .from('script_uploads')

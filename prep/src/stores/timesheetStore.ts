@@ -74,6 +74,13 @@ export interface TimesheetEntry {
   notes: string;
   status: 'draft' | 'submitted' | 'approved';
   previousWrapOut?: string;
+  /**
+   * Auth user id of the team member who logged this entry from
+   * mobile. Set by mergeMemberEntries when the row arrives via
+   * Supabase; absent on entries the designer added directly in
+   * prep. Used by the UI to flag the row as "synced".
+   */
+  sourceUserId?: string;
 }
 
 export interface TimesheetCalculation {
@@ -241,6 +248,20 @@ interface TimesheetState {
   getEntry: (crewId: string, date: string) => TimesheetEntry;
   saveEntry: (crewId: string, entry: TimesheetEntry) => void;
   deleteEntry: (crewId: string, date: string) => void;
+  /**
+   * Apply timesheet rows pulled from Supabase onto the local store.
+   * Each member row contributes a list of entries that get keyed
+   * under `${crewId}:${entry.date}` for the crew row whose `userId`
+   * matches the member's user_id. Existing entries are replaced so
+   * the latest mobile log wins; entries the designer added by hand
+   * for a date the member hasn't logged yet are preserved.
+   *
+   * Returns the count of entries that were applied so callers can
+   * surface a "X new entries from your team" toast.
+   */
+  mergeMemberEntries: (
+    rows: Array<{ user_id: string; entries: unknown }>,
+  ) => number;
 
   // Navigation
   setSelectedCrew: (crewId: string | null) => void;
@@ -583,6 +604,40 @@ function createTimesheetStore(projectId: string) {
             lastSaved: new Date().toISOString(),
           });
           triggerTsAutoSave();
+        },
+        mergeMemberEntries: (rows) => {
+          if (rows.length === 0) return 0;
+          const state = get();
+          // Build userId → crewId map (skip rows we don't track yet —
+          // the synced crew row is created by ensureTeamCrew before
+          // this runs in the timesheet page mount sequence).
+          const crewByUserId = new Map<string, string>();
+          for (const c of state.crew) {
+            if (c.userId) crewByUserId.set(c.userId, c.id);
+          }
+
+          let applied = 0;
+          const newEntries = { ...state.entries };
+          for (const row of rows) {
+            const crewId = crewByUserId.get(row.user_id);
+            if (!crewId) continue;
+            const list = Array.isArray(row.entries)
+              ? (row.entries as TimesheetEntry[])
+              : [];
+            for (const incoming of list) {
+              if (!incoming?.date || !incoming?.id) continue;
+              const key = `${crewId}:${incoming.date}`;
+              // Tag the entry so the UI can show a "synced from
+              // mobile" badge and so write-back logic in phase 2 can
+              // tell synced from designer-added rows apart.
+              newEntries[key] = { ...incoming, sourceUserId: row.user_id };
+              applied += 1;
+            }
+          }
+          if (applied === 0) return 0;
+          set({ entries: newEntries, lastSaved: new Date().toISOString() });
+          triggerTsAutoSave();
+          return applied;
         },
         updateCrewRateCard: (crewId, updates) => {
           set((s) => ({
