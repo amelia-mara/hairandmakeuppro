@@ -514,6 +514,143 @@
   background: rgba(232, 98, 26, 0.10);
 }
 
+/* When the dashed log-day button sits at the top of the hour-log
+   table (above the column headers) it needs a different rhythm:
+   no top margin, slight bottom margin, full-bleed inside the card. */
+.tsr-add-btn--top {
+  margin: 0 0 10px 0;
+  border-radius: 8px 8px 0 0;
+  border-style: dashed;
+}
+
+/* ── Hour Log redesigned columns ─────────────────── */
+.tsr-hl-head {
+  padding: 9px 18px;
+  align-items: baseline;
+  gap: 14px;
+}
+.tsr-hl-row {
+  align-items: center;
+  padding: 12px 18px;
+  gap: 14px;
+  cursor: pointer;
+}
+.tsr-hl-date {
+  width: 72px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.tsr-hl-date-day {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.tsr-hl-date-main {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.tsr-hl-date-year {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.tsr-hl-type {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tsr-hl-wday-tag {
+  font-size: 9px !important;
+}
+.tsr-hl-flags {
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  width: 100%;
+}
+.tsr-hl-times {
+  flex: 1;
+  min-width: 0;
+}
+.tsr-hl-times-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.tsr-hl-times-val { font-size: 14px; }
+.tsr-hl-times-arrow {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+.tsr-hl-times-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.tsr-hl-hrs {
+  width: 92px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.tsr-hl-hrs-main {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.tsr-hl-unit {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 1px;
+}
+.tsr-hl-hrs-sub {
+  font-size: 10px;
+  color: var(--accent-gold, #D4943A);
+  font-weight: 600;
+  margin-top: 1px;
+  letter-spacing: 0.02em;
+}
+.tsr-hl-earn {
+  width: 110px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.tsr-hl-earn-main {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.tsr-hl-earn-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.tsr-hl-status {
+  width: 96px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
 /* ── Timesheet Rows ──────────────────────────────── */
 .tsr-ts-row {
   display: flex;
