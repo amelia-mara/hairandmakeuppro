@@ -224,6 +224,33 @@
   font-style: italic;
   padding-bottom: 4px;
 }
+/* Editable synopsis input — keeps the italic, muted look but
+   reveals a soft border on focus so the user can tell it's a
+   field. */
+.bs-scene-synopsis--editable {
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin: 8px -8px 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: text;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bs-scene-synopsis--editable::placeholder {
+  color: var(--text-muted);
+  opacity: 0.45;
+}
+.bs-scene-synopsis--editable:hover {
+  border-color: var(--border-card);
+}
+.bs-scene-synopsis--editable:focus {
+  outline: none;
+  border-color: rgba(var(--a), 0.45);
+  background: rgba(var(--a), 0.04);
+}
 
 /* Table */
 .bs-table {
@@ -350,6 +377,59 @@
 .bs-empty {
   color: var(--text-muted); opacity: 0.35;
   font-size: 0.8125rem;
+}
+
+/* ━━━ Inline-editable cell input + look dropdown ━━━
+   Used by EmbeddedBreakdownTable in split-view. Looks like plain
+   text in the cell until focused, when it picks up a soft border so
+   the user knows they're editing. Commits on blur. */
+.bs-cell-input,
+.bs-cell-select {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  line-height: inherit;
+  cursor: text;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bs-cell-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.35;
+}
+.bs-cell-input:hover,
+.bs-cell-select:hover {
+  border-color: var(--border-card);
+}
+.bs-cell-input:focus,
+.bs-cell-select:focus {
+  outline: none;
+  border-color: rgba(var(--a), 0.45);
+  background: rgba(var(--a), 0.04);
+}
+.bs-cell-select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  /* Reuse the look-name pill styling when something is picked. */
+  font-weight: 600;
+  color: var(--accent);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+                    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 22px;
+}
+.bs-cell-select:has(option[value=""]:checked) {
+  color: var(--text-muted);
+  opacity: 0.6;
+  font-weight: 400;
 }
 
 /* "Same as" continuity ref */
