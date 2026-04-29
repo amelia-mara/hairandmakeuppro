@@ -322,6 +322,36 @@ function ExpandedDayContent({ entry, updateField, calculation, rateCard }: Expan
         </select>
       </div>
 
+      {/* Rate kind — Prep / Shoot. Drives which rate the calculator
+          picks up off the rate card. Defaults to Shoot when missing. */}
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-wide font-medium min-w-[70px]" style={{ color: 'var(--color-text-muted)' }}>
+          Rate Kind
+        </span>
+        <div role="group" aria-label="Rate kind" className="flex-1 inline-flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          {(['shoot', 'prep'] as const).map((kind) => {
+            const active = (entry.rateType ?? 'shoot') === kind;
+            return (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => updateField('rateType', kind)}
+                className="flex-1 py-2.5 text-sm font-medium transition-colors"
+                style={{
+                  background: active ? 'var(--color-gold-50, rgba(232, 98, 26, 0.1))' : 'var(--color-input-bg)',
+                  color: active ? 'var(--color-gold, #E8621A)' : 'var(--color-text-muted)',
+                  borderLeft: kind === 'prep' ? '1px solid var(--color-border)' : 'none',
+                  textTransform: 'capitalize',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {kind === 'prep' ? 'Prep day' : 'Shoot day'}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 6th/7th Day Checkboxes */}
       <div className="flex gap-3">
         <label
