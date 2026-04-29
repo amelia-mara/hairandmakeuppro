@@ -65,14 +65,17 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
 };
 
 export const DEFAULT_CATEGORIES: BudgetCategory[] = [
-  { id: 'makeup',      name: 'Makeup',             items: [] },
-  { id: 'hair',        name: 'Hair',               items: [] },
-  { id: 'wigs',        name: 'Wigs and Postiche',  items: [] },
-  { id: 'sfx',         name: 'SFX',                items: [] },
-  { id: 'prosthetics', name: 'Prosthetics',        items: [] },
-  { id: 'disposables', name: 'Disposables',        items: [] },
-  { id: 'hygiene',     name: 'Hygiene',            items: [] },
-  { id: 'tools',       name: 'Tools',              items: [] },
+  { id: 'makeup',             name: 'Makeup',             items: [] },
+  { id: 'hair',               name: 'Hair',               items: [] },
+  { id: 'wigs',               name: 'Wigs and Postiche',  items: [] },
+  { id: 'sfx',                name: 'SFX',                items: [] },
+  { id: 'prosthetics',        name: 'Prosthetics',        items: [] },
+  { id: 'mouldmaking',        name: 'Mould Making',       items: [] },
+  { id: 'disposables',        name: 'Disposables',        items: [] },
+  { id: 'hygiene',            name: 'Hygiene',            items: [] },
+  { id: 'accessories',        name: 'Accessories',        items: [] },
+  { id: 'actorspecifics',     name: 'Actors Specifics',   items: [] },
+  { id: 'departmentsupplies', name: 'Department Supplies', items: [] },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
