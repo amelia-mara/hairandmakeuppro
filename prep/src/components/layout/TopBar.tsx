@@ -180,7 +180,13 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                     {/* Profile card */}
                     <div className="account-card">
                       <div className="account-profile">
-                        <div className="account-avatar">{user?.initials || 'U'}</div>
+                        <div
+                          className={`account-avatar${
+                            isOwnerTier(effectiveTier) ? ' avatar-btn--owner' : ''
+                          }`}
+                        >
+                          {user?.initials || 'U'}
+                        </div>
                         <div className="account-info">
                           <div className="account-name">{user?.name || 'User'}</div>
                           <div className="account-email">{user?.email || ''}</div>
