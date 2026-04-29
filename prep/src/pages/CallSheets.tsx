@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useCallSheetStore, type CallSheetFile } from '@/stores/callSheetStore';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import { extractTextFromPDF, parseCallSheetText } from '@/utils/callSheetParser';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -58,17 +59,33 @@ export function CallSheets({ projectId }: CallSheetsProps) {
         });
         const thumbnailUri = await generateThumbnail(dataUri);
 
-        // Try to parse date from filename, fallback to today
+        // Run the same regex parser mobile uses so the PDF, the prep
+        // dashboard widgets, and mobile's Today page all see identical
+        // data. Tolerant of failures — the thumbnail upload still works
+        // even if the parser can't make sense of the layout.
+        let parsed;
+        try {
+          const text = await extractTextFromPDF(file);
+          parsed = parseCallSheetText(text, dataUri);
+        } catch (err) {
+          console.warn('[CallSheets] regex parse failed; storing PDF only', err);
+        }
+
+        // Prefer the date the parser pulled out of the call sheet header;
+        // fall back to a date in the filename, then today.
         const dateMatch = file.name.match(/(\d{4}[-/]\d{2}[-/]\d{2})/);
-        const date = dateMatch ? dateMatch[1].replace(/\//g, '-') : new Date().toISOString().slice(0, 10);
+        const date =
+          parsed?.date ??
+          (dateMatch ? dateMatch[1].replace(/\//g, '-') : new Date().toISOString().slice(0, 10));
 
         addSheet({
-          id: crypto.randomUUID(),
+          id: parsed?.id ?? crypto.randomUUID(),
           name: file.name.replace(/\.pdf$/i, ''),
           date,
           dataUri,
           thumbnailUri,
           uploadedAt: new Date().toISOString(),
+          parsed,
         });
       } finally {
         setUploading(false);
