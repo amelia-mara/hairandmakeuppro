@@ -14,7 +14,6 @@ import {
 import {
   useShoppingFlagStore,
   SHOPPING_FLAG_KINDS,
-  type ShoppingFlagKind,
   type ShoppingFlagScope,
 } from '@/stores/shoppingFlagStore';
 import { ordinal } from '@/utils/ordinal';
