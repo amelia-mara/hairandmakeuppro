@@ -48,8 +48,12 @@ export interface Expense {
   supplier: string;
   category: string;
   lineItemId?: string;
+  /** VAT amount paid on the receipt (held as string to match the
+   *  way the form keeps the input controlled). */
   vat: string;
   amount: number;
+  /** Free-form note / item description, e.g. "Foundation restocks". */
+  notes?: string;
   receiptId?: string;
   receiptImageUri?: string;
 }
