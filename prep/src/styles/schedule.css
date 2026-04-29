@@ -390,12 +390,34 @@
 
 .sch-scene-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 12px;
   background: rgba(var(--a), 0.03);
   border-radius: 8px;
   font-size: 0.8125rem;
+}
+.sch-scene-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sch-scene-cast {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 50px;
+}
+.sch-scene-cast-pill {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--a), 0.20);
+  background: rgba(var(--a), 0.05);
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .sch-scene-num {
