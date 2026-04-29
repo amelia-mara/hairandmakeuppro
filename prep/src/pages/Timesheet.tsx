@@ -5,6 +5,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
+import { useTeamStore } from '@/stores/teamStore';
 
 interface TimesheetProps {
   projectId: string;
@@ -150,8 +151,16 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const addCrew = store(s => s.addCrew);
   const removeCrew = store(s => s.removeCrew);
   const ensureSelfCrew = store(s => s.ensureSelfCrew);
+  const ensureTeamCrew = store(s => s.ensureTeamCrew);
   const getCrewWeekSummary = store(s => s.getCrewWeekSummary);
   const getTotalLabourCost = store(s => s.getTotalLabourCost);
+
+  // Pull project team members so anyone joined via the invite code
+  // automatically appears as a crew row in the timesheet.
+  const teamStore = useTeamStore(projectId);
+  const teamMembers = teamStore((s) => s.members);
+  const loadTeam = teamStore((s) => s.loadFromSupabase);
+  useEffect(() => { loadTeam(projectId); }, [projectId, loadTeam]);
 
   // Remove-crew confirmation. Deleting also wipes that crew's logged
   // hours, so we never auto-confirm — the user has to acknowledge.
@@ -210,6 +219,25 @@ export function Timesheet({ projectId }: TimesheetProps) {
       rateCard: p.rateCard,
     });
   }, [authUser, profile, ensureProfile, ensureSelfCrew]);
+
+  // Mirror the project team into the crew list. Anyone joined via the
+  // invite code (i.e. visible on the Team page) gets an auto-created
+  // crew row with a default rate card the designer can then adjust.
+  // The user's own row is excluded — it's managed by ensureSelfCrew.
+  // removeOrphans cleans up rows for people the designer kicked off
+  // the project so their hours don't keep showing up.
+  useEffect(() => {
+    if (!authUser) return;
+    const synced = teamMembers
+      .filter((m) => m.id !== authUser.id)
+      .map((m) => ({
+        userId: m.id,
+        name: m.name,
+        email: m.email,
+        phone: '',
+      }));
+    ensureTeamCrew(synced, { removeOrphans: true });
+  }, [authUser, teamMembers, ensureTeamCrew]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);

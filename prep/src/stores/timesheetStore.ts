@@ -217,6 +217,25 @@ interface TimesheetState {
       rateCard?: RateCard;
     },
   ) => string;
+  /**
+   * Sync project team members (joined via the project invite code)
+   * into the timesheet's crew list. For each member with a userId we
+   * either add a new crew row (with a default rate card the designer
+   * can adjust later) or refresh the personal fields (name / email)
+   * on the existing row. Rate cards on existing rows are NEVER
+   * touched. Pass `removeOrphans: true` to also delete crew rows
+   * whose userId no longer matches an active team member — used when
+   * the designer removes someone from the project.
+   */
+  ensureTeamCrew: (
+    members: Array<{
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+    }>,
+    options?: { removeOrphans?: boolean },
+  ) => void;
 
   // Entries
   getEntry: (crewId: string, date: string) => TimesheetEntry;
@@ -482,6 +501,88 @@ function createTimesheetStore(projectId: string) {
           }));
           triggerTsAutoSave();
           return id;
+        },
+        ensureTeamCrew: (members, options) => {
+          if (members.length === 0 && !options?.removeOrphans) return;
+          const state = get();
+          const memberByUserId = new Map(members.map((m) => [m.userId, m]));
+          const newCrew: CrewMember[] = [];
+          const newEntries = { ...state.entries };
+
+          // First pass: walk the existing crew and either refresh
+          // matching rows or drop them when removeOrphans is set.
+          for (const c of state.crew) {
+            // The user's own row is managed separately by ensureSelfCrew;
+            // never overwrite or delete it here.
+            if (c.isMe) { newCrew.push(c); continue; }
+            const match = c.userId ? memberByUserId.get(c.userId) : undefined;
+            if (match) {
+              newCrew.push({
+                ...c,
+                userId: match.userId,
+                name: match.name || c.name,
+                email: match.email ?? c.email,
+                phone: match.phone ?? c.phone,
+              });
+              memberByUserId.delete(match.userId);
+            } else if (c.userId && options?.removeOrphans) {
+              // Drop synced rows whose user is no longer on the team
+              // — also wipe their logged hours so we don't leak data.
+              for (const k of Object.keys(newEntries)) {
+                if (k.startsWith(`${c.id}:`)) delete newEntries[k];
+              }
+            } else {
+              newCrew.push(c);
+            }
+          }
+
+          // Second pass: anyone left in memberByUserId is a brand new
+          // team member with no crew row yet — add one with default rate.
+          let nextIdx = 0;
+          for (const m of memberByUserId.values()) {
+            const id = `crew-team-${m.userId}-${Date.now()}-${nextIdx++}`;
+            newCrew.push({
+              id,
+              name: m.name,
+              position: 'Crew',
+              department: 'hair',
+              crewType: 'paye',
+              email: m.email ?? '',
+              phone: m.phone ?? '',
+              rateCard: createDefaultRateCard(),
+              userId: m.userId,
+            });
+          }
+
+          // Skip the set when nothing actually changed (avoids
+          // touching lastSaved on every render).
+          const sameLength = newCrew.length === state.crew.length;
+          const sameOrder =
+            sameLength && newCrew.every((c, i) => c.id === state.crew[i].id);
+          const sameContent =
+            sameOrder &&
+            newCrew.every((c, i) => {
+              const o = state.crew[i];
+              return (
+                c.name === o.name &&
+                c.email === o.email &&
+                c.phone === o.phone &&
+                c.userId === o.userId
+              );
+            });
+          if (sameContent) return;
+
+          set({
+            crew: newCrew,
+            entries: newEntries,
+            selectedCrewId:
+              state.selectedCrewId &&
+              newCrew.some((c) => c.id === state.selectedCrewId)
+                ? state.selectedCrewId
+                : (newCrew[0]?.id ?? null),
+            lastSaved: new Date().toISOString(),
+          });
+          triggerTsAutoSave();
         },
         updateCrewRateCard: (crewId, updates) => {
           set((s) => ({
