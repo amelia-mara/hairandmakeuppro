@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface TimesheetProps {
   projectId: string;
@@ -53,6 +54,14 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const [expandedRc, setExpandedRc] = useState<Record<string, boolean>>({});
   const [showAddModal, setShowAddModal] = useState(false);
 
+  /* Mobile-only — phone viewport (≤768px) hides the 210px sidebar by
+     default and slides it in from the left when ☰ is tapped. Picking
+     a panel auto-closes the drawer. */
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
+  const pickPanel = (id: PanelId) => { setActivePanel(id); setDrawerOpen(false); };
+
   const store = useTimesheetStore(projectId);
   const production = store(s => s.production);
   const crew = store(s => s.crew);
@@ -97,7 +106,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const toggleRcExpand = (id: string) => setExpandedRc(prev => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="tsr-layout">
+    <div className={`tsr-layout${isMobile ? ' tsr-layout--mobile' : ''}${isMobile && drawerOpen ? ' tsr-layout--drawer-open' : ''}`}>
+      {/* Mobile drawer backdrop */}
+      {isMobile && drawerOpen && (
+        <div className="tsr-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
       {/* ━━━ Sidebar ━━━ */}
       <nav className="tsr-sidebar">
         <div className="tsr-sb-label">Timesheet Manager</div>
@@ -105,7 +118,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
           <button
             key={item.id}
             className={`tsr-sb-item ${activePanel === item.id ? 'active' : ''}`}
-            onClick={() => setActivePanel(item.id)}
+            onClick={() => pickPanel(item.id)}
           >
             <span className="tsr-sb-num">{item.num}</span>
             {item.label}
@@ -130,6 +143,21 @@ export function Timesheet({ projectId }: TimesheetProps) {
 
       {/* ━━━ Main Content ━━━ */}
       <main className="tsr-main">
+        {isMobile && (
+          <button
+            type="button"
+            className="tsr-drawer-toggle"
+            aria-label="Open timesheet sections"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span>Sections</span>
+          </button>
+        )}
         {/* ══════════════ 01 OVERVIEW ══════════════ */}
         {activePanel === 'overview' && (
           <OverviewPanel
