@@ -47,6 +47,13 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
   const set = <K extends keyof UserProfile>(key: K, value: UserProfile[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
+  // Tiny helper for the rate-card sub-form so each numeric input
+  // doesn't need to know about the parent draft shape.
+  const setRate = <K extends keyof UserProfile['rateCard']>(
+    key: K,
+    value: UserProfile['rateCard'][K],
+  ) => setDraft((d) => ({ ...d, rateCard: { ...d.rateCard, [key]: value } }));
+
   const missing = REQUIRED_PROFILE_FIELDS.filter((f) => {
     const v = draft[f];
     return v == null || (typeof v === 'string' && v.trim() === '');
@@ -271,6 +278,135 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
                 placeholder="United Kingdom"
               />
             </Field>
+          </Section>
+
+          {/* Default rate card — seeds the "Me" crew row in every new
+              project. Editing it here doesn't change rate cards on
+              existing projects (those rates are negotiated per
+              production); only brand-new projects pick up the new
+              defaults. */}
+          <Section title="Default rate card">
+            <p className="tm-modal-message" style={{ margin: 0 }}>
+              Used as the starting rate when you join a new project. Per-project rate cards on the timesheet override these defaults.
+            </p>
+            <Row>
+              <Field label="Daily rate">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step={10}
+                  value={draft.rateCard.dailyRate}
+                  onChange={(e) =>
+                    setRate('dailyRate', Number(e.target.value) || 0)
+                  }
+                />
+              </Field>
+              <Field label="Base contract">
+                <select
+                  className="tm-form-input"
+                  value={draft.rateCard.baseContract}
+                  onChange={(e) => {
+                    const bc = e.target.value as UserProfile['rateCard']['baseContract'];
+                    setRate('baseContract', bc);
+                    // Keep baseDayHours in sync with the contract.
+                    setRate(
+                      'baseDayHours',
+                      bc === '10+1' ? 10 : bc === '11+1' ? 11 : 12,
+                    );
+                  }}
+                >
+                  <option value="10+1">10+1 (10-hour shoot)</option>
+                  <option value="11+1">11+1 (11-hour shoot)</option>
+                  <option value="12+1">12+1 (12-hour shoot)</option>
+                </select>
+              </Field>
+            </Row>
+            <Row>
+              <Field label="OT multiplier">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step={0.1}
+                  value={draft.rateCard.otMultiplier}
+                  onChange={(e) =>
+                    setRate('otMultiplier', Number(e.target.value) || 1)
+                  }
+                />
+              </Field>
+              <Field label="Pre-call multiplier">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step={0.1}
+                  value={draft.rateCard.preCallMultiplier}
+                  onChange={(e) =>
+                    setRate('preCallMultiplier', Number(e.target.value) || 1)
+                  }
+                />
+              </Field>
+            </Row>
+            <Row>
+              <Field label="Late-night multiplier">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step={0.1}
+                  value={draft.rateCard.lateNightMultiplier}
+                  onChange={(e) =>
+                    setRate('lateNightMultiplier', Number(e.target.value) || 1)
+                  }
+                />
+              </Field>
+              <Field label="6th-day multiplier">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step={0.1}
+                  value={draft.rateCard.sixthDayMultiplier}
+                  onChange={(e) =>
+                    setRate('sixthDayMultiplier', Number(e.target.value) || 1)
+                  }
+                />
+              </Field>
+            </Row>
+            <Row>
+              <Field label="7th-day multiplier">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step={0.1}
+                  value={draft.rateCard.seventhDayMultiplier}
+                  onChange={(e) =>
+                    setRate('seventhDayMultiplier', Number(e.target.value) || 1)
+                  }
+                />
+              </Field>
+              <Field label="Kit rental / day">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step={5}
+                  value={draft.rateCard.kitRental}
+                  onChange={(e) =>
+                    setRate('kitRental', Number(e.target.value) || 0)
+                  }
+                />
+              </Field>
+            </Row>
           </Section>
         </div>
 
