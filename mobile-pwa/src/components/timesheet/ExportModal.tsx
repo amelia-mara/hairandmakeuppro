@@ -6,6 +6,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { calculateInvoiceWithVAT, type WeekSummary } from '@/types';
+import { summariseApproval } from '@/utils/timesheetApproval';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -85,6 +86,17 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   };
 
   const totals = calculateTotals();
+  const approval = summariseApproval(weekSummary.entries);
+  // Banner colour palette mirrored on the rendered HTML so the
+  // approval state reads consistently across the in-app UI and the
+  // printed/PDF output.
+  const approvalPalette = {
+    approved: { bg: 'rgba(74, 191, 176, 0.16)', fg: '#3a9f8e', label: 'APPROVED' },
+    partial:  { bg: 'rgba(212, 148, 58, 0.16)', fg: '#a86f1f', label: 'PARTIAL APPROVAL' },
+    pending:  { bg: 'rgba(232, 98, 26, 0.10)',  fg: '#a44617', label: 'PENDING APPROVAL' },
+    none:     { bg: '#f3f3f3',                  fg: '#888',    label: 'DRAFT' },
+  } as const;
+  const approvalChip = approvalPalette[approval.state];
 
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -239,6 +251,15 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   <div class="header">
     <h1>Timesheet</h1>
     <div class="period">${formatDateRange()}</div>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; margin-bottom: 20px; background: ${approvalChip.bg}; color: ${approvalChip.fg};">
+    <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px;">
+      ${approvalChip.label}${approval.state === 'approved' ? ' BY DESIGNER' : ''}
+    </div>
+    <div style="font-size: 11px; font-weight: 600;">
+      ${approval.state === 'none' ? '' : `${approval.approvedCount} / ${approval.totalCount} days approved`}
+    </div>
   </div>
 
   <div class="rate-cards">
@@ -420,6 +441,9 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     <div class="inv-title-block">
       <div class="inv-title">INVOICE</div>
       <div class="inv-number">${invoiceNumber}</div>
+      <div style="display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; background: ${approvalChip.bg}; color: ${approvalChip.fg};">
+        ${approvalChip.label}${approval.state === 'approved' ? ' BY DESIGNER' : ''}
+      </div>
     </div>
   </div>
 
