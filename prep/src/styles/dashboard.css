@@ -598,3 +598,76 @@
 }
 .dash-callout-label { font-weight: 700; }
 .dash-callout-value { font-weight: 500; }
+
+/* ── Cast looks pills (Today's Cast widget) ── */
+.dash-cast-looks { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.dash-cast-look-pill {
+  padding: 1px 6px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  background: rgba(212, 148, 58, 0.12);
+  color: var(--accent-gold);
+}
+
+/* ── Synopsis line (H&MU widget, when script is parsed) ── */
+.dash-scene-synopsis {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ── Per-character breakdown rows in H&MU widget ── */
+.dash-scene-bd {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-card);
+}
+.dash-scene-bd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-scene-bd-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  letter-spacing: 0.02em;
+}
+.dash-scene-bd-look {
+  margin-left: 4px;
+  font-weight: 500;
+  color: var(--accent-gold);
+}
+.dash-scene-bd-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dash-scene-bd-field {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  padding: 1px 6px;
+  font-size: 0.625rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-secondary);
+  max-width: 100%;
+}
+.dash-scene-bd-field-label {
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dash-scene-bd-field-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
