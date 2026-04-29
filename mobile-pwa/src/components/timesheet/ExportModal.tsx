@@ -5,7 +5,7 @@ import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
-import { calculateInvoiceWithVAT, type WeekSummary } from '@/types';
+import { calculateInvoiceWithVAT, getEffectiveRate, type WeekSummary } from '@/types';
 import { summariseApproval } from '@/utils/timesheetApproval';
 
 interface ExportModalProps {
@@ -197,7 +197,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   // Generate PDF-like HTML content (for print/save as PDF)
   const generatePDFContent = (): string => {
     const weekEntries = getWeekEntries();
-    const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
+    const hourlyRate = getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours;
     const sym = '&pound;';
 
     return `<!DOCTYPE html>
@@ -265,7 +265,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   <div class="rate-cards">
     <div class="rate-card">
       <div class="label">Daily Rate</div>
-      <div class="value">${sym}${rateCard.dailyRate.toFixed(2)}</div>
+      <div class="value">${sym}${getEffectiveRate(rateCard, 'shoot').toFixed(2)}</div>
     </div>
     <div class="rate-card">
       <div class="label">Base Day</div>
@@ -353,7 +353,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
 
   // Generate invoice HTML using billing details + production invoicing details
   const generateInvoice = (): string => {
-    const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
+    const hourlyRate = getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours;
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     const invoiceDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const sym = '&pound;';
@@ -490,7 +490,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
       <tr>
         <td>Hair &amp; Makeup Services &mdash; Base Day Rate<div class="desc-sub">${daysWorked} days &times; ${rateCard.baseDayHours} hours</div></td>
         <td>${daysWorked}</td>
-        <td>${sym}${rateCard.dailyRate.toFixed(2)}</td>
+        <td>${sym}${getEffectiveRate(rateCard, 'shoot').toFixed(2)}</td>
         <td class="amt">${sym}${totals.basePay.toFixed(2)}</td>
       </tr>
       ${totals.preCallPay > 0 ? `

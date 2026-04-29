@@ -12,7 +12,7 @@ import type {
   ExportDeliveryMethod,
   UserTier,
 } from '@/types';
-import { EXPORT_DOCUMENTS, calculateInvoiceWithVAT } from '@/types';
+import { EXPORT_DOCUMENTS, calculateInvoiceWithVAT, getEffectiveRate } from '@/types';
 
 interface ProjectExportScreenProps {
   onBack: () => void;
@@ -281,8 +281,8 @@ export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBill
     <div class="col" style="text-align:right"><h3>Details</h3><p><strong>Date:</strong> ${invDate}<br><strong>Period:</strong> ${firstDate} — ${lastDate}<br><strong>Due:</strong> ${bd.paymentTerms || 'Payment within 30 days'}${refLines.length ? '<br>' + refLines.join(' | ') : ''}</p></div>
   </div>
   <table><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th class="amt">Amount</th></tr></thead><tbody>
-    <tr><td>Hair &amp; Makeup Services — Day Rate</td><td>${allEntries.length} days</td><td>${sym}${rateCard.dailyRate.toFixed(2)}</td><td class="amt">${sym}${(allEntries.length * rateCard.dailyRate).toFixed(2)}</td></tr>
-    ${overtimeHours > 0 ? `<tr><td>Overtime</td><td>${overtimeHours.toFixed(1)} hrs</td><td>—</td><td class="amt">${sym}${(totalEarnings - allEntries.length * rateCard.dailyRate - allEntries.length * rateCard.kitRental).toFixed(2)}</td></tr>` : ''}
+    <tr><td>Hair &amp; Makeup Services — Day Rate</td><td>${allEntries.length} days</td><td>${sym}${getEffectiveRate(rateCard, 'shoot').toFixed(2)}</td><td class="amt">${sym}${(allEntries.length * getEffectiveRate(rateCard, 'shoot')).toFixed(2)}</td></tr>
+    ${overtimeHours > 0 ? `<tr><td>Overtime</td><td>${overtimeHours.toFixed(1)} hrs</td><td>—</td><td class="amt">${sym}${(totalEarnings - allEntries.length * getEffectiveRate(rateCard, 'shoot') - allEntries.length * rateCard.kitRental).toFixed(2)}</td></tr>` : ''}
     ${rateCard.kitRental > 0 ? `<tr><td>Kit / Box Rental</td><td>${allEntries.length} days</td><td>${sym}${rateCard.kitRental.toFixed(2)}</td><td class="amt">${sym}${(allEntries.length * rateCard.kitRental).toFixed(2)}</td></tr>` : ''}
   </tbody></table>
   <div class="totals">

@@ -290,19 +290,38 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
               Used as the starting rate when you join a new project. Per-project rate cards on the timesheet override these defaults.
             </p>
             <Row>
-              <Field label="Daily rate">
+              <Field label="Prep rate">
                 <input
                   className="tm-form-input"
                   type="number"
                   inputMode="decimal"
                   min={0}
                   step={10}
-                  value={draft.rateCard.dailyRate}
+                  value={
+                    draft.rateCard.prepRate ?? draft.rateCard.dailyRate ?? 0
+                  }
                   onChange={(e) =>
-                    setRate('dailyRate', Number(e.target.value) || 0)
+                    setRate('prepRate', Number(e.target.value) || 0)
                   }
                 />
               </Field>
+              <Field label="Shoot rate">
+                <input
+                  className="tm-form-input"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step={10}
+                  value={
+                    draft.rateCard.shootRate ?? draft.rateCard.dailyRate ?? 0
+                  }
+                  onChange={(e) =>
+                    setRate('shootRate', Number(e.target.value) || 0)
+                  }
+                />
+              </Field>
+            </Row>
+            <Row>
               <Field label="Base contract">
                 <select
                   className="tm-form-input"

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useTimesheetStore, CURRENCY_SYMBOLS, createEmptyEntry as createEmptyEntryClient, type CrewMember, type CurrencyCode, type RateCard, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
+import { useTimesheetStore, CURRENCY_SYMBOLS, createDefaultRateCard, createEmptyEntry as createEmptyEntryClient, getEffectiveRate, type CrewMember, type CurrencyCode, type RateCard, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
 import { LogDayModal } from '@/components/timesheet/LogDayModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -142,7 +142,10 @@ function RateCardEditor({
 }) {
   const rc = member.rateCard;
   const sym = CURRENCY_SYMBOLS[currency] ?? '£';
-  const otRate = (rc.dailyRate / (rc.baseDayHours || 10)) * rc.otMultiplier;
+  const shootRate = getEffectiveRate(rc, 'shoot');
+  // Hourly OT rate is derived from the shoot rate — the prep rate
+  // doesn't get overtime in the typical BECTU model.
+  const otRate = (shootRate / (rc.baseDayHours || 10)) * rc.otMultiplier;
 
   return (
     <div style={{ padding: '18px 20px 14px' }}>
@@ -166,11 +169,18 @@ function RateCardEditor({
       </div>
       <div className="tsr-rc-grid">
         <RcField
-          label="Day rate"
-          value={rc.dailyRate}
+          label="Prep rate"
+          value={getEffectiveRate(rc, 'prep')}
           step={10}
           prefix={sym}
-          onCommit={(v) => onUpdate({ dailyRate: v })}
+          onCommit={(v) => onUpdate({ prepRate: v, dailyRate: undefined })}
+        />
+        <RcField
+          label="Shoot rate"
+          value={shootRate}
+          step={10}
+          prefix={sym}
+          onCommit={(v) => onUpdate({ shootRate: v, dailyRate: undefined })}
         />
         <RcSelect
           label="Base contract"
@@ -787,7 +797,7 @@ function OverviewPanel({
   totalBasePay: number;
   totalOtPay: number;
 }) {
-  const myRate = crew[0]?.rateCard.dailyRate ?? 0;
+  const myRate = getEffectiveRate(crew[0]?.rateCard ?? createDefaultRateCard(), 'shoot') ?? 0;
 
   return (
     <div>
@@ -893,7 +903,7 @@ function OverviewPanel({
                       {member.isMe && <YouPill />}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      {member.position} · {fmt(member.rateCard.dailyRate, currency)}/day
+                      {member.position} · {fmt(getEffectiveRate(member.rateCard, 'shoot'), currency)}/day
                     </div>
                   </div>
                   <div style={{ width: 80, textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)' }}>{workedDays}</div>
@@ -1067,7 +1077,9 @@ function MyTimesheetsPanel({
   const myCrew = crew.find((c) => c.isMe) ?? crew[0];
   const mySummary = crewSummaries.find((s) => s.member.id === myCrew?.id)?.summary
     ?? crewSummaries[0]?.summary;
-  const myRate = myCrew?.rateCard.dailyRate ?? 0;
+  const myShoot = myCrew ? getEffectiveRate(myCrew.rateCard, 'shoot') : 0;
+  const myPrep = myCrew ? getEffectiveRate(myCrew.rateCard, 'prep') : 0;
+  const myRate = myShoot;
   const handleNew = () => myCrew && onLogDay(myCrew, null);
   const handleEdit = (entry: TimesheetEntry) => myCrew && onLogDay(myCrew, entry);
 
@@ -1078,7 +1090,10 @@ function MyTimesheetsPanel({
           <div className="tsr-ph-eyebrow">02 — My Timesheets</div>
           <div className="tsr-ph-title">My Timesheets</div>
           <div className="tsr-ph-sub">
-            Track your hours · Day rate {fmt(myRate, currency)} · {myCrew?.rateCard.baseContract ?? '11+1'}
+            Track your hours ·
+            {' '}Shoot {fmt(myShoot, currency)}
+            {myPrep !== myShoot ? ` · Prep ${fmt(myPrep, currency)}` : ''}
+            {' '}· {myCrew?.rateCard.baseContract ?? '11+1'}
           </div>
         </div>
         <div className="tsr-ph-actions">
@@ -1289,7 +1304,7 @@ function MyTimesheetsPanel({
    PANEL: My Invoices
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function InvoicesPanel({ currency, totalLabour, crew }: { currency: CurrencyCode; totalLabour: number; crew: CrewMember[] }) {
-  const myRate = crew[0]?.rateCard.dailyRate ?? 0;
+  const myRate = getEffectiveRate(crew[0]?.rateCard ?? createDefaultRateCard(), 'shoot') ?? 0;
 
   return (
     <div>
@@ -1408,7 +1423,7 @@ function TeamTimesheetsPanel({
                   {member.isMe && <YouPill />}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  {member.position} · {fmt(member.rateCard.dailyRate, currency)}/day · {member.rateCard.baseContract}
+                  {member.position} · {fmt(getEffectiveRate(member.rateCard, 'shoot'), currency)}/day · {member.rateCard.baseContract}
                 </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 8 }}>{workedDays} days</div>
@@ -1464,7 +1479,7 @@ function TeamTimesheetsPanel({
                         {calc ? calc.otHours.toFixed(1) : '—'}
                       </div>
                       <div className="tsr-tte-earn">
-                        {calc ? fmtDec(calc.totalPay, currency) : fmt(member.rateCard.dailyRate, currency)}
+                        {calc ? fmtDec(calc.totalPay, currency) : fmt(getEffectiveRate(member.rateCard, 'shoot'), currency)}
                       </div>
                       <div className="tsr-tte-appr">
                         <button
@@ -1577,7 +1592,7 @@ function TeamManagePanel({
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{member.position}</div>
               </div>
-              <span className="tsr-tag orange">{fmt(rc.dailyRate, currency)}/day</span>
+              <span className="tsr-tag orange">{fmt(getEffectiveRate(rc, 'shoot'), currency)}/day</span>
               <span className="tsr-tag gold" style={{ marginLeft: 4 }}>{rc.baseContract} shoot</span>
               <span className="tsr-tag teal" style={{ marginLeft: 10 }}>Active</span>
               <div style={{ marginLeft: 14, display: 'flex', alignItems: 'center', gap: 8 }}>

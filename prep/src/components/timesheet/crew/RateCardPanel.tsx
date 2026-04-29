@@ -71,14 +71,25 @@ export function RateCardPanel({ crew, onUpdateCrew, onUpdateRateCard }: RateCard
           <div className="ts-section-label">RATE CARD</div>
           <div className="ts-form-grid ts-form-grid-3">
           <div className="ts-form-field">
-            <label className="ts-label">Daily Rate ({sym})</label>
+            <label className="ts-label">Prep Rate ({sym})</label>
             <input
               className="ts-input"
               type="number"
               min={0}
               step={10}
-              value={rc.dailyRate}
-              onChange={e => onUpdateRateCard({ dailyRate: parseFloat(e.target.value) || 0 })}
+              value={rc.prepRate ?? rc.dailyRate ?? 0}
+              onChange={e => onUpdateRateCard({ prepRate: parseFloat(e.target.value) || 0 })}
+            />
+          </div>
+          <div className="ts-form-field">
+            <label className="ts-label">Shoot Rate ({sym})</label>
+            <input
+              className="ts-input"
+              type="number"
+              min={0}
+              step={10}
+              value={rc.shootRate ?? rc.dailyRate ?? 0}
+              onChange={e => onUpdateRateCard({ shootRate: parseFloat(e.target.value) || 0 })}
             />
           </div>
           <div className="ts-form-field">
