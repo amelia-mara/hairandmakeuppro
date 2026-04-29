@@ -11,6 +11,10 @@ import {
   type WidgetId,
   type LayoutItem,
 } from '@/stores/dashboardStore';
+import {
+  TodaysCastWidget,
+  HMURequirementsWidget,
+} from '@/components/dashboard/CallSheetWidgets';
 
 interface ProjectDashboardProps {
   projectId: string;
@@ -120,6 +124,7 @@ export function ProjectDashboard({ projectId }: ProjectDashboardProps) {
               <div key={widgetId} className="widget-card">
                 <WidgetRenderer
                   widgetId={widgetId}
+                  projectId={projectId}
                   onRemove={() => handleRemoveWidget(widgetId)}
                 />
               </div>
@@ -142,7 +147,15 @@ export function ProjectDashboard({ projectId }: ProjectDashboardProps) {
 
 /* ━━━ Widget Renderer ━━━ */
 
-function WidgetRenderer({ widgetId, onRemove }: { widgetId: WidgetId; onRemove: () => void }) {
+function WidgetRenderer({
+  widgetId,
+  projectId,
+  onRemove,
+}: {
+  widgetId: WidgetId;
+  projectId: string;
+  onRemove: () => void;
+}) {
   const def = AVAILABLE_WIDGETS.find((w) => w.id === widgetId);
   if (!def) return null;
 
@@ -185,9 +198,14 @@ function WidgetRenderer({ widgetId, onRemove }: { widgetId: WidgetId; onRemove: 
       <div style={{ flex: 1, padding: '16px 20px', overflow: 'auto' }}>
         {widgetId === 'budget-overview' && <BudgetOverviewWidget />}
         {widgetId === 'quick-actions' && <QuickActionsWidget />}
-        {widgetId !== 'budget-overview' && widgetId !== 'quick-actions' && (
-          <PlaceholderWidget name={def.name} description={def.description} />
-        )}
+        {widgetId === 'todays-cast' && <TodaysCastWidget projectId={projectId} />}
+        {widgetId === 'hmu-requirements' && <HMURequirementsWidget projectId={projectId} />}
+        {widgetId !== 'budget-overview' &&
+          widgetId !== 'quick-actions' &&
+          widgetId !== 'todays-cast' &&
+          widgetId !== 'hmu-requirements' && (
+            <PlaceholderWidget name={def.name} description={def.description} />
+          )}
       </div>
     </div>
   );
