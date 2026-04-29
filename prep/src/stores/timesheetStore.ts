@@ -26,7 +26,25 @@ export type CrewType = 'paye' | 'ltd';
 export type Department = 'hair' | 'makeup' | 'sfx' | 'prosthetics';
 
 export interface RateCard {
-  dailyRate: number;
+  /**
+   * Prep-day rate (fittings, R&D, recces, costume tests). Used when
+   * a TimesheetEntry has `rateType: 'prep'`.
+   */
+  prepRate: number;
+  /**
+   * Full shoot-day rate. Used when a TimesheetEntry has
+   * `rateType: 'shoot'` (the default for fresh entries).
+   */
+  shootRate: number;
+  /**
+   * Legacy single rate. Older persisted cards only carry this
+   * value; we fall back to it when a card is missing prepRate /
+   * shootRate, then drop it once the user resaves.
+   *
+   * @deprecated kept for backwards compatibility — read at runtime
+   *   via getEffectiveRate(); never write to it from new code.
+   */
+  dailyRate?: number;
   baseDayHours: number;
   baseContract: BaseContract;
   dayType: BECTUDayType;
@@ -39,6 +57,27 @@ export interface RateCard {
   lunchDuration: number;
 }
 
+/**
+ * Resolve which rate applies for an entry. Falls back to the legacy
+ * dailyRate when prepRate / shootRate are missing on an older card,
+ * and finally to 0 if even that's absent.
+ */
+export function getEffectiveRate(
+  rateCard: RateCard,
+  rateType: 'prep' | 'shoot' = 'shoot',
+): number {
+  if (rateType === 'prep') {
+    return rateCard.prepRate
+      ?? rateCard.dailyRate
+      ?? rateCard.shootRate
+      ?? 0;
+  }
+  return rateCard.shootRate
+    ?? rateCard.dailyRate
+    ?? rateCard.prepRate
+    ?? 0;
+}
+
 export interface CrewMember {
   id: string;
   name: string;
@@ -48,6 +87,8 @@ export interface CrewMember {
   email: string;
   phone: string;
   rateCard: RateCard;
+  // (rateType lives on the TimesheetEntry, not here — same crew
+  // member can be on prep one day and shoot the next.)
   /**
    * Marks the row as the *current user's* own timesheet entry. Exactly
    * one crew member per project should carry this flag — it identifies
@@ -75,6 +116,13 @@ export interface TimesheetEntry {
   notes: string;
   status: 'draft' | 'submitted' | 'approved';
   previousWrapOut?: string;
+  /**
+   * Whether this day was billed at the prep or shoot rate. Drives
+   * which RateCard rate getEffectiveRate picks. Defaults to 'shoot'
+   * — the most common case — so older entries without the field
+   * still calculate the same way they used to.
+   */
+  rateType?: 'prep' | 'shoot';
   /**
    * Auth user id of the team member who logged this entry from
    * mobile. Set by mergeMemberEntries when the row arrives via
@@ -152,7 +200,8 @@ export interface ProductionSettings {
 
 export function createDefaultRateCard(): RateCard {
   return {
-    dailyRate: 200,
+    prepRate: 150,
+    shootRate: 200,
     baseDayHours: 10,
     baseContract: '10+1',
     dayType: 'SWD',
@@ -341,7 +390,10 @@ function emptyCalculation(): TimesheetCalculation {
 function toBECTUEntry(entry: TimesheetEntry, rateCard: RateCard, previousWrapOut?: string): BECTUTimesheetEntry {
   return {
     date: entry.date,
-    dayRate: rateCard.dailyRate,
+    // Pick prepRate for prep days, shootRate otherwise. Falls back
+    // to the legacy dailyRate when an older card is missing the new
+    // fields — see getEffectiveRate.
+    dayRate: getEffectiveRate(rateCard, entry.rateType ?? 'shoot'),
     baseContract: rateCard.baseContract,
     dayType: entry.dayType,
     preCallTime: entry.preCall || null,

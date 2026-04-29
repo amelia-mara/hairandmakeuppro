@@ -110,6 +110,36 @@ export function LogDayModal({
             </Field>
           </Row>
 
+          <Field label="Rate kind">
+            <div role="group" aria-label="Rate kind" style={{ display: 'inline-flex', border: '1px solid var(--border-card)', borderRadius: 6, overflow: 'hidden' }}>
+              {(['shoot', 'prep'] as const).map((kind) => {
+                const active = (draft.rateType ?? 'shoot') === kind;
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => set('rateType', kind)}
+                    style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      padding: '7px 16px',
+                      border: 'none',
+                      borderLeft: kind === 'prep' ? '1px solid var(--border-card)' : 'none',
+                      cursor: 'pointer',
+                      background: active ? 'rgba(var(--a), 0.12)' : 'var(--bg-card)',
+                      color: active ? 'var(--accent)' : 'var(--text-muted)',
+                      letterSpacing: '0.04em',
+                      textTransform: 'capitalize' as const,
+                    }}
+                  >
+                    {kind === 'prep' ? 'Prep day' : 'Shoot day'}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
           <Row>
             <Field label="Pre-call">
               <input

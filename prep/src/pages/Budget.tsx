@@ -6,7 +6,7 @@ import {
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useBudgetStore, CURRENCY_SYMBOLS, type BudgetLineItem } from '@/stores/budgetStore';
-import { useTimesheetStore } from '@/stores/timesheetStore';
+import { useTimesheetStore, getEffectiveRate } from '@/stores/timesheetStore';
 import { useShoppingFlagStore, SHOPPING_FLAG_KINDS, type ShoppingFlag } from '@/stores/shoppingFlagStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { ReceiptConfirmPanel, type ConfirmData } from '@/components/budget/receipts/ReceiptConfirmPanel';
@@ -698,8 +698,8 @@ export function Budget({ projectId }: BudgetProps) {
                     {crew.map(member => (
                       <tr key={member.id}>
                         <td>{member.name} — {member.position}</td>
-                        <td className="bg-td-muted">{fmt(member.rateCard.dailyRate)}</td>
-                        <td className="bg-td-amount">{fmt(member.rateCard.dailyRate)}/day</td>
+                        <td className="bg-td-muted">{fmt(getEffectiveRate(member.rateCard, 'shoot'))}</td>
+                        <td className="bg-td-amount">{fmt(getEffectiveRate(member.rateCard, 'shoot'))}/day</td>
                       </tr>
                     ))}
                   </tbody>

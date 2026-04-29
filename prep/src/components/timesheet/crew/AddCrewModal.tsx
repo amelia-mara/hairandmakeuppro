@@ -18,12 +18,14 @@ export function AddCrewModal({ production, onAdd, onClose }: AddCrewModalProps) 
   const [position, setPosition] = useState('');
   const [department, setDepartment] = useState<Department>('makeup');
   const [crewType, setCrewType] = useState<CrewType>('paye');
-  const [dailyRate, setDailyRate] = useState(200);
+  const [prepRate, setPrepRate] = useState(150);
+  const [shootRate, setShootRate] = useState(200);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
     const rateCard = createDefaultRateCard();
-    rateCard.dailyRate = dailyRate;
+    rateCard.prepRate = prepRate;
+    rateCard.shootRate = shootRate;
     rateCard.baseContract = production.defaultBaseContract;
     rateCard.dayType = production.defaultDayType;
 
@@ -79,8 +81,12 @@ export function AddCrewModal({ production, onAdd, onClose }: AddCrewModalProps) 
               </select>
             </div>
             <div className="ts-form-field">
-              <label className="ts-label">Daily Rate (£)</label>
-              <input className="ts-input" type="number" min={0} step={10} value={dailyRate} onChange={e => setDailyRate(parseFloat(e.target.value) || 0)} />
+              <label className="ts-label">Prep Rate (£)</label>
+              <input className="ts-input" type="number" min={0} step={10} value={prepRate} onChange={e => setPrepRate(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="ts-form-field">
+              <label className="ts-label">Shoot Rate (£)</label>
+              <input className="ts-input" type="number" min={0} step={10} value={shootRate} onChange={e => setShootRate(parseFloat(e.target.value) || 0)} />
             </div>
           </div>
         </div>

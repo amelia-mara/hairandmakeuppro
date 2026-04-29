@@ -10,7 +10,7 @@ import type {
   CallSheet,
   BaseContract,
 } from '@/types';
-import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType, parseDayTypeFromString } from '@/types';
+import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType, parseDayTypeFromString, getEffectiveRate } from '@/types';
 import {
   calculateBECTUTimesheet,
   getLunchDuration,
@@ -74,7 +74,8 @@ function toBECTUEntry(entry: TimesheetEntry, rateCard: RateCard, previousWrapOut
 
   return {
     date: entry.date,
-    dayRate: rateCard.dailyRate,
+    // Pick prepRate for prep days, shootRate otherwise.
+    dayRate: getEffectiveRate(rateCard, entry.rateType ?? 'shoot'),
     baseContract: baseContract,
     dayType: entry.dayType as BECTUDayType,
     preCallTime: entry.preCall || null,

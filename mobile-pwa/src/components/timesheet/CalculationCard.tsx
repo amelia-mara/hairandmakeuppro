@@ -1,4 +1,5 @@
 import type { TimesheetCalculation, RateCard } from '@/types';
+import { getEffectiveRate } from '@/types';
 
 interface CalculationCardProps {
   calculation: TimesheetCalculation;
@@ -7,7 +8,7 @@ interface CalculationCardProps {
 
 export function CalculationCard({ calculation, rateCard }: CalculationCardProps) {
   const hasData = calculation.totalHours > 0;
-  const rateConfigured = rateCard.dailyRate > 0;
+  const rateConfigured = getEffectiveRate(rateCard, 'shoot') > 0;
 
   if (!hasData) {
     return (
