@@ -135,10 +135,15 @@ function RateCardEditor({
   member,
   currency,
   onUpdate,
+  onRemove,
 }: {
   member: CrewMember;
   currency: CurrencyCode;
   onUpdate: (updates: Partial<RateCard>) => void;
+  /** Optional remove handler. When supplied, a danger-styled
+   *  "Delete crew member" button appears at the bottom of the
+   *  card. Hidden when undefined (the user's own "me" row). */
+  onRemove?: () => void;
 }) {
   const rc = member.rateCard;
   const sym = CURRENCY_SYMBOLS[currency] ?? '£';
@@ -246,6 +251,27 @@ function RateCardEditor({
           onCommit={(v) => onUpdate({ kitRental: v })}
         />
       </div>
+
+      {/* Danger action — removed from the row chrome so prep/me/team
+          rows look uniform. Confirmation dialog is mounted at the
+          page root and warns about the cascade-delete of hours. */}
+      {onRemove && (
+        <div className="tsr-rc-danger">
+          <button
+            type="button"
+            className="tsr-rc-delete-btn"
+            onClick={onRemove}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/>
+            </svg>
+            Remove {member.name}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1597,25 +1623,9 @@ function TeamManagePanel({
               <span className="tsr-tag teal" style={{ marginLeft: 10 }}>Active</span>
               <div style={{ marginLeft: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button className="tsr-btn tsr-btn-ghost tsr-btn-sm" onClick={(e) => { e.stopPropagation(); onNavTimesheets(); }}>Timesheets</button>
-                {/* Removing the "me" row would only re-create itself on
-                    the next render, so we hide the button on it. Every
-                    other crew row gets a small \u00D7 that opens a
-                    confirmation dialog before the row + their hours
-                    are removed. */}
-                {!member.isMe && (
-                  <button
-                    type="button"
-                    className="tsr-icon-btn tsr-icon-btn--danger"
-                    title={`Remove ${member.name}`}
-                    aria-label={`Remove ${member.name}`}
-                    onClick={(e) => { e.stopPropagation(); onRemoveCrew(member.id); }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                )}
+                {/* Remove-crew action lives inside the expanded rate
+                    card now \u2014 keeps the row chrome uniform across
+                    "me" and team rows. */}
                 <span className="tsr-chevron">{isOpen ? '\u25B2 Rate card' : '\u25BC Rate card'}</span>
               </div>
             </div>
@@ -1626,6 +1636,7 @@ function TeamManagePanel({
                 member={member}
                 currency={currency}
                 onUpdate={(updates) => onUpdateRateCard(member.id, updates)}
+                onRemove={member.isMe ? undefined : () => onRemoveCrew(member.id)}
               />
             </div>
           </div>
