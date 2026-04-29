@@ -45,9 +45,13 @@ export interface UserProfile {
   // per production); it only changes what brand-new projects start
   // with.
   rateCard: RateCard;
-  // Tracks whether the user dismissed the post-signup nudge so we
-  // don't re-prompt them every reload.
+  // Tracks whether the post-signup nudge has been shown to this user
+  // already. Flipped to true the moment the modal closes (Save, Skip,
+  // or click outside) so it only ever auto-fires once per user.
   signupNudgeDismissed: boolean;
+  // Same idea for the first-time-on-timesheet reminder. Independent
+  // flag because the two prompts fire from different surfaces.
+  timesheetNudgeDismissed?: boolean;
   updatedAt: string;
 }
 
@@ -85,6 +89,7 @@ export function createEmptyProfile(userId: string, fullName = '', email = ''): U
     country: '',
     rateCard: createDefaultRateCard(),
     signupNudgeDismissed: false,
+    timesheetNudgeDismissed: false,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -112,6 +117,8 @@ interface UserProfileState {
   getProfile: (userId: string) => UserProfile | undefined;
   updateProfile: (userId: string, updates: Partial<UserProfile>) => void;
   dismissSignupNudge: (userId: string) => void;
+  /** Mirror of dismissSignupNudge for the timesheet-first-visit prompt. */
+  dismissTimesheetNudge: (userId: string) => void;
   clearProfile: (userId: string) => void;
 }
 
@@ -168,6 +175,17 @@ export const useUserProfileStore = create<UserProfileState>()(
             profiles: {
               ...s.profiles,
               [userId]: { ...existing, signupNudgeDismissed: true, userId },
+            },
+          };
+        }),
+
+      dismissTimesheetNudge: (userId) =>
+        set((s) => {
+          const existing = s.profiles[userId] ?? createEmptyProfile(userId);
+          return {
+            profiles: {
+              ...s.profiles,
+              [userId]: { ...existing, timesheetNudgeDismissed: true, userId },
             },
           };
         }),

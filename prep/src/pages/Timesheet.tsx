@@ -4,7 +4,7 @@ import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
 import { LogDayModal } from '@/components/timesheet/LogDayModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAuthStore } from '@/stores/authStore';
-import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
+import { useUserProfileStore } from '@/stores/userProfileStore';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { useTeamStore } from '@/stores/teamStore';
 import { fetchMemberTimesheets } from '@/services/supabaseSync';
@@ -427,31 +427,30 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const { currency } = production;
 
   /* ── Personal-details reminder ────────────────────────────────────
-     Some users only want the timesheet calculator and never plan to
-     invoice from Checks Happy. We show the profile modal as a
-     dismissable reminder when the user opens the timesheet with an
-     incomplete profile, but they can skip and continue using the
-     page. The user can fill in details later from the account panel
-     (Edit Profile). The "me" crew row is created with whatever
-     identity we already know (auth name + email, defaults for the
-     rest) so the page is usable even without invoicing details. */
+     Fires once, the very first time the user opens the timesheet
+     for this account. Independent of the post-signup nudge — the
+     two prompts each get their own flag so opening the timesheet
+     re-prompts even if the user already saw the signup nudge. After
+     close (Save, Skip, or click outside), the flag flips and the
+     prompt never auto-fires again. The Edit Profile menu item is
+     the only way back in. */
   const authUser = useAuthStore((s) => s.user);
   const profile = useUserProfileStore((s) =>
     authUser ? s.profiles[authUser.id] : undefined,
   );
   const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
-  const profileComplete = isProfileComplete(profile);
-  const reminderDismissed = profile?.signupNudgeDismissed ?? false;
-  const [showProfileReminder, setShowProfileReminder] = useState(
-    !!authUser && !profileComplete && !reminderDismissed,
-  );
-  // Re-fire the reminder if the user lands on the timesheet after
-  // dismissing it elsewhere — but never twice in the same session
-  // and never once they've completed the profile.
+  const dismissTimesheetNudge = useUserProfileStore((s) => s.dismissTimesheetNudge);
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
+
   useEffect(() => {
     if (!authUser) return;
-    setShowProfileReminder(!profileComplete && !reminderDismissed);
-  }, [authUser, profileComplete, reminderDismissed]);
+    const fresh = profile ?? ensureProfile(authUser.id, authUser.name, authUser.email);
+    if (!fresh.timesheetNudgeDismissed) setShowProfileReminder(true);
+    // Intentionally only reads the dismissed flag once per mount — we
+    // don't want the modal to re-open if the user closes it then
+    // navigates away and back.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -731,7 +730,10 @@ export function Timesheet({ projectId }: TimesheetProps) {
       {showProfileReminder && (
         <UserProfileModal
           isSignupNudge
-          onClose={() => setShowProfileReminder(false)}
+          onClose={() => {
+            if (authUser) dismissTimesheetNudge(authUser.id);
+            setShowProfileReminder(false);
+          }}
         />
       )}
 

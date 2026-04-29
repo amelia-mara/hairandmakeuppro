@@ -28,7 +28,6 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
   const user = useAuthStore((s) => s.user);
   const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
   const updateProfile = useUserProfileStore((s) => s.updateProfile);
-  const dismissSignupNudge = useUserProfileStore((s) => s.dismissSignupNudge);
 
   const [draft, setDraft] = useState<UserProfile>(() => {
     if (!user) return createEmptyProfile('');
@@ -66,10 +65,11 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
     onClose();
   };
 
-  const handleSkip = () => {
-    if (isSignupNudge) dismissSignupNudge(user.id);
-    onClose();
-  };
+  // Whichever button closes the modal, the parent (App-level signup
+  // nudge or timesheet first-visit reminder) is responsible for
+  // flipping its own one-time-shown flag — the modal doesn't know
+  // which surface invoked it.
+  const handleSkip = () => onClose();
 
   const subtitle = isSignupNudge
     ? "Add your invoicing details now so they're ready when you log hours. You can skip and come back later — we'll prompt you when you open the timesheet."

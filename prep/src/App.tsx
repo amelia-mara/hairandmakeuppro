@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
-import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
+import { useUserProfileStore } from '@/stores/userProfileStore';
 import { ProjectHub } from '@/pages/ProjectHub';
 import { CreateProjectModal } from '@/pages/CreateProject';
 import { ProjectLayout } from '@/components/layout/ProjectLayout';
@@ -264,29 +264,31 @@ function App() {
  */
 function SignupProfileNudge() {
   const user = useAuthStore((s) => s.user);
-  const profile = useUserProfileStore((s) => (user ? s.profiles[user.id] : undefined));
   const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
+  const dismissSignupNudge = useUserProfileStore((s) => s.dismissSignupNudge);
   const [open, setOpen] = useState(false);
 
+  // The nudge fires AT MOST once per user — the moment we see a fresh
+  // profile with the flag still false, we open the modal. Whether the
+  // user saves, skips, or clicks outside, closing it flips the flag
+  // so the prompt never auto-fires again. The Edit Profile menu item
+  // remains the only way back into the modal after that.
   useEffect(() => {
     if (!user) return;
-    // Calling ensureProfile creates a blank profile row the first time
-    // we see this user — that gives the modal something to edit and
-    // signupNudgeDismissed something to flip.
     const fresh = ensureProfile(user.id, user.name, user.email);
-    setOpen(!isProfileComplete(fresh) && !fresh.signupNudgeDismissed);
+    if (!fresh.signupNudgeDismissed) setOpen(true);
   }, [user, ensureProfile]);
 
-  // Re-evaluate when the persisted profile changes (e.g. after Save).
-  useEffect(() => {
-    if (!profile) return;
-    if (isProfileComplete(profile) || profile.signupNudgeDismissed) {
-      setOpen(false);
-    }
-  }, [profile]);
-
   if (!open || !user) return null;
-  return <UserProfileModal isSignupNudge onClose={() => setOpen(false)} />;
+  return (
+    <UserProfileModal
+      isSignupNudge
+      onClose={() => {
+        dismissSignupNudge(user.id);
+        setOpen(false);
+      }}
+    />
+  );
 }
 
 /**
