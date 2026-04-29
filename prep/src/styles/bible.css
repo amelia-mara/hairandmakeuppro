@@ -554,3 +554,92 @@
 [data-theme="light"] .bb-sidebar-divider {
   background: rgba(180, 160, 120, 0.3);
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BIBLE — phone (≤ 768px)
+
+   The 180px sidebar squashes the main content on a phone. Hide it
+   by default and slide it in as a left drawer when the user taps
+   the ☰ rendered in the section header. Detail grids that pair
+   labels in two columns (Production / HOD, etc.) stack to a single
+   column so the values can render in full.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  /* Sidebar becomes a left drawer */
+  .bb-page--mobile .bb-sidebar {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: min(85vw, 280px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+    background: var(--bg-surface) !important;
+  }
+  .bb-page--drawer-open .bb-sidebar {
+    transform: translateX(0);
+  }
+  .bb-drawer-backdrop {
+    position: fixed;
+    inset: 80px 0 0 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: bb-drawer-fade 0.18s ease-out;
+  }
+  @keyframes bb-drawer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .bb-drawer-toggle {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  /* Main panel takes full width */
+  .bb-page--mobile .bb-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Section header — tighten padding, allow title to wrap */
+  .bb-page--mobile .bb-section-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .bb-page--mobile .bb-section-title {
+    font-size: 0.8125rem;
+  }
+  .bb-page--mobile .bb-section-meta {
+    font-size: 0.625rem;
+    flex-basis: 100%;
+  }
+
+  .bb-page--mobile .bb-content {
+    padding: 16px 14px;
+  }
+
+  .bb-page--mobile .bb-card {
+    padding: 14px 16px;
+  }
+
+  /* Stack 2-col detail grid so values like "Hair & Makeup" don't
+     truncate to "{bbDeptL..." or wrap mid-word. */
+  .bb-page--mobile .bb-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

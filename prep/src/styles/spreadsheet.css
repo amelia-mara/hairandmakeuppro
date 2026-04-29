@@ -680,3 +680,97 @@
   color: var(--accent);
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BREAKDOWN SHEET — phone (≤ 768px)
+
+   Header: tabs + counts + 5 action buttons can't fit a phone in
+   one row — wrap actions to a second row, scroll tabs horizontally,
+   hide the "X scenes · Y characters" subtitle (it doesn't fit and
+   the same data is reachable from other surfaces).
+
+   Tables: each scene block has 9 fixed-width columns summing to
+   ~1300px. On a phone we contain horizontal scroll inside the scene
+   block so vertical page scroll stays unencumbered, and tighten cell
+   padding so more fits per swipe.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  /* Header — tabs above, actions wrap below */
+  .bs-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .bs-header-left {
+    gap: 10px;
+  }
+  .bs-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+  .bs-tabs::-webkit-scrollbar { display: none; }
+  .bs-tab {
+    font-size: 0.75rem;
+    padding: 4px 6px 8px;
+    flex-shrink: 0;
+  }
+
+  .bs-header-right {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+  /* Hide the count subtitle on phones — it's the first thing to clip
+     and it's redundant with what the user already sees. */
+  .bs-header-right .bs-subtitle {
+    display: none;
+  }
+  .bs-action-btn {
+    font-size: 0.6875rem;
+    padding: 6px 10px;
+  }
+  .bs-filter {
+    flex: 1;
+    min-width: 0;
+  }
+  .bs-filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Scrollable content — tighten outer padding so the scene cards
+     can reach a sensible width. */
+  .bs-scroll {
+    padding: 8px 12px 56px;
+  }
+
+  /* Each scene block scrolls horizontally inside itself so the user
+     can swipe through CHARACTER → LOOK → HAIR → MAKEUP → … without
+     dragging the whole page. */
+  .bs-scene-block {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bs-scene-header {
+    padding: 14px 16px 12px;
+    position: sticky;
+    left: 0;
+  }
+  .bs-table {
+    min-width: 720px;
+  }
+  .bs-table th,
+  .bs-table td {
+    padding: 10px 14px;
+  }
+  .bs-table th {
+    font-size: 0.625rem;
+  }
+  .bs-table td {
+    font-size: 0.75rem;
+  }
+}
+
