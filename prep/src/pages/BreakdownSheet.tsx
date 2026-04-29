@@ -654,6 +654,75 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
   const characters: Character[] = useMemo(() => parsedData ? parsedData.characters : MOCK_CHARACTERS, [parsedData]);
   const looks: Look[] = useMemo(() => parsedData ? parsedData.looks : MOCK_LOOKS, [parsedData]);
 
+  /** Make sure a breakdown row exists for the scene AND the character
+   *  before mutating. Mirrors the BreakdownFormPanel auto-create flow
+   *  in ScriptBreakdown.tsx so edits in either view feel identical. */
+  const ensureRow = useCallback((sceneId: string, characterId: string): SceneBreakdown => {
+    const scene = scenes.find((s) => s.id === sceneId)!;
+    let bd: SceneBreakdown | undefined = store.getBreakdown(sceneId);
+    if (!bd) {
+      const fresh: SceneBreakdown = {
+        sceneId,
+        timeline: {
+          day: scene.storyDay || '',
+          time: scene.dayNight === 'DAY' ? 'Day'
+            : scene.dayNight === 'NIGHT' ? 'Night'
+            : scene.dayNight === 'DAWN' ? 'Dawn'
+            : scene.dayNight === 'DUSK' ? 'Dusk' : '',
+          type: scene.timelineType ?? '',
+          note: '',
+        },
+        characters: scene.characterIds.map((cid): CharacterBreakdown => ({
+          characterId: cid, lookId: '',
+          entersWith: emptyHMW(),
+          sfx: '', environmental: '', action: '',
+          changeType: 'no-change', changeNotes: '',
+          exitsWith: emptyHMW(),
+          notes: '',
+        })),
+        continuityEvents: [],
+      };
+      store.setBreakdown(sceneId, fresh);
+      bd = fresh;
+    }
+    if (!bd.characters.find((c) => c.characterId === characterId)) {
+      const newChar: CharacterBreakdown = {
+        characterId, lookId: '',
+        entersWith: emptyHMW(),
+        sfx: '', environmental: '', action: '',
+        changeType: 'no-change', changeNotes: '',
+        exitsWith: emptyHMW(),
+        notes: '',
+      };
+      const updated: SceneBreakdown = { ...bd, characters: [...bd.characters, newChar] };
+      store.setBreakdown(sceneId, updated);
+      bd = updated;
+    }
+    return bd;
+  }, [store, scenes]);
+
+  /** Patch a character breakdown row, ensuring it exists first. */
+  const updateChar = useCallback((sceneId: string, characterId: string, patch: Partial<CharacterBreakdown>) => {
+    ensureRow(sceneId, characterId);
+    store.updateCharacterBreakdown(sceneId, characterId, patch);
+  }, [ensureRow, store]);
+
+  /** entersWith edits mirror to the character's currently-selected
+   *  look so the next scene that picks the same look auto-fills. */
+  const updateEntersWith = useCallback(
+    (sceneId: string, characterId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => {
+      const bd = ensureRow(sceneId, characterId);
+      const cb = bd.characters.find((c) => c.characterId === characterId)!;
+      store.updateCharacterBreakdown(sceneId, characterId, {
+        entersWith: { ...cb.entersWith, [field]: value },
+      });
+      if (cb.lookId) {
+        parsedScriptStore.updateLook(projectId, cb.lookId, { [field]: value });
+      }
+    },
+    [ensureRow, store, parsedScriptStore, projectId],
+  );
+
   const timeJumpSceneIds = useMemo(() => {
     const jumpIds = new Set<string>();
     let prevDay = '';
@@ -708,7 +777,12 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                 <span className="bs-scene-location">{scene.intExt}. {scene.location} — {scene.dayNight}</span>
                 {showBadge && <span className="bs-scene-badge">{timelineType?.toUpperCase()}</span>}
               </div>
-              {synopsis && <div className="bs-scene-synopsis">{synopsis}</div>}
+              <EditableCell
+                value={synopsis || ''}
+                onSave={(v) => synopsisStore.setSynopsis(scene.id, v)}
+                placeholder="Write a synopsis for this scene…"
+                className="bs-scene-synopsis bs-scene-synopsis--editable"
+              />
             </div>
             <table className="bs-table">
               <thead>
@@ -764,6 +838,10 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                     ) : null;
                   const placeholder = (value: string, count: number) =>
                     !value && count === 0 ? <span className="bs-empty">—</span> : null;
+                  // Suppress the legacy "—" placeholder — the
+                  // EditableCell input renders its own dash when empty.
+                  void placeholder;
+                  const charLooks = looks.filter((l) => l.characterId === cid);
                   return (
                     <tr key={cid} className={`bs-row ${hasEvents ? 'bs-row--continuity' : ''}`}>
                       <td className="bs-col-char">
@@ -773,39 +851,60 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                         </div>
                       </td>
                       <td className="bs-col-look">
-                        {charLook ? <span className="bs-look-name">{charLook.name}</span> : <span className="bs-empty">—</span>}
+                        <select
+                          className="bs-cell-select"
+                          value={cb?.lookId || ''}
+                          onChange={(e) => updateChar(scene.id, cid, { lookId: e.target.value })}
+                        >
+                          <option value="">—</option>
+                          {charLooks.map((l) => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="bs-col-hair">
-                        {hair}
-                        {placeholder(hair, hairTags.length)}
+                        <EditableCell
+                          value={hair}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'hair', v)}
+                        />
                         {pills(hairTags, '#D4943A')}
                         {hasChange && cb?.exitsWith.hair && <div className="bs-exit-note">Exit: {cb.exitsWith.hair}</div>}
                       </td>
                       <td className="bs-col-makeup">
-                        {makeup}
-                        {placeholder(makeup, makeupTags.length)}
+                        <EditableCell
+                          value={makeup}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'makeup', v)}
+                        />
                         {pills(makeupTags, '#C2785C')}
                         {hasChange && cb?.exitsWith.makeup && <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>}
                       </td>
                       <td className="bs-col-wardrobe">
-                        {wardrobe}
-                        {placeholder(wardrobe, wardrobeTags.length)}
+                        <EditableCell
+                          value={wardrobe}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'wardrobe', v)}
+                        />
                         {pills(wardrobeTags, '#ec4899')}
                         {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
                       </td>
                       <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
-                        {sfx}
-                        {placeholder(sfx, sfxTags.length)}
+                        <EditableCell
+                          value={sfx}
+                          onSave={(v) => updateChar(scene.id, cid, { sfx: v })}
+                        />
                         {pills(sfxTags, '#ef4444')}
                       </td>
                       <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
-                        {environmental}
-                        {placeholder(environmental, envTags.length)}
+                        <EditableCell
+                          value={environmental}
+                          onSave={(v) => updateChar(scene.id, cid, { environmental: v })}
+                        />
                         {pills(envTags, '#38bdf8')}
                       </td>
                       <td className="bs-col-action">
-                        {action}
-                        {placeholder(action, actionTags.length)}
+                        <EditableCell
+                          value={action}
+                          onSave={(v) => updateChar(scene.id, cid, { action: v })}
+                        />
                         {pills(actionTags, '#a855f7')}
                       </td>
                       <td className="bs-col-notes">
@@ -825,6 +924,43 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
         );
       })}
     </div>
+  );
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   EDITABLE CELL — inline text input that looks like plain text
+   until focused. Used by EmbeddedBreakdownTable so users can fill
+   out the breakdown directly in split-view alongside the script
+   without bouncing back to the form panel. Commits on blur or
+   Enter; Esc reverts the edit.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function EditableCell({ value, onSave, placeholder = '—', className = 'bs-cell-input' }: {
+  value: string;
+  onSave: (next: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(value);
+  // Sync incoming value when external changes happen (e.g. picking a
+  // look auto-fills entersWith from the look's saved fields).
+  useEffect(() => { setDraft(value); }, [value]);
+  return (
+    <input
+      type="text"
+      className={className}
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { if (draft !== value) onSave(draft); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          setDraft(value);
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
   );
 }
 
