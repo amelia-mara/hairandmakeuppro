@@ -113,13 +113,19 @@ export function parseScriptText(text: string): ParsedScript {
 
     // ── Omitted scene placeholder ──────────────────────────────
     // Scripts mark deleted scenes with a stub line that retains the
-    // scene number, e.g. "12. OMITTED" or "12 OMITTED.". We emit a
-    // ParsedScene with isOmitted:true so the scene list keeps
-    // numbering coherent — without this the parser would silently
-    // merge the line into the previous scene's content and the gap
-    // would confuse anyone cross-referencing the breakdown.
+    // scene number. Common formats — all detected here — are:
+    //
+    //   "12. OMITTED"     "12 OMITTED."     "OMITTED."
+    //   "12A. OMITTED."   "SCENE 12 OMITTED."
+    //   "98 OMITTED 98"   ← number at BOTH ends (revision pages)
+    //   "30 OMITTED 30."
+    //
+    // We emit a ParsedScene with isOmitted:true so the scene list
+    // keeps numbering coherent (29, 30, 31 with 30 marked omitted)
+    // and store the verbatim trimmed line in `content` so the
+    // script viewer can render it exactly as it appears in the PDF.
     const omittedMatch = trimmed.match(
-      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*$/i,
+      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*(?:\d+[A-Z]{0,4})?\.?\s*$/i,
     );
     if (omittedMatch) {
       // Close out the current scene first.
@@ -138,7 +144,9 @@ export function parseScriptText(text: string): ParsedScript {
         location: 'OMITTED',
         timeOfDay: 'DAY',
         characters: [],
-        content: '',
+        // Preserve the verbatim line so ScriptView can render the
+        // exact text from the PDF rather than a synthesised label.
+        content: trimmed,
         isOmitted: true,
       });
       lastLineWasCharacter = false;
