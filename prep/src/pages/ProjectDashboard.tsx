@@ -203,7 +203,7 @@ function BudgetOverviewWidget() {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+      <div className="budget-overview-figures">
         <BudgetFigure label="Department Budget" value={`£${budget.toLocaleString()}`} />
         <BudgetFigure label="Spent to Date" value={`£${spent.toLocaleString()}`} />
         <BudgetFigure label="Remaining" value={`£${remaining.toLocaleString()}`} highlight />
@@ -269,7 +269,7 @@ function QuickActionsWidget() {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', height: '100%' }}>
+    <div className="quick-actions-grid">
       {actions.map((action) => (
         <button key={action.label} className="quick-action-btn">
           <action.icon />
