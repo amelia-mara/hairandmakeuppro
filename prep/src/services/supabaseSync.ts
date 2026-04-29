@@ -701,7 +701,9 @@ export async function uploadCallSheetToStorage(
     // Optional regex-parsed CallSheet object. When present, its fields go
     // into parsed_data so mobile's call-sheet store picks up scenes,
     // castCalls, preCalls, etc. without needing to re-parse the PDF.
-    parsed?: Record<string, unknown>;
+    // Typed as `unknown` so the call site can pass either the strict
+    // CallSheet shape from the parser or a generic record.
+    parsed?: unknown;
   },
 ): Promise<{ pdfUrl: string; thumbnailUrl: string } | null> {
   try {
@@ -736,8 +738,16 @@ export async function uploadCallSheetToStorage(
       thumbnailUrl: thumbUrlData.publicUrl,
       uploadedAt: sheet.uploadedAt,
     };
-    const parsedData: Record<string, unknown> = sheet.parsed
-      ? { ...sheet.parsed, ...storageMeta }
+    // Spread the parsed CallSheet (when present) underneath the storage
+    // metadata so the storage URLs always win on key collision. Using a
+    // local cast keeps the public signature loose (`unknown`) while the
+    // body still gets normal object semantics.
+    const parsedAsRecord =
+      sheet.parsed && typeof sheet.parsed === 'object'
+        ? (sheet.parsed as Record<string, unknown>)
+        : undefined;
+    const parsedData: Record<string, unknown> = parsedAsRecord
+      ? { ...parsedAsRecord, ...storageMeta }
       : storageMeta;
 
     // Save metadata to call_sheet_data

@@ -5,7 +5,11 @@ import {
   type BreakdownContext,
 } from '@/hooks/useProjectBreakdownContext';
 import type { CastCall, CallSheetScene } from '@/utils/callSheet/types';
-import type { CharacterBreakdown, ParsedSceneData } from '@/stores/breakdownStore';
+import type {
+  CharacterBreakdown,
+  ParsedSceneData,
+  SceneBreakdown,
+} from '@/stores/breakdownStore';
 
 /* ━━━ Today's Cast ━━━ */
 
@@ -253,12 +257,12 @@ function CharacterBdRow({
 }
 
 function collectFromCharacters(
-  bd: ReturnType<BreakdownContext['breakdownsByScene'][string]> | undefined,
+  bd: SceneBreakdown | undefined,
   field: 'sfx' | 'environmental',
 ): string | undefined {
   if (!bd) return undefined;
   const values = bd.characters
-    .map((c) => c[field])
+    .map((c: CharacterBreakdown) => c[field])
     .filter((v): v is string => Boolean(v && v.trim()));
   if (!values.length) return undefined;
   return Array.from(new Set(values)).join(', ');
