@@ -344,12 +344,21 @@ function OverviewTab({ schedule }: { schedule: ProductionSchedule }) {
         </div>
       )}
 
-      {/* Raw text preview when no day breakdown available */}
+      {/* Format-not-recognised banner — surfaces clearly when
+          neither the Movie-Magic nor the production-stationery
+          walker matched the upload, so the user knows the import
+          succeeded but a new parser handler is needed. */}
       {schedule.days.length === 0 && schedule.rawText && (
         <div className="sch-section">
+          <div className="sch-unrecognised-banner">
+            <strong>Schedule format not recognised yet.</strong>
+            <span>
+              The PDF uploaded fine and the cast list (where present) was extracted, but the day-by-day breakdown couldn't be parsed automatically. Send the PDF on so a handler for this layout can be added.
+            </span>
+          </div>
           <h2 className="sch-section-title">Extracted Text</h2>
           <p className="sch-section-hint">
-            The schedule has been parsed for cast data. Full day-by-day breakdown can be added with AI processing.
+            Below is the raw text extracted from the schedule, so you can see what the parser had to work with.
           </p>
           <pre className="sch-raw-text">{schedule.rawText.slice(0, 5000)}</pre>
         </div>
