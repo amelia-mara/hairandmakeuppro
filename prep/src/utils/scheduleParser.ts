@@ -349,29 +349,126 @@ function extractDays(text: string): ScheduleDay[] {
 /* ━━━ Cast list ━━━ */
 
 /**
- * Build the cast number → name map by aggregating every "N. NAME"
- * row across the whole schedule. Full-Fat layouts spell out the
- * names inline; One-line layouts only show numbers, but they're
- * usually accompanied by a Full-Fat companion in the same release.
+ * Build the cast number → name map. Scans (in order):
  *
- * We also keep counts so the most-common form of a name wins (some
- * scenes show "5. HARPER", others "5. HARPER / JESSICA" — pick the
- * longer / more common variant).
+ * 1. A dedicated cast-list page or section, when present.
+ *    Production schedules often include a numbered cast roster
+ *    on page 1 like:
+ *
+ *        1.  BRY ............ Sarah Smith
+ *        2.  TOM ............ John Doe
+ *        3.  HARPER / JESSICA Anna Lee
+ *
+ *    or as a tab-separated table. This is the preferred source
+ *    because One-Line schedules carry no inline cast names.
+ *
+ * 2. Aggregated inline references — every "N. NAME" row in any
+ *    "Cast Members" block across the body. Full-Fat layouts cover
+ *    this; the most-common name variant for a number wins.
+ *
+ * 3. Backfill — for any cast number referenced in scene rows but
+ *    never resolved to a name, insert a placeholder ("Cast N") so
+ *    the UI still shows the number.
  */
 function buildCastList(text: string, days: ScheduleDay[]): ScheduleCastMember[] {
+  // Pass 1 — dedicated cast list section, if present.
+  const explicit = scanExplicitCastList(text);
+  // Pass 2 — inline aggregation across the whole text.
+  const inline = aggregateInlineCastRows(text);
+
+  // Merge: explicit wins where both exist; inline fills the rest.
+  const byNumber = new Map<number, string>();
+  for (const c of inline) byNumber.set(c.number, c.name);
+  for (const c of explicit) byNumber.set(c.number, c.name); // override
+
+  // Pass 3 — backfill referenced numbers with placeholders.
+  for (const day of days) {
+    for (const scene of day.scenes) {
+      for (const n of scene.castNumbers) {
+        if (!byNumber.has(n)) byNumber.set(n, `Cast ${n}`);
+      }
+    }
+  }
+
+  const list: ScheduleCastMember[] = Array.from(byNumber.entries())
+    .map(([number, name]) => ({ number, name }))
+    .sort((a, b) => a.number - b.number);
+  return list;
+}
+
+/**
+ * Look for a dedicated cast roster on the first page or under a
+ * "Cast List / Cast Members / Cast" heading. Tolerates several
+ * common layouts:
+ *
+ *   "1.  BRY                  Sarah Smith"
+ *   "1   BRY"
+ *   "1)  BRY ........ Sarah Smith"
+ *   "1\tBRY\tSarah Smith"
+ *
+ * Returns whatever it can resolve; an empty list is fine — the
+ * caller will fall back to inline aggregation.
+ */
+function scanExplicitCastList(text: string): ScheduleCastMember[] {
+  // Section to scan: from start until just before the first
+  // "Shoot Day #1" marker (so we never scoop up day-block text).
+  const firstDayPos = text.search(/Shoot\s+Day\s+#\d/i);
+  const head = firstDayPos > 0 ? text.slice(0, firstDayPos) : text.slice(0, 5000);
+
+  // If there's an explicit "Cast List" / "Cast Members" header
+  // followed by entries, narrow to that block. Otherwise scan the
+  // whole head section.
+  const headerRe = /\b(?:CAST\s+LIST|CAST\s+MEMBERS?|CAST(?!\s+\d))\s*[:\n]/i;
+  const headerMatch = head.match(headerRe);
+  const block = headerMatch
+    ? head.slice(headerMatch.index! + headerMatch[0].length)
+    : head;
+
+  // A cast row is one of:
+  //   "1.  BRY <leader> <actor>"
+  //   "1   BRY"
+  //   "1)  BRY"
+  // The name is the first ALL-CAPS-y word group; an optional
+  // performer name in title case may follow but we only take the
+  // character.
+  const rowRe = /(?:^|\n)\s*(\d{1,3})\s*[.)\]]?\s+([A-Z][A-Z'\-/.&\s]{1,40}?)(?=\s{2,}|\t|\.{2,}|\n|$)/g;
+
+  const out: ScheduleCastMember[] = [];
+  const seen = new Set<number>();
+  let m: RegExpExecArray | null;
+  while ((m = rowRe.exec(block)) !== null) {
+    const num = parseInt(m[1], 10);
+    if (!Number.isFinite(num) || num < 1 || num > 999) continue;
+    if (seen.has(num)) continue;
+
+    let name = m[2].trim().replace(/\s+/g, ' ').replace(/[.,;:]+$/, '').trim();
+    if (name.length < 2 || name.length > 60) continue;
+    // Filter common false positives — column headers, addresses,
+    // page numbers, day titles, schedule metadata.
+    if (/^(INT|EXT|DAY|NIGHT|MORNING|HOURS|PAGE|SCENE|SHOOT|TOTAL|UNIT|SET|END|TIME|CALL|LOC|BACKGROUND|SOUND|NOTES|MEMBERS|ADDITIONAL|LABOUR|STUNT|VEHICLES|MAKEUP|HAIR|COSTUME|VISUAL|EFFECTS|SPECIAL|EQUIPMENT|SCN|TUE|WED|THU|FRI|SAT|SUN|MON|JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER|SCHEDULE)/i.test(name)) continue;
+
+    seen.add(num);
+    out.push({ number: num, name: name.toUpperCase() });
+  }
+  return out;
+}
+
+/**
+ * Pass 2 — Aggregate every "N. NAME" hit across the full text.
+ * Full-Fat schedules embed cast members under each scene block,
+ * so we count occurrences and pick the most-common variant per
+ * number (so "5. HARPER / JESSICA" beats a stray "5. HARPER").
+ */
+function aggregateInlineCastRows(text: string): ScheduleCastMember[] {
   const occurrences = new Map<number, Map<string, number>>();
 
-  // Pass 1: scan every "N. NAME" pattern in the raw text. CAST_ROW_RE
-  // matches a line that's just a number followed by a name, which
-  // catches the Full-Fat blocks reliably.
   for (const line of text.split('\n')) {
     const m = line.match(CAST_ROW_RE);
     if (!m) continue;
-    if (m[1].startsWith('_')) continue; // stunt double, skip
+    if (m[1].startsWith('_')) continue; // stunt double
     const num = parseInt(m[1], 10);
     if (!Number.isFinite(num) || num <= 0 || num > 999) continue;
     let name = m[2].trim().replace(/\s+/g, ' ').replace(/[.,;:]+$/, '').trim();
-    // Filter false positives
     if (name.length < 2 || name.length > 60) continue;
     if (/^(INT|EXT|DAY|NIGHT|MORNING|HOURS|PAGE|SCENE|EST|TIME|CALL|UNIT|SET|LOC|END|TOTAL|SHOOT|MEMBERS|ADDITIONAL|LABOUR|STUNT|VEHICLES|MAKEUP|HAIR|COSTUME|VISUAL|EFFECTS|SPECIAL|EQUIPMENT|BACKGROUND|SOUND|NOTES|SCN)/i.test(name)) continue;
     if (/^\d/.test(name)) continue;
@@ -382,12 +479,9 @@ function buildCastList(text: string, days: ScheduleDay[]): ScheduleCastMember[] 
     variants.set(name, (variants.get(name) || 0) + 1);
   }
 
-  const list: ScheduleCastMember[] = [];
-  // Sort numerically by cast number
-  const numbers = Array.from(occurrences.keys()).sort((a, b) => a - b);
-  for (const num of numbers) {
+  const out: ScheduleCastMember[] = [];
+  for (const num of Array.from(occurrences.keys()).sort((a, b) => a - b)) {
     const variants = occurrences.get(num)!;
-    // Pick the most-frequent variant; tiebreak on length (longer wins).
     let bestName = '';
     let bestCount = -1;
     for (const [name, count] of variants) {
@@ -396,50 +490,16 @@ function buildCastList(text: string, days: ScheduleDay[]): ScheduleCastMember[] 
         bestCount = count;
       }
     }
-    list.push({ number: num, name: bestName });
+    out.push({ number: num, name: bestName });
   }
-
-  // Fallback: if Pass 1 found nothing, try a generic header-section
-  // scan (covers schedules with a dedicated cast-list page).
-  if (list.length === 0) {
-    return scanLegacyCastList(text);
-  }
-
-  // Backfill: ensure every cast number referenced in any scene
-  // appears in the list, even if we never resolved a name.
-  const referenced = new Set<number>();
-  for (const day of days) {
-    for (const scene of day.scenes) {
-      for (const n of scene.castNumbers) referenced.add(n);
-    }
-  }
-  for (const n of referenced) {
-    if (!list.find((c) => c.number === n)) {
-      list.push({ number: n, name: `Cast ${n}` });
-    }
-  }
-  list.sort((a, b) => a.number - b.number);
-  return list;
-}
-
-function scanLegacyCastList(text: string): ScheduleCastMember[] {
-  const out: ScheduleCastMember[] = [];
-  const head = text.slice(0, 15000);
-  const m = head.match(/(?:CAST\s*LIST|CAST\s*MEMBERS?|CAST|CHARACTERS?)[:\s]*\n([\s\S]*?)(?=\n\s*\n\s*\n|=== PAGE|END\s*OF|SHOOTING\s*DAY|\nDAY\b|Shoot\s+Day)/i);
-  if (!m) return out;
-  const block = m[1];
-  const re = /(\d{1,3})\s*[.\-)\]:]\s*([A-Z][A-Za-z'\-.\s]{1,30})/g;
-  let mm: RegExpExecArray | null;
-  while ((mm = re.exec(block)) !== null) {
-    const num = parseInt(mm[1], 10);
-    if (!Number.isFinite(num) || num < 1 || num > 999) continue;
-    const name = mm[2].trim().replace(/\s+/g, ' ').toUpperCase();
-    if (out.find((c) => c.number === num)) continue;
-    out.push({ number: num, name });
-  }
-  out.sort((a, b) => a.number - b.number);
   return out;
 }
+
+// Kept for API compatibility — no longer used directly.
+function scanLegacyCastList(_text: string): ScheduleCastMember[] {
+  return [];
+}
+void scanLegacyCastList;
 
 /* ━━━ Metadata ━━━ */
 
