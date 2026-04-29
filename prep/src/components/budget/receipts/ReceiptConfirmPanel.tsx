@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { BudgetCategory, BudgetLineItem, CurrencyCode } from '@/stores/budgetStore';
 import { CURRENCY_SYMBOLS } from '@/stores/budgetStore';
+import { extractReceiptData, buildDescriptionFromItems } from '@/services/receiptAIService';
 
 /**
  * Add Receipt modal — desktop adaptation of the mobile-pwa Add
@@ -58,6 +59,17 @@ export function ReceiptConfirmPanel({
   const [localImageUri, setLocalImageUri] = useState<string | undefined>(imageUri);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* Receipt vision extraction state. When the user attaches an
+     image we auto-call /api/ai with the project's category list,
+     pre-fill every form field from the response, and surface a
+     warning banner on low-confidence extractions. */
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionStatus, setExtractionStatus] = useState<
+    | { kind: 'idle' }
+    | { kind: 'success'; lowConfidence: boolean }
+    | { kind: 'error'; message: string }
+  >({ kind: 'idle' });
+
   // Reset every time the modal opens (the mobile version mounts /
   // unmounts so it gets a fresh form for free; the prep panel is
   // long-lived so we have to clear by hand).
@@ -70,8 +82,47 @@ export function ReceiptConfirmPanel({
     setCategory('');
     setLineItemId('');
     setNotes('');
+    setExtractionStatus({ kind: 'idle' });
+    setIsExtracting(false);
     setLocalImageUri(isManual ? undefined : imageUri);
   }, [open, imageUri, isManual]);
+
+  /* Run vision extraction on a freshly attached image. Pulled out
+     so both the file-upload handler and any future "re-scan" button
+     can call it. */
+  const performExtraction = async (dataUrl: string) => {
+    setIsExtracting(true);
+    setExtractionStatus({ kind: 'idle' });
+    try {
+      const result = await extractReceiptData(
+        dataUrl,
+        categories.map((c) => ({ id: c.id, name: c.name })),
+      );
+      if (result.success && result.data) {
+        const d = result.data;
+        if (d.vendor) setSupplier(d.vendor);
+        if (d.amount !== null) setAmount(d.amount.toFixed(2));
+        if (d.vat !== null && d.vat !== undefined) setVat(d.vat.toFixed(2));
+        if (d.date) setDate(d.date);
+        if (d.categoryId) setCategory(d.categoryId);
+        if (d.items.length > 0) setNotes(buildDescriptionFromItems(d.items));
+        setExtractionStatus({ kind: 'success', lowConfidence: d.confidence === 'low' });
+      } else {
+        setExtractionStatus({
+          kind: 'error',
+          message: result.error || 'Could not read this receipt. Fill in the fields manually.',
+        });
+      }
+    } catch (err) {
+      console.error('[ReceiptModal] extraction error:', err);
+      setExtractionStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to read receipt. Enter details manually.',
+      });
+    } finally {
+      setIsExtracting(false);
+    }
+  };
 
   // Esc to close — matches every other modal in the app.
   useEffect(() => {
@@ -105,7 +156,14 @@ export function ReceiptConfirmPanel({
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setLocalImageUri(reader.result as string);
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setLocalImageUri(dataUrl);
+      // Don't await — let the modal stay responsive while the
+      // Vision API works. The image preview shows a "Reading
+      // receipt…" overlay until performExtraction resolves.
+      performExtraction(dataUrl);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -133,20 +191,33 @@ export function ReceiptConfirmPanel({
         </div>
 
         <div className="receipt-modal-body">
-          {/* Image preview / upload zone */}
+          {/* Image preview / upload zone. While extraction runs, an
+              overlay covers the image so the user knows the form
+              is auto-filling itself. */}
           {localImageUri ? (
             <div className="receipt-image-preview">
               <img src={localImageUri} alt="Receipt" />
-              <button
-                type="button"
-                className="receipt-image-remove"
-                onClick={() => setLocalImageUri(undefined)}
-                aria-label="Remove image"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-                </svg>
-              </button>
+              {isExtracting && (
+                <div className="receipt-image-overlay">
+                  <div className="receipt-spinner" />
+                  <span>Reading receipt…</span>
+                </div>
+              )}
+              {!isExtracting && (
+                <button
+                  type="button"
+                  className="receipt-image-remove"
+                  onClick={() => {
+                    setLocalImageUri(undefined);
+                    setExtractionStatus({ kind: 'idle' });
+                  }}
+                  aria-label="Remove image"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                  </svg>
+                </button>
+              )}
             </div>
           ) : (
             <button
@@ -171,6 +242,21 @@ export function ReceiptConfirmPanel({
             </button>
           )}
 
+          {/* Extraction status — surfaced just above the form so
+              the user understands why the fields are pre-filled. */}
+          {extractionStatus.kind === 'error' && (
+            <div className="receipt-banner receipt-banner--warn">
+              {extractionStatus.message}
+            </div>
+          )}
+          {extractionStatus.kind === 'success' && (
+            <div className={`receipt-banner ${extractionStatus.lowConfidence ? 'receipt-banner--warn' : 'receipt-banner--ok'}`}>
+              {extractionStatus.lowConfidence
+                ? 'Some values may be inaccurate — please double-check before saving.'
+                : 'Receipt read. Review the auto-filled fields below.'}
+            </div>
+          )}
+
           {/* Supplier */}
           <div className="receipt-field">
             <label className="receipt-field-label">Supplier</label>
@@ -181,6 +267,7 @@ export function ReceiptConfirmPanel({
               onChange={e => setSupplier(e.target.value)}
               placeholder="e.g. Boots, Camera Ready Cosmetics"
               autoFocus
+              disabled={isExtracting}
             />
           </div>
 
@@ -198,6 +285,7 @@ export function ReceiptConfirmPanel({
                   step={0.01}
                   min={0}
                   placeholder="0.00"
+                  disabled={isExtracting}
                 />
               </div>
             </div>
@@ -208,6 +296,7 @@ export function ReceiptConfirmPanel({
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
+                disabled={isExtracting}
               />
             </div>
           </div>
@@ -227,6 +316,7 @@ export function ReceiptConfirmPanel({
                 step={0.01}
                 min={0}
                 placeholder="0.00"
+                disabled={isExtracting}
               />
             </div>
           </div>
@@ -243,6 +333,7 @@ export function ReceiptConfirmPanel({
                     type="button"
                     onClick={() => { setCategory(c.id); setLineItemId(''); }}
                     className={`receipt-cat-pill${active ? ' receipt-cat-pill--active' : ''}`}
+                    disabled={isExtracting}
                   >
                     {c.name}
                   </button>
@@ -261,6 +352,7 @@ export function ReceiptConfirmPanel({
                 className="receipt-input"
                 value={lineItemId}
                 onChange={e => setLineItemId(e.target.value)}
+                disabled={isExtracting}
               >
                 <option value="">No specific item</option>
                 {lineItems.map(item => (
@@ -281,6 +373,7 @@ export function ReceiptConfirmPanel({
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="e.g. Foundation restocks"
+              disabled={isExtracting}
             />
           </div>
         </div>
@@ -292,9 +385,9 @@ export function ReceiptConfirmPanel({
           <button
             className="btn-gold receipt-btn receipt-btn--primary"
             onClick={handleConfirm}
-            disabled={!canSubmit}
+            disabled={!canSubmit || isExtracting}
           >
-            Save Receipt
+            {isExtracting ? 'Reading…' : 'Save Receipt'}
           </button>
         </div>
       </div>
