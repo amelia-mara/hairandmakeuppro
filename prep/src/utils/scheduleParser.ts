@@ -138,10 +138,28 @@ const LOCATION_HEADER_RE = /^[\s\t]*([A-Z][^\n]*\([A-Za-z][^)]*\))\s*$/;
 const SCENE_HEADER_RE =
   /^[\s\t]*(?:Scn|SCN)\s+(INT|EXT|I\/E|INT\/EXT|EXT\/INT)\s+(.+?)\s+(DAY|NIGHT|DAWN|DUSK|EVENING|EVENIN|MORNING|MORNI|AFTERNOON|CONT|CONTINUOUS|MAGIC\s+HOUR)\b/i;
 
-// Scene data line: "<num>  <description>  <storyDay code> <pages>  [<castNums> AVs | <address>]"
-// Story day codes seen in the wild: D10, N29, FB1..FB4, DUSK1, DAWN1, FB3
-const SCENE_DATA_RE =
-  /^[\s\t]*(\d+(?:[A-Za-z]{1,3})?)\s+(.+?)\s+([DNFP][A-Z]?\d+(?:[A-Za-z]{0,3})?|FB\d+|DAWN\d*|DUSK\d*)\s+(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)(?:\s+(.*))?$/;
+// Full-Fat data line: <num>\t<desc>\t<storyDay> <pages>\t<address>
+//   "51\tTOM finds JESS & SOREN…\tD10 6/8\t58 Bassett Crescent…"
+const FULL_FAT_DATA_RE =
+  /^[\s\t]*(\d+(?:[A-Za-z]{1,3})?)[\s\t]+(.+?)[\s\t]+([DNFP][A-Z]?\d+(?:[A-Za-z]{0,3})?|FB\d+|DAWN\d*|DUSK\d*)\s+(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)(?:[\s\t]+(.*))?$/;
+
+// One-Line data line — pdf.js splits the row into TWO entries
+// because the storyDay sits at a slightly different baseline:
+//   "51 TOM finds JESS & SOREN…\t6/8 2, 5, 6"      ← this regex
+//   "D10\tAVs"                                     ← STORYDAY_TAIL_RE
+// So the data line has number + description + pages + cast list,
+// and storyDay is filled in from the follow-up line. We anchor on
+// the literal \t between description and pages — the pdf.js
+// extractor inserts it for the column gap, and it lets us match
+// descriptions containing digits ("6 months pass…") without the
+// regex consuming the wrong digit as the pages start.
+const ONE_LINE_DATA_RE =
+  /^[\s\t]*(\d+(?:[A-Za-z]{1,3})?)[\s]+([^\t]+?)\t+(\d.*)$/;
+
+// Tail line for One-Line scenes: the storyDay code is on its own
+// row in pdf.js extraction, terminated by "AVs".
+const STORYDAY_TAIL_RE =
+  /^[\s\t]*([DNFP][A-Z]?\d+(?:[A-Za-z]{0,3})?|FB\d+|DAWN\d*|DUSK\d*)[\s\t]*AVs\b/i;
 
 const CAST_ROW_RE = /^[\s\t]*(_?\d+[A-Za-z]?)\.\s*(.+?)\s*$/;
 // Same pattern but globally scoped — used for picking out every
@@ -204,7 +222,10 @@ function extractDays(text: string): ScheduleDay[] {
       finalizeScene();
       const dayNumber = parseInt(dayHeader[1], 10);
       const dayOfWeek = dayHeader[2];
-      const date = dayHeader[3];
+      // The schedule prints "18 May, 2026"; the UI uses
+      // `new Date(iso + 'T00:00:00')` which only accepts
+      // YYYY-MM-DD, so convert before storing.
+      const date = toIsoDate(dayHeader[3]);
       currentDay = {
         dayNumber,
         date,
@@ -247,32 +268,48 @@ function extractDays(text: string): ScheduleDay[] {
       continue;
     }
 
-    // Scene data line (the line right after the SCN header)
+    // Scene data line (right after the SCN header). We try the
+    // Full-Fat layout first because its storyDay-inline shape is
+    // more specific; if that doesn't match, fall through to the
+    // One-Line layout (storyDay arrives on the next line via
+    // STORYDAY_TAIL_RE).
     if (pendingScene && !pendingScene.sceneNumber) {
-      const data = rawLine.match(SCENE_DATA_RE);
-      if (data) {
-        pendingScene.sceneNumber = data[1];
-        pendingScene.description = data[2].trim();
-        pendingScene.storyDay = data[3].trim();
-        pendingScene.pages = data[4].trim();
-        // Trailing bit (data[5]) is one of:
-        //   - One-line:  "1, 2, 5, 6 AVs"  or  "1, 2, _5A, _6A AVs"
-        //   - One-line wrap-corrupted: "st 2, 5 AVs"  (description
-        //     truncation bled "stairs." into the cast column)
-        //   - Full-fat:  street address like "58 Bassett Crescent…"
-        // Strategy: only treat the trailing as cast numbers if it
-        // contains "AVs" (the one-line column terminator). Strip
-        // anything before the first digit, then parse number tokens.
-        const trailing = data[5]?.trim();
-        if (trailing && /\bAVs\b/i.test(trailing)) {
-          // Cut everything before the first digit (drops noise like
-          // "st" left over from a truncated description column).
-          const firstDigit = trailing.search(/\d/);
-          if (firstDigit >= 0) {
-            const castSection = trailing.slice(firstDigit).split(/\bAVs\b/i)[0];
-            pendingScene.castNumbers.push(...parseCastNumberList(castSection));
+      const ff = rawLine.match(FULL_FAT_DATA_RE);
+      if (ff) {
+        pendingScene.sceneNumber = ff[1];
+        pendingScene.description = ff[2].trim();
+        pendingScene.storyDay = ff[3].trim();
+        pendingScene.pages = ff[4].trim();
+        // Full-Fat trailing is the address — ignore.
+        continue;
+      }
+
+      const ol = rawLine.match(ONE_LINE_DATA_RE);
+      if (ol) {
+        pendingScene.sceneNumber = ol[1];
+        pendingScene.description = ol[2].trim();
+        // Tail = pages + cast numbers run together. Pages comes
+        // first in fractions/integers; the rest is cast.
+        const tail = ol[3];
+        const pagesM = tail.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+)\s*(.*)$/);
+        if (pagesM) {
+          pendingScene.pages = pagesM[1].trim();
+          if (pagesM[2]) {
+            pendingScene.castNumbers.push(...parseCastNumberList(pagesM[2]));
           }
         }
+        continue;
+      }
+    }
+
+    // One-Line storyDay tail line: "D10\tAVs" arrives on the row
+    // AFTER the data line because pdf.js bins the storyDay column
+    // separately. Only apply if the pending scene has data but no
+    // storyDay yet.
+    if (pendingScene && pendingScene.sceneNumber && !pendingScene.storyDay) {
+      const sd = rawLine.match(STORYDAY_TAIL_RE);
+      if (sd) {
+        pendingScene.storyDay = sd[1].trim();
         continue;
       }
     }
@@ -456,4 +493,24 @@ function normalizeDayNight(raw: string): string {
 function formatTime(hhmm: string): string {
   if (hhmm.length !== 4) return hhmm;
   return `${hhmm.slice(0, 2)}:${hhmm.slice(2)}`;
+}
+
+const MONTH_TO_NUM: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+};
+
+/**
+ * Convert "18 May, 2026" → "2026-05-18". Returns the original
+ * string when parsing fails so the day still shows up in the list
+ * even if the date can't be normalized.
+ */
+function toIsoDate(input: string): string {
+  const m = input.match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})$/);
+  if (!m) return input;
+  const day = m[1].padStart(2, '0');
+  const month = MONTH_TO_NUM[m[2].slice(0, 3).toLowerCase()];
+  const year = m[3];
+  if (!month) return input;
+  return `${year}-${month}-${day}`;
 }
