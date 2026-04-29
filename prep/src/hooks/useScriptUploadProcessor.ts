@@ -146,7 +146,15 @@ export function useScriptUploadProcessor({
           timeInfo: '',
           characterIds: charIds,
           synopsis: '',
-          scriptContent: isPreamble ? ps.content.trim() : ps.content.replace(/^[^\n]*\n/, '').trim(),
+          // For real scenes the parser stores the slugline as the
+          // first line of content, so we strip it for display. For
+          // omitted scenes the verbatim line ("30 OMITTED 30") IS
+          // the content, so we keep it untouched.
+          scriptContent: isPreamble
+            ? ps.content.trim()
+            : ps.isOmitted
+              ? ps.content.trim()
+              : ps.content.replace(/^[^\n]*\n/, '').trim(),
           isOmitted: ps.isOmitted || undefined,
         };
       });

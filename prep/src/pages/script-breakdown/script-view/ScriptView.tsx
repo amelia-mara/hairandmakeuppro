@@ -469,8 +469,12 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
               className={`sv-paper sv-paper--omitted ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
               style={{ fontSize: `${fontSize}px` }}
             >
+              {/* Render the verbatim line from the script (e.g.
+                  "30 OMITTED 30") so the page matches the PDF
+                  exactly. Falls back to a synthesised label when
+                  the parser couldn't capture the original line. */}
               <div className="sv-heading sv-heading--omitted">
-                {scene.number}&nbsp;&nbsp;OMITTED
+                {scene.scriptContent || `${scene.number}  OMITTED`}
               </div>
             </div>
           );
