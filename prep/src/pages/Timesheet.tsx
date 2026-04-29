@@ -966,25 +966,39 @@ function MyTimesheetsPanel({
       </div>
 
       {/* Hour Log */}
-      {mySummary && mySummary.entries.filter(e => e.unitCall).length > 0 && (
-        <>
-          <div className="tsr-sh">Hour Log <div className="tsr-sh-line" /></div>
-          <div className="tsr-card flush">
-            <div className="tsr-col-head">
-              <div className="tsr-ch tsr-tc-date">Date</div>
-              <div className="tsr-ch tsr-tc-day">Day</div>
-              <div className="tsr-ch tsr-tc-dtype">Type</div>
-              <div className="tsr-ch tsr-tc-wday">W/day</div>
-              <div className="tsr-ch tsr-tc-start">Start</div>
-              <div className="tsr-ch tsr-tc-end">Finish</div>
-              <div className="tsr-ch tsr-tc-hrs" style={{ textAlign: 'right' }}>Hrs</div>
-              <div className="tsr-ch tsr-tc-ot" style={{ textAlign: 'right' }}>OT</div>
-              <div className="tsr-ch tsr-tc-earn" style={{ textAlign: 'right' }}>Earned</div>
+      <div className="tsr-sh">Hour Log <div className="tsr-sh-line" /></div>
+      <div className="tsr-card flush">
+        {/* Inline log-day CTA sits above the rows so the "add" action
+            is the first thing the user sees, not buried below the
+            list. The header button at the top of the page does the
+            same thing — both wired to handleNew. */}
+        <button
+          type="button"
+          className="tsr-add-btn tsr-add-btn--top"
+          onClick={handleNew}
+          disabled={!myCrew}
+        >
+          + Log Day
+        </button>
+
+        {mySummary && mySummary.entries.filter(e => e.unitCall).length > 0 ? (
+          <>
+            <div className="tsr-col-head tsr-hl-head">
+              <div className="tsr-ch tsr-hl-date">Date</div>
+              <div className="tsr-ch tsr-hl-type">Type</div>
+              <div className="tsr-ch tsr-hl-times">Times</div>
+              <div className="tsr-ch tsr-hl-hrs" style={{ textAlign: 'right' }}>Hours</div>
+              <div className="tsr-ch tsr-hl-earn" style={{ textAlign: 'right' }}>Earned</div>
+              <div className="tsr-ch tsr-hl-status" style={{ textAlign: 'right' }}>Status</div>
             </div>
-            {mySummary.entries.filter(e => e.unitCall).map(entry => {
+            {mySummary.entries
+              .filter((e) => e.unitCall)
+              .sort((a, b) => (a.date < b.date ? 1 : -1)) // newest day first
+              .map((entry) => {
               const d = new Date(entry.date + 'T12:00:00');
-              const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
-              const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+              const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+              const dateMain = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              const dateYear = d.toLocaleDateString('en-GB', { year: 'numeric' });
               // Run a fresh calc per row so the displayed totals
               // always match the rate card (which can be edited per
               // project after the entry was logged).
@@ -995,54 +1009,87 @@ function MyTimesheetsPanel({
                 entry.dayType === 'SCWD' ? 'Semi-cont' :
                 entry.dayType === 'CWD' ? 'Continuous' :
                 'Shoot';
+              const flags: string[] = [];
+              if (entry.isSeventhDay) flags.push('7th day');
+              else if (entry.isSixthDay) flags.push('6th day');
+              if (calc?.hasLateNight) flags.push('Late night');
+              if (calc?.hasBrokenLunch) flags.push('Broken lunch');
+              const status =
+                entry.status === 'approved' ? 'Approved' :
+                entry.status === 'submitted' ? 'Pending' :
+                'Draft';
               return (
                 <div
                   key={entry.date}
-                  className="tsr-ts-row"
-                  style={{ cursor: 'pointer' }}
+                  className="tsr-ts-row tsr-hl-row"
                   onClick={() => handleEdit(entry)}
                   title="Edit this entry"
                 >
-                  <div className="tsr-tc-date">{dateStr}</div>
-                  <div className="tsr-tc-day">{dayName}</div>
-                  <div className="tsr-tc-dtype">
+                  <div className="tsr-hl-date">
+                    <div className="tsr-hl-date-day">{dayName}</div>
+                    <div className="tsr-hl-date-main">{dateMain}</div>
+                    <div className="tsr-hl-date-year">{dateYear}</div>
+                  </div>
+                  <div className="tsr-hl-type">
                     <span className="tsr-tag orange">{dayTypeLabel}</span>
+                    <span className="tsr-tag gold tsr-hl-wday-tag">
+                      {myCrew?.rateCard.baseContract ?? '11+1'}
+                    </span>
+                    {flags.length > 0 && (
+                      <span className="tsr-hl-flags">{flags.join(' · ')}</span>
+                    )}
                   </div>
-                  <div className="tsr-tc-wday">
-                    <span className="tsr-tag gold">{myCrew?.rateCard.baseContract ?? '11+1'}</span>
+                  <div className="tsr-hl-times">
+                    <div className="tsr-hl-times-row">
+                      <span className="tsr-hl-times-val">{entry.unitCall || '—'}</span>
+                      <span className="tsr-hl-times-arrow">→</span>
+                      <span className="tsr-hl-times-val">{entry.wrapOut || '—'}</span>
+                    </div>
+                    {entry.preCall && (
+                      <div className="tsr-hl-times-sub">Pre-call {entry.preCall}</div>
+                    )}
                   </div>
-                  <div className="tsr-tc-start">{entry.unitCall || '—'}</div>
-                  <div className="tsr-tc-end">{entry.wrapOut || '—'}</div>
-                  <div className="tsr-tc-hrs">
-                    {calc ? `${calc.totalHours.toFixed(1)}` : '—'}
+                  <div className="tsr-hl-hrs">
+                    <div className="tsr-hl-hrs-main">
+                      {calc ? calc.totalHours.toFixed(1) : '—'}<span className="tsr-hl-unit">h</span>
+                    </div>
+                    {calc && calc.otHours > 0 && (
+                      <div className="tsr-hl-hrs-sub">+{calc.otHours.toFixed(1)}h OT</div>
+                    )}
                   </div>
-                  <div className="tsr-tc-ot">
-                    {calc ? `${calc.otHours.toFixed(1)}` : '—'}
+                  <div className="tsr-hl-earn">
+                    <div className="tsr-hl-earn-main">
+                      {calc ? fmtDec(calc.totalPay, currency) : fmt(myRate, currency)}
+                    </div>
+                    {calc && calc.kitRental > 0 && (
+                      <div className="tsr-hl-earn-sub">
+                        inc. {fmt(calc.kitRental, currency)} kit
+                      </div>
+                    )}
                   </div>
-                  <div className="tsr-tc-earn">
-                    {calc ? fmtDec(calc.totalPay, currency) : fmt(myRate, currency)}
+                  <div className="tsr-hl-status">
+                    <span
+                      className={`tsr-tag ${
+                        entry.status === 'approved'
+                          ? 'teal'
+                          : entry.status === 'submitted'
+                          ? 'gold'
+                          : ''
+                      }`}
+                    >
+                      {status}
+                    </span>
                   </div>
                 </div>
               );
             })}
+          </>
+        ) : (
+          <div className="tsr-empty" style={{ padding: '24px 18px' }}>
+            No timesheet entries logged yet. Click <strong>+ Log Day</strong> above to start tracking your hours.
           </div>
-        </>
-      )}
-
-      {(!mySummary || mySummary.entries.filter(e => e.unitCall).length === 0) && (
-        <div className="tsr-empty">
-          No timesheet entries logged yet. Click "+ Log Day" to start tracking your hours.
-        </div>
-      )}
-
-      <button
-        type="button"
-        className="tsr-add-btn"
-        onClick={handleNew}
-        disabled={!myCrew}
-      >
-        + Log Day
-      </button>
+        )}
+      </div>
     </div>
   );
 }
