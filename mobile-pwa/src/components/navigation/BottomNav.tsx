@@ -29,7 +29,21 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card shadow-nav border-t border-border">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 bg-card shadow-nav border-t border-border"
+      // Promote the bar to its own GPU compositor layer. iOS Safari has a
+      // long-standing quirk where `position: fixed` elements can briefly
+      // detach during momentum scrolling or while the URL bar / on-screen
+      // keyboard is showing/hiding — the bar appears mid-page for a frame
+      // until the next layout flush snaps it back to the bottom. Forcing
+      // a 3D transform keeps the nav on its own layer so the browser
+      // doesn't recompute its position during those transitions.
+      style={{
+        transform: 'translateZ(0)',
+        WebkitBackfaceVisibility: 'hidden',
+        backfaceVisibility: 'hidden',
+      }}
+    >
       <div className="mobile-container">
         <div className="flex items-center justify-around bottom-nav-safe">
           {tabs.map((tab) => {
