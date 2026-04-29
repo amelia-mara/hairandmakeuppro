@@ -40,6 +40,14 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
   const accountRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useThemeStore();
   const { user, isAuthenticated, logout } = useAuthStore();
+  // Subscribe to previewTier reactively so the avatar's brown
+  // owner styling toggles correctly when the user switches tiers
+  // via the dev tier picker. user.tier stays as the underlying
+  // owner role; the visual badge follows the effective preview.
+  const previewTier = useAuthStore((s) => s.previewTier);
+  const effectiveTier = previewTier && user?.tier === 'owner'
+    ? previewTier
+    : (user?.tier ?? '');
 
   // Close nav on outside click
   useEffect(() => {
@@ -159,7 +167,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                 <div className="avatar-halo avatar-halo--mid" />
                 <div className="avatar-halo avatar-halo--inner" />
                 <button
-                  className={`avatar-btn${isOwnerTier(user?.tier ?? '') ? ' avatar-btn--owner' : ''}`}
+                  className={`avatar-btn${isOwnerTier(effectiveTier) ? ' avatar-btn--owner' : ''}`}
                   onClick={() => setAccountOpen(!accountOpen)}
                 >
                   {user?.initials || 'U'}
