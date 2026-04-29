@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
+import { UserProfileModal } from '@/components/profile/UserProfileModal';
+import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
 import { ProjectHub } from '@/pages/ProjectHub';
 import { CreateProjectModal } from '@/pages/CreateProject';
 import { ProjectLayout } from '@/components/layout/ProjectLayout';
@@ -196,16 +198,24 @@ function App() {
     );
   }
 
+  // Post-signup profile nudge — shown once per user when authenticated
+  // with an incomplete profile. The modal supports a Skip action that
+  // sets signupNudgeDismissed so we don't pester them on every reload.
+  const signupNudge = isAuthenticated ? <SignupProfileNudge /> : null;
+
   // Project view — TopBar with nav dropdown + content
   if (selectedProjectId) {
     return (
-      <ProjectView
-        projectId={selectedProjectId}
-        activePage={activePage}
-        onNavigate={setActivePage}
-        onBackToHub={handleBackToHub}
-        onNavigateToAuth={() => handleNavigateToAuth('login')}
-      />
+      <>
+        <ProjectView
+          projectId={selectedProjectId}
+          activePage={activePage}
+          onNavigate={setActivePage}
+          onBackToHub={handleBackToHub}
+          onNavigateToAuth={() => handleNavigateToAuth('login')}
+        />
+        {signupNudge}
+      </>
     );
   }
 
@@ -241,8 +251,42 @@ function App() {
           onCancel={handleCloseModal}
         />
       )}
+      {signupNudge}
     </div>
   );
+}
+
+/**
+ * Renders the post-signup profile nudge once per user. The user can
+ * skip — we set signupNudgeDismissed so we don't pester them — and the
+ * timesheet page will force the modal back if they try to log hours
+ * without filling in invoicing details.
+ */
+function SignupProfileNudge() {
+  const user = useAuthStore((s) => s.user);
+  const profile = useUserProfileStore((s) => (user ? s.profiles[user.id] : undefined));
+  const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    // Calling ensureProfile creates a blank profile row the first time
+    // we see this user — that gives the modal something to edit and
+    // signupNudgeDismissed something to flip.
+    const fresh = ensureProfile(user.id, user.name, user.email);
+    setOpen(!isProfileComplete(fresh) && !fresh.signupNudgeDismissed);
+  }, [user, ensureProfile]);
+
+  // Re-evaluate when the persisted profile changes (e.g. after Save).
+  useEffect(() => {
+    if (!profile) return;
+    if (isProfileComplete(profile) || profile.signupNudgeDismissed) {
+      setOpen(false);
+    }
+  }, [profile]);
+
+  if (!open || !user) return null;
+  return <UserProfileModal isSignupNudge onClose={() => setOpen(false)} />;
 }
 
 /**

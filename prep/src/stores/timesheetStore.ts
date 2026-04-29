@@ -47,6 +47,15 @@ export interface CrewMember {
   email: string;
   phone: string;
   rateCard: RateCard;
+  /**
+   * Marks the row as the *current user's* own timesheet entry. Exactly
+   * one crew member per project should carry this flag — it identifies
+   * "you" so the sidebar / crew list can visually separate your own
+   * invoice from the team's.
+   */
+  isMe?: boolean;
+  /** Auth user id linked to this crew row (only set when isMe). */
+  userId?: string;
 }
 
 export interface TimesheetEntry {
@@ -189,6 +198,15 @@ interface TimesheetState {
   updateCrew: (id: string, updates: Partial<CrewMember>) => void;
   removeCrew: (id: string) => void;
   updateCrewRateCard: (crewId: string, updates: Partial<RateCard>) => void;
+  /**
+   * Ensure a "me" crew row exists in this project, prefilled from the
+   * caller-supplied user-profile fields. The rate-card defaults are
+   * left untouched so the user can adjust them per project. Returns
+   * the id of the matching crew row.
+   */
+  ensureSelfCrew: (
+    me: { userId: string; name: string; email: string; phone: string; crewType: CrewType },
+  ) => string;
 
   // Entries
   getEntry: (crewId: string, date: string) => TimesheetEntry;
@@ -393,6 +411,67 @@ function createTimesheetStore(projectId: string) {
             };
           });
           triggerTsAutoSave();
+        },
+        ensureSelfCrew: (me) => {
+          const state = get();
+          // Match on the userId we stamp on the row, then by email as a
+          // fallback so a row a designer added by hand earlier still
+          // gets recognised as "me".
+          const existing =
+            state.crew.find((c) => c.isMe && c.userId === me.userId) ||
+            state.crew.find((c) => c.userId === me.userId) ||
+            state.crew.find(
+              (c) =>
+                me.email.trim() !== '' &&
+                c.email.trim().toLowerCase() === me.email.trim().toLowerCase(),
+            );
+          if (existing) {
+            // Refresh the personal fields from the profile but keep the
+            // project-specific rate card and position untouched.
+            set((s) => ({
+              crew: s.crew.map((c) =>
+                c.id === existing.id
+                  ? {
+                      ...c,
+                      isMe: true,
+                      userId: me.userId,
+                      name: me.name || c.name,
+                      email: me.email || c.email,
+                      phone: me.phone || c.phone,
+                      crewType: me.crewType,
+                    }
+                  : c.isMe && c.id !== existing.id
+                  ? { ...c, isMe: false } // Only one row should carry the flag.
+                  : c,
+              ),
+              lastSaved: new Date().toISOString(),
+            }));
+            triggerTsAutoSave();
+            return existing.id;
+          }
+          // No matching crew yet — insert a fresh row with sensible
+          // defaults. The user can edit position/department/rate card
+          // from the crew settings tab.
+          const id = `crew-${Date.now()}`;
+          const member: CrewMember = {
+            id,
+            name: me.name,
+            position: 'Designer',
+            department: 'hair',
+            crewType: me.crewType,
+            email: me.email,
+            phone: me.phone,
+            rateCard: createDefaultRateCard(),
+            isMe: true,
+            userId: me.userId,
+          };
+          set((s) => ({
+            crew: [member, ...s.crew],
+            selectedCrewId: s.selectedCrewId || id,
+            lastSaved: new Date().toISOString(),
+          }));
+          triggerTsAutoSave();
+          return id;
         },
         updateCrewRateCard: (crewId, updates) => {
           set((s) => ({

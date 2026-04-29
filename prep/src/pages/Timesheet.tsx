@@ -2,6 +2,9 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useAuthStore } from '@/stores/authStore';
+import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
+import { UserProfileModal } from '@/components/profile/UserProfileModal';
 
 interface TimesheetProps {
   projectId: string;
@@ -44,6 +47,33 @@ function getAvatarColor(index: number) {
   return AVATAR_COLORS[index % AVATAR_COLORS.length];
 }
 
+/**
+ * Small "You" pill used to mark the current user's crew row so the
+ * designer can spot their own invoice apart from the team's at a
+ * glance. Rendered alongside the member's name everywhere the crew
+ * list shows up.
+ */
+function YouPill() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '1px 6px',
+        fontSize: '0.5625rem',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        borderRadius: '999px',
+        background: 'rgba(var(--a), 0.12)',
+        color: 'var(--accent)',
+      }}
+    >
+      You
+    </span>
+  );
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TIMESHEET PAGE — Redesigned with sidebar navigation
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -67,19 +97,51 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const crew = store(s => s.crew);
   const selectedWeekStart = store(s => s.selectedWeekStart);
   const addCrew = store(s => s.addCrew);
+  const ensureSelfCrew = store(s => s.ensureSelfCrew);
   const getCrewWeekSummary = store(s => s.getCrewWeekSummary);
   const getTotalLabourCost = store(s => s.getTotalLabourCost);
 
   const { currency } = production;
+
+  /* ── Personal-details gate ────────────────────────────────────────
+     The timesheet only makes sense once the signed-in user has
+     filled in their invoicing details. We show a forced modal until
+     the profile is complete; once it is, we auto-create / refresh
+     the user's "me" crew row in this project so their invoice and
+     the team's invoices live in the same crew list but are visually
+     separated. */
+  const authUser = useAuthStore((s) => s.user);
+  const profile = useUserProfileStore((s) =>
+    authUser ? s.profiles[authUser.id] : undefined,
+  );
+  const profileComplete = isProfileComplete(profile);
+  const showProfileGate = !!authUser && !profileComplete;
+
+  useEffect(() => {
+    if (!authUser || !profile || !profileComplete) return;
+    ensureSelfCrew({
+      userId: authUser.id,
+      name: profile.fullName || authUser.name,
+      email: profile.email || authUser.email,
+      phone: profile.phone,
+      crewType: profile.crewType,
+    });
+  }, [authUser, profile, profileComplete, ensureSelfCrew]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2000);
   }, []);
 
-  /* Compute crew summaries */
+  /* Compute crew summaries — pin the "me" row to the top so the user
+     always sees their own invoice ahead of the team list. */
   const crewSummaries = useMemo(() => {
-    return crew.map((member, idx) => ({
+    const sorted = [...crew].sort((a, b) => {
+      if (a.isMe && !b.isMe) return -1;
+      if (!a.isMe && b.isMe) return 1;
+      return 0;
+    });
+    return sorted.map((member, idx) => ({
       member,
       summary: getCrewWeekSummary(member.id, selectedWeekStart),
       colorIdx: idx,
@@ -232,6 +294,10 @@ export function Timesheet({ projectId }: TimesheetProps) {
         />
       )}
 
+      {showProfileGate && (
+        <UserProfileModal required onClose={() => { /* gate dismissal handled by save */ }} />
+      )}
+
       {toast && <div className="tsr-toast">{toast}</div>}
     </div>
   );
@@ -360,7 +426,10 @@ function OverviewPanel({
                 <div key={member.id} className="tsr-team-row" style={{ cursor: 'default' }}>
                   <div className="tsr-avatar" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{member.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {member.name}
+                      {member.isMe && <YouPill />}
+                    </div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                       {member.position} · {fmt(member.rateCard.dailyRate, currency)}/day
                     </div>
@@ -601,7 +670,10 @@ function TeamTimesheetsPanel({
             <div className="tsr-team-row" style={{ cursor: 'pointer' }} onClick={() => toggleTeamExpand(member.id)}>
               <div className="tsr-avatar" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{member.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {member.name}
+                  {member.isMe && <YouPill />}
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                   {member.position} · {fmt(member.rateCard.dailyRate, currency)}/day · {member.rateCard.baseContract}
                 </div>
@@ -730,7 +802,10 @@ function TeamManagePanel({
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', cursor: 'pointer' }} onClick={() => toggleRcExpand(member.id)}>
               <div className="tsr-avatar lg" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{member.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {member.name}
+                  {member.isMe && <YouPill />}
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{member.position}</div>
               </div>
               <span className="tsr-tag orange">{fmt(rc.dailyRate, currency)}/day</span>
