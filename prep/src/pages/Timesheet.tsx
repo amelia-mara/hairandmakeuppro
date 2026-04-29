@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type WeekSummary } from '@/stores/timesheetStore';
+import { useTimesheetStore, CURRENCY_SYMBOLS, type CrewMember, type CurrencyCode, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
+import { LogDayModal } from '@/components/timesheet/LogDayModal';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
@@ -154,6 +155,21 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const ensureTeamCrew = store(s => s.ensureTeamCrew);
   const getCrewWeekSummary = store(s => s.getCrewWeekSummary);
   const getTotalLabourCost = store(s => s.getTotalLabourCost);
+  const saveEntry = store(s => s.saveEntry);
+  const deleteEntry = store(s => s.deleteEntry);
+  const calculateEntry = store(s => s.calculateEntry);
+  const getPreviousWrapOut = store(s => s.getPreviousWrapOut);
+
+  // Log-day modal state — `null` for closed, `{ crew, entry }` for open.
+  const [logDayState, setLogDayState] = useState<{
+    crew: CrewMember;
+    entry: TimesheetEntry | null;
+  } | null>(null);
+  const openLogDay = useCallback(
+    (member: CrewMember, entry?: TimesheetEntry | null) =>
+      setLogDayState({ crew: member, entry: entry ?? null }),
+    [],
+  );
 
   // Pull project team members so anyone joined via the invite code
   // automatically appears as a crew row in the timesheet.
@@ -363,6 +379,8 @@ export function Timesheet({ projectId }: TimesheetProps) {
             totalOtHours={totalOtHours}
             totalDays={totalDays}
             totalLabour={totalLabour}
+            calculateEntry={calculateEntry}
+            onLogDay={(member, entry) => openLogDay(member, entry)}
           />
         )}
 
@@ -418,6 +436,31 @@ export function Timesheet({ projectId }: TimesheetProps) {
           member={confirmRemoveMember}
           onCancel={() => setConfirmRemoveId(null)}
           onConfirm={handleRemoveCrew}
+        />
+      )}
+
+      {logDayState && (
+        <LogDayModal
+          crew={logDayState.crew}
+          currency={currency}
+          initialEntry={logDayState.entry}
+          previousWrapOut={
+            logDayState.entry
+              ? getPreviousWrapOut(logDayState.crew.id, logDayState.entry.date)
+              : undefined
+          }
+          calculate={(entry, prev) => calculateEntry(logDayState.crew.id, entry, prev)}
+          onSave={(entry) => {
+            saveEntry(logDayState.crew.id, entry);
+            showToast(logDayState.entry ? 'Entry updated' : 'Day logged');
+            setLogDayState(null);
+          }}
+          onDelete={(date) => {
+            deleteEntry(logDayState.crew.id, date);
+            showToast('Entry deleted');
+            setLogDayState(null);
+          }}
+          onClose={() => setLogDayState(null)}
         />
       )}
 
@@ -593,6 +636,7 @@ function OverviewPanel({
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function MyTimesheetsPanel({
   crew, crewSummaries, currency, totalHours: _totalHours, totalOtHours: _totalOtHours, totalDays: _totalDays, totalLabour: _totalLabour,
+  calculateEntry, onLogDay,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -601,10 +645,17 @@ function MyTimesheetsPanel({
   totalOtHours: number;
   totalDays: number;
   totalLabour: number;
+  calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
+  onLogDay: (member: CrewMember, entry?: TimesheetEntry | null) => void;
 }) {
-  const myCrew = crew[0];
-  const mySummary = crewSummaries[0]?.summary;
+  // Prefer the row marked isMe so the panel always reflects the auth
+  // user, falling back to the first crew row when nothing is marked.
+  const myCrew = crew.find((c) => c.isMe) ?? crew[0];
+  const mySummary = crewSummaries.find((s) => s.member.id === myCrew?.id)?.summary
+    ?? crewSummaries[0]?.summary;
   const myRate = myCrew?.rateCard.dailyRate ?? 0;
+  const handleNew = () => myCrew && onLogDay(myCrew, null);
+  const handleEdit = (entry: TimesheetEntry) => myCrew && onLogDay(myCrew, entry);
 
   return (
     <div>
@@ -618,7 +669,14 @@ function MyTimesheetsPanel({
         </div>
         <div className="tsr-ph-actions">
           <button className="tsr-btn tsr-btn-ghost">Export CSV</button>
-          <button className="tsr-btn tsr-btn-primary">+ Log Day</button>
+          <button
+            type="button"
+            className="tsr-btn tsr-btn-primary"
+            onClick={handleNew}
+            disabled={!myCrew}
+          >
+            + Log Day
+          </button>
         </div>
       </div>
 
@@ -661,17 +719,43 @@ function MyTimesheetsPanel({
               const d = new Date(entry.date + 'T12:00:00');
               const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
               const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+              // Run a fresh calc per row so the displayed totals
+              // always match the rate card (which can be edited per
+              // project after the entry was logged).
+              const calc = myCrew && entry.unitCall && entry.wrapOut
+                ? calculateEntry(myCrew.id, entry, entry.previousWrapOut)
+                : null;
+              const dayTypeLabel =
+                entry.dayType === 'SCWD' ? 'Semi-cont' :
+                entry.dayType === 'CWD' ? 'Continuous' :
+                'Shoot';
               return (
-                <div key={entry.date} className="tsr-ts-row">
+                <div
+                  key={entry.date}
+                  className="tsr-ts-row"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleEdit(entry)}
+                  title="Edit this entry"
+                >
                   <div className="tsr-tc-date">{dateStr}</div>
                   <div className="tsr-tc-day">{dayName}</div>
-                  <div className="tsr-tc-dtype"><span className="tsr-tag orange">Shoot</span></div>
-                  <div className="tsr-tc-wday"><span className="tsr-tag gold">{myCrew?.rateCard.baseContract ?? '11+1'}</span></div>
+                  <div className="tsr-tc-dtype">
+                    <span className="tsr-tag orange">{dayTypeLabel}</span>
+                  </div>
+                  <div className="tsr-tc-wday">
+                    <span className="tsr-tag gold">{myCrew?.rateCard.baseContract ?? '11+1'}</span>
+                  </div>
                   <div className="tsr-tc-start">{entry.unitCall || '—'}</div>
                   <div className="tsr-tc-end">{entry.wrapOut || '—'}</div>
-                  <div className="tsr-tc-hrs">{entry.unitCall && entry.wrapOut ? '—' : '—'}</div>
-                  <div className="tsr-tc-ot">—</div>
-                  <div className="tsr-tc-earn">{fmt(myRate, currency)}</div>
+                  <div className="tsr-tc-hrs">
+                    {calc ? `${calc.totalHours.toFixed(1)}` : '—'}
+                  </div>
+                  <div className="tsr-tc-ot">
+                    {calc ? `${calc.otHours.toFixed(1)}` : '—'}
+                  </div>
+                  <div className="tsr-tc-earn">
+                    {calc ? fmtDec(calc.totalPay, currency) : fmt(myRate, currency)}
+                  </div>
                 </div>
               );
             })}
@@ -685,7 +769,14 @@ function MyTimesheetsPanel({
         </div>
       )}
 
-      <button className="tsr-add-btn">+ Log Day</button>
+      <button
+        type="button"
+        className="tsr-add-btn"
+        onClick={handleNew}
+        disabled={!myCrew}
+      >
+        + Log Day
+      </button>
     </div>
   );
 }
