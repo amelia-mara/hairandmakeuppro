@@ -431,9 +431,17 @@ interface PendingScene {
 /**
  * Walk the schedule's raw text and produce ScheduleDay[] with
  * fully-populated scenes per day. Pure regex / state machine — no
- * network calls.
+ * network calls. Tries the Movie-Magic layout (Scn / End of Day)
+ * first; falls back to the production-schedule layout (DAY N /
+ * "<X> pgs Scenes:" markers) if no days are detected.
  */
 export function extractDays(rawText: string): ScheduleDay[] {
+  const movieMagic = extractDaysMovieMagic(rawText);
+  if (movieMagic.length > 0) return movieMagic;
+  return extractDaysProductionSchedule(rawText);
+}
+
+function extractDaysMovieMagic(rawText: string): ScheduleDay[] {
   const days: ScheduleDay[] = [];
   const lines = rawText.split('\n');
 
@@ -564,4 +572,183 @@ export function extractDays(rawText: string): ScheduleDay[] {
 
   finalizeScene();
   return days;
+}
+
+// ============================================
+// PRODUCTION-SCHEDULE LAYOUT (e.g. The Punishing)
+// ============================================
+// "DAY N - Location" headers + "<X> pgs Scenes:" markers per scene.
+// Scene cells are scattered across multiple pdf.js rows so we
+// slice between consecutive markers and field-extract each block.
+// ============================================
+
+const PROD_DAY_HEADER_RE = /^DAY\s+(\d+)(?:\s*[-–]\s*(.+))?$/i;
+const PROD_DAY_END_RE = /End\s+of\s+Shooting\s+Day\s+(\d+)\s*[-–]+\s*([A-Za-z]+),?\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})\s*[-–]+\s*([\d\s\/]+)\s*Pages/i;
+const PROD_SCENE_MARKER_RE = /^(?:\d+\s+)?(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)\s*pgs?\b.*\bScenes:/i;
+const PROD_HOURS_RE = /HOURS:\s*(\d{4})\s*-\s*(\d{4})/i;
+
+function extractDaysProductionSchedule(rawText: string): ScheduleDay[] {
+  const days: ScheduleDay[] = [];
+  const lines = rawText.split('\n');
+
+  type Boundary =
+    | { kind: 'day-start'; idx: number; dayNumber: number; location: string }
+    | { kind: 'day-end'; idx: number; weekday: string; date: string; totalPages: string }
+    | { kind: 'hours'; idx: number; hours: string }
+    | { kind: 'scene-marker'; idx: number };
+  const boundaries: Boundary[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].replace(/\s+/g, ' ').trim();
+    let m;
+    if ((m = trimmed.match(PROD_DAY_HEADER_RE))) {
+      boundaries.push({ kind: 'day-start', idx: i, dayNumber: parseInt(m[1], 10), location: (m[2] || '').trim() });
+      continue;
+    }
+    if ((m = trimmed.match(PROD_DAY_END_RE))) {
+      boundaries.push({ kind: 'day-end', idx: i, weekday: m[2], date: m[3].trim(), totalPages: m[4].trim() });
+      continue;
+    }
+    if ((m = trimmed.match(PROD_HOURS_RE))) {
+      boundaries.push({ kind: 'hours', idx: i, hours: `${formatTime(m[1])}–${formatTime(m[2])}` });
+      continue;
+    }
+    if (PROD_SCENE_MARKER_RE.test(trimmed)) {
+      boundaries.push({ kind: 'scene-marker', idx: i });
+    }
+  }
+
+  let currentDay: ScheduleDay | null = null;
+  let pendingHours: string | null = null;
+  let shootOrder = 0;
+
+  for (let bi = 0; bi < boundaries.length; bi++) {
+    const b = boundaries[bi];
+    if (b.kind === 'day-start') {
+      currentDay = {
+        dayNumber: b.dayNumber,
+        location: b.location,
+        hours: pendingHours || undefined,
+        scenes: [],
+      };
+      days.push(currentDay);
+      shootOrder = 0;
+      pendingHours = null;
+      continue;
+    }
+    if (b.kind === 'day-end') {
+      if (currentDay) {
+        currentDay.dayOfWeek = b.weekday;
+        currentDay.date = toIsoDate(b.date);
+        currentDay.totalPages = b.totalPages;
+      }
+      currentDay = null;
+      continue;
+    }
+    if (b.kind === 'hours') {
+      if (currentDay) currentDay.hours = b.hours;
+      else pendingHours = b.hours;
+      continue;
+    }
+    if (b.kind === 'scene-marker' && currentDay) {
+      const startIdx = b.idx;
+      const next = boundaries[bi + 1];
+      const endIdx = next ? next.idx : Math.min(startIdx + 6, lines.length);
+      shootOrder++;
+      const scene = parseProductionSceneBlock(lines.slice(startIdx, endIdx), shootOrder);
+      if (scene) currentDay.scenes.push(scene);
+    }
+  }
+
+  return days;
+}
+
+function parseProductionSceneBlock(blockLines: string[], shootOrder: number): ScheduleSceneEntry | null {
+  const usable = blockLines
+    .map((l) => l.replace(/\r/g, '').trimEnd())
+    .filter((l) => l.trim().length > 0)
+    .filter((l) => !/^(Pack\s+down|Lighting\s+Change|Set\s+Move|Load\s+(in|out)|UNIT\s+MOVE|LUNCH|End\s+of\s+Shooting|===\s+PAGE)/i.test(l.trim()));
+  if (usable.length === 0) return null;
+
+  const markerCells = usable[0].split(/\t+/).map((s) => s.trim()).filter(Boolean);
+  const pagesMatch = markerCells[0]?.match(/^(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)\s*pgs?$/i);
+  if (!pagesMatch) return null;
+  const pages = pagesMatch[1].trim();
+
+  let intExt: 'INT' | 'EXT' | null = null;
+  let location = '';
+  const castNumbers: number[] = [];
+  for (let ci = 1; ci < markerCells.length; ci++) {
+    const cell = markerCells[ci];
+    if (/^Scenes:$/i.test(cell)) continue;
+    if (/^Est\.?\s*Time$/i.test(cell)) continue;
+    if (/^(INT|EXT|I\/E|INT\/EXT|EXT\/INT)$/i.test(cell)) {
+      intExt = cell.toUpperCase().startsWith('EXT') ? 'EXT' : 'INT';
+      continue;
+    }
+    if (/^(_?\d{1,3}[A-Za-z]?\s*,\s*)+_?\d{1,3}[A-Za-z]?$/.test(cell) || /^_?\d{1,3}[A-Za-z]?$/.test(cell)) {
+      castNumbers.push(...parseCastNumberList(cell));
+      continue;
+    }
+    if (/[A-Z]/.test(cell)) {
+      location = location ? `${location} ${cell}` : cell;
+    }
+  }
+
+  let sceneNumber = '';
+  let dayNight = '';
+  let description = '';
+  let estimatedTime: string | undefined;
+
+  for (let li = 1; li < usable.length; li++) {
+    const cells = usable[li].split(/\t+/).map((s) => s.trim()).filter(Boolean);
+    for (const cell of cells) {
+      if (!intExt && /^(INT|EXT|I\/E|INT\/EXT|EXT\/INT)$/i.test(cell)) {
+        intExt = cell.toUpperCase().startsWith('EXT') ? 'EXT' : 'INT';
+        continue;
+      }
+      if (!sceneNumber && /^\d+[A-Za-z]?$/.test(cell)) {
+        sceneNumber = cell;
+        continue;
+      }
+      const dnAlone = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)$/i);
+      if (dnAlone && !dayNight) { dayNight = dnAlone[1]; continue; }
+      const dnPrefix = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)\s*(.*)$/i);
+      if (dnPrefix) {
+        if (!dayNight) dayNight = dnPrefix[1];
+        const rest = dnPrefix[2].trim();
+        if (rest && rest.length > description.length) description = rest;
+        continue;
+      }
+      const dnGlued = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)([A-Z].*)$/);
+      if (dnGlued) {
+        if (!dayNight) dayNight = dnGlued[1];
+        const rest = dnGlued[2].trim();
+        if (rest && rest.length > description.length) description = rest;
+        continue;
+      }
+      if (/^(\d{1,2}:\d{2}|:\d{2})$/.test(cell)) { estimatedTime = cell; continue; }
+      if (/^(_?\d{1,3}[A-Za-z]?\s*,\s*)+_?\d{1,3}[A-Za-z]?$/.test(cell)) {
+        castNumbers.push(...parseCastNumberList(cell));
+        continue;
+      }
+      if (!location && /^[A-Z][A-Z\s\-,/']{2,}$/.test(cell)) { location = cell; continue; }
+      if (/[a-z]/.test(cell) && cell.length > 3 && cell.length > description.length) description = cell;
+    }
+  }
+
+  if (!intExt) return null;
+  if (!sceneNumber) return null;
+
+  return {
+    sceneNumber,
+    intExt,
+    dayNight: normalizeDayNight(dayNight || 'Day'),
+    setLocation: location,
+    description: description || undefined,
+    pages,
+    castNumbers: Array.from(new Set(castNumbers)),
+    estimatedTime,
+    shootOrder,
+  };
 }
