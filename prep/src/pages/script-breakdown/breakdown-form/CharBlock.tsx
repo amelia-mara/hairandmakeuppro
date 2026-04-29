@@ -11,6 +11,12 @@ import {
   type Scene,
   type ScriptTag,
 } from '@/stores/breakdownStore';
+import {
+  useShoppingFlagStore,
+  SHOPPING_FLAG_KINDS,
+  type ShoppingFlagKind,
+  type ShoppingFlagScope,
+} from '@/stores/shoppingFlagStore';
 import { ordinal } from '@/utils/ordinal';
 import { FInput } from './form-primitives';
 import { SceneRangeSelect } from './SceneRangeSelect';
@@ -28,7 +34,8 @@ import { CostumeBreakdownFields, type CostumeSceneBreakdown } from './CostumeBre
  * Everything else flows through the props received from
  * BreakdownFormPanel.
  */
-export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onUpdateLookField, department, costumeData, onCostumeUpdate }: {
+export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, characterEvents, onAddCharEvent, onUpdateEvent, onRemoveEvent, allScenes, allCharacters, sceneId, onRemoveCharacter, onAddLook, onUpdateLookField, department, costumeData, onCostumeUpdate }: {
+  projectId: string;
   char: Character; cb: CharacterBreakdown; looks: Look[];
   highlighted: boolean; onUpdate: (d: Partial<CharacterBreakdown>) => void;
   characterEvents: ContinuityEvent[];
@@ -285,6 +292,13 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
             <TagPills tags={sfxTags} color={catColor('sfx')} />
           </div>
 
+          <ShoppingListSection
+            projectId={projectId}
+            characterId={char.id}
+            lookId={cb.lookId}
+            characterEvents={characterEvents}
+          />
+
           <div className="cb-field">
             <FInput label="Environmental" value={cb.environmental || ''} onChange={(v) => onUpdate({ environmental: v })} />
             <TagPills tags={sceneTags.filter(t => t.categoryId === 'environmental')} color={catColor('environmental')} />
@@ -381,6 +395,127 @@ export function CharBlock({ char, cb, looks, highlighted, onUpdate, characterEve
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SHOPPING LIST SECTION
+
+   Per-character checkboxes for major HMU items the production has
+   to source ahead of shooting (wig / facial hair / tattoo /
+   prosthetic). Each ticked item gets a scope picker:
+     - Look       (default)  — covers every scene with this look
+     - Continuity            — covers the event's scene range
+     - Storyline             — covers every scene the character is in
+
+   The store dedupes by (character, kind, scope, scopeRef) so ticking
+   "wig" on three different scenes that all use the same look results
+   in one budget line item, not three.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function ShoppingListSection({
+  projectId,
+  characterId,
+  lookId,
+  characterEvents,
+}: {
+  projectId: string;
+  characterId: string;
+  lookId: string | undefined;
+  characterEvents: ContinuityEvent[];
+}) {
+  const store = useShoppingFlagStore(projectId);
+  const flags = store((s) => s.flags);
+  const toggleFlag = store((s) => s.toggleFlag);
+  const setScope = store((s) => s.setScope);
+
+  // Default scope: 'look' if a look is set, else 'storyline'.
+  const defaultScope: ShoppingFlagScope = lookId ? 'look' : 'storyline';
+  const defaultScopeRef = lookId;
+
+  return (
+    <div className="cb-field cb-shopping">
+      <label className="cb-label">Shopping list</label>
+      <div className="cb-shopping-grid">
+        {SHOPPING_FLAG_KINDS.map(({ id: kind, label }) => {
+          // Show as ticked if ANY flag exists for this character/kind,
+          // regardless of scope — the scope picker below shows which.
+          const charFlags = flags.filter(
+            (f) => f.characterId === characterId && f.kind === kind,
+          );
+          const ticked = charFlags.length > 0;
+          // The active flag (if any) — used for the scope picker.
+          // Prefer one matching the current look; fall back to any.
+          const activeFlag =
+            charFlags.find(
+              (f) => f.scope === defaultScope &&
+                (defaultScope === 'storyline' ||
+                 f.lookId === defaultScopeRef ||
+                 f.continuityEventId === defaultScopeRef),
+            ) || charFlags[0];
+
+          return (
+            <div key={kind} className="cb-shopping-row">
+              <label className="cb-shopping-check">
+                <input
+                  type="checkbox"
+                  checked={ticked}
+                  onChange={() => {
+                    if (ticked && activeFlag) {
+                      // Untick the existing flag(s).
+                      charFlags.forEach((f) =>
+                        toggleFlag(
+                          characterId,
+                          kind,
+                          f.scope,
+                          f.scope === 'look'
+                            ? f.lookId
+                            : f.scope === 'continuity'
+                              ? f.continuityEventId
+                              : undefined,
+                        ),
+                      );
+                    } else {
+                      toggleFlag(characterId, kind, defaultScope, defaultScopeRef);
+                    }
+                  }}
+                />
+                <span>{label}</span>
+              </label>
+
+              {ticked && activeFlag && (
+                <div className="cb-shopping-scope">
+                  <button
+                    type="button"
+                    className={`cb-scope-pill${activeFlag.scope === 'look' ? ' cb-scope-pill--active' : ''}`}
+                    disabled={!lookId}
+                    onClick={() => setScope(activeFlag.id, 'look', lookId)}
+                  >
+                    Look
+                  </button>
+                  <button
+                    type="button"
+                    className={`cb-scope-pill${activeFlag.scope === 'continuity' ? ' cb-scope-pill--active' : ''}`}
+                    disabled={characterEvents.length === 0}
+                    onClick={() =>
+                      setScope(activeFlag.id, 'continuity', characterEvents[0]?.id)
+                    }
+                  >
+                    Event
+                  </button>
+                  <button
+                    type="button"
+                    className={`cb-scope-pill${activeFlag.scope === 'storyline' ? ' cb-scope-pill--active' : ''}`}
+                    onClick={() => setScope(activeFlag.id, 'storyline')}
+                  >
+                    Storyline
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
 import { useProjectStore } from '@/stores/projectStore';
 import { useBudgetStore, CURRENCY_SYMBOLS, type BudgetLineItem } from '@/stores/budgetStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
+import { useShoppingFlagStore, SHOPPING_FLAG_KINDS, type ShoppingFlag } from '@/stores/shoppingFlagStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { ReceiptConfirmPanel, type ConfirmData } from '@/components/budget/receipts/ReceiptConfirmPanel';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
@@ -108,6 +110,142 @@ export function Budget({ projectId }: BudgetProps) {
   const sym = CURRENCY_SYMBOLS[currency] || '£';
   const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   const fmtSigned = (n: number) => n < 0 ? `-${fmt(n)}` : n > 0 ? `+${fmt(n)}` : '—';
+
+  /* ── Shopping list rollup ──────────────────────────────────
+     Per-character "major item" flags (wig / facial hair / tattoo /
+     prosthetic) ticked in the breakdown panel. The store dedupes by
+     (character, kind, scope, scopeRef), so each entry here maps to
+     one budget line item. We expand each flag to the scenes it
+     covers and, if a schedule is parsed, count unique shoot days. */
+  const shoppingStore = useShoppingFlagStore(projectId);
+  const shoppingFlags = shoppingStore((s) => s.flags);
+  const scheduleStore = useScheduleStore(projectId);
+  const schedule = scheduleStore((s) => s.current);
+
+  const allLooks = useMemo(
+    () => parsedData ? parsedData.looks : [],
+    [parsedData],
+  );
+
+  /** Map sceneNumber (int) → unique shoot day count from the parsed
+   *  schedule. Returns 0 when the scene doesn't appear in the schedule
+   *  or no schedule has been uploaded. */
+  const scheduleDaysFor = useCallback((sceneNumbers: number[]): number => {
+    if (!schedule) return 0;
+    const wanted = new Set(sceneNumbers.map(String));
+    const days = new Set<number>();
+    for (const day of schedule.days) {
+      for (const s of day.scenes) {
+        if (wanted.has(String(parseInt(s.sceneNumber, 10)))) {
+          days.add(day.dayNumber);
+          break;
+        }
+      }
+    }
+    return days.size;
+  }, [schedule]);
+
+  interface ShoppingRollupRow {
+    flag: ShoppingFlag;
+    kindLabel: string;
+    characterName: string;
+    scopeLabel: string;
+    sceneNumbers: number[];
+    dayCount: number;
+  }
+
+  const shoppingRollup: ShoppingRollupRow[] = useMemo(() => {
+    if (shoppingFlags.length === 0) return [];
+
+    /** Compact a sorted array of scene numbers into "1, 4-7, 12" form. */
+    const formatSceneRange = (nums: number[]): string => {
+      if (nums.length === 0) return '—';
+      const sorted = [...nums].sort((a, b) => a - b);
+      const ranges: string[] = [];
+      let start = sorted[0];
+      let prev = sorted[0];
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === prev + 1) {
+          prev = sorted[i];
+        } else {
+          ranges.push(start === prev ? `${start}` : `${start}–${prev}`);
+          start = sorted[i];
+          prev = sorted[i];
+        }
+      }
+      ranges.push(start === prev ? `${start}` : `${start}–${prev}`);
+      return ranges.join(', ');
+    };
+
+    return shoppingFlags
+      .map((flag): ShoppingRollupRow | null => {
+        const kindDef = SHOPPING_FLAG_KINDS.find((k) => k.id === flag.kind);
+        const ch = characters.find((c) => c.id === flag.characterId);
+        if (!kindDef || !ch) return null;
+
+        let sceneNumbers: number[] = [];
+        let scopeLabel = '';
+
+        if (flag.scope === 'storyline') {
+          sceneNumbers = scenes
+            .filter((s) => s.characterIds.includes(flag.characterId) && !s.isOmitted)
+            .map((s) => s.number);
+          scopeLabel = 'Storyline';
+        } else if (flag.scope === 'look' && flag.lookId) {
+          const look = allLooks.find((l) => l.id === flag.lookId);
+          scopeLabel = `Look · ${look?.name || 'Untitled'}`;
+          // Scene matches when its breakdown has this character on this look.
+          for (const scene of scenes) {
+            if (scene.isOmitted) continue;
+            const bd = breakdownStore.getBreakdown(scene.id);
+            if (!bd) continue;
+            const cb = bd.characters.find(
+              (c) => c.characterId === flag.characterId && c.lookId === flag.lookId,
+            );
+            if (cb) sceneNumbers.push(scene.number);
+          }
+        } else if (flag.scope === 'continuity' && flag.continuityEventId) {
+          // Find the event by scanning every scene's breakdown — the
+          // event lives wherever it was created, but its sceneRange
+          // covers the whole arc.
+          let event = null as null | { sceneRange: string; description?: string; type: string };
+          for (const scene of scenes) {
+            const bd = breakdownStore.getBreakdown(scene.id);
+            if (!bd) continue;
+            const found = bd.continuityEvents.find((e) => e.id === flag.continuityEventId);
+            if (found) { event = found; break; }
+          }
+          if (!event) return null;
+          scopeLabel = `Event · ${event.description || event.type}`;
+          // Parse sceneRange like "5-12" or "5"
+          const rangeMatch = event.sceneRange.match(/^(\d+)\s*[-–]\s*(\d+)?/);
+          if (rangeMatch) {
+            const start = parseInt(rangeMatch[1], 10);
+            const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : start;
+            sceneNumbers = scenes
+              .filter((s) => s.number >= start && s.number <= end && !s.isOmitted)
+              .map((s) => s.number);
+          }
+        }
+
+        return {
+          flag,
+          kindLabel: kindDef.label,
+          characterName: ch.name,
+          scopeLabel: scopeLabel + (sceneNumbers.length > 0 ? ` · Sc ${formatSceneRange(sceneNumbers)}` : ''),
+          sceneNumbers,
+          dayCount: scheduleDaysFor(sceneNumbers),
+        };
+      })
+      .filter((r): r is ShoppingRollupRow => r !== null)
+      .sort((a, b) => {
+        // Group by character name, then by kind in the canonical order.
+        if (a.characterName !== b.characterName) return a.characterName.localeCompare(b.characterName);
+        const aIdx = SHOPPING_FLAG_KINDS.findIndex((k) => k.id === a.flag.kind);
+        const bIdx = SHOPPING_FLAG_KINDS.findIndex((k) => k.id === b.flag.kind);
+        return aIdx - bIdx;
+      });
+  }, [shoppingFlags, characters, scenes, allLooks, breakdownStore, scheduleDaysFor]);
 
   /* ── Script flags (SFX/prosthetics from breakdown) ── */
   const scriptFlags: ScriptFlag[] = useMemo(() => {
@@ -355,7 +493,43 @@ export function Budget({ projectId }: BudgetProps) {
               <StatCard label="Total Scenes" value={String(scenes.length)} />
               <StatCard label="Flagged" value={String(flaggedCount)} color="bg-stat-value--orange" />
               <StatCard label="SFX / Prosthetics" value={String(scriptFlags.filter(f => f.type.variant === 'teal').length)} />
-              <StatCard label="Budget Items Generated" value={String(allLineItems.length)} color="bg-stat-value--teal" />
+              <StatCard label="Shopping Items" value={String(shoppingRollup.length)} color="bg-stat-value--teal" />
+            </div>
+
+            {/* Shopping list rollup — major HMU items the production has
+                to source ahead of shooting. Each row is one budget line
+                item (deduped across scenes via the flag's scope). */}
+            <div className="bg-section-heading">
+              Shopping List <span className="bg-section-line" />
+            </div>
+            <div className="bg-card bg-card--flush">
+              <div className="bg-col-head">
+                <span className="bg-ch" style={{ width: 110 }}>Item</span>
+                <span className="bg-ch" style={{ width: 130 }}>Character</span>
+                <span className="bg-ch" style={{ flex: 1 }}>Scope · Scenes</span>
+                <span className="bg-ch" style={{ width: 80, textAlign: 'right' }}>{schedule ? 'Days' : 'Scenes'}</span>
+              </div>
+              {shoppingRollup.length === 0 && (
+                <div className="bg-empty-row">
+                  No shopping items flagged yet. Tick wig / facial hair / tattoo / prosthetic in the Script Breakdown panel.
+                </div>
+              )}
+              {shoppingRollup.map((row) => (
+                <div key={row.flag.id} className="bg-flag-row">
+                  <div className="bg-flag-sc">{row.kindLabel}</div>
+                  <div className="bg-flag-char">{row.characterName}</div>
+                  <div className="bg-flag-body">
+                    <div className="bg-flag-desc">{row.scopeLabel}</div>
+                  </div>
+                  <div className="bg-flag-type">
+                    <span className="bg-tag bg-tag--teal">
+                      {schedule
+                        ? `${row.dayCount} day${row.dayCount === 1 ? '' : 's'}`
+                        : `${row.sceneNumbers.length} sc`}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="bg-section-heading">

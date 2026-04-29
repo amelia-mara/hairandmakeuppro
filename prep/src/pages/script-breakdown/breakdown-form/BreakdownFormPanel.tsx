@@ -187,7 +187,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
             const costumeBreakdowns = (resolvedChar as any).costume_breakdown as Record<string, CostumeSceneBreakdown> | undefined;
             const costumeData: CostumeSceneBreakdown = costumeBreakdowns?.[String(scene.number)] || {};
             return (
-              <CharBlock key={ch.id} char={ch} cb={cb}
+              <CharBlock key={ch.id} projectId={_projectId} char={ch} cb={cb}
                 sceneId={scene.id}
                 looks={allLooks.filter((l) => l.characterId === ch.id)}
                 highlighted={activeCharacterId === ch.id}
