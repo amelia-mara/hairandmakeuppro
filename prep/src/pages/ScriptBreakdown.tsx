@@ -546,11 +546,29 @@ export function ScriptBreakdown({ projectId }: Props) {
                 : { width: rightPanel.width, minWidth: rightPanel.width }
           }
         >
-          <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {splitView && (
+          {splitView ? (
+            // Split-view header — mirrors the center panel's
+            // cp-tabstrip + cp-toolbar pattern so the right side
+            // aligns at the same height as the SCRIPT/BRY/YOUNG
+            // tab row on the left and visually feels like its
+            // pair. The "Breakdown" pill renders as a fixed active
+            // tab; the close X + Tools menu sit in the toolbar row
+            // beneath, the same vertical slot as the left's "Tags"
+            // toggle.
+            <>
+              <div className="cp-tabstrip">
+                <div className="cp-tabs-row">
+                  <button
+                    type="button"
+                    className="cp-divider-tab cp-divider-tab--active"
+                    disabled
+                  >
+                    Breakdown
+                  </button>
+                </div>
+              </div>
+              <div className="cp-toolbar cp-toolbar--actions-right">
+                <div className="cp-toolbar-actions">
                   <button
                     className="btn-ghost bd-btn bd-split-close"
                     onClick={() => setSplitView(false)}
@@ -560,8 +578,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                       <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                     </svg>
                   </button>
-                )}
-            <ToolsMenu
+                  <ToolsMenu
               open={toolsOpen}
               onToggle={() => setToolsOpen(!toolsOpen)}
               onClose={() => setToolsOpen(false)}
@@ -627,14 +644,89 @@ export function ScriptBreakdown({ projectId }: Props) {
               onViewDraftPdf={handleViewDraftPdf}
               onDeleteDraft={handleDeleteDraft}
             />
+                </div>
               </div>
+            </>
+          ) : (
+            <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span className="fp-panel-title">Scene Breakdown</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ToolsMenu
+                    open={toolsOpen}
+                    onToggle={() => setToolsOpen(!toolsOpen)}
+                    onClose={() => setToolsOpen(false)}
+                    onImportScript={() => setShowUploadModal(true)}
+                    onOpenBreakdownView={() => {
+                      // Force Script tab on so the center panel actually
+                      // shows the script — entering split-view from a
+                      // character tab would otherwise leave the user with
+                      // a character profile next to the breakdown.
+                      setActiveTab('script');
+                      setSplitView(true);
+                    }}
+                    onExportBreakdown={async (format) => {
+                      const { exportBreakdownPDF, exportBreakdownXLSX } =
+                        await import('@/utils/export/breakdown');
+                      const preview =
+                        format === 'pdf' ? exportBreakdownPDF(projectId)
+                        : format === 'xlsx' ? exportBreakdownXLSX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    onExportLookbooks={async (format) => {
+                      const { exportLookbookPDF, exportLookbookPPTX } =
+                        await import('@/utils/export/lookbook');
+                      const preview =
+                        format === 'pdf' ? exportLookbookPDF(projectId)
+                        : format === 'pptx' ? await exportLookbookPPTX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    onExportTimeline={async (format) => {
+                      const { exportTimelinePDF, exportTimelineXLSX } =
+                        await import('@/utils/export/timeline');
+                      const preview =
+                        format === 'pdf' ? exportTimelinePDF(projectId)
+                        : format === 'xlsx' ? exportTimelineXLSX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    onExportBible={async (format) => {
+                      if (format !== 'pdf') {
+                        console.log('Export bible', format);
+                        return;
+                      }
+                      const { exportBiblePDF } = await import('@/utils/export/bible');
+                      setExportPreview(exportBiblePDF(projectId));
+                    }}
+                    onExportQueries={async (format) => {
+                      const { exportQueriesPDF, exportQueriesXLSX } =
+                        await import('@/utils/export/queries');
+                      const preview =
+                        format === 'pdf' ? exportQueriesPDF(projectId)
+                        : format === 'xlsx' ? exportQueriesXLSX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    drafts={drafts}
+                    draftsLoading={draftsLoading}
+                    draftsExpanded={draftsExpanded}
+                    onToggleDraftsExpanded={() => setDraftsExpanded(!draftsExpanded)}
+                    loadingDraftId={loadingDraftId}
+                    onLoadDraft={handleLoadDraft}
+                    onViewDraftPdf={handleViewDraftPdf}
+                    onDeleteDraft={handleDeleteDraft}
+                  />
+                </div>
+              </div>
+              {scene && (
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
+                </div>
+              )}
             </div>
-            {scene && !splitView && (
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
-              </div>
-            )}
-          </div>
+          )}
           {splitView ? (
             <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
           ) : scene?.isOmitted ? (
