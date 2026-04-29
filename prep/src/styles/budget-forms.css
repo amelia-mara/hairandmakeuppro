@@ -523,7 +523,13 @@
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .receipt-modal-backdrop {
   position: fixed;
-  inset: 0;
+  /* Start below the 80px TopBar so a tall modal can't slide
+     underneath it. The TopBar is opaque so leaving the top 80px
+     un-dimmed reads the same as a full-viewport dim. */
+  top: 80px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 200;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
@@ -543,7 +549,10 @@
   border-radius: 16px;
   width: 100%;
   max-width: 540px;
-  max-height: 90vh;
+  /* Backdrop already starts 80px below the viewport top to clear the
+     TopBar; subtract the 24px*2 padding from the available height
+     so the modal never overflows. */
+  max-height: calc(100vh - 80px - 48px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -832,7 +841,8 @@
 }
 
 /* On phones the modal becomes a bottom sheet that takes the full
-   viewport, matching what the mobile-pwa does. */
+   available height (still below the 80px TopBar), matching what
+   the mobile-pwa does. */
 @media (max-width: 768px) {
   .receipt-modal-backdrop {
     padding: 0;
@@ -840,6 +850,7 @@
   }
   .receipt-modal {
     max-width: none;
+    /* backdrop top is already 80px so 100% fills the rest. */
     max-height: 100%;
     border-radius: 16px 16px 0 0;
     border-bottom: none;
