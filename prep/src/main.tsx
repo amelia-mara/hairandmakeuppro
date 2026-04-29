@@ -29,6 +29,7 @@ import './styles/schedule.css';
 import './styles/call-sheets.css';
 import './styles/team.css';
 import './styles/auth.css';
+import './styles/scriptie-chat.css';
 import App from './App';
 
 // Initialize theme before render — triggers applyTheme which sets both class and data-theme

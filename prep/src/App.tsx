@@ -18,9 +18,10 @@ import { BetaCodePage } from '@/pages/BetaCodePage';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectSync } from '@/hooks/useProjectSync';
-import { canAccessPrep } from '@/utils/tierUtils';
+import { canAccessPrep, isOwnerTier } from '@/utils/tierUtils';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
+import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -378,6 +379,11 @@ function ProjectView({
           <Team projectId={projectId} />
         )}
       </ProjectLayout>
+      {/* Owner-tier-only AI assistant. Renders a floating button in
+          the bottom-right that opens a side panel chat scoped to
+          this project. Gated on the effective tier so the dev tier
+          picker can hide it when previewing a non-owner role. */}
+      {isOwnerTier(effectiveTier) && <ScriptieChat projectId={projectId} />}
     </div>
   );
 }
