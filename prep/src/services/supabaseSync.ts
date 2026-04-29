@@ -691,7 +691,18 @@ export function saveTimesheetEntry(
  */
 export async function uploadCallSheetToStorage(
   projectId: string,
-  sheet: { id: string; name: string; date: string; dataUri: string; thumbnailUri: string; uploadedAt: string },
+  sheet: {
+    id: string;
+    name: string;
+    date: string;
+    dataUri: string;
+    thumbnailUri: string;
+    uploadedAt: string;
+    // Optional regex-parsed CallSheet object. When present, its fields go
+    // into parsed_data so mobile's call-sheet store picks up scenes,
+    // castCalls, preCalls, etc. without needing to re-parse the PDF.
+    parsed?: Record<string, unknown>;
+  },
 ): Promise<{ pdfUrl: string; thumbnailUrl: string } | null> {
   try {
     // Upload PDF
@@ -712,6 +723,23 @@ export async function uploadCallSheetToStorage(
     const { data: pdfUrlData } = supabase.storage.from('project-documents').getPublicUrl(pdfPath);
     const { data: thumbUrlData } = supabase.storage.from('project-documents').getPublicUrl(thumbPath);
 
+    // Compose parsed_data: PDF storage metadata always present; merge in
+    // structured fields (scenes/castCalls/preCalls/etc.) when the local
+    // parser produced them. Mobile's mergeCallSheetData spreads the whole
+    // parsed_data object into the CallSheet, so the field names must match
+    // the mobile CallSheet shape.
+    const storageMeta = {
+      name: sheet.name,
+      storagePath: pdfPath,
+      thumbnailPath: thumbPath,
+      pdfUrl: pdfUrlData.publicUrl,
+      thumbnailUrl: thumbUrlData.publicUrl,
+      uploadedAt: sheet.uploadedAt,
+    };
+    const parsedData: Record<string, unknown> = sheet.parsed
+      ? { ...sheet.parsed, ...storageMeta }
+      : storageMeta;
+
     // Save metadata to call_sheet_data
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
@@ -720,14 +748,16 @@ export async function uploadCallSheetToStorage(
         id: sheet.id,
         project_id: projectId,
         shoot_date: sheet.date,
-        parsed_data: {
-          name: sheet.name,
-          storagePath: pdfPath,
-          thumbnailPath: thumbPath,
-          pdfUrl: pdfUrlData.publicUrl,
-          thumbnailUrl: thumbUrlData.publicUrl,
-          uploadedAt: sheet.uploadedAt,
-        } as unknown as Json,
+        production_day:
+          (sheet.parsed && typeof (sheet.parsed as { productionDay?: unknown }).productionDay === 'number')
+            ? ((sheet.parsed as { productionDay: number }).productionDay)
+            : null,
+        raw_text:
+          (sheet.parsed && typeof (sheet.parsed as { rawText?: unknown }).rawText === 'string')
+            ? ((sheet.parsed as { rawText: string }).rawText)
+            : null,
+        parsed_data: parsedData as unknown as Json,
+        storage_path: pdfPath,
         uploaded_by: user?.id || null,
       }, { onConflict: 'id' });
     if (error) throw error;

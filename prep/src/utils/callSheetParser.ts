@@ -1,20 +1,19 @@
-import { v4 as uuidv4 } from 'uuid';
-import type { CallSheet } from '@/types';
+// Prep mirror of the mobile call sheet parser. Both apps run the same
+// regex code so the parsed data they produce is identical — letting prep
+// upload feed mobile's Today page via the shared call_sheet_data row.
+//
+// If you change anything here, update the mobile-pwa copy too.
+
+import type { CallSheet } from './callSheet/types';
 import { extractTextFromPDF } from './callSheet/extractText';
 import { parseHeader } from './callSheet/parseHeader';
 import { parseLocations } from './callSheet/parseLocations';
 import { parseScenes } from './callSheet/parseScenes';
 import { parseCastCalls, parseSupportingArtists } from './callSheet/parseCast';
 
-// Re-export so existing imports of `extractTextFromPDF` from this module
-// keep working.
+export type { CallSheet } from './callSheet/types';
 export { extractTextFromPDF };
 
-/**
- * Parse extracted call sheet text into a structured CallSheet object.
- * 100% client-side regex; no API key required. Different productions use
- * different layouts so each sub-parser has its own dispatch + heuristics.
- */
 export function parseCallSheetText(text: string, pdfUri?: string): CallSheet {
   const header = parseHeader(text);
   const loc = parseLocations(text);
@@ -23,7 +22,7 @@ export function parseCallSheetText(text: string, pdfUri?: string): CallSheet {
   const supportingArtists = parseSupportingArtists(text);
 
   return {
-    id: uuidv4(),
+    id: crypto.randomUUID(),
     date: header.date ?? new Date().toISOString().slice(0, 10),
     productionDay: header.productionDay ?? 1,
     totalProductionDays: header.totalProductionDays,
@@ -51,10 +50,6 @@ export function parseCallSheetText(text: string, pdfUri?: string): CallSheet {
   };
 }
 
-/**
- * Wrap parseCallSheetText in a Promise so it remains a drop-in for the
- * old async AI version. callSheetStore awaits this.
- */
 export async function parseCallSheetPDF(file: File): Promise<CallSheet> {
   const pdfUri = await new Promise<string>((resolve) => {
     const reader = new FileReader();
