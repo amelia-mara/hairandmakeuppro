@@ -370,6 +370,71 @@ export function Budget({ projectId }: BudgetProps) {
     </div>
   );
 
+  /** Approved Budget stat — same shape as StatCard but the value is
+   *  click-to-edit. Replaces the Production-set toggle on Budget
+   *  Proposal: productions that just hand you a number can click
+   *  this card and type in the figure live during shoot. */
+  const ApprovedBudgetCard = () => {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(String(productionBudget || ''));
+    useEffect(() => {
+      if (!editing) setDraft(String(productionBudget || ''));
+    }, [editing]);
+
+    const commit = () => {
+      const next = parseFloat(draft);
+      setBudgetLimit(isNaN(next) || next < 0 ? 0 : next);
+      setEditing(false);
+    };
+
+    const subText = productionBudget > 0
+      ? 'Production-set · click to edit'
+      : 'Click to set production-confirmed amount';
+
+    return (
+      <div
+        className="bg-stat-card bg-stat-card--editable"
+        onClick={() => { if (!editing) setEditing(true); }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !editing) {
+            e.preventDefault();
+            setEditing(true);
+          }
+        }}
+      >
+        <div className="bg-stat-label">Approved Budget</div>
+        {editing ? (
+          <div className="bg-stat-value-edit" onClick={(e) => e.stopPropagation()}>
+            <span className="bg-stat-value-symbol">{sym}</span>
+            <input
+              type="number"
+              min={0}
+              step={50}
+              autoFocus
+              value={draft}
+              placeholder="0"
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commit();
+                else if (e.key === 'Escape') {
+                  setDraft(String(productionBudget || ''));
+                  setEditing(false);
+                }
+              }}
+              className="bg-stat-value-input"
+            />
+          </div>
+        ) : (
+          <div className="bg-stat-value bg-stat-value--teal">{fmt(approvedBudget)}</div>
+        )}
+        <div className="bg-stat-sub">{subText}</div>
+      </div>
+    );
+  };
+
   return (
     <div className={`bg-page${isMobile ? ' bg-page--mobile' : ''}${isMobile && drawerOpen ? ' bg-page--drawer-open' : ''}`}>
       {/* Mobile drawer backdrop */}
@@ -597,44 +662,6 @@ export function Budget({ projectId }: BudgetProps) {
               <StatCard label="Full Budget Ask" value={fmt(fullBudgetAsk)} color="bg-stat-value--teal" sub={isLTD ? 'Materials + wages + contingency' : 'Materials + contingency'} />
             </div>
 
-            {/* Production-set budget — for productions that skip the
-                proposal flow and just hand you a fixed amount. When
-                set (>0), it overrides the bottom-up calculation as
-                the "Approved Budget" on every panel. */}
-            <div className="bg-section-heading">
-              Production-set budget <span className="bg-section-line" />
-            </div>
-            <div className="bg-toggle-block">
-              <div className="bg-toggle-info">
-                <div className="bg-toggle-title">Skip the proposal — production gave you a fixed amount</div>
-                <div className="bg-toggle-sub">If production has confirmed a number, enter it here. Spend tracking will compare against this instead of the bottom-up calculation above. Leave blank (or 0) to use the proposal total.</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <span style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-muted)' }}>{sym}</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={50}
-                  value={productionBudget || ''}
-                  placeholder="0"
-                  onChange={(e) => setBudgetLimit(parseFloat(e.target.value) || 0)}
-                  className="bg-budget-input"
-                  style={{
-                    width: 140,
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-card)',
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.9375rem',
-                    fontWeight: 600,
-                    textAlign: 'right',
-                  }}
-                />
-              </div>
-            </div>
-
             {/* Crew wages toggle */}
             <div className="bg-section-heading">
               Crew Wages <span className="bg-section-line" />
@@ -753,7 +780,7 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(approvedBudget)} sub={productionBudget > 0 ? 'Production-set' : 'Bottom-up estimate'} />
+              <ApprovedBudgetCard />
               <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(pctApproved)}% of approved`} />
               <StatCard label="Remaining" value={fmt(remainingApproved)} color={remainingApproved >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={`${Math.max(0, 100 - Math.round(pctApproved))}% left to spend`} />
               <StatCard label="Receipts" value={String(expenses.length)} sub={`${expenses.length} logged`} />
