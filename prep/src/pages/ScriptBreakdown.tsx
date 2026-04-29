@@ -34,6 +34,14 @@ const RIGHT_DEFAULT = 400;
 const RIGHT_MIN = 300;
 const RIGHT_MAX = 560;
 
+/* Split-view (Tools → View Breakdown) needs wider bounds than the
+   form-panel above so the full breakdown table fits comfortably,
+   and a separate localStorage key so the user's split layout
+   doesn't clobber their form-panel sizing. */
+const SPLIT_DEFAULT = 700;
+const SPLIT_MIN = 400;
+const SPLIT_MAX = 1100;
+
 export function ScriptBreakdown({ projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
   const [scrollTrigger, setScrollTrigger] = useState(0);
@@ -45,6 +53,7 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
+  const splitPanel = usePanelResize('prep-split-breakdown-w', SPLIT_DEFAULT, SPLIT_MIN, SPLIT_MAX, 'right');
 
   /* Mobile-only — phone viewport (≤768px) collapses the three-panel
      layout into a stack: scene list becomes a slide-in drawer; script
@@ -515,15 +524,27 @@ export function ScriptBreakdown({ projectId }: Props) {
           </div>
         </div>
 
-        {/* Right divider */}
-        <div className="bd-divider" onMouseDown={rightPanel.onMouseDown} onDoubleClick={rightPanel.onDoubleClick}>
+        {/* Right divider — drag-to-resize the right panel. Wired to
+            splitPanel when split-view is on (wider bounds, its own
+            saved width) and rightPanel otherwise. */}
+        <div
+          className="bd-divider"
+          onMouseDown={splitView ? splitPanel.onMouseDown : rightPanel.onMouseDown}
+          onDoubleClick={splitView ? splitPanel.onDoubleClick : rightPanel.onDoubleClick}
+        >
           <div className="bd-divider-grip" />
         </div>
 
         {/* ━━━ RIGHT — Breakdown Form or Full Breakdown Table ━━━ */}
         <div
           className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`}
-          style={isMobile || splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}
+          style={
+            isMobile
+              ? undefined
+              : splitView
+                ? { width: splitPanel.width, minWidth: splitPanel.width }
+                : { width: rightPanel.width, minWidth: rightPanel.width }
+          }
         >
           <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
