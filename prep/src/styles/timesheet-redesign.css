@@ -767,6 +767,73 @@
   display: block;
 }
 
+/* ── Editable Rate Card (team-manage panel) ──────── */
+.tsr-rc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.tsr-rc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-sans);
+}
+.tsr-rc-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.tsr-rc-input-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  background: var(--bg-input, #fff);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.tsr-rc-input-wrap:focus-within {
+  border-color: rgba(var(--a), 0.45);
+}
+.tsr-rc-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+.tsr-rc-input[type="number"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tsr-rc-affix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.03);
+}
+.tsr-rc-input-wrap:has(.tsr-rc-affix:first-child) .tsr-rc-affix:first-child {
+  border-right: 1px solid var(--border-card);
+}
+.tsr-rc-input-wrap:has(.tsr-rc-affix:last-child) .tsr-rc-affix:last-child {
+  border-left: 1px solid var(--border-card);
+}
+
 /* ── Working Day Selector ────────────────────────── */
 .tsr-wd-selector {
   display: flex;
