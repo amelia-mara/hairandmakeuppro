@@ -221,6 +221,14 @@ function UploadZone({
 function OverviewTab({ schedule }: { schedule: ProductionSchedule }) {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
+  // Cast number → display name lookup so we can show e.g. [BRY],
+  // [TOM] pills under each scene instead of the raw cast numbers
+  // the parser stores.
+  const castNameByNumber = new Map<number, string>();
+  for (const c of schedule.castList) {
+    castNameByNumber.set(c.number, c.character || c.name);
+  }
+
   return (
     <div className="sch-overview">
       {/* Stats row */}
@@ -307,13 +315,24 @@ function OverviewTab({ schedule }: { schedule: ProductionSchedule }) {
                     <div className="sch-scene-list">
                       {day.scenes.map((scene, idx) => (
                         <div key={idx} className="sch-scene-row">
-                          <span className="sch-scene-num">{scene.sceneNumber}</span>
-                          <span className={`sch-scene-badge sch-scene-badge--${scene.intExt.toLowerCase()}`}>
-                            {scene.intExt}
-                          </span>
-                          <span className="sch-scene-loc">{scene.setLocation}</span>
-                          <span className="sch-scene-dn">{scene.dayNight}</span>
-                          {scene.pages && <span className="sch-scene-pages">{scene.pages} pgs</span>}
+                          <div className="sch-scene-row-main">
+                            <span className="sch-scene-num">{scene.sceneNumber}</span>
+                            <span className={`sch-scene-badge sch-scene-badge--${scene.intExt.toLowerCase()}`}>
+                              {scene.intExt}
+                            </span>
+                            <span className="sch-scene-loc">{scene.setLocation}</span>
+                            <span className="sch-scene-dn">{scene.dayNight}</span>
+                            {scene.pages && <span className="sch-scene-pages">{scene.pages} pgs</span>}
+                          </div>
+                          {scene.castNumbers.length > 0 && (
+                            <div className="sch-scene-cast">
+                              {scene.castNumbers.map((n) => (
+                                <span key={n} className="sch-scene-cast-pill" title={`Cast ${n}`}>
+                                  {castNameByNumber.get(n) || `Cast ${n}`}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
