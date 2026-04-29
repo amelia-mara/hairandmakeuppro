@@ -308,7 +308,12 @@ export function ScriptBreakdown({ projectId }: Props) {
       <div className={`bd-panels${isMobile && mobileDrawerOpen ? ' bd-panels--drawer-open' : ''}`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
-        <SceneListPanel
+        {/* Hide the scenes list when split-view is active so the
+            script (center) and breakdown (right) get the whole
+            screen for cross-referencing. The user navigates scenes
+            via the breakdown rows; the X in the breakdown header
+            restores the normal layout. */}
+        {!splitView && <SceneListPanel
           totalSceneCount={nonPreambleScenes.length}
           filteredScenes={filteredScenes}
           allCharacters={ALL_CHARACTERS}
@@ -340,7 +345,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               characterIdMap: new Map<string, string>(),
             });
           }}
-        />
+        />}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
@@ -540,7 +545,14 @@ export function ScriptBreakdown({ projectId }: Props) {
               onToggle={() => setToolsOpen(!toolsOpen)}
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
-              onOpenBreakdownView={() => setSplitView(true)}
+              onOpenBreakdownView={() => {
+                // Force Script tab on so the center panel actually
+                // shows the script — entering split-view from a
+                // character tab would otherwise leave the user with
+                // a character profile next to the breakdown.
+                setActiveTab('script');
+                setSplitView(true);
+              }}
               onExportBreakdown={async (format) => {
                 const { exportBreakdownPDF, exportBreakdownXLSX } =
                   await import('@/utils/export/breakdown');
