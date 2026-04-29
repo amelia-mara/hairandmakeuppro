@@ -33,6 +33,26 @@
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUDGET OVERVIEW WIDGET — three-figure grid
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.budget-overview-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   QUICK ACTIONS WIDGET — 2x2 button grid
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: 100%;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    WIDGET CARD
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .widget-card {
@@ -229,3 +249,41 @@
 }
 
 /* ━━━ Draggable Divider ━━━ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE — phones (≤ 768px)
+   The 280px permanent dashboard sidebar squashes content
+   on phone widths. Hide it and rely on the TopBar's nav
+   dropdown for navigation. Tighten dashboard padding and
+   stack the three-up budget figures so the widget fits.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    display: none;
+  }
+
+  .dashboard-header {
+    padding: 18px 16px;
+    gap: 12px;
+  }
+
+  .dashboard-grid-wrapper {
+    padding: 16px;
+  }
+
+  .dashboard-empty {
+    padding: 60px 20px;
+  }
+
+  /* Budget figures stack to a single column so the £25,000
+     numbers don't truncate to "£25,0..." */
+  .budget-overview-figures {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Widget header tighter padding */
+  .widget-header {
+    padding: 10px 12px 8px 14px;
+  }
+}
