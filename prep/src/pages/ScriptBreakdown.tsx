@@ -11,6 +11,7 @@ import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { type DiffResult } from '@/utils/scriptDiff';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useScriptDrafts } from '@/hooks/useScriptDrafts';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { ScriptUploadModal } from './script-breakdown/modals/ScriptUploadModal';
@@ -44,6 +45,15 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
+
+  /* Mobile-only — phone viewport (≤768px) collapses the three-panel
+     layout into a stack: scene list becomes a slide-in drawer; script
+     and breakdown share the screen 50/50. The drawer state is forced
+     closed when we leave the mobile breakpoint so a desktop-resize
+     can't strand it open. */
+  const isMobile = useIsMobile();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setMobileDrawerOpen(false); }, [isMobile]);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -198,6 +208,7 @@ export function ScriptBreakdown({ projectId }: Props) {
     setSelectedSceneId(id);
     setScrollTrigger(n => n + 1);
     setActiveTab('script');
+    setMobileDrawerOpen(false);
   }, []);
 
   /* Auto-select first matching scene when search query changes */
@@ -206,6 +217,13 @@ export function ScriptBreakdown({ projectId }: Props) {
       selectScene(filteredScenes[0].id);
     }
   }, [searchQuery, filteredScenes, selectedSceneId, selectScene]);
+
+  /* Mobile scene-strip navigation — prev/next walk the unfiltered list
+     so the user always lands on a real adjacent scene rather than the
+     next match for whatever search is open. */
+  const sceneIndex = nonPreambleScenes.findIndex((s) => s.id === validSceneId);
+  const prevScene = sceneIndex > 0 ? nonPreambleScenes[sceneIndex - 1] : null;
+  const nextScene = sceneIndex >= 0 && sceneIndex < nonPreambleScenes.length - 1 ? nonPreambleScenes[sceneIndex + 1] : null;
 
   /* Called by IntersectionObserver as user scrolls through script */
   const onSceneVisible = useCallback((id: string) => {
@@ -233,9 +251,61 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [filteredScenes, selectedSceneId, selectScene, store, triggerSave]);
 
   return (
-    <div className="bd-page">
+    <div className={`bd-page${isMobile ? ' bd-page--mobile' : ''}`}>
+      {/* Mobile-only scene navigator strip — sits above the panels.
+          Hamburger opens the scene drawer; arrows step through scenes.
+          On desktop this strip is hidden (display: none) so the layout
+          is unchanged. */}
+      {isMobile && scene && (
+        <div className="bd-mobile-strip">
+          <button
+            type="button"
+            className="bd-mobile-strip-btn"
+            aria-label="Open scene list"
+            onClick={() => setMobileDrawerOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div className="bd-mobile-strip-title" title={`${scene.number} ${scene.intExt}. ${scene.location}`}>
+            <span className="bd-mobile-strip-num">{scene.number}</span>
+            <span className="bd-mobile-strip-loc">{scene.intExt}. {scene.location}</span>
+          </div>
+          <button
+            type="button"
+            className="bd-mobile-strip-btn"
+            aria-label="Previous scene"
+            disabled={!prevScene}
+            onClick={() => prevScene && selectScene(prevScene.id)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="bd-mobile-strip-btn"
+            aria-label="Next scene"
+            disabled={!nextScene}
+            onClick={() => nextScene && selectScene(nextScene.id)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Mobile drawer backdrop — taps dismiss without selecting */}
+      {isMobile && mobileDrawerOpen && (
+        <div className="bd-mobile-drawer-backdrop" onClick={() => setMobileDrawerOpen(false)} />
+      )}
+
       {/* Three panels with draggable dividers */}
-      <div className={`bd-panels`}>
+      <div className={`bd-panels${isMobile && mobileDrawerOpen ? ' bd-panels--drawer-open' : ''}`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
         <SceneListPanel
@@ -446,7 +516,10 @@ export function ScriptBreakdown({ projectId }: Props) {
         </div>
 
         {/* ━━━ RIGHT — Breakdown Form or Full Breakdown Table ━━━ */}
-        <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
+        <div
+          className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`}
+          style={isMobile || splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}
+        >
           <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
