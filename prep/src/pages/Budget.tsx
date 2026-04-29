@@ -59,10 +59,14 @@ export function Budget({ projectId }: BudgetProps) {
   const setIsLTD = store(s => s.setIsLTD);
   const addLineItem = store(s => s.addLineItem);
   const addExpense = store(s => s.addExpense);
+  const projectInfo = store(s => s.projectInfo);
+  const setBudgetLimit = store(s => s.setBudgetLimit);
+  /** Production-set fixed budget. Some productions skip the proposal
+   *  flow and just hand the department a number — when this is > 0
+   *  it overrides the bottom-up approvedBudget calculation. */
+  const productionBudget = projectInfo?.budgetLimit || 0;
   const getTotalBudget = store(s => s.getTotalBudget);
   const getTotalSpent = store(s => s.getTotalSpent);
-  const getRemaining = store(s => s.getRemaining);
-  const getBudgetUsedPercent = store(s => s.getBudgetUsedPercent);
   const getPerCategoryBudget = store(s => s.getPerCategoryBudget);
   const getPerCategorySpend = store(s => s.getPerCategorySpend);
   const getLineItemTotal = store(s => s.getLineItemTotal);
@@ -96,8 +100,6 @@ export function Budget({ projectId }: BudgetProps) {
   /* ── Computed budget values ── */
   const totalBudget = getTotalBudget();
   const totalSpent = getTotalSpent();
-  const remaining = getRemaining();
-  const percentUsed = getBudgetUsedPercent();
   const perCategoryBudget = getPerCategoryBudget();
   const perCategorySpend = getPerCategorySpend();
 
@@ -106,6 +108,12 @@ export function Budget({ projectId }: BudgetProps) {
   const fullBudgetAsk = isLTD
     ? totalBudget + totalCrewCost + contingencyAmount
     : totalBudget + contingencyAmount;
+  /** Final budget the department is working against — production-set
+   *  amount when supplied, otherwise the bottom-up proposal total.
+   *  Used for "Approved Budget", spend %, remaining, variance. */
+  const approvedBudget = productionBudget > 0 ? productionBudget : fullBudgetAsk;
+  const remainingApproved = approvedBudget - totalSpent;
+  const pctApproved = approvedBudget > 0 ? (totalSpent / approvedBudget) * 100 : 0;
 
   const sym = CURRENCY_SYMBOLS[currency] || '£';
   const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -428,10 +436,10 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(fullBudgetAsk)} color="bg-stat-value--teal" sub="Confirmed by production" />
+              <StatCard label="Approved Budget" value={fmt(approvedBudget)} color="bg-stat-value--teal" sub={productionBudget > 0 ? 'Production-set' : 'Bottom-up estimate'} />
               <StatCard label="Proposed Total" value={fmt(totalBudget)} color="bg-stat-value--orange" sub="Materials only" />
-              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(percentUsed)}% of approved budget`} />
-              <StatCard label="Remaining" value={fmt(remaining)} color={remaining >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={hasExpenses ? `${expenses.length} receipts logged` : 'No spend logged yet'} />
+              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(pctApproved)}% of approved budget`} />
+              <StatCard label="Remaining" value={fmt(remainingApproved)} color={remainingApproved >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={hasExpenses ? `${expenses.length} receipts logged` : 'No spend logged yet'} />
             </div>
 
             <div className="bg-section-heading">
@@ -589,6 +597,44 @@ export function Budget({ projectId }: BudgetProps) {
               <StatCard label="Full Budget Ask" value={fmt(fullBudgetAsk)} color="bg-stat-value--teal" sub={isLTD ? 'Materials + wages + contingency' : 'Materials + contingency'} />
             </div>
 
+            {/* Production-set budget — for productions that skip the
+                proposal flow and just hand you a fixed amount. When
+                set (>0), it overrides the bottom-up calculation as
+                the "Approved Budget" on every panel. */}
+            <div className="bg-section-heading">
+              Production-set budget <span className="bg-section-line" />
+            </div>
+            <div className="bg-toggle-block">
+              <div className="bg-toggle-info">
+                <div className="bg-toggle-title">Skip the proposal — production gave you a fixed amount</div>
+                <div className="bg-toggle-sub">If production has confirmed a number, enter it here. Spend tracking will compare against this instead of the bottom-up calculation above. Leave blank (or 0) to use the proposal total.</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <span style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-muted)' }}>{sym}</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={50}
+                  value={productionBudget || ''}
+                  placeholder="0"
+                  onChange={(e) => setBudgetLimit(parseFloat(e.target.value) || 0)}
+                  className="bg-budget-input"
+                  style={{
+                    width: 140,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-card)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '0.9375rem',
+                    fontWeight: 600,
+                    textAlign: 'right',
+                  }}
+                />
+              </div>
+            </div>
+
             {/* Crew wages toggle */}
             <div className="bg-section-heading">
               Crew Wages <span className="bg-section-line" />
@@ -707,9 +753,9 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(fullBudgetAsk)} sub="Confirmed by production" />
-              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(percentUsed)}% of approved`} />
-              <StatCard label="Remaining" value={fmt(remaining)} color={remaining >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={`${100 - Math.round(percentUsed)}% left to spend`} />
+              <StatCard label="Approved Budget" value={fmt(approvedBudget)} sub={productionBudget > 0 ? 'Production-set' : 'Bottom-up estimate'} />
+              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(pctApproved)}% of approved`} />
+              <StatCard label="Remaining" value={fmt(remainingApproved)} color={remainingApproved >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={`${Math.max(0, 100 - Math.round(pctApproved))}% left to spend`} />
               <StatCard label="Receipts" value={String(expenses.length)} sub={`${expenses.length} logged`} />
             </div>
 
@@ -790,10 +836,10 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(fullBudgetAsk)} />
+              <StatCard label="Approved Budget" value={fmt(approvedBudget)} />
               <StatCard label="Total Spent" value={fmt(totalSpent)} color="bg-stat-value--orange" />
-              <StatCard label="Variance" value={fmtSigned(totalSpent - fullBudgetAsk)} color={totalSpent <= fullBudgetAsk ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={totalSpent <= fullBudgetAsk ? 'Under budget' : 'Over budget'} />
-              <StatCard label="Status" value={totalSpent <= fullBudgetAsk ? 'Under budget' : 'Over budget'} color={totalSpent <= fullBudgetAsk ? 'bg-stat-value--teal' : 'bg-stat-value--red'} />
+              <StatCard label="Variance" value={fmtSigned(totalSpent - approvedBudget)} color={totalSpent <= approvedBudget ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={totalSpent <= approvedBudget ? 'Under budget' : 'Over budget'} />
+              <StatCard label="Status" value={totalSpent <= approvedBudget ? 'Under budget' : 'Over budget'} color={totalSpent <= approvedBudget ? 'bg-stat-value--teal' : 'bg-stat-value--red'} />
             </div>
 
             <div className="bg-section-heading">
