@@ -181,6 +181,13 @@ interface PendingScene {
 }
 
 function extractDays(text: string): ScheduleDay[] {
+  const movieMagic = extractDaysMovieMagic(text);
+  if (movieMagic.length > 0) return movieMagic;
+  // Fall back to the production-schedule layout (DAY N + "pgs Scenes:")
+  return extractDaysProductionSchedule(text);
+}
+
+function extractDaysMovieMagic(text: string): ScheduleDay[] {
   const days: ScheduleDay[] = [];
   const lines = text.split('\n');
 
@@ -373,12 +380,18 @@ function extractDays(text: string): ScheduleDay[] {
 function buildCastList(text: string, days: ScheduleDay[]): ScheduleCastMember[] {
   // Pass 1 — dedicated cast list section, if present.
   const explicit = scanExplicitCastList(text);
+  // Pass 1b — production-schedule format ("1.PETER" columns on
+  // page 1). The generic scanner misses this when there's no
+  // space after the dot.
+  const production = scanProductionCastList(text);
   // Pass 2 — inline aggregation across the whole text.
   const inline = aggregateInlineCastRows(text);
 
-  // Merge: explicit wins where both exist; inline fills the rest.
+  // Merge: production / explicit win where both exist; inline
+  // fills the rest.
   const byNumber = new Map<number, string>();
   for (const c of inline) byNumber.set(c.number, c.name);
+  for (const c of production) byNumber.set(c.number, c.name);
   for (const c of explicit) byNumber.set(c.number, c.name); // override
 
   // Pass 3 — backfill referenced numbers with placeholders.
@@ -573,4 +586,285 @@ function toIsoDate(input: string): string {
   const year = m[3];
   if (!month) return input;
   return `${year}-${month}-${day}`;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PRODUCTION-SCHEDULE LAYOUT  (e.g. The Punishing)
+
+   Pure regex / state machine for schedules built by the
+   "production schedule" stationery many UK productions use:
+
+     CAST MEMBERS
+     1.PETER       11.JONAS       21.HULDUFOLK
+     2.GWEN        12.EMIKO       22.GWEN STANDIN
+     ...
+
+     WEEK 1
+     DAY 1 - Farmhouse
+     HOURS: 0600 - 1600 --- (CWD)
+     SR: 0827 / SS: 1554
+     Load in / Set up - 2:00
+     1/8 pgs   Scenes:   EXT   FARMHOUSE - DRIVEWAY   Est. Time
+     4A
+     Day       TAXI passes the road to the Farmhouse  :30
+     ...
+     End of Shooting Day 1 -- Monday, 24 November 2025 -- 4 5/8 Pages -- Time Estimate: 7:30
+
+   Each scene is a "block" — the marker line ("<X> pgs Scenes:")
+   plus the next 2-3 lines that pdf.js scatters across separate
+   rows because they sit at slightly different baselines. We slice
+   between consecutive markers and field-extract from the joined
+   block instead of trying to bind precise line shapes.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const PROD_DAY_HEADER_RE = /^DAY\s+(\d+)(?:\s*[-–]\s*(.+))?$/i;
+const PROD_DAY_END_RE = /End\s+of\s+Shooting\s+Day\s+(\d+)\s*[-–]+\s*([A-Za-z]+),?\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})\s*[-–]+\s*([\d\s\/]+)\s*Pages/i;
+const PROD_SCENE_MARKER_RE = /^(?:\d+\s+)?(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)\s*pgs?\b.*\bScenes:/i;
+const PROD_HOURS_RE = /HOURS:\s*(\d{4})\s*-\s*(\d{4})/i;
+const PROD_CAST_LIST_RE = /\b(\d{1,3})\.\s*([A-Z][A-Z'\-/.\s]{1,40}?)(?=\t|\n|\r|$|\s{2,})/g;
+
+function extractDaysProductionSchedule(rawText: string): ScheduleDay[] {
+  const days: ScheduleDay[] = [];
+  const lines = rawText.split('\n');
+
+  let currentDay: ScheduleDay | null = null;
+  let pendingHours: string | null = null;
+  let shootOrder = 0;
+  // Indices of every "<X> pgs Scenes:" marker line so we can carve
+  // each scene into a contiguous block.
+  const sceneMarkers: { idx: number; dayIdx: number }[] = [];
+
+  // Pass 1: locate day boundaries + scene markers.
+  type Boundary =
+    | { kind: 'day-start'; idx: number; dayNumber: number; location: string }
+    | { kind: 'day-end'; idx: number; dayNumber: number; weekday: string; date: string; totalPages: string }
+    | { kind: 'hours'; idx: number; hours: string }
+    | { kind: 'scene-marker'; idx: number };
+  const boundaries: Boundary[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].replace(/\s+/g, ' ').trim();
+
+    const dh = trimmed.match(PROD_DAY_HEADER_RE);
+    if (dh) {
+      boundaries.push({ kind: 'day-start', idx: i, dayNumber: parseInt(dh[1], 10), location: (dh[2] || '').trim() });
+      continue;
+    }
+    const de = trimmed.match(PROD_DAY_END_RE);
+    if (de) {
+      boundaries.push({ kind: 'day-end', idx: i, dayNumber: parseInt(de[1], 10), weekday: de[2], date: de[3].trim(), totalPages: de[4].trim() });
+      continue;
+    }
+    const hr = trimmed.match(PROD_HOURS_RE);
+    if (hr) {
+      boundaries.push({ kind: 'hours', idx: i, hours: `${formatTime(hr[1])}–${formatTime(hr[2])}` });
+      continue;
+    }
+    if (PROD_SCENE_MARKER_RE.test(trimmed)) {
+      boundaries.push({ kind: 'scene-marker', idx: i });
+    }
+  }
+
+  // Pass 2: walk the boundaries in order, opening / closing days
+  // and folding each scene marker into the active day.
+  for (let bi = 0; bi < boundaries.length; bi++) {
+    const b = boundaries[bi];
+    if (b.kind === 'day-start') {
+      currentDay = {
+        dayNumber: b.dayNumber,
+        location: b.location,
+        hours: pendingHours || undefined,
+        scenes: [],
+      };
+      days.push(currentDay);
+      shootOrder = 0;
+      pendingHours = null;
+      continue;
+    }
+    if (b.kind === 'day-end') {
+      if (currentDay) {
+        currentDay.dayOfWeek = b.weekday;
+        currentDay.date = toIsoDate(b.date);
+        currentDay.totalPages = b.totalPages;
+      }
+      currentDay = null;
+      continue;
+    }
+    if (b.kind === 'hours') {
+      if (currentDay) currentDay.hours = b.hours;
+      else pendingHours = b.hours;
+      continue;
+    }
+    if (b.kind === 'scene-marker' && currentDay) {
+      // The block runs from this marker until the next marker /
+      // boundary / day-end.
+      const startIdx = b.idx;
+      const next = boundaries[bi + 1];
+      const endIdx = next ? next.idx : Math.min(startIdx + 6, lines.length);
+      const blockLines = lines.slice(startIdx, endIdx);
+      shootOrder++;
+      const scene = parseProductionSceneBlock(blockLines, shootOrder);
+      if (scene) currentDay.scenes.push(scene);
+      sceneMarkers.push({ idx: startIdx, dayIdx: days.length - 1 });
+    }
+  }
+
+  return days;
+}
+
+/**
+ * Field-extract a single scene from a 2–6 line block. Each cell
+ * in the source PDF row gets emitted as a separate column by
+ * pdf.js — we keep the tab boundaries intact, classify each cell
+ * by content pattern, and assemble the scene from those classified
+ * cells. This is robust to the half-dozen layout permutations the
+ * format uses (cast inline vs. on next line, location floating,
+ * day/night before vs. after description, etc.).
+ */
+function parseProductionSceneBlock(blockLines: string[], shootOrder: number): ScheduleSceneEntry | null {
+  // Drop empty lines + gutter notes (LOAD, MOVE, LUNCH, page
+  // markers) but keep the original tab structure on each kept line.
+  const usable = blockLines
+    .map((l) => l.replace(/\r/g, '').trimEnd())
+    .filter((l) => l.trim().length > 0)
+    .filter((l) => !/^(Pack\s+down|Lighting\s+Change|Set\s+Move|Load\s+(in|out)|UNIT\s+MOVE|LUNCH|End\s+of\s+Shooting|===\s+PAGE)/i.test(l.trim()));
+  if (usable.length === 0) return null;
+
+  // Marker line — first usable line.
+  const markerCells = usable[0].split(/\t+/).map((s) => s.trim()).filter(Boolean);
+  const pagesMatch = markerCells[0]?.match(/^(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)\s*pgs?$/i);
+  if (!pagesMatch) return null;
+  const pages = pagesMatch[1].trim();
+
+  // Scan marker cells for INT/EXT, location, cast.
+  let intExt: 'INT' | 'EXT' | null = null;
+  let location = '';
+  const castNumbers: number[] = [];
+  for (let ci = 1; ci < markerCells.length; ci++) {
+    const cell = markerCells[ci];
+    if (/^Scenes:$/i.test(cell)) continue;
+    if (/^Est\.?\s*Time$/i.test(cell)) continue;
+    if (/^(INT|EXT|I\/E|INT\/EXT|EXT\/INT)$/i.test(cell)) {
+      intExt = cell.toUpperCase().startsWith('EXT') ? 'EXT' : 'INT';
+      continue;
+    }
+    if (/^(_?\d{1,3}[A-Za-z]?\s*,\s*)+_?\d{1,3}[A-Za-z]?$/.test(cell) || /^_?\d{1,3}[A-Za-z]?$/.test(cell)) {
+      // Pure cast-number cell (single number or comma list).
+      castNumbers.push(...parseCastNumberList(cell));
+      continue;
+    }
+    // Anything else with letters → location text.
+    if (/[A-Z]/.test(cell)) {
+      location = location ? `${location} ${cell}` : cell;
+    }
+  }
+
+  // Subsequent lines — fill in whatever the marker line missed.
+  // Scene number is a line that's just <digits>[<letter>?]. Day/
+  // Night + description live together on a "Day  ...  :30" line.
+  let sceneNumber = '';
+  let dayNight = '';
+  let description = '';
+  let estimatedTime: string | undefined;
+
+  for (let li = 1; li < usable.length; li++) {
+    const cells = usable[li].split(/\t+/).map((s) => s.trim()).filter(Boolean);
+
+    for (const cell of cells) {
+      // INT/EXT / location continuation
+      if (!intExt && /^(INT|EXT|I\/E|INT\/EXT|EXT\/INT)$/i.test(cell)) {
+        intExt = cell.toUpperCase().startsWith('EXT') ? 'EXT' : 'INT';
+        continue;
+      }
+      // Standalone scene-number cell
+      if (!sceneNumber && /^\d+[A-Za-z]?$/.test(cell)) {
+        sceneNumber = cell;
+        continue;
+      }
+      // Day / Night / Morning / Evening — sometimes alone, sometimes
+      // glued to the description (e.g. "MorningGWEN sneaks out").
+      const dnAlone = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)$/i);
+      if (dnAlone && !dayNight) {
+        dayNight = dnAlone[1];
+        continue;
+      }
+      const dnPrefix = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)\s*(.*)$/i);
+      if (dnPrefix) {
+        if (!dayNight) dayNight = dnPrefix[1];
+        const rest = dnPrefix[2].trim();
+        if (rest && rest.length > description.length) description = rest;
+        continue;
+      }
+      // "Morning" glued without separator, e.g. "MorningGWEN sneaks…"
+      const dnGlued = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)([A-Z].*)$/);
+      if (dnGlued) {
+        if (!dayNight) dayNight = dnGlued[1];
+        const rest = dnGlued[2].trim();
+        if (rest && rest.length > description.length) description = rest;
+        continue;
+      }
+      // Estimated-time cell (":30" or "1:00") — store but don't
+      // include in description.
+      if (/^(\d{1,2}:\d{2}|:\d{2})$/.test(cell)) {
+        estimatedTime = cell;
+        continue;
+      }
+      // Single-cell cast-number list (when the marker line was
+      // location-only and this row carries cast).
+      if (/^(_?\d{1,3}[A-Za-z]?\s*,\s*)+_?\d{1,3}[A-Za-z]?$/.test(cell)) {
+        castNumbers.push(...parseCastNumberList(cell));
+        continue;
+      }
+      // Standalone location continuation.
+      if (!location && /^[A-Z][A-Z\s\-,/']{2,}$/.test(cell)) {
+        location = cell;
+        continue;
+      }
+      // Anything else with words → description fragment.
+      if (/[a-z]/.test(cell) && cell.length > 3 && cell.length > description.length) {
+        description = cell;
+      }
+    }
+  }
+
+  if (!intExt) return null;
+  if (!sceneNumber) return null;
+
+  return {
+    sceneNumber,
+    intExt,
+    dayNight: normalizeDayNight(dayNight || 'Day'),
+    setLocation: location,
+    description: description || undefined,
+    pages,
+    castNumbers: Array.from(new Set(castNumbers)),
+    estimatedTime,
+    shootOrder,
+  };
+}
+
+/**
+ * Production-schedule cast list lives on the very first page,
+ * formatted as "1.PETER\t11.JONAS\t21.HULDUFOLK" columns. The
+ * generic explicit-roster scanner usually catches it but the
+ * "no space after the dot" form trips up some patterns; this
+ * helper handles it specifically.
+ */
+function scanProductionCastList(text: string): ScheduleCastMember[] {
+  const out: ScheduleCastMember[] = [];
+  const seen = new Set<number>();
+  // Look at everything before the first "DAY 1" or "WEEK 1" marker.
+  const headerEnd = text.search(/\b(DAY\s+1|WEEK\s+1)\b/);
+  const head = headerEnd > 0 ? text.slice(0, headerEnd) : text.slice(0, 5000);
+  for (const m of head.matchAll(PROD_CAST_LIST_RE)) {
+    const num = parseInt(m[1], 10);
+    if (!Number.isFinite(num) || num < 1 || num > 999) continue;
+    if (seen.has(num)) continue;
+    let name = m[2].trim().replace(/\s+/g, ' ').replace(/[.,;:]+$/, '').trim();
+    if (name.length < 2 || name.length > 60) continue;
+    if (/^(CAST|MEMBERS|HOURS|HOURS:|WEEK|DAY|EXT|INT|EST|TIME|MORNI|MEMBERS|END|WEEK|TOTAL)/i.test(name)) continue;
+    seen.add(num);
+    out.push({ number: num, name: name.toUpperCase() });
+  }
+  return out;
 }
