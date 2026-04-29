@@ -552,12 +552,15 @@
   font-size: 0.75rem;
 }
 
-/* Wider right panel when showing full breakdown */
+/* Wider right panel when showing full breakdown.
+   Width comes from inline style (driven by usePanelResize via the
+   splitPanel hook), so we no longer pin it with !important — that
+   would defeat the drag-to-resize divider between script and
+   breakdown. flex-basis stays auto so the inline width controls
+   the panel size. */
 .bd-right--breakdown {
-  flex: 1 1 auto !important;
-  width: auto !important;
-  min-width: 500px !important;
-  max-width: none !important;
+  flex: 0 0 auto;
+  max-width: none;
 }
 
 /* ━━━ Split-view layout ━━━ */
