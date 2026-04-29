@@ -48,6 +48,57 @@ function getAvatarColor(index: number) {
 }
 
 /**
+ * Confirmation dialog shown before deleting a crew member. Removing
+ * the row also wipes their logged hours, so we never auto-confirm.
+ */
+function RemoveCrewConfirm({
+  member,
+  onCancel,
+  onConfirm,
+}: {
+  member: CrewMember;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="tm-modal-overlay" onClick={onCancel}>
+      <div className="tm-modal tm-modal--sm" onClick={(e) => e.stopPropagation()}>
+        <div className="tm-modal-header">
+          <h3 className="tm-modal-title">Remove {member.name}?</h3>
+          <button
+            type="button"
+            className="tm-modal-close"
+            onClick={onCancel}
+            aria-label="Close"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="tm-modal-body">
+          <p className="tm-modal-message">
+            All of {member.name.split(' ')[0]}'s logged hours, rate-card overrides and timesheet entries on this project will be deleted. This can't be undone.
+          </p>
+        </div>
+        <div className="tm-modal-footer">
+          <button type="button" className="tm-modal-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="tm-modal-confirm tm-modal-confirm--danger"
+            onClick={onConfirm}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Small "You" pill used to mark the current user's crew row so the
  * designer can spot their own invoice apart from the team's at a
  * glance. Rendered alongside the member's name everywhere the crew
@@ -97,9 +148,24 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const crew = store(s => s.crew);
   const selectedWeekStart = store(s => s.selectedWeekStart);
   const addCrew = store(s => s.addCrew);
+  const removeCrew = store(s => s.removeCrew);
   const ensureSelfCrew = store(s => s.ensureSelfCrew);
   const getCrewWeekSummary = store(s => s.getCrewWeekSummary);
   const getTotalLabourCost = store(s => s.getTotalLabourCost);
+
+  // Remove-crew confirmation. Deleting also wipes that crew's logged
+  // hours, so we never auto-confirm — the user has to acknowledge.
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const confirmRemoveMember = useMemo(
+    () => crew.find((c) => c.id === confirmRemoveId) ?? null,
+    [crew, confirmRemoveId],
+  );
+  const handleRemoveCrew = useCallback(() => {
+    if (!confirmRemoveId) return;
+    removeCrew(confirmRemoveId);
+    setConfirmRemoveId(null);
+    showToast('Crew member removed');
+  }, [confirmRemoveId, removeCrew, showToast]);
 
   const { currency } = production;
 
@@ -295,6 +361,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
             toggleRcExpand={toggleRcExpand}
             onAddCrew={() => setShowAddModal(true)}
             onNavTimesheets={() => setActivePanel('team-ts')}
+            onRemoveCrew={(id) => setConfirmRemoveId(id)}
           />
         )}
       </main>
@@ -308,6 +375,14 @@ export function Timesheet({ projectId }: TimesheetProps) {
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}
+        />
+      )}
+
+      {confirmRemoveMember && (
+        <RemoveCrewConfirm
+          member={confirmRemoveMember}
+          onCancel={() => setConfirmRemoveId(null)}
+          onConfirm={handleRemoveCrew}
         />
       )}
 
@@ -752,7 +827,7 @@ function TeamTimesheetsPanel({
    PANEL: Team Management
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TeamManagePanel({
-  crew, crewSummaries, currency, totalLabour, totalDays, expandedRc, toggleRcExpand, onAddCrew, onNavTimesheets,
+  crew, crewSummaries, currency, totalLabour, totalDays, expandedRc, toggleRcExpand, onAddCrew, onNavTimesheets, onRemoveCrew,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -763,6 +838,7 @@ function TeamManagePanel({
   toggleRcExpand: (id: string) => void;
   onAddCrew: () => void;
   onNavTimesheets: () => void;
+  onRemoveCrew: (id: string) => void;
 }) {
   return (
     <div>
@@ -833,6 +909,25 @@ function TeamManagePanel({
               <span className="tsr-tag teal" style={{ marginLeft: 10 }}>Active</span>
               <div style={{ marginLeft: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button className="tsr-btn tsr-btn-ghost tsr-btn-sm" onClick={(e) => { e.stopPropagation(); onNavTimesheets(); }}>Timesheets</button>
+                {/* Removing the "me" row would only re-create itself on
+                    the next render, so we hide the button on it. Every
+                    other crew row gets a small \u00D7 that opens a
+                    confirmation dialog before the row + their hours
+                    are removed. */}
+                {!member.isMe && (
+                  <button
+                    type="button"
+                    className="tsr-icon-btn tsr-icon-btn--danger"
+                    title={`Remove ${member.name}`}
+                    aria-label={`Remove ${member.name}`}
+                    onClick={(e) => { e.stopPropagation(); onRemoveCrew(member.id); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
                 <span className="tsr-chevron">{isOpen ? '\u25B2 Rate card' : '\u25BC Rate card'}</span>
               </div>
             </div>
