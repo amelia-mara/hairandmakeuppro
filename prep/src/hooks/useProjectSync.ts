@@ -653,12 +653,21 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             onContinuityInsert: (payload) => {
               handleContinuityRealtimeInsert(payload);
             },
-            // NOTE: Mobile timesheets are local-only. Prep stores timesheet
-            // state in a sentinel row (week_starting='1970-01-01') with a
-            // different structure. Full two-way timesheet sync requires a
-            // design decision on shared format. Log for now.
+            // Member timesheet rows landed via mobile or another
+            // prep client. Skip the sentinel prep-state row (the
+            // big "1970-01-01" blob); for everything else, refetch
+            // and merge so the team-ts panel shows the latest hours
+            // without the user having to re-mount the timesheet.
             onTimesheetInsert: (payload) => {
-              console.log('[PrepSync] Timesheet entry from app:', payload);
+              const newWeek = (payload.new as { week_starting?: string } | null)?.week_starting;
+              const oldWeek = (payload.old as { week_starting?: string } | null)?.week_starting;
+              if (newWeek === '1970-01-01' || oldWeek === '1970-01-01') return;
+              if (!projectId) return;
+              import('@/services/supabaseSync').then(async (mod) => {
+                const rows = await mod.fetchMemberTimesheets(projectId);
+                const tsStore = useTimesheetStore(projectId);
+                tsStore.getState().mergeMemberEntries(rows);
+              });
             },
           };
 

@@ -103,20 +103,19 @@ export function subscribeToProject(projectId: string): () => void {
       });
     })
 
-    // Prep approved timesheet hours
-    // NOTE: Mobile timesheets are local-only (IndexedDB). Prep stores
-    // timesheet state in a sentinel row (week_starting='1970-01-01') with
-    // a different structure (crew + production + entries blob). Full
-    // two-way timesheet sync requires a design decision on shared format.
-    // For now, log the event so it's visible in dev tools.
+    // Timesheet rows updated by prep (or another tab) — reflect the
+    // change locally so approval / edits the designer just saved
+    // appear without a manual refresh. We only act on rows that
+    // belong to the current auth user; everyone else's hours stay on
+    // their own device.
     .on('postgres_changes', {
-      event: 'UPDATE',
+      event: '*',
       schema: 'public',
       table: 'timesheets',
       filter: `project_id=eq.${projectId}`,
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
-        console.log('[AppRealtime] Timesheet updated from Prep:', payload);
+        handleTimesheetChange(payload);
       });
     })
 
@@ -195,6 +194,64 @@ function handleWithFlag(fn: () => void) {
   } finally {
     setReceivingFromServer(false);
   }
+}
+
+/**
+ * Apply a Realtime timesheet payload to the local store. Skips the
+ * sentinel prep-state row (week_starting='1970-01-01') and any rows
+ * whose user_id isn't the current auth user — those belong to other
+ * team members and stay on their own devices. The store push
+ * triggered by saveEntry / deleteEntry is suppressed by the
+ * receivingFromServer flag so we don't echo back.
+ */
+function handleTimesheetChange(payload: ChangePayload) {
+  const newRow = payload.new as
+    | { user_id?: string; week_starting?: string; entries?: unknown }
+    | null;
+  const oldRow = payload.old as
+    | { user_id?: string; week_starting?: string }
+    | null;
+  const week = newRow?.week_starting ?? oldRow?.week_starting;
+  if (week === '1970-01-01') return;
+  const currentUserId = useAuthStore.getState().user?.id;
+  if (!currentUserId) return;
+  const rowUserId = newRow?.user_id ?? oldRow?.user_id;
+  if (rowUserId !== currentUserId) return;
+
+  // Lazy-import the store to avoid the circular dependency of
+  // realtimeSync ← timesheetStore ← timesheetSync ← projectStore.
+  import('@/stores/timesheetStore').then(({ useTimesheetStore }) => {
+    if (payload.eventType === 'DELETE') {
+      // Whole week was wiped server-side; drop the matching local
+      // entries so we don't keep stale rows in IndexedDB.
+      const monday = week;
+      if (!monday) return;
+      const all = useTimesheetStore.getState().entries;
+      const filtered: typeof all = {};
+      for (const [date, e] of Object.entries(all)) {
+        const d = new Date(date + 'T00:00:00');
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const m = new Date(d);
+        m.setDate(diff);
+        if (m.toISOString().slice(0, 10) !== monday) filtered[date] = e;
+      }
+      useTimesheetStore.setState({ entries: filtered });
+      return;
+    }
+    const rawEntries = Array.isArray(newRow?.entries) ? newRow!.entries : null;
+    if (!rawEntries) return;
+    // Use the store's existing TimesheetEntry type loosely; the
+    // shape is whatever was pushed up earlier so we trust it.
+    const list = rawEntries as Array<Record<string, unknown> & { date: string }>;
+    useTimesheetStore.setState((state) => {
+      const next = { ...state.entries };
+      for (const e of list) {
+        if (e?.date) next[e.date as string] = e as unknown as typeof state.entries[string];
+      }
+      return { entries: next };
+    });
+  });
 }
 
 function handleSceneChange(payload: ChangePayload) {

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { pushMemberWeekDebounced, getWeekStart as getMemberWeekStart } from '@/services/timesheetSync';
 import {
   calculateBECTUTimesheet,
   getLunchDuration,
@@ -248,6 +249,14 @@ interface TimesheetState {
   getEntry: (crewId: string, date: string) => TimesheetEntry;
   saveEntry: (crewId: string, entry: TimesheetEntry) => void;
   deleteEntry: (crewId: string, date: string) => void;
+  /** Toggle approval state on a single entry. Triggers a write-back
+   *  to the team member's Supabase row when the crew row is synced
+   *  so mobile sees the new status. */
+  setEntryStatus: (
+    crewId: string,
+    date: string,
+    status: TimesheetEntry['status'],
+  ) => void;
   /**
    * Apply timesheet rows pulled from Supabase onto the local store.
    * Each member row contributes a list of entries that get keyed
@@ -406,7 +415,28 @@ function entryKey(crewId: string, date: string) {
 function createTimesheetStore(projectId: string) {
   return create<TimesheetState>()(
     persist(
-      (set, get) => ({
+      (set, get) => {
+        // Pulled out so saveEntry / deleteEntry / approveEntry don't
+        // each re-implement the same plumbing. Computes the affected
+        // user + week, gathers that week's current entries from the
+        // store, and pushes via the debounced helper. Designer-only
+        // crew rows (no userId) are no-ops.
+        const pushBackIfSynced = (crewId: string, dateInWeek: string) => {
+          const state = get();
+          const member = state.crew.find((c) => c.id === crewId);
+          if (!member?.userId) return;
+          const weekStart = getMemberWeekStart(dateInWeek);
+          const prefix = `${crewId}:`;
+          const weekEntries: TimesheetEntry[] = [];
+          for (const [k, v] of Object.entries(state.entries)) {
+            if (!k.startsWith(prefix)) continue;
+            if (getMemberWeekStart(v.date) !== weekStart) continue;
+            weekEntries.push(v);
+          }
+          pushMemberWeekDebounced(projectId, member.userId, weekStart, weekEntries);
+        };
+
+        return {
         production: {
           name: '',
           code: '',
@@ -656,11 +686,19 @@ function createTimesheetStore(projectId: string) {
         },
         saveEntry: (crewId, entry) => {
           const key = entryKey(crewId, entry.date);
+          // Stamp sourceUserId on every entry that lives on a synced
+          // crew row so write-back / "Synced" UI logic doesn't have
+          // to re-derive ownership every time.
+          const member = get().crew.find((c) => c.id === crewId);
+          const stamped = member?.userId
+            ? { ...entry, sourceUserId: entry.sourceUserId ?? member.userId }
+            : entry;
           set((s) => ({
-            entries: { ...s.entries, [key]: entry },
+            entries: { ...s.entries, [key]: stamped },
             lastSaved: new Date().toISOString(),
           }));
           triggerTsAutoSave();
+          pushBackIfSynced(crewId, stamped.date);
         },
         deleteEntry: (crewId, date) => {
           const key = entryKey(crewId, date);
@@ -670,6 +708,20 @@ function createTimesheetStore(projectId: string) {
             return { entries: newEntries, lastSaved: new Date().toISOString() };
           });
           triggerTsAutoSave();
+          pushBackIfSynced(crewId, date);
+        },
+        setEntryStatus: (crewId, date, status) => {
+          const key = entryKey(crewId, date);
+          set((s) => {
+            const existing = s.entries[key];
+            if (!existing) return s;
+            return {
+              entries: { ...s.entries, [key]: { ...existing, status } },
+              lastSaved: new Date().toISOString(),
+            };
+          });
+          triggerTsAutoSave();
+          pushBackIfSynced(crewId, date);
         },
 
         // ── Navigation ─────────────────────────────
@@ -792,7 +844,8 @@ function createTimesheetStore(projectId: string) {
           });
           triggerTsAutoSave();
         },
-      }),
+        };
+      },
       {
         name: `prep-happy-timesheet-${projectId}`,
         storage: createJSONStorage(() => localStorage),

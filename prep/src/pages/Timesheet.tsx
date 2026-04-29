@@ -190,6 +190,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const getTotalLabourCost = store(s => s.getTotalLabourCost);
   const saveEntry = store(s => s.saveEntry);
   const deleteEntry = store(s => s.deleteEntry);
+  const setEntryStatus = store(s => s.setEntryStatus);
   const calculateEntry = store(s => s.calculateEntry);
   const getPreviousWrapOut = store(s => s.getPreviousWrapOut);
 
@@ -454,6 +455,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
             expandedTeam={expandedTeam}
             toggleTeamExpand={toggleTeamExpand}
             calculateEntry={calculateEntry}
+            onToggleApproval={(crewId, date, current) => {
+              const next = current === 'approved' ? 'submitted' : 'approved';
+              setEntryStatus(crewId, date, next);
+              showToast(next === 'approved' ? 'Entry approved' : 'Approval cleared');
+            }}
           />
         )}
 
@@ -904,7 +910,7 @@ function InvoicesPanel({ currency, totalLabour, crew }: { currency: CurrencyCode
    PANEL: Team Timesheets
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TeamTimesheetsPanel({
-  crew, crewSummaries, currency, totalHours, totalLabour, expandedTeam, toggleTeamExpand, calculateEntry,
+  crew, crewSummaries, currency, totalHours, totalLabour, expandedTeam, toggleTeamExpand, calculateEntry, onToggleApproval,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -914,6 +920,7 @@ function TeamTimesheetsPanel({
   expandedTeam: Record<string, boolean>;
   toggleTeamExpand: (id: string) => void;
   calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
+  onToggleApproval: (crewId: string, date: string, current: TimesheetEntry['status']) => void;
 }) {
   // Count entries that arrived from a team member's mobile and
   // haven't been touched by the designer yet.
@@ -1017,9 +1024,18 @@ function TeamTimesheetsPanel({
                         {calc ? fmtDec(calc.totalPay, currency) : fmt(member.rateCard.dailyRate, currency)}
                       </div>
                       <div className="tsr-tte-appr">
-                        <span className={`tsr-appr-btn ${entry.status === 'approved' ? 'done' : ''}`}>
+                        <button
+                          type="button"
+                          className={`tsr-appr-btn ${entry.status === 'approved' ? 'done' : ''}`}
+                          onClick={() => onToggleApproval(member.id, entry.date, entry.status)}
+                          title={
+                            entry.status === 'approved'
+                              ? 'Click to revoke approval'
+                              : 'Click to approve'
+                          }
+                        >
                           {entry.status === 'approved' ? 'Approved' : entry.status === 'submitted' ? 'Pending' : 'Draft'}
-                        </span>
+                        </button>
                       </div>
                     </div>
                   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTimesheetStore, getWeekStart, addDays } from '@/stores/timesheetStore';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { AccessRestricted } from '@/components/AccessRestricted';
@@ -7,6 +7,8 @@ import { TimesheetDocument } from './TimesheetDocument';
 import { SummaryCard } from './SummaryCard';
 import { ExportModal } from './ExportModal';
 import { RateCardSettings } from './RateCardSettings';
+import { pullTimesheetForCurrentUser } from '@/services/timesheetSync';
+import { useProjectStore } from '@/stores/projectStore';
 
 export function Timesheet() {
   const access = useProjectAccess();
@@ -22,6 +24,25 @@ export function Timesheet() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getWeekStart(selectedDate));
   const [showExportModal, setShowExportModal] = useState(false);
   const [rateCardExpanded, setRateCardExpanded] = useState(false);
+
+  // Pull any approval / edits the designer pushed from prep into the
+  // local store on mount. Runs once per project switch; realtime
+  // keeps things fresh after that. Skips the local push echo via the
+  // store's setState path (no saveEntry calls happen here).
+  const projectId = useProjectStore((s) => s.currentProject?.id);
+  useEffect(() => {
+    let cancelled = false;
+    if (!projectId) return;
+    pullTimesheetForCurrentUser().then((entries) => {
+      if (cancelled || entries.length === 0) return;
+      useTimesheetStore.setState((state) => {
+        const next = { ...state.entries };
+        for (const e of entries) next[e.date] = e;
+        return { entries: next };
+      });
+    });
+    return () => { cancelled = true; };
+  }, [projectId]);
 
   // Navigate weeks
   const navigateWeek = (direction: 'prev' | 'next') => {
