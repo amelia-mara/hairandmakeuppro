@@ -213,7 +213,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
             }}>
               Production Type
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            <div className="cp-type-grid">
               {PROJECT_TYPES.map((type) => {
                 const Icon = TYPE_ICONS[type];
                 const selected = projectType === type;
@@ -248,7 +248,7 @@ export function CreateProjectModal({ onComplete, onCancel }: CreateProjectModalP
             }}>
               Department
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div className="cp-dept-grid">
               {([
                 { value: 'hmu' as DepartmentType, label: 'Hair & Makeup', Icon: Palette },
                 { value: 'costume' as DepartmentType, label: 'Costume', Icon: Scissors },

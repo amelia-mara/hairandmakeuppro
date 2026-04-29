@@ -496,6 +496,20 @@
   background: var(--accent-gold-soft);
 }
 
+/* Production type / department grids inside the New Project modal —
+   classed (rather than inline) so the @media block below can stack
+   them on phones without changing the desktop layout. */
+.cp-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.cp-dept-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    HEADER
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -553,4 +567,91 @@
 .stagger-2 { animation-delay: 0.1s; animation-fill-mode: backwards; }
 .stagger-3 { animation-delay: 0.15s; animation-fill-mode: backwards; }
 .stagger-4 { animation-delay: 0.2s; animation-fill-mode: backwards; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PHONE — Your Projects hub + New Project modal
+   Same 768px breakpoint as base.css. Desktop layout
+   is untouched; these rules only fire on phones.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  /* Outer page padding — desktop uses 80px/40px which leaves
+     a giant blank zone above the board on a phone. */
+  .hub-projects {
+    padding: 24px 14px 40px;
+  }
+
+  /* The brown "board" wrapper around the cards. Reduce inner
+     padding so the project cards aren't squeezed. */
+  .hub-projects-board {
+    padding: 22px 16px 24px;
+    border-radius: 14px;
+  }
+
+  /* Decorative rainbow swirl behind the projects board. The
+     desktop version is 600px and offset off-screen; on a phone
+     it dominates the page. Scale + reposition so it stays a
+     soft accent rather than wallpaper. */
+  .hub-projects-rainbow {
+    width: 360px;
+    height: 360px;
+    top: -60px;
+    right: -120px;
+    opacity: 0.32;
+  }
+
+  /* Header row — drop the title size + reduce bottom spacing. */
+  .hub-projects-header {
+    margin-bottom: 18px;
+  }
+  .hub-projects-title {
+    font-size: 1.125rem;
+  }
+
+  /* Cards grid — already auto-fills; just tighten the gap. */
+  .hub-projects-grid {
+    gap: 14px;
+  }
+
+  /* Real project cards — keep aesthetic but trim the height so
+     two stack within a viewport without scrolling forever. */
+  .project-card {
+    min-height: 220px;
+  }
+  .project-card-header {
+    padding: 18px 18px 12px 22px;
+  }
+  .project-card-body {
+    padding: 0 18px 16px 22px;
+  }
+  .project-card-footer {
+    padding: 12px 16px 12px 22px;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  /* "+ New Project" placeholder — desktop reserves 280px tall +
+     60px vertical padding which is wasted space on a phone. */
+  .new-project-card {
+    min-height: 140px;
+    padding: 28px 16px;
+  }
+  .new-project-card .icon-circle {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 10px;
+  }
+
+  /* New Project modal — fit the viewport width / height comfortably
+     and stack the production-type cards 2-up so labels don't get
+     truncated by the squeeze of three columns at 312px wide. */
+  .modal-glass {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 32px);
+    border-radius: 12px;
+  }
+  .cp-type-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 
