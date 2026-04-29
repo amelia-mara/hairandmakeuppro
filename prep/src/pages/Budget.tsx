@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS,
   useBreakdownStore, useParsedScriptStore, useCharacterOverridesStore,
@@ -8,6 +8,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useBudgetStore, CURRENCY_SYMBOLS, type BudgetLineItem } from '@/stores/budgetStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import { ReceiptConfirmPanel, type ConfirmData } from '@/components/budget/receipts/ReceiptConfirmPanel';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /* ━━━ Types ━━━ */
 
@@ -36,6 +37,14 @@ export function Budget({ projectId }: BudgetProps) {
   const [activePanel, setActivePanel] = useState('overview');
   const [expensePanelOpen, setExpensePanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  /* Mobile-only — phone viewport (≤768px) hides the 210px sidebar by
+     default and slides it in from the left when ☰ is tapped. Picking
+     a section auto-closes the drawer. */
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
+  const pickPanel = (id: string) => { setActivePanel(id); setDrawerOpen(false); };
   const project = useProjectStore((s) => s.getProject(projectId));
   const deptLabel = project?.department === 'costume' ? 'Costume' : 'Hair & Makeup';
 
@@ -216,7 +225,11 @@ export function Budget({ projectId }: BudgetProps) {
   );
 
   return (
-    <div className="bg-page">
+    <div className={`bg-page${isMobile ? ' bg-page--mobile' : ''}${isMobile && drawerOpen ? ' bg-page--drawer-open' : ''}`}>
+      {/* Mobile drawer backdrop */}
+      {isMobile && drawerOpen && (
+        <div className="bg-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
       {/* ── SIDEBAR ── */}
       <nav className="bg-sidebar">
         <div className="bg-sidebar-label">Budget Manager</div>
@@ -224,7 +237,7 @@ export function Budget({ projectId }: BudgetProps) {
           <button
             key={s.id}
             className={`bg-sidebar-item ${activePanel === s.id ? 'bg-sidebar-item--active' : ''}`}
-            onClick={() => setActivePanel(s.id)}
+            onClick={() => pickPanel(s.id)}
           >
             <span className="bg-sidebar-num">{s.num}</span>
             <span className="bg-sidebar-text">{s.title}</span>
@@ -246,6 +259,21 @@ export function Budget({ projectId }: BudgetProps) {
 
       {/* ── MAIN CONTENT ── */}
       <main className="bg-main">
+        {isMobile && (
+          <button
+            type="button"
+            className="bg-drawer-toggle"
+            aria-label="Open budget sections"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span>Sections</span>
+          </button>
+        )}
         {/* ═══════════════════════════════════
             01  OVERVIEW
         ═══════════════════════════════════ */}

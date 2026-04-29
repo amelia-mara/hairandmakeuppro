@@ -1116,3 +1116,95 @@
 
 /* ━━━ Keep existing receipt confirm panel + modal styles ━━━ */
 /* These are imported from budget-forms.css which is still loaded */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUDGET — phone (≤ 768px)
+
+   210px sidebar collapses to a slide-in drawer; ☰ at the top of the
+   main panel opens it. 4-up / 3-up / 2-up stat grids stack to two
+   columns (single column for the BUDGET OVERVIEW value cards would
+   feel too tall). The 2-col bg-info-grid stacks 1-col so values
+   like "Hair & Makeup" stop wrapping mid-word.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .bg-page--mobile .bg-sidebar {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: min(85vw, 280px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+    background: var(--bg-surface) !important;
+  }
+  .bg-page--drawer-open .bg-sidebar {
+    transform: translateX(0);
+  }
+  .bg-drawer-backdrop {
+    position: fixed;
+    inset: 80px 0 0 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: bg-drawer-fade 0.18s ease-out;
+  }
+  @keyframes bg-drawer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .bg-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+
+  /* Main takes full width and tightens its outer padding. */
+  .bg-page--mobile .bg-main {
+    padding: 14px 14px 60px;
+  }
+
+  /* Page header: title + "Last updated" stack instead of competing
+     for the same row. */
+  .bg-page--mobile .bg-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .bg-page--mobile .bg-title {
+    font-size: 1.375rem;
+  }
+  .bg-page--mobile .bg-header-actions {
+    padding-top: 0;
+  }
+
+  /* Stat grids — drop 4-up / 3-up to 2-up so the £ values still
+     have room without wrapping. */
+  .bg-page--mobile .bg-stat-grid--4,
+  .bg-page--mobile .bg-stat-grid--3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Two-column production-details grid stacks so values aren't
+     truncated. */
+  .bg-page--mobile .bg-info-grid {
+    grid-template-columns: 1fr;
+  }
+  .bg-page--mobile .bg-info-cell {
+    border-right: none;
+  }
+}
