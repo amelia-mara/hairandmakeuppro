@@ -23,11 +23,7 @@ import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
-// Scriptie chat is temporarily disabled — see commit history for the
-// full implementation. Mounting it broke the project view because
-// its module tree pulled in breakdownStore at app boot. Will be
-// re-enabled once a fully isolated load path is in place.
-// import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
+import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -429,6 +425,9 @@ function ProjectView({
           <Team projectId={projectId} />
         )}
       </ProjectLayout>
+      {isFeatureEnabled('aiAssistantChat', userTier) && (
+        <ScriptieChat projectId={projectId} />
+      )}
     </div>
   );
 }
