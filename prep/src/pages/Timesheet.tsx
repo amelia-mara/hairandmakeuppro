@@ -555,6 +555,8 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const toggleTeamExpand = (id: string) => setExpandedTeam(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleRcExpand = (id: string) => setExpandedRc(prev => ({ ...prev, [id]: !prev[id] }));
 
+  const sidebarTeam = crew.filter(c => !c.isMe);
+
   return (
     <div className={`tsr-layout${isMobile ? ' tsr-layout--mobile' : ''}${isMobile && drawerOpen ? ' tsr-layout--drawer-open' : ''}`}>
       {/* Mobile drawer backdrop */}
@@ -574,6 +576,37 @@ export function Timesheet({ projectId }: TimesheetProps) {
             <span className={`tsr-sb-dot ${item.status}`} />
           </button>
         ))}
+        <hr className="tsr-sb-divider" />
+
+        <div className="tsr-sb-label">Team</div>
+        {sidebarTeam.length === 0 ? (
+          <div className="tsr-sb-team-empty">No team yet</div>
+        ) : (
+          sidebarTeam.map(member => {
+            const isActive = activePanel === 'my-ts' && viewingCrewId === member.id;
+            const synced = !!member.userId;
+            return (
+              <button
+                key={member.id}
+                type="button"
+                className={`tsr-sb-team-item ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  openMemberTimesheet(member.id);
+                  setDrawerOpen(false);
+                }}
+                title={member.position || member.name}
+              >
+                <span className="tsr-sb-team-name">{member.name || 'Unnamed'}</span>
+                <span
+                  className={`tsr-sb-team-tag ${synced ? 'synced' : 'manual'}`}
+                  title={synced ? 'Synced from app' : 'Manually added'}
+                >
+                  {synced ? 'Synced' : 'Manual'}
+                </span>
+              </button>
+            );
+          })
+        )}
         <hr className="tsr-sb-divider" />
 
         <div className="tsr-sb-label">At a glance</div>
