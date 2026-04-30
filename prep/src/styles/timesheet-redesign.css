@@ -112,11 +112,6 @@
   margin: 14px 18px;
 }
 
-/* Legend rules kept as no-ops in case any older tree references
-   them — the sidebar now shows the at-a-glance stats below. */
-.tsr-sb-legend-row { display: none; }
-.tsr-sb-legend-dot { display: none; }
-
 /* At-a-glance summary that replaced the Completion legend.
    One row per stat, label left, value right. Picks up the same
    accent colours as the rest of the timesheet (orange for the
@@ -168,11 +163,6 @@
   justify-content: space-between;
   margin-bottom: 26px;
 }
-
-/* Eyebrow class is no longer rendered (the "01 — …" labels were
-   stripped from the JSX), but the rule stays as a safe no-op in
-   case any older tree references it. */
-.tsr-ph-eyebrow { display: none; }
 
 /* "Back to mine" pill that appears at the top of the My Timesheets
    panel when the designer is viewing a teammate's timesheet. Quiet

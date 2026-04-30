@@ -861,40 +861,25 @@ export type EntryStatus = 'draft' | 'pending' | 'approved';
 export type TimesheetView = 'week' | 'sheet';
 
 export interface RateCard {
-  /** Prep-day rate (fittings, tests, R&D). */
   prepRate: number;
-  /** Full shoot-day rate. */
   shootRate: number;
-  /**
-   * Legacy single rate. Older persisted cards only carry this; we
-   * fall back to it when prepRate / shootRate are missing.
-   * @deprecated read via getEffectiveRate.
-   */
-  dailyRate?: number;
   baseDayHours: BaseDayHours;
-  baseContract: BaseContract; // BECTU base contract (10+1 or 11+1)
-  dayType: DayType; // Working day type - determines lunch duration
-  otMultiplier: number; // 1.5x after base hours
-  lateNightMultiplier: number; // 2x after 23:00
-  preCallMultiplier: number; // 1.5x for pre-call hours
-  sixthDayMultiplier: number; // 1.5x
-  seventhDayMultiplier: number; // 2x for 7th consecutive day
+  baseContract: BaseContract;
+  dayType: DayType;
+  otMultiplier: number;
+  lateNightMultiplier: number;
+  preCallMultiplier: number;
+  sixthDayMultiplier: number;
+  seventhDayMultiplier: number;
   kitRental: number;
-  lunchDuration: number; // in minutes - derived from dayType: SWD=60, CWD/SCWD=30
+  lunchDuration: number;
 }
 
-/**
- * Resolve which rate applies for a given day. Falls back to the
- * legacy dailyRate when the new fields aren't yet on the card.
- */
 export function getEffectiveRate(
   rateCard: RateCard,
   rateType: 'prep' | 'shoot' = 'shoot',
 ): number {
-  if (rateType === 'prep') {
-    return rateCard.prepRate ?? rateCard.dailyRate ?? rateCard.shootRate ?? 0;
-  }
-  return rateCard.shootRate ?? rateCard.dailyRate ?? rateCard.prepRate ?? 0;
+  return rateType === 'prep' ? rateCard.prepRate : rateCard.shootRate;
 }
 
 export interface TimesheetEntry {

@@ -58,12 +58,6 @@ interface CommonProps {
   onEdit: (entry: TimesheetEntry) => void;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   WEEK VIEW
-   Conventional table — one row per day Mon→Sun, the
-   shape an artist would print and submit to production.
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
 export function WeekTimesheet({
   crew,
   weekStartDate,
@@ -224,8 +218,6 @@ export function WeekTimesheet({
         </div>
       </div>
 
-      {/* Sign-off footer (visual only — production submission is via
-          Export). Reads as a real submitted-timesheet would. */}
       <div className="tsr-wts-signoff">
         <div className="tsr-wts-signoff-line">
           <span className="tsr-wts-signoff-label">Crew Member</span>
@@ -244,14 +236,6 @@ export function WeekTimesheet({
   );
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   MONTH VIEW
-   Calendar grid spanning the full month containing the
-   currently-selected week. Mon-start, 5–6 rows of 7
-   cards. Tapping a card opens the LogDayModal; clicking
-   the week-strip on the left jumps Week view to that week.
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
 export function MonthGrid({
   crew,
   weekStartDate,
@@ -267,23 +251,20 @@ export function MonthGrid({
   onJumpToToday: () => void;
 }) {
   const todayIso = new Date().toISOString().slice(0, 10);
-  // Pick the month from the middle of the visible week so jumping
-  // back/forward within a month doesn't accidentally flip to the
-  // next/prev month.
+  // Anchor on the middle of the visible week so a back/forward jump
+  // doesn't accidentally flip into a neighbouring month.
   const anchor = new Date(addDaysIso(weekStartDate, 3) + 'T00:00:00');
   const year = anchor.getFullYear();
   const month = anchor.getMonth();
 
-  // Compute the visible range — Monday on/before the 1st, Sunday
-  // on/after the last day of the month.
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
-  const firstDay = first.getDay(); // 0 = Sun
-  const startOffset = firstDay === 0 ? -6 : 1 - firstDay; // Mon-start
+  const firstDay = first.getDay();
+  const startOffset = firstDay === 0 ? -6 : 1 - firstDay;
   const gridStart = new Date(first);
   gridStart.setDate(first.getDate() + startOffset);
   const lastDay = last.getDay();
-  const endOffset = lastDay === 0 ? 0 : 7 - lastDay; // pad to Sun
+  const endOffset = lastDay === 0 ? 0 : 7 - lastDay;
   const gridEnd = new Date(last);
   gridEnd.setDate(last.getDate() + endOffset);
   const totalDays = Math.round((gridEnd.getTime() - gridStart.getTime()) / 86_400_000) + 1;
@@ -295,7 +276,6 @@ export function MonthGrid({
 
   const monthLabel = anchor.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-  // Group days into weeks of 7 for layout + per-week totals.
   const weeks: DayRow[][] = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
@@ -313,8 +293,6 @@ export function MonthGrid({
 
   const stepMonth = (delta: -1 | 1) => {
     const next = new Date(year, month + delta, 1);
-    // Snap to the Monday on/before the 1st so the week navigator
-    // (in Week view) stays aligned.
     const day = next.getDay();
     const off = day === 0 ? -6 : 1 - day;
     const monday = new Date(next);

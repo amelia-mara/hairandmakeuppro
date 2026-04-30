@@ -1,15 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import type { TimesheetEntry } from '@/stores/timesheetStore';
 
-// Prep-side write-back layer for the per-user-per-week rows that
-// mobile owns. Prep only calls these for crew rows that carry a
-// `userId`; designer-only crew rows stay local. Counterpart to
-// mobile-pwa's services/timesheetSync.ts.
-
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const DEBOUNCE_MS = 700;
 
-/** Monday of the week containing `dateStr`, in YYYY-MM-DD. */
 export function getWeekStart(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   const day = date.getDay();
@@ -19,10 +13,7 @@ export function getWeekStart(dateStr: string): string {
   return monday.toISOString().slice(0, 10);
 }
 
-/**
- * Replace one user's week of entries on Supabase. Empty arrays delete
- * the row so the table stays tidy after the user's hours are wiped.
- */
+/** Empty `entries` deletes the row instead of upserting. */
 export async function pushMemberWeek(
   projectId: string,
   userId: string,
@@ -53,10 +44,6 @@ export async function pushMemberWeek(
   if (error) console.warn('[PrepTimesheetSync] upsert failed:', error.message);
 }
 
-/**
- * Debounced wrapper. Coalesces a burst of edits to the same week so
- * we don't spam Supabase.
- */
 export function pushMemberWeekDebounced(
   projectId: string,
   userId: string,
