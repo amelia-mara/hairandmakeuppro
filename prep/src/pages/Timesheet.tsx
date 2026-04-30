@@ -822,7 +822,6 @@ function OverviewPanel({
     <div>
       <div className="tsr-ph">
         <div>
-          <div className="tsr-ph-eyebrow">01 — Overview</div>
           <h2 className="tsr-ph-title"><span className="tsr-ph-title-italic">Timesheet</span>{' '}<span className="tsr-ph-title-regular">Overview</span></h2>
           <div className="tsr-ph-sub">{crew.length} crew members active</div>
         </div>
@@ -988,7 +987,6 @@ function MyTimesheetsPanel({
     <div>
       <div className="tsr-ph">
         <div>
-          <div className="tsr-ph-eyebrow">02 — My Timesheets</div>
           <div className="tsr-ph-title">My Timesheets</div>
           <div className="tsr-ph-sub">
             Track your hours ·
@@ -1097,7 +1095,6 @@ function InvoicesPanel({ currency, totalLabour, crew }: { currency: CurrencyCode
     <div>
       <div className="tsr-ph">
         <div>
-          <div className="tsr-ph-eyebrow">03 — My Invoices</div>
           <div className="tsr-ph-title">My Invoices</div>
           <div className="tsr-ph-sub">Auto-generated from your timesheet · 14 day payment terms</div>
         </div>
@@ -1179,7 +1176,6 @@ function TeamTimesheetsPanel({
     <div>
       <div className="tsr-ph">
         <div>
-          <div className="tsr-ph-eyebrow">04 — Team Timesheets</div>
           <div className="tsr-ph-title">Team Timesheets</div>
           <div className="tsr-ph-sub">Review and approve your crew's hours · tap a row to expand</div>
         </div>
@@ -1320,7 +1316,6 @@ function TeamManagePanel({
     <div>
       <div className="tsr-ph">
         <div>
-          <div className="tsr-ph-eyebrow">05 — Team Management</div>
           <div className="tsr-ph-title">Team Management</div>
           <div className="tsr-ph-sub">Crew roster, rate cards, and working day agreements</div>
         </div>
