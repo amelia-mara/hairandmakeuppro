@@ -112,20 +112,45 @@
   margin: 14px 18px;
 }
 
-.tsr-sb-legend-row {
+/* Legend rules kept as no-ops in case any older tree references
+   them — the sidebar now shows the at-a-glance stats below. */
+.tsr-sb-legend-row { display: none; }
+.tsr-sb-legend-dot { display: none; }
+
+/* At-a-glance summary that replaced the Completion legend.
+   One row per stat, label left, value right. Picks up the same
+   accent colours as the rest of the timesheet (orange for the
+   main earnings figure, teal for team size). */
+.tsr-sb-stat {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 8px;
-  padding: 3px 18px;
-  font-size: 11px;
+  padding: 6px 18px;
+}
+.tsr-sb-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
-
-.tsr-sb-legend-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.tsr-sb-stat-val {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.tsr-sb-stat-val.orange { color: var(--accent); }
+.tsr-sb-stat-val.teal { color: var(--brand-teal, #4ABFB0); }
+.tsr-sb-stat-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0;
+  margin-left: 2px;
 }
 
 /* ── Main Content ────────────────────────────────── */
