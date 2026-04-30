@@ -23,10 +23,7 @@ import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
-// Temporarily un-mounted while we diagnose a regression that left
-// the project view blank. The component + store remain in the tree
-// but aren't rendered until the cause is identified.
-// import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
+import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -428,6 +425,9 @@ function ProjectView({
           <Team projectId={projectId} />
         )}
       </ProjectLayout>
+      {isFeatureEnabled('aiAssistantChat', userTier) && (
+        <ScriptieChat projectId={projectId} />
+      )}
     </div>
   );
 }
