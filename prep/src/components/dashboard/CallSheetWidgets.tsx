@@ -188,7 +188,6 @@ function SceneRow({ scene, ctx }: { scene: CallSheetScene; ctx: BreakdownContext
         <div className="dash-scene-synopsis">{scriptScene.synopsis}</div>
       )}
 
-      {/* Per-character HMU breakdown rows pulled from the breakdown store. */}
       {breakdown && breakdown.characters.length > 0 && (
         <div className="dash-scene-bd">
           {breakdown.characters.map((cb) => (
@@ -197,7 +196,6 @@ function SceneRow({ scene, ctx }: { scene: CallSheetScene; ctx: BreakdownContext
         </div>
       )}
 
-      {/* Cast pills row when no breakdown is hooked up yet. */}
       {!breakdown && scene.cast && scene.cast.length > 0 && (
         <div className="dash-scene-cast">
           {scene.cast.map((id) => (
@@ -206,8 +204,6 @@ function SceneRow({ scene, ctx }: { scene: CallSheetScene; ctx: BreakdownContext
         </div>
       )}
 
-      {/* Scene-wide call-outs — prefer breakdown data; fall back to the
-          call sheet's notes column when breakdown is empty. */}
       {(sceneSfx || sceneEnv || hmuFromSheet || sfxFromSheet) && (
         <div className="dash-scene-callouts">
           {sceneSfx && <Callout label="SFX" value={sceneSfx} />}

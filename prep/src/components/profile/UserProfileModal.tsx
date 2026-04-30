@@ -297,9 +297,7 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
                   inputMode="decimal"
                   min={0}
                   step={10}
-                  value={
-                    draft.rateCard.prepRate ?? draft.rateCard.dailyRate ?? 0
-                  }
+                  value={draft.rateCard.prepRate}
                   onChange={(e) =>
                     setRate('prepRate', Number(e.target.value) || 0)
                   }
@@ -312,9 +310,7 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
                   inputMode="decimal"
                   min={0}
                   step={10}
-                  value={
-                    draft.rateCard.shootRate ?? draft.rateCard.dailyRate ?? 0
-                  }
+                  value={draft.rateCard.shootRate}
                   onChange={(e) =>
                     setRate('shootRate', Number(e.target.value) || 0)
                   }
