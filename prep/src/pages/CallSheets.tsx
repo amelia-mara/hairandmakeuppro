@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useCallSheetStore, type CallSheetFile } from '@/stores/callSheetStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import { extractTextFromPDF, parseCallSheetText, type ParseContext } from '@/utils/callSheetParser';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -17,6 +19,11 @@ export function CallSheets({ projectId }: CallSheetsProps) {
   const sheets = store((s) => s.sheets);
   const addSheet = store((s) => s.addSheet);
   const removeSheet = store((s) => s.removeSheet);
+
+  // Schedule cast roster — used as a whitelist when parsing the call
+  // sheet so noise like a stray "1330" timing isn't picked up as cast.
+  const scheduleStore = useScheduleStore(projectId);
+  const schedule = scheduleStore((s) => s.current);
 
   const [viewingSheet, setViewingSheet] = useState<CallSheetFile | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -58,17 +65,38 @@ export function CallSheets({ projectId }: CallSheetsProps) {
         });
         const thumbnailUri = await generateThumbnail(dataUri);
 
-        // Try to parse date from filename, fallback to today
+        // Run the same regex parser mobile uses so the PDF, the prep
+        // dashboard widgets, and mobile's Today page all see identical
+        // data. Tolerant of failures — the thumbnail upload still works
+        // even if the parser can't make sense of the layout.
+        // Pass the schedule's cast roster (when present) as parser
+        // context so misclassified time tokens don't end up as cast.
+        const context: ParseContext | undefined = schedule
+          ? { validCastNumbers: new Set(schedule.castList.map((m) => m.number)) }
+          : undefined;
+        let parsed;
+        try {
+          const text = await extractTextFromPDF(file);
+          parsed = parseCallSheetText(text, dataUri, context);
+        } catch (err) {
+          console.warn('[CallSheets] regex parse failed; storing PDF only', err);
+        }
+
+        // Prefer the date the parser pulled out of the call sheet header;
+        // fall back to a date in the filename, then today.
         const dateMatch = file.name.match(/(\d{4}[-/]\d{2}[-/]\d{2})/);
-        const date = dateMatch ? dateMatch[1].replace(/\//g, '-') : new Date().toISOString().slice(0, 10);
+        const date =
+          parsed?.date ??
+          (dateMatch ? dateMatch[1].replace(/\//g, '-') : new Date().toISOString().slice(0, 10));
 
         addSheet({
-          id: crypto.randomUUID(),
+          id: parsed?.id ?? crypto.randomUUID(),
           name: file.name.replace(/\.pdf$/i, ''),
           date,
           dataUri,
           thumbnailUri,
           uploadedAt: new Date().toISOString(),
+          parsed,
         });
       } finally {
         setUploading(false);

@@ -33,6 +33,26 @@
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUDGET OVERVIEW WIDGET — three-figure grid
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.budget-overview-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   QUICK ACTIONS WIDGET — 2x2 button grid
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: 100%;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    WIDGET CARD
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .widget-card {
@@ -229,3 +249,425 @@
 }
 
 /* ━━━ Draggable Divider ━━━ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE — phones (≤ 768px)
+   The 280px permanent dashboard sidebar squashes content
+   on phone widths. Hide it and rely on the TopBar's nav
+   dropdown for navigation. Tighten dashboard padding and
+   stack the three-up budget figures so the widget fits.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    display: none;
+  }
+
+  .dashboard-header {
+    padding: 18px 16px;
+    gap: 12px;
+  }
+
+  .dashboard-grid-wrapper {
+    padding: 16px;
+  }
+
+  .dashboard-empty {
+    padding: 60px 20px;
+  }
+
+  /* Budget figures stack to a single column so the £25,000
+     numbers don't truncate to "£25,0..." */
+  .budget-overview-figures {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Widget header tighter padding */
+  .widget-header {
+    padding: 10px 12px 8px 14px;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCRIPT BREAKDOWN — phone (≤ 768px)
+
+   Three-panel desktop layout collapses to a stack:
+     - Sticky scene-strip header  (☰ + scene name + ◀ ▶)
+     - Script panel               (top half, scrollable)
+     - Breakdown form             (bottom half, scrollable)
+     - Scene list                 (slide-in left drawer, hidden by default)
+
+   The vertical-resize divider isn't reproduced on mobile — both
+   panels keep an internal scroll, which is what users expect on a
+   phone. Desktop dimensions are untouched.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .bd-page--mobile {
+    /* Phones: pin the page to the viewport so the inner panels can
+       scroll without dragging the whole page with them. */
+    height: calc(100vh - 80px);
+    height: calc(100dvh - 80px);
+  }
+
+  /* ── Scene navigator strip ───────────────────────── */
+  .bd-mobile-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-card);
+    flex-shrink: 0;
+    z-index: 5;
+  }
+  .bd-mobile-strip-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .bd-mobile-strip-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .bd-mobile-strip-btn:not(:disabled):hover,
+  .bd-mobile-strip-btn:not(:disabled):active {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+  }
+  .bd-mobile-strip-title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .bd-mobile-strip-num {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    flex-shrink: 0;
+  }
+  .bd-mobile-strip-loc {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Stack: script (top half) + breakdown (bottom half) ── */
+  .bd-page--mobile .bd-panels {
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Scene-list drawer ───────────────────────────── */
+  .bd-page--mobile .bd-left {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: min(85vw, 320px) !important;
+    min-width: 0 !important;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+    /* The desktop bd-left is transparent so the page rainbow shows
+       through; as a fixed drawer it needs an opaque surface or it
+       reveals the page behind it. */
+    background: var(--bg-surface) !important;
+  }
+  .bd-page--mobile .bd-panels--drawer-open .bd-left {
+    transform: translateX(0);
+  }
+  .bd-mobile-drawer-backdrop {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: bd-mobile-drawer-fade 0.18s ease-out;
+  }
+  @keyframes bd-mobile-drawer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ── Center (script) + right (breakdown) share screen 50/50 ── */
+  .bd-page--mobile .bd-center {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* Script page has a bd-right beneath bd-center; cap each at 50%
+     and put a divider between them. Continuity has no bd-right so
+     this rule is skipped via :has and bd-center takes full height. */
+  .bd-page--mobile .bd-panels:has(.bd-right) .bd-center {
+    flex: 1 1 50%;
+    border-bottom: 1px solid var(--border-card);
+  }
+  .bd-page--mobile .bd-right {
+    flex: 1 1 50%;
+    min-height: 0;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    border-left: none;
+  }
+
+  /* Hide the desktop-only vertical divider (its mouse-only handlers
+     don't translate to touch and the stacked layout doesn't need it). */
+  .bd-page--mobile .bd-divider {
+    display: none;
+  }
+
+  /* Tighten center panel chrome so script gets more vertical room. */
+  .bd-page--mobile .cp-tabstrip {
+    padding-left: 4px;
+  }
+  .bd-page--mobile .cp-divider-tab {
+    padding: 8px 16px 6px;
+    font-size: 0.6875rem;
+  }
+  .bd-page--mobile .cp-toolbar {
+    padding: 4px 12px;
+  }
+  .bd-page--mobile .sv-paper {
+    padding: 18px 18px;
+    margin: 8px 8px 0;
+  }
+
+  /* Floating zoom isn't reachable on touch (no hover) — surface it
+     so users on phones can still adjust font size. */
+  .bd-page--mobile .bd-zoom-float {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Tighten the breakdown header so the title + ⋯ + scene subtitle
+     don't dominate the bottom-half on phones. */
+  .bd-page--mobile .fp-panel-header {
+    padding: 10px 14px;
+  }
+  .bd-page--mobile .fp-panel-title {
+    font-size: 0.75rem;
+  }
+
+  /* The Tools dropdown (position: fixed; right: 0; width: 320px) is
+     unchanged — it already overlays the viewport correctly on phones. */
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Call sheet–driven widgets (Today's Cast, H&MU Reqs)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.dash-widget-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dash-widget-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-card);
+}
+.dash-widget-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-heading);
+}
+.dash-widget-sub {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+.dash-widget-empty {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 12px;
+  line-height: 1.5;
+}
+
+/* ── Today's Cast rows ── */
+.dash-cast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dash-cast-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px dashed var(--border-card);
+}
+.dash-cast-row:last-child { border-bottom: none; }
+.dash-cast-id {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-align: center;
+}
+.dash-cast-name { font-size: 0.8125rem; color: var(--text-heading); font-weight: 500; }
+.dash-cast-actor { font-size: 0.6875rem; color: var(--text-muted); }
+.dash-cast-times { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.dash-cast-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+}
+.dash-cast-time-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.dash-cast-time-value { color: var(--text-heading); font-weight: 600; }
+.dash-cast-time.is-accent .dash-cast-time-value { color: var(--accent-gold); }
+
+/* ── H&MU Requirements scene list ── */
+.dash-scene-list { display: flex; flex-direction: column; gap: 8px; }
+.dash-scene-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  background: var(--bg-card-soft, transparent);
+}
+.dash-scene-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+.dash-scene-num { font-weight: 700; color: var(--text-heading); }
+.dash-scene-dn { color: var(--accent-gold); font-weight: 600; }
+.dash-scene-pages { font-variant-numeric: tabular-nums; }
+.dash-scene-time { margin-left: auto; }
+.dash-scene-set {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-scene-cast { display: flex; flex-wrap: wrap; gap: 4px; }
+.dash-scene-cast-pill {
+  padding: 1px 6px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(232, 98, 26, 0.08);
+  color: var(--accent);
+}
+.dash-scene-callouts { display: flex; gap: 6px; flex-wrap: wrap; }
+.dash-callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-secondary);
+}
+.dash-callout.is-accent {
+  background: rgba(212, 148, 58, 0.12);
+  color: var(--accent-gold);
+}
+.dash-callout-label { font-weight: 700; }
+.dash-callout-value { font-weight: 500; }
+
+/* ── Cast looks pills (Today's Cast widget) ── */
+.dash-cast-looks { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.dash-cast-look-pill {
+  padding: 1px 6px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  background: rgba(212, 148, 58, 0.12);
+  color: var(--accent-gold);
+}
+
+/* ── Synopsis line (H&MU widget, when script is parsed) ── */
+.dash-scene-synopsis {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ── Per-character breakdown rows in H&MU widget ── */
+.dash-scene-bd {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-card);
+}
+.dash-scene-bd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-scene-bd-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  letter-spacing: 0.02em;
+}
+.dash-scene-bd-look {
+  margin-left: 4px;
+  font-weight: 500;
+  color: var(--accent-gold);
+}
+.dash-scene-bd-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dash-scene-bd-field {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  padding: 1px 6px;
+  font-size: 0.625rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-secondary);
+  max-width: 100%;
+}
+.dash-scene-bd-field-label {
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dash-scene-bd-field-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}

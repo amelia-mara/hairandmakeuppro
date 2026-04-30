@@ -343,3 +343,412 @@ export function getCharacterNamesForScene(
     .map(num => getCharacterNameByNumber(castList, num))
     .filter((name): name is string => !!name);
 }
+
+// ============================================
+// STAGE 2: REGEX-BASED SCENE EXTRACTION (no AI)
+// ============================================
+// Walks the raw text line-by-line and produces ScheduleDay[] with
+// per-day scene rows + cast numbers. Mirrors the prep app's
+// scheduleParser.extractDays() so both apps interpret the same
+// PDF identically. Handles both the multi-line "Full Fat" layout
+// and the compact "One-Line" layout, and supports the two common
+// day-marker conventions:
+//   - "Shoot Day #N <weekday>, <date>" / "End of Day #N"   (Movie Magic)
+//   - "Shooting Day N"                  / "End of Shooting Day N"
+// ============================================
+
+import type { ScheduleDay, ScheduleSceneEntry } from '@/types';
+
+const DAY_HEADER_RE =
+  /(?:Shoot|Shooting)\s+Day\s+#?(\d+)(?:\s+([A-Za-z]+),?\s+(\d{1,2}\s+[A-Za-z]+,?\s+\d{4}))?/i;
+const DAY_END_RE = /End\s+of\s+(?:Shooting\s+)?Day\s+#?(\d+)/i;
+const HOURS_RE = /(\d{4})-(\d{4})\s+SCWD/i;
+const LOCATION_HEADER_RE = /^[\s\t]*([A-Z][^\n]*\([A-Za-z][^)]*\))\s*$/;
+
+const SCENE_HEADER_RE =
+  /^[\s\t]*(?:Scn|SCN)\s+(INT|EXT|I\/E|INT\/EXT|EXT\/INT)\s+(.+?)\s+(DAY|NIGHT|DAWN|DUSK|EVENING|EVENIN|MORNING|MORNI|AFTERNOON|CONT|CONTINUOUS|MAGIC\s+HOUR)\b/i;
+
+const FULL_FAT_DATA_RE =
+  /^[\s\t]*(\d+(?:[A-Za-z]{1,3})?)[\s\t]+(.+?)[\s\t]+([DNFP][A-Z]?\d+(?:[A-Za-z]{0,3})?|FB\d+|DAWN\d*|DUSK\d*)\s+(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)(?:[\s\t]+(.*))?$/;
+
+const ONE_LINE_DATA_RE =
+  /^[\s\t]*(\d+(?:[A-Za-z]{1,3})?)[\s]+([^\t]+?)\t+(\d.*)$/;
+
+const STORYDAY_TAIL_RE =
+  /^[\s\t]*([DNFP][A-Z]?\d+(?:[A-Za-z]{0,3})?|FB\d+|DAWN\d*|DUSK\d*)[\s\t]*AVs\b/i;
+
+const CAST_ROW_RE = /^[\s\t]*(_?\d+[A-Za-z]?)\.\s*(.+?)\s*$/;
+const CAST_INLINE_RE = /(_?\d{1,3}[A-Za-z]?)\.\s+([A-Z][A-Za-z'\-/.\s]+?)(?=\s{2,}|\t|$)/g;
+
+const MONTH_TO_NUM: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+};
+
+function toIsoDate(input: string): string | undefined {
+  if (!input) return undefined;
+  const m = input.match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})$/);
+  if (!m) return input;
+  const day = m[1].padStart(2, '0');
+  const month = MONTH_TO_NUM[m[2].slice(0, 3).toLowerCase()];
+  if (!month) return input;
+  return `${m[3]}-${month}-${day}`;
+}
+
+function formatTime(hhmm: string): string {
+  return hhmm.length === 4 ? `${hhmm.slice(0, 2)}:${hhmm.slice(2)}` : hhmm;
+}
+
+function normalizeDayNight(raw: string): string {
+  const upper = raw.toUpperCase().replace(/\s+/g, ' ');
+  if (upper === 'MORNI') return 'MORNING';
+  if (upper === 'EVENIN') return 'EVENING';
+  if (upper === 'CONT') return 'CONTINUOUS';
+  return upper;
+}
+
+function parseCastNumberList(input: string): number[] {
+  return input
+    .split(/[,\s]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && !t.startsWith('_'))
+    .map((t) => parseInt(t.replace(/[^\d]/g, ''), 10))
+    .filter((n) => Number.isFinite(n) && n > 0 && n < 999);
+}
+
+interface PendingScene {
+  intExt: 'INT' | 'EXT';
+  setLocation: string;
+  dayNight: string;
+  sceneNumber?: string;
+  description?: string;
+  storyDay?: string;
+  pages?: string;
+  castNumbers: number[];
+  shootOrder: number;
+}
+
+/**
+ * Walk the schedule's raw text and produce ScheduleDay[] with
+ * fully-populated scenes per day. Pure regex / state machine — no
+ * network calls. Tries the Movie-Magic layout (Scn / End of Day)
+ * first; falls back to the production-schedule layout (DAY N /
+ * "<X> pgs Scenes:" markers) if no days are detected.
+ */
+export function extractDays(rawText: string): ScheduleDay[] {
+  const movieMagic = extractDaysMovieMagic(rawText);
+  if (movieMagic.length > 0) return movieMagic;
+  return extractDaysProductionSchedule(rawText);
+}
+
+function extractDaysMovieMagic(rawText: string): ScheduleDay[] {
+  const days: ScheduleDay[] = [];
+  const lines = rawText.split('\n');
+
+  let currentDay: ScheduleDay | null = null;
+  let pendingScene: PendingScene | null = null;
+  let pendingLocation: string | null = null;
+  let pendingHours: string | null = null;
+  let shootOrder = 0;
+
+  const finalizeScene = () => {
+    if (currentDay && pendingScene && pendingScene.sceneNumber) {
+      const entry: ScheduleSceneEntry = {
+        sceneNumber: pendingScene.sceneNumber,
+        intExt: pendingScene.intExt,
+        dayNight: pendingScene.dayNight ? normalizeDayNight(pendingScene.dayNight) : 'Day',
+        setLocation: pendingScene.setLocation,
+        description: pendingScene.description,
+        pages: pendingScene.pages,
+        castNumbers: Array.from(new Set(pendingScene.castNumbers)),
+        shootOrder: pendingScene.shootOrder,
+      };
+      // Story day — surfaced via description prefix when set so
+      // mobile UIs that look for it (e.g. day filters) can still
+      // see it without a schema change.
+      if (pendingScene.storyDay) {
+        (entry as ScheduleSceneEntry & { storyDay?: string }).storyDay = pendingScene.storyDay;
+      }
+      currentDay.scenes.push(entry);
+    }
+    pendingScene = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\t/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const dayHeader = line.match(DAY_HEADER_RE);
+    if (dayHeader) {
+      finalizeScene();
+      currentDay = {
+        dayNumber: parseInt(dayHeader[1], 10),
+        date: dayHeader[3] ? toIsoDate(dayHeader[3]) : undefined,
+        dayOfWeek: dayHeader[2] || undefined,
+        location: pendingLocation || '',
+        hours: pendingHours || undefined,
+        scenes: [],
+      };
+      days.push(currentDay);
+      shootOrder = 0;
+      pendingLocation = null;
+      pendingHours = null;
+      continue;
+    }
+
+    if (DAY_END_RE.test(line)) {
+      finalizeScene();
+      const totalPagesMatch = line.match(/Total\s+Pages?:?\s+(.+?)(?:\s|$)/i);
+      if (currentDay && totalPagesMatch) currentDay.totalPages = totalPagesMatch[1].trim();
+      currentDay = null;
+      continue;
+    }
+
+    const sceneHeader = rawLine.match(SCENE_HEADER_RE);
+    if (sceneHeader && currentDay) {
+      finalizeScene();
+      const intExtRaw = sceneHeader[1].toUpperCase();
+      const intExt: 'INT' | 'EXT' = intExtRaw.startsWith('EXT') ? 'EXT' : 'INT';
+      shootOrder++;
+      pendingScene = {
+        intExt,
+        setLocation: sceneHeader[2].trim(),
+        dayNight: sceneHeader[3].trim(),
+        castNumbers: [],
+        shootOrder,
+      };
+      continue;
+    }
+
+    if (pendingScene && !pendingScene.sceneNumber) {
+      const ff = rawLine.match(FULL_FAT_DATA_RE);
+      if (ff) {
+        pendingScene.sceneNumber = ff[1];
+        pendingScene.description = ff[2].trim();
+        pendingScene.storyDay = ff[3].trim();
+        pendingScene.pages = ff[4].trim();
+        continue;
+      }
+      const ol = rawLine.match(ONE_LINE_DATA_RE);
+      if (ol) {
+        pendingScene.sceneNumber = ol[1];
+        pendingScene.description = ol[2].trim();
+        const tail = ol[3];
+        const pagesM = tail.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+)\s*(.*)$/);
+        if (pagesM) {
+          pendingScene.pages = pagesM[1].trim();
+          if (pagesM[2]) pendingScene.castNumbers.push(...parseCastNumberList(pagesM[2]));
+        }
+        continue;
+      }
+    }
+
+    if (pendingScene && pendingScene.sceneNumber && !pendingScene.storyDay) {
+      const sd = rawLine.match(STORYDAY_TAIL_RE);
+      if (sd) {
+        pendingScene.storyDay = sd[1].trim();
+        continue;
+      }
+    }
+
+    if (pendingScene && CAST_ROW_RE.test(rawLine)) {
+      for (const m of rawLine.matchAll(CAST_INLINE_RE)) {
+        const numToken = m[1];
+        if (numToken.startsWith('_')) continue;
+        const num = parseInt(numToken, 10);
+        if (Number.isFinite(num) && num > 0 && num < 1000) {
+          pendingScene.castNumbers.push(num);
+        }
+      }
+      continue;
+    }
+
+    if (!currentDay) {
+      const locMatch = rawLine.match(LOCATION_HEADER_RE);
+      if (locMatch) pendingLocation = locMatch[1].trim();
+      const hoursMatch = line.match(HOURS_RE);
+      if (hoursMatch) pendingHours = `${formatTime(hoursMatch[1])}–${formatTime(hoursMatch[2])}`;
+    }
+  }
+
+  finalizeScene();
+  return days;
+}
+
+// ============================================
+// PRODUCTION-SCHEDULE LAYOUT (e.g. The Punishing)
+// ============================================
+// "DAY N - Location" headers + "<X> pgs Scenes:" markers per scene.
+// Scene cells are scattered across multiple pdf.js rows so we
+// slice between consecutive markers and field-extract each block.
+// ============================================
+
+const PROD_DAY_HEADER_RE = /^DAY\s+(\d+)(?:\s*[-–]\s*(.+))?$/i;
+const PROD_DAY_END_RE = /End\s+of\s+Shooting\s+Day\s+(\d+)\s*[-–]+\s*([A-Za-z]+),?\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})\s*[-–]+\s*([\d\s\/]+)\s*Pages/i;
+const PROD_SCENE_MARKER_RE = /^(?:\d+\s+)?(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)\s*pgs?\b.*\bScenes:/i;
+const PROD_HOURS_RE = /HOURS:\s*(\d{4})\s*-\s*(\d{4})/i;
+
+function extractDaysProductionSchedule(rawText: string): ScheduleDay[] {
+  const days: ScheduleDay[] = [];
+  const lines = rawText.split('\n');
+
+  type Boundary =
+    | { kind: 'day-start'; idx: number; dayNumber: number; location: string }
+    | { kind: 'day-end'; idx: number; weekday: string; date: string; totalPages: string }
+    | { kind: 'hours'; idx: number; hours: string }
+    | { kind: 'scene-marker'; idx: number };
+  const boundaries: Boundary[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].replace(/\s+/g, ' ').trim();
+    let m;
+    if ((m = trimmed.match(PROD_DAY_HEADER_RE))) {
+      boundaries.push({ kind: 'day-start', idx: i, dayNumber: parseInt(m[1], 10), location: (m[2] || '').trim() });
+      continue;
+    }
+    if ((m = trimmed.match(PROD_DAY_END_RE))) {
+      boundaries.push({ kind: 'day-end', idx: i, weekday: m[2], date: m[3].trim(), totalPages: m[4].trim() });
+      continue;
+    }
+    if ((m = trimmed.match(PROD_HOURS_RE))) {
+      boundaries.push({ kind: 'hours', idx: i, hours: `${formatTime(m[1])}–${formatTime(m[2])}` });
+      continue;
+    }
+    if (PROD_SCENE_MARKER_RE.test(trimmed)) {
+      boundaries.push({ kind: 'scene-marker', idx: i });
+    }
+  }
+
+  let currentDay: ScheduleDay | null = null;
+  let pendingHours: string | null = null;
+  let shootOrder = 0;
+
+  for (let bi = 0; bi < boundaries.length; bi++) {
+    const b = boundaries[bi];
+    if (b.kind === 'day-start') {
+      currentDay = {
+        dayNumber: b.dayNumber,
+        location: b.location,
+        hours: pendingHours || undefined,
+        scenes: [],
+      };
+      days.push(currentDay);
+      shootOrder = 0;
+      pendingHours = null;
+      continue;
+    }
+    if (b.kind === 'day-end') {
+      if (currentDay) {
+        currentDay.dayOfWeek = b.weekday;
+        currentDay.date = toIsoDate(b.date);
+        currentDay.totalPages = b.totalPages;
+      }
+      currentDay = null;
+      continue;
+    }
+    if (b.kind === 'hours') {
+      if (currentDay) currentDay.hours = b.hours;
+      else pendingHours = b.hours;
+      continue;
+    }
+    if (b.kind === 'scene-marker' && currentDay) {
+      const startIdx = b.idx;
+      const next = boundaries[bi + 1];
+      const endIdx = next ? next.idx : Math.min(startIdx + 6, lines.length);
+      shootOrder++;
+      const scene = parseProductionSceneBlock(lines.slice(startIdx, endIdx), shootOrder);
+      if (scene) currentDay.scenes.push(scene);
+    }
+  }
+
+  return days;
+}
+
+function parseProductionSceneBlock(blockLines: string[], shootOrder: number): ScheduleSceneEntry | null {
+  const usable = blockLines
+    .map((l) => l.replace(/\r/g, '').trimEnd())
+    .filter((l) => l.trim().length > 0)
+    .filter((l) => !/^(Pack\s+down|Lighting\s+Change|Set\s+Move|Load\s+(in|out)|UNIT\s+MOVE|LUNCH|End\s+of\s+Shooting|===\s+PAGE)/i.test(l.trim()));
+  if (usable.length === 0) return null;
+
+  const markerCells = usable[0].split(/\t+/).map((s) => s.trim()).filter(Boolean);
+  const pagesMatch = markerCells[0]?.match(/^(\d+(?:\s+\d+\/\d+)?|\d+\/\d+|\d+)\s*pgs?$/i);
+  if (!pagesMatch) return null;
+  const pages = pagesMatch[1].trim();
+
+  let intExt: 'INT' | 'EXT' | null = null;
+  let location = '';
+  const castNumbers: number[] = [];
+  for (let ci = 1; ci < markerCells.length; ci++) {
+    const cell = markerCells[ci];
+    if (/^Scenes:$/i.test(cell)) continue;
+    if (/^Est\.?\s*Time$/i.test(cell)) continue;
+    if (/^(INT|EXT|I\/E|INT\/EXT|EXT\/INT)$/i.test(cell)) {
+      intExt = cell.toUpperCase().startsWith('EXT') ? 'EXT' : 'INT';
+      continue;
+    }
+    if (/^(_?\d{1,3}[A-Za-z]?\s*,\s*)+_?\d{1,3}[A-Za-z]?$/.test(cell) || /^_?\d{1,3}[A-Za-z]?$/.test(cell)) {
+      castNumbers.push(...parseCastNumberList(cell));
+      continue;
+    }
+    if (/[A-Z]/.test(cell)) {
+      location = location ? `${location} ${cell}` : cell;
+    }
+  }
+
+  let sceneNumber = '';
+  let dayNight = '';
+  let description = '';
+  let estimatedTime: string | undefined;
+
+  for (let li = 1; li < usable.length; li++) {
+    const cells = usable[li].split(/\t+/).map((s) => s.trim()).filter(Boolean);
+    for (const cell of cells) {
+      if (!intExt && /^(INT|EXT|I\/E|INT\/EXT|EXT\/INT)$/i.test(cell)) {
+        intExt = cell.toUpperCase().startsWith('EXT') ? 'EXT' : 'INT';
+        continue;
+      }
+      if (!sceneNumber && /^\d+[A-Za-z]?$/.test(cell)) {
+        sceneNumber = cell;
+        continue;
+      }
+      const dnAlone = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)$/i);
+      if (dnAlone && !dayNight) { dayNight = dnAlone[1]; continue; }
+      const dnPrefix = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)\s*(.*)$/i);
+      if (dnPrefix) {
+        if (!dayNight) dayNight = dnPrefix[1];
+        const rest = dnPrefix[2].trim();
+        if (rest && rest.length > description.length) description = rest;
+        continue;
+      }
+      const dnGlued = cell.match(/^(Day|Night|Morning|Evening|Dawn|Dusk)([A-Z].*)$/);
+      if (dnGlued) {
+        if (!dayNight) dayNight = dnGlued[1];
+        const rest = dnGlued[2].trim();
+        if (rest && rest.length > description.length) description = rest;
+        continue;
+      }
+      if (/^(\d{1,2}:\d{2}|:\d{2})$/.test(cell)) { estimatedTime = cell; continue; }
+      if (/^(_?\d{1,3}[A-Za-z]?\s*,\s*)+_?\d{1,3}[A-Za-z]?$/.test(cell)) {
+        castNumbers.push(...parseCastNumberList(cell));
+        continue;
+      }
+      if (!location && /^[A-Z][A-Z\s\-,/']{2,}$/.test(cell)) { location = cell; continue; }
+      if (/[a-z]/.test(cell) && cell.length > 3 && cell.length > description.length) description = cell;
+    }
+  }
+
+  if (!intExt) return null;
+  if (!sceneNumber) return null;
+
+  return {
+    sceneNumber,
+    intExt,
+    dayNight: normalizeDayNight(dayNight || 'Day'),
+    setLocation: location,
+    description: description || undefined,
+    pages,
+    castNumbers: Array.from(new Set(castNumbers)),
+    estimatedTime,
+    shootOrder,
+  };
+}

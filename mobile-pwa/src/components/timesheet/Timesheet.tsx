@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTimesheetStore, getWeekStart, addDays } from '@/stores/timesheetStore';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { AccessRestricted } from '@/components/AccessRestricted';
@@ -7,6 +7,9 @@ import { TimesheetDocument } from './TimesheetDocument';
 import { SummaryCard } from './SummaryCard';
 import { ExportModal } from './ExportModal';
 import { RateCardSettings } from './RateCardSettings';
+import { pullTimesheetForCurrentUser } from '@/services/timesheetSync';
+import { useProjectStore } from '@/stores/projectStore';
+import { getEffectiveRate } from '@/types';
 
 export function Timesheet() {
   const access = useProjectAccess();
@@ -23,6 +26,25 @@ export function Timesheet() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [rateCardExpanded, setRateCardExpanded] = useState(false);
 
+  // Pull any approval / edits the designer pushed from prep into the
+  // local store on mount. Runs once per project switch; realtime
+  // keeps things fresh after that. Skips the local push echo via the
+  // store's setState path (no saveEntry calls happen here).
+  const projectId = useProjectStore((s) => s.currentProject?.id);
+  useEffect(() => {
+    let cancelled = false;
+    if (!projectId) return;
+    pullTimesheetForCurrentUser().then((entries) => {
+      if (cancelled || entries.length === 0) return;
+      useTimesheetStore.setState((state) => {
+        const next = { ...state.entries };
+        for (const e of entries) next[e.date] = e;
+        return { entries: next };
+      });
+    });
+    return () => { cancelled = true; };
+  }, [projectId]);
+
   // Navigate weeks
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newStart = addDays(currentWeekStart, direction === 'next' ? 7 : -7);
@@ -34,8 +56,8 @@ export function Timesheet() {
   // Format rate card summary
   const formatRateCardSummary = () => {
     const parts = [];
-    if (rateCard.dailyRate > 0) {
-      parts.push(`£${rateCard.dailyRate}/day`);
+    if (getEffectiveRate(rateCard, 'shoot') > 0) {
+      parts.push(`£${getEffectiveRate(rateCard, 'shoot')}/day`);
     }
     parts.push(`${rateCard.baseDayHours}+1`);
     if (rateCard.kitRental > 0) {

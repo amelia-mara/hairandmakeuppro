@@ -94,6 +94,75 @@
   background: rgba(var(--a), 0.18); border-color: rgba(var(--a), 0.35);
 }
 
+/* Sort-mode toggle — Scene / Shoot pair, sits between the
+   subtitle and the Script split-view button. */
+.bs-sort-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+.bs-sort-btn {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 7px 12px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bs-sort-btn + .bs-sort-btn {
+  border-left: 1px solid var(--border-card);
+}
+.bs-sort-btn:hover:not(:disabled):not(.bs-sort-btn--active) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+.bs-sort-btn--active {
+  background: rgba(var(--a), 0.12);
+  color: var(--accent);
+}
+.bs-sort-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Day divider — emitted between scene blocks when sorting by
+   shoot order. Shows the production day number, weekday + date,
+   and the day's location so the designer can scan continuity
+   problems day-by-day. */
+.bs-day-divider {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, rgba(var(--a), 0.10) 0%, rgba(var(--a), 0.02) 80%, transparent 100%);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px 14px 14px 6px;
+}
+.bs-day-divider-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.bs-day-divider-date {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.bs-day-divider-loc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* Scrollable content */
 .bs-scroll {
   flex: 1; overflow-y: auto; overflow-x: auto;
@@ -224,6 +293,33 @@
   font-style: italic;
   padding-bottom: 4px;
 }
+/* Editable synopsis input — keeps the italic, muted look but
+   reveals a soft border on focus so the user can tell it's a
+   field. */
+.bs-scene-synopsis--editable {
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin: 8px -8px 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: text;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bs-scene-synopsis--editable::placeholder {
+  color: var(--text-muted);
+  opacity: 0.45;
+}
+.bs-scene-synopsis--editable:hover {
+  border-color: var(--border-card);
+}
+.bs-scene-synopsis--editable:focus {
+  outline: none;
+  border-color: rgba(var(--a), 0.45);
+  background: rgba(var(--a), 0.04);
+}
 
 /* Table */
 .bs-table {
@@ -350,6 +446,59 @@
 .bs-empty {
   color: var(--text-muted); opacity: 0.35;
   font-size: 0.8125rem;
+}
+
+/* ━━━ Inline-editable cell input + look dropdown ━━━
+   Used by EmbeddedBreakdownTable in split-view. Looks like plain
+   text in the cell until focused, when it picks up a soft border so
+   the user knows they're editing. Commits on blur. */
+.bs-cell-input,
+.bs-cell-select {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  line-height: inherit;
+  cursor: text;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bs-cell-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.35;
+}
+.bs-cell-input:hover,
+.bs-cell-select:hover {
+  border-color: var(--border-card);
+}
+.bs-cell-input:focus,
+.bs-cell-select:focus {
+  outline: none;
+  border-color: rgba(var(--a), 0.45);
+  background: rgba(var(--a), 0.04);
+}
+.bs-cell-select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  /* Reuse the look-name pill styling when something is picked. */
+  font-weight: 600;
+  color: var(--accent);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+                    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 22px;
+}
+.bs-cell-select:has(option[value=""]:checked) {
+  color: var(--text-muted);
+  opacity: 0.6;
+  font-weight: 400;
 }
 
 /* "Same as" continuity ref */
@@ -552,12 +701,41 @@
   font-size: 0.75rem;
 }
 
-/* Wider right panel when showing full breakdown */
+/* Wider right panel when showing full breakdown.
+   Width comes from inline style (driven by usePanelResize via the
+   splitPanel hook), so we no longer pin it with !important — that
+   would defeat the drag-to-resize divider between script and
+   breakdown. flex-basis stays auto so the inline width controls
+   the panel size. */
 .bd-right--breakdown {
-  flex: 1 1 auto !important;
-  width: auto !important;
-  min-width: 500px !important;
-  max-width: none !important;
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+/* Omitted-scene strip in the breakdown table — a single thin row
+   that preserves the numbering gap without rendering a full scene
+   card for a scene that no longer exists. */
+.bs-scene-block--omitted {
+  margin-top: 16px;
+  opacity: 0.5;
+  background: transparent;
+  border: 1px dashed rgba(0, 0, 0, 0.10);
+  box-shadow: none;
+}
+.bs-scene-header--omitted {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 28px;
+  border-bottom: none;
+}
+.bs-scene-omitted-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-style: italic;
 }
 
 /* ━━━ Split-view layout ━━━ */
@@ -678,5 +856,99 @@
   background: rgba(var(--a), 0.12);
   border-color: rgba(var(--a), 0.30);
   color: var(--accent);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BREAKDOWN SHEET — phone (≤ 768px)
+
+   Header: tabs + counts + 5 action buttons can't fit a phone in
+   one row — wrap actions to a second row, scroll tabs horizontally,
+   hide the "X scenes · Y characters" subtitle (it doesn't fit and
+   the same data is reachable from other surfaces).
+
+   Tables: each scene block has 9 fixed-width columns summing to
+   ~1300px. On a phone we contain horizontal scroll inside the scene
+   block so vertical page scroll stays unencumbered, and tighten cell
+   padding so more fits per swipe.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  /* Header — tabs above, actions wrap below */
+  .bs-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .bs-header-left {
+    gap: 10px;
+  }
+  .bs-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+  .bs-tabs::-webkit-scrollbar { display: none; }
+  .bs-tab {
+    font-size: 0.75rem;
+    padding: 4px 6px 8px;
+    flex-shrink: 0;
+  }
+
+  .bs-header-right {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+  /* Hide the count subtitle on phones — it's the first thing to clip
+     and it's redundant with what the user already sees. */
+  .bs-header-right .bs-subtitle {
+    display: none;
+  }
+  .bs-action-btn {
+    font-size: 0.6875rem;
+    padding: 6px 10px;
+  }
+  .bs-filter {
+    flex: 1;
+    min-width: 0;
+  }
+  .bs-filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Scrollable content — tighten outer padding so the scene cards
+     can reach a sensible width. */
+  .bs-scroll {
+    padding: 8px 12px 56px;
+  }
+
+  /* Each scene block scrolls horizontally inside itself so the user
+     can swipe through CHARACTER → LOOK → HAIR → MAKEUP → … without
+     dragging the whole page. */
+  .bs-scene-block {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bs-scene-header {
+    padding: 14px 16px 12px;
+    position: sticky;
+    left: 0;
+  }
+  .bs-table {
+    min-width: 720px;
+  }
+  .bs-table th,
+  .bs-table td {
+    padding: 10px 14px;
+  }
+  .bs-table th {
+    font-size: 0.625rem;
+  }
+  .bs-table td {
+    font-size: 0.75rem;
+  }
 }
 

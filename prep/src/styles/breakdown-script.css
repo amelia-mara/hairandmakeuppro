@@ -59,6 +59,15 @@
   box-shadow: none;
   z-index: 3;
 }
+/* The split-view "Breakdown" pill renders as an active tab that
+   isn't actionable (it's a label, not navigation). Strip the
+   browser's default disabled styling so it looks identical to a
+   regular active tab on the left. */
+.cp-divider-tab:disabled,
+.cp-divider-tab[disabled] {
+  opacity: 1;
+  cursor: default;
+}
 
 /* ━━━ Toolbar row — legend tags + zoom ━━━ */
 .cp-toolbar {
@@ -72,6 +81,18 @@
   gap: 12px;
   position: relative;
   z-index: 1;
+}
+/* Right-side variant used by the split-view breakdown header.
+   Matches the left center-panel toolbar's height so the two panel
+   tops align, but pushes its actions (close X + Tools menu) to the
+   right edge instead of starting them on the left. */
+.cp-toolbar--actions-right {
+  justify-content: flex-end;
+}
+.cp-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Tags toggle button */
@@ -238,6 +259,23 @@
 }
 .sv-paper--revised .sv-heading {
   color: #E8621A;
+}
+
+/* Omitted-scene placeholder in the continuous script viewer */
+.sv-paper--omitted {
+  padding: 14px 24px;
+  margin: 6px 12px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.10);
+  min-height: 0;
+  opacity: 0.55;
+}
+.sv-heading--omitted {
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #B8A98C;
+  font-size: 0.875em;
 }
 
 /* In-script change highlight — applied per word/phrase only when the

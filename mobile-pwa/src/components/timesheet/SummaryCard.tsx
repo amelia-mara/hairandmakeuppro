@@ -1,5 +1,6 @@
 import type { WeekSummary } from '@/types';
 import { useTimesheetStore } from '@/stores/timesheetStore';
+import { summariseApproval, approvalLabel, type ApprovalState } from '@/utils/timesheetApproval';
 
 interface SummaryCardProps {
   summary: WeekSummary;
@@ -8,6 +9,7 @@ interface SummaryCardProps {
 export function SummaryCard({ summary }: SummaryCardProps) {
   const { rateCard } = useTimesheetStore();
   const hasData = summary.entries.length > 0;
+  const approval = summariseApproval(summary.entries);
 
   if (!hasData) {
     return (
@@ -34,6 +36,12 @@ export function SummaryCard({ summary }: SummaryCardProps) {
 
   return (
     <div className="card">
+      {/* Approval banner — visible signal that the week has been
+          approved by the designer in prep, partially approved, or is
+          still pending. The banner is what tells the team member
+          "you're clear to download and send to production". */}
+      <ApprovalBanner state={approval.state} approvedCount={approval.approvedCount} totalCount={approval.totalCount} />
+
       {/* Compact 4-column summary grid */}
       <div className="grid grid-cols-4 gap-2 text-center">
         <SummaryItem
@@ -126,6 +134,43 @@ export function SummaryCard({ summary }: SummaryCardProps) {
             </div>
           </div>
         </details>
+      )}
+    </div>
+  );
+}
+
+function ApprovalBanner({
+  state,
+  approvedCount,
+  totalCount,
+}: {
+  state: ApprovalState;
+  approvedCount: number;
+  totalCount: number;
+}) {
+  const styles = {
+    approved: { bg: 'rgba(74, 191, 176, 0.12)', fg: 'var(--brand-teal, #4ABFB0)', icon: '✓' },
+    partial:  { bg: 'rgba(212, 148, 58, 0.12)', fg: 'var(--accent-gold, #D4943A)', icon: '⏳' },
+    pending:  { bg: 'rgba(232, 98, 26, 0.10)',  fg: 'var(--accent, #E8621A)',     icon: '⏳' },
+    none:     { bg: 'transparent',              fg: 'var(--color-text-placeholder)', icon: '·' },
+  } as const;
+  const s = styles[state];
+
+  return (
+    <div
+      className="flex items-center justify-between rounded-lg px-3 py-2 mb-3"
+      style={{ background: s.bg, color: s.fg }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold">{s.icon}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide">
+          {approvalLabel(state)}
+        </span>
+      </div>
+      {totalCount > 0 && (
+        <span className="text-[10px] font-semibold opacity-80">
+          {approvedCount} / {totalCount} {totalCount === 1 ? 'day' : 'days'}
+        </span>
       )}
     </div>
   );

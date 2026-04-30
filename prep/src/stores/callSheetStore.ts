@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { CallSheet } from '@/utils/callSheet/types';
 
 export interface CallSheetFile {
   id: string;
@@ -8,6 +9,10 @@ export interface CallSheetFile {
   dataUri: string;       // base64 data URI of the PDF
   thumbnailUri: string;  // rendered first-page thumbnail
   uploadedAt: string;    // ISO timestamp
+  // Parsed call sheet data — present when the PDF has been run through
+  // the regex parser so mobile and prep dashboard widgets can consume
+  // it. Older records may not have it yet; treat as optional.
+  parsed?: CallSheet;
 }
 
 interface CallSheetState {
