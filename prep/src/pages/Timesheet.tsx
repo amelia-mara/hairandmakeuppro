@@ -15,7 +15,7 @@ interface TimesheetProps {
 }
 
 /* ── Sidebar panels ── */
-type PanelId = 'overview' | 'my-ts' | 'invoices' | 'team-ts' | 'team-manage';
+type PanelId = 'my-ts' | 'invoices' | 'team-ts' | 'team-manage';
 
 interface SidebarItem {
   id: PanelId;
@@ -410,7 +410,7 @@ function SyncedPill() {
    TIMESHEET PAGE — Redesigned with sidebar navigation
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export function Timesheet({ projectId }: TimesheetProps) {
-  const [activePanel, setActivePanel] = useState<PanelId>('overview');
+  const [activePanel, setActivePanel] = useState<PanelId>('my-ts');
   const [toast, setToast] = useState<string | null>(null);
   const [expandedTeam, setExpandedTeam] = useState<Record<string, boolean>>({});
   const [expandedRc, setExpandedRc] = useState<Record<string, boolean>>({});
@@ -589,13 +589,10 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const totalLabour = getTotalLabourCost(selectedWeekStart);
   const totalHours = crewSummaries.reduce((s, c) => s + c.summary.totalHours, 0);
   const totalOtHours = crewSummaries.reduce((s, c) => s + c.summary.otHours, 0);
-  const totalBasePay = crewSummaries.reduce((s, c) => s + c.summary.basePay, 0);
-  const totalOtPay = crewSummaries.reduce((s, c) => s + c.summary.overtimePay, 0);
   const totalDays = crewSummaries.reduce((s, c) => s + c.summary.entries.filter(e => e.unitCall).length, 0);
 
   /* Determine sidebar item status */
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', status: crew.length > 0 ? 'done' : 'none' },
     { id: 'my-ts', label: 'My Timesheets', status: crew.length > 0 ? 'going' : 'none' },
     { id: 'invoices', label: 'My Invoices', status: 'going' },
     { id: 'team-ts', label: 'Team Timesheets', status: crew.length > 1 ? 'going' : 'none' },
@@ -625,18 +622,32 @@ export function Timesheet({ projectId }: TimesheetProps) {
           </button>
         ))}
         <hr className="tsr-sb-divider" />
-        <div className="tsr-sb-label">Completion</div>
-        <div className="tsr-sb-legend-row">
-          <div className="tsr-sb-legend-dot" style={{ background: 'var(--brand-teal)' }} />
-          Complete
+
+        {/* At-a-glance summary — replaces the old Completion legend.
+            Same numbers the dropped Overview panel used to show, in
+            a compact stacked layout that sits comfortably under the
+            sidebar nav. Updates live with selected week + crew. */}
+        <div className="tsr-sb-label">At a glance</div>
+        <div className="tsr-sb-stat">
+          <span className="tsr-sb-stat-label">Total earnings</span>
+          <span className="tsr-sb-stat-val orange">{fmt(totalLabour, currency)}</span>
         </div>
-        <div className="tsr-sb-legend-row">
-          <div className="tsr-sb-legend-dot" style={{ background: 'var(--accent)', opacity: 0.65 }} />
-          In progress
+        <div className="tsr-sb-stat">
+          <span className="tsr-sb-stat-label">Hours · OT</span>
+          <span className="tsr-sb-stat-val">
+            {Math.round(totalHours)}h
+            {totalOtHours > 0 && (
+              <span className="tsr-sb-stat-sub"> · {totalOtHours.toFixed(1)} OT</span>
+            )}
+          </span>
         </div>
-        <div className="tsr-sb-legend-row">
-          <div className="tsr-sb-legend-dot" style={{ border: '1.5px solid var(--border-medium)' }} />
-          Not started
+        <div className="tsr-sb-stat">
+          <span className="tsr-sb-stat-label">Days logged</span>
+          <span className="tsr-sb-stat-val">{totalDays}</span>
+        </div>
+        <div className="tsr-sb-stat">
+          <span className="tsr-sb-stat-label">Team size</span>
+          <span className="tsr-sb-stat-val teal">{crew.length}</span>
         </div>
       </nav>
 
@@ -657,22 +668,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
             <span>Sections</span>
           </button>
         )}
-        {/* ══════════════ 01 OVERVIEW ══════════════ */}
-        {activePanel === 'overview' && (
-          <OverviewPanel
-            crew={crew}
-            crewSummaries={crewSummaries}
-            currency={currency}
-            totalLabour={totalLabour}
-            totalHours={totalHours}
-            totalOtHours={totalOtHours}
-            totalDays={totalDays}
-            totalBasePay={totalBasePay}
-            totalOtPay={totalOtPay}
-          />
-        )}
-
-        {/* ══════════════ 02 MY TIMESHEETS ══════════════ */}
+        {/* ══════════════ MY TIMESHEETS ══════════════ */}
         {activePanel === 'my-ts' && (
           <MyTimesheetsPanel
             crew={crew}
@@ -801,151 +797,6 @@ interface CrewSummaryRow {
   member: CrewMember;
   summary: WeekSummary;
   colorIdx: number;
-}
-
-function OverviewPanel({
-  crew, crewSummaries, currency, totalLabour, totalHours, totalOtHours, totalDays, totalBasePay, totalOtPay,
-}: {
-  crew: CrewMember[];
-  crewSummaries: CrewSummaryRow[];
-  currency: CurrencyCode;
-  totalLabour: number;
-  totalHours: number;
-  totalOtHours: number;
-  totalDays: number;
-  totalBasePay: number;
-  totalOtPay: number;
-}) {
-  const myRate = getEffectiveRate(crew[0]?.rateCard ?? createDefaultRateCard(), 'shoot') ?? 0;
-
-  return (
-    <div>
-      <div className="tsr-ph">
-        <div>
-          <h2 className="tsr-ph-title"><span className="tsr-ph-title-italic">Timesheet</span>{' '}<span className="tsr-ph-title-regular">Overview</span></h2>
-          <div className="tsr-ph-sub">{crew.length} crew members active</div>
-        </div>
-      </div>
-
-      {/* Earnings Band */}
-      <div className="tsr-earnings-band">
-        <div className="tsr-eb-cell">
-          <div className="tsr-eb-label">Total Earnings</div>
-          <div className="tsr-eb-val orange">{fmt(totalLabour, currency)}</div>
-          <div className="tsr-eb-sub">{totalDays} days logged</div>
-        </div>
-        <div className="tsr-eb-cell">
-          <div className="tsr-eb-label">Base Pay</div>
-          <div className="tsr-eb-val teal">{fmt(totalBasePay, currency)}</div>
-          <div className="tsr-eb-sub">{Math.round(totalHours - totalOtHours)} base hours</div>
-        </div>
-        <div className="tsr-eb-cell">
-          <div className="tsr-eb-label">Overtime</div>
-          <div className="tsr-eb-val gold">{fmt(totalOtPay, currency)}</div>
-          <div className="tsr-eb-sub">{totalOtHours.toFixed(1)} OT hours</div>
-        </div>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="tsr-stat-grid tsr-sg-4">
-        <div className="tsr-stat-card">
-          <div className="tsr-stat-label">Days Logged</div>
-          <div className="tsr-stat-val">{totalDays}</div>
-          <div className="tsr-stat-sub">All crew</div>
-        </div>
-        <div className="tsr-stat-card">
-          <div className="tsr-stat-label">Total Hours</div>
-          <div className="tsr-stat-val orange">{Math.round(totalHours)}</div>
-          <div className="tsr-stat-sub">Incl. {totalOtHours.toFixed(1)} hrs overtime</div>
-        </div>
-        <div className="tsr-stat-card">
-          <div className="tsr-stat-label">My Day Rate</div>
-          <div className="tsr-stat-val">{fmt(myRate, currency)}</div>
-          <div className="tsr-stat-sub">{crew[0]?.position ?? 'HOD'}</div>
-        </div>
-        <div className="tsr-stat-card">
-          <div className="tsr-stat-label">Team Size</div>
-          <div className="tsr-stat-val teal">{crew.length}</div>
-          <div className="tsr-stat-sub">Active crew</div>
-        </div>
-      </div>
-
-      {/* Earnings Breakdown */}
-      {totalLabour > 0 && (
-        <>
-          <div className="tsr-sh">Earnings Breakdown <div className="tsr-sh-line" /></div>
-          <div className="tsr-card">
-            <div className="tsr-earn-bar-row">
-              <div className="tsr-ebr-name">Base Pay</div>
-              <div className="tsr-ebr-bar"><div className="tsr-ebr-track"><div className="tsr-ebr-fill" style={{ width: `${totalLabour ? (totalBasePay / totalLabour) * 100 : 0}%` }} /></div></div>
-              <div className="tsr-ebr-amt">{fmt(totalBasePay, currency)}</div>
-              <div className="tsr-ebr-days">{totalDays} days</div>
-            </div>
-            <div className="tsr-earn-bar-row">
-              <div className="tsr-ebr-name">Overtime</div>
-              <div className="tsr-ebr-bar"><div className="tsr-ebr-track"><div className="tsr-ebr-fill teal" style={{ width: `${totalLabour ? (totalOtPay / totalLabour) * 100 : 0}%` }} /></div></div>
-              <div className="tsr-ebr-amt">{fmt(totalOtPay, currency)}</div>
-              <div className="tsr-ebr-days">{totalOtHours.toFixed(1)} hrs</div>
-            </div>
-            <div className="tsr-earn-bar-row" style={{ borderBottom: 'none' }}>
-              <div className="tsr-ebr-name" style={{ fontWeight: 700 }}>Total</div>
-              <div className="tsr-ebr-bar" />
-              <div className="tsr-ebr-amt" style={{ fontWeight: 700, fontSize: 16 }}>{fmt(totalLabour, currency)}</div>
-              <div className="tsr-ebr-days" />
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Team Hours */}
-      {crew.length > 0 && (
-        <>
-          <div className="tsr-sh">Team Hours <div className="tsr-sh-line" /></div>
-          <div className="tsr-card flush">
-            <div className="tsr-col-head">
-              <div className="tsr-ch" style={{ flex: 1 }}>Team Member</div>
-              <div className="tsr-ch" style={{ width: 80, textAlign: 'right' }}>Days</div>
-              <div className="tsr-ch" style={{ width: 80, textAlign: 'right' }}>Hours</div>
-              <div className="tsr-ch" style={{ width: 90, textAlign: 'right' }}>Earnings</div>
-              <div className="tsr-ch" style={{ width: 90, textAlign: 'right' }}>Status</div>
-            </div>
-            {crewSummaries.map(({ member, summary, colorIdx }) => {
-              const ac = getAvatarColor(colorIdx);
-              const workedDays = summary.entries.filter(e => e.unitCall).length;
-              return (
-                <div key={member.id} className="tsr-team-row" style={{ cursor: 'default' }}>
-                  <div className="tsr-avatar" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {member.name}
-                      {member.isMe && <YouPill />}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      {member.position} · {fmt(getEffectiveRate(member.rateCard, 'shoot'), currency)}/day
-                    </div>
-                  </div>
-                  <div style={{ width: 80, textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)' }}>{workedDays}</div>
-                  <div style={{ width: 80, textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)' }}>{summary.totalHours.toFixed(1)} hrs</div>
-                  <div style={{ width: 90, textAlign: 'right', fontFamily: 'var(--font-display)', fontSize: 15 }}>{fmt(summary.totalEarnings, currency)}</div>
-                  <div style={{ width: 90, textAlign: 'right' }}>
-                    <span className={`tsr-tag ${workedDays > 0 ? 'teal' : ''}`}>
-                      {workedDays > 0 ? 'Up to date' : 'No entries'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {crew.length === 0 && (
-        <div className="tsr-empty">
-          Add crew members in Team Management to see your timesheet overview.
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
