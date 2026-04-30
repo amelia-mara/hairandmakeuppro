@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { isOwnerTier } from '@/utils/tierUtils';
 import { useProjectStore } from '@/stores/projectStore';
 import { SyncIcon } from '@/components/sync';
 
@@ -34,6 +35,12 @@ const getTypeLabel = (type: ProductionType): string => {
 export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProfile, onSyncTap }: ProjectHeaderProps) {
   const { currentProject } = useProjectStore();
   const { user, projectMemberships } = useAuthStore();
+  // Reactively follow the dev tier preview so the avatar's brown
+  // owner styling toggles correctly when the user switches tiers.
+  const previewTier = useAuthStore((s) => s.previewTier);
+  const effectiveTier = previewTier && user?.tier === 'owner'
+    ? previewTier
+    : (user?.tier ?? '');
   const [saveFailures, setSaveFailures] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -145,10 +152,12 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
               {/* Sync icon */}
               {onSyncTap && <SyncIcon onClick={onSyncTap} />}
 
-              {/* Account icon */}
+              {/* Account icon — owner tier renders the initials in
+                  brown to signal owner status; every other tier keeps
+                  the standard cream-on-orange. */}
               <button
                 onClick={onNavigateToProfile}
-                className="w-8 h-8 rounded-full bg-gold flex items-center justify-center text-white text-xs font-bold active:scale-95 transition-transform"
+                className={`w-8 h-8 rounded-full bg-gold flex items-center justify-center text-xs font-bold active:scale-95 transition-transform ${isOwnerTier(effectiveTier) ? 'text-[#2A1A08]' : 'text-white'}`}
               >
                 {getInitials()}
               </button>

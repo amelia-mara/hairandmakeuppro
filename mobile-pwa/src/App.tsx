@@ -43,6 +43,8 @@ import {
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
+import { BillingPromptModal } from '@/components/profile/BillingPromptModal';
+import { useBillingStore } from '@/stores/billingStore';
 import { ProjectSettingsScreen } from '@/components/project-settings';
 
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
@@ -181,6 +183,44 @@ function AppContent() {
   const [tabResetKey, setTabResetKey] = useState(0);
   // SubView for direct navigation to team, invite, stats, project settings, billing, or user profile
   const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | 'billing' | undefined>(undefined);
+
+  // Billing-prompt state: a small, dismissable modal that nudges
+  // the user to fill in invoicing details. Fires once after sign-up
+  // and again the first time the user opens the timesheet with
+  // incomplete details. Once skipped (signupNudgeDismissed) the
+  // user has to open it themselves via the profile menu.
+  const [billingPromptReason, setBillingPromptReason] =
+    useState<'signup' | 'timesheet' | null>(null);
+  const signupNudgeShown = useBillingStore((s) => s.signupNudgeDismissed);
+  const timesheetNudgeShown = useBillingStore(
+    (s) => s.timesheetNudgeDismissed ?? false,
+  );
+  const seenSignupNudgeRef = useRef(false);
+  const seenTimesheetNudgeRef = useRef(false);
+
+  // The signup nudge fires once per user, ever — when we see an
+  // authenticated user with the flag still false. Profile
+  // completeness is no longer part of the gate, so the user isn't
+  // re-nagged just because they haven't filled the details in yet.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (signupNudgeShown) return;
+    if (seenSignupNudgeRef.current) return;
+    seenSignupNudgeRef.current = true;
+    setBillingPromptReason('signup');
+  }, [isAuthenticated, signupNudgeShown]);
+
+  // The timesheet reminder fires once, the first time the user
+  // opens the Hours tab. Same one-shot semantic as the signup
+  // nudge — closing the modal flips the flag and it never
+  // auto-fires again.
+  useEffect(() => {
+    if (activeTab !== 'hours') return;
+    if (timesheetNudgeShown) return;
+    if (seenTimesheetNudgeRef.current) return;
+    seenTimesheetNudgeRef.current = true;
+    setBillingPromptReason('timesheet');
+  }, [activeTab, timesheetNudgeShown]);
 
   // Validate state on mount - fix inconsistent persisted state that causes blank screens
   useEffect(() => {
@@ -780,6 +820,30 @@ function AppContent() {
             setTimeout(() => {
               setMoreSubView(undefined);
             }, 0);
+          }}
+        />
+      )}
+
+      {/* Billing-details prompt — signup nudge or timesheet reminder.
+          Each fires exactly once per user; closing the modal (any
+          path) flips the matching one-time-shown flag in the
+          billing store so it never auto-fires again. */}
+      {billingPromptReason && (
+        <BillingPromptModal
+          reason={billingPromptReason}
+          onClose={() => {
+            const billing = useBillingStore.getState();
+            if (billingPromptReason === 'signup') billing.dismissSignupNudge();
+            else billing.dismissTimesheetNudge();
+            setBillingPromptReason(null);
+          }}
+          onFillIn={() => {
+            const billing = useBillingStore.getState();
+            if (billingPromptReason === 'signup') billing.dismissSignupNudge();
+            else billing.dismissTimesheetNudge();
+            setBillingPromptReason(null);
+            setActiveTab('more');
+            setMoreSubView('billing');
           }}
         />
       )}

@@ -10,7 +10,7 @@ import type {
   CallSheet,
   BaseContract,
 } from '@/types';
-import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType, parseDayTypeFromString } from '@/types';
+import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType, parseDayTypeFromString, getEffectiveRate } from '@/types';
 import {
   calculateBECTUTimesheet,
   getLunchDuration,
@@ -18,6 +18,10 @@ import {
   type BECTUTimesheetEntry,
   type BECTUDayType,
 } from '@/utils/bectuCalculations';
+import {
+  syncWeekForCurrentUser,
+  getWeekStart as getWeekStartForSync,
+} from '@/services/timesheetSync';
 
 /**
  * Create empty calculation result for incomplete entries
@@ -70,7 +74,8 @@ function toBECTUEntry(entry: TimesheetEntry, rateCard: RateCard, previousWrapOut
 
   return {
     date: entry.date,
-    dayRate: rateCard.dailyRate,
+    // Pick prepRate for prep days, shootRate otherwise.
+    dayRate: getEffectiveRate(rateCard, entry.rateType ?? 'shoot'),
     baseContract: baseContract,
     dayType: entry.dayType as BECTUDayType,
     preCallTime: entry.preCall || null,
@@ -189,6 +194,18 @@ export const useTimesheetStore = create<TimesheetState>()(
             [entry.date]: entry,
           },
         }));
+        // Push the whole week containing this entry to Supabase so
+        // the project's prep designer sees the update under the
+        // user's crew row. Debounced inside syncWeekForCurrentUser.
+        try {
+          const weekStart = getWeekStartForSync(entry.date);
+          const weekEntries = Object.values(get().entries).filter(
+            (e) => getWeekStartForSync(e.date) === weekStart,
+          );
+          syncWeekForCurrentUser(weekStart, weekEntries);
+        } catch (err) {
+          console.warn('[TimesheetStore] saveEntry sync failed', err);
+        }
       },
 
       deleteEntry: (date) => {
@@ -197,6 +214,17 @@ export const useTimesheetStore = create<TimesheetState>()(
           delete newEntries[date];
           return { entries: newEntries };
         });
+        // Re-push the now-shorter week so the deleted day disappears
+        // upstream too. Empty weeks are deleted server-side.
+        try {
+          const weekStart = getWeekStartForSync(date);
+          const weekEntries = Object.values(get().entries).filter(
+            (e) => getWeekStartForSync(e.date) === weekStart,
+          );
+          syncWeekForCurrentUser(weekStart, weekEntries);
+        } catch (err) {
+          console.warn('[TimesheetStore] deleteEntry sync failed', err);
+        }
       },
 
       clearAll: () => {

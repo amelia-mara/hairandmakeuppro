@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS,
   useBreakdownStore, useTagStore, useParsedScriptStore, useCharacterOverridesStore,
   type Scene, type Character, type Look,
 } from '@/stores/breakdownStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /* ━━━ Types ━━━ */
 
@@ -29,11 +30,19 @@ export function BibleTab({ projectId }: { projectId: string }) {
   const breakdownStore = useBreakdownStore();
   const tagStore = useTagStore();
   const bbProject = useProjectStore((s) => s.getProject(projectId));
-  const bbDeptLabel = bbProject?.department === 'costume' ? 'Costume' : '{bbDeptLabel}';
+  const bbDeptLabel = bbProject?.department === 'costume' ? 'Costume' : 'Hair & Makeup';
   const parsedScriptStore = useParsedScriptStore();
   const overridesStore = useCharacterOverridesStore();
 
   const [activeSection, setActiveSection] = useState('overview');
+
+  /* Mobile-only — phone viewport (≤768px) hides the sidebar by default
+     and slides it in from the left when the user taps the ☰ in the
+     section header. Picking a section auto-closes the drawer. */
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
+  const pickSection = (id: string) => { setActiveSection(id); setDrawerOpen(false); };
 
   /* Resolve data source */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -161,7 +170,11 @@ export function BibleTab({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="bb-page">
+    <div className={`bb-page${isMobile ? ' bb-page--mobile' : ''}${isMobile && drawerOpen ? ' bb-page--drawer-open' : ''}`}>
+      {/* Mobile drawer backdrop */}
+      {isMobile && drawerOpen && (
+        <div className="bb-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
       {/* Sidebar */}
       <div className="bb-sidebar">
         <div className="bb-sidebar-label">Sections</div>
@@ -169,7 +182,7 @@ export function BibleTab({ projectId }: { projectId: string }) {
           <button
             key={sec.id}
             className={`bb-nav-item ${activeSection === sec.id ? 'bb-nav-item--active' : ''} ${sec.complete ? 'bb-nav-item--complete' : ''}`}
-            onClick={() => setActiveSection(sec.id)}
+            onClick={() => pickSection(sec.id)}
           >
             <span className="bb-nav-num">{sec.num}</span>
             <span className="bb-nav-title">{sec.title}</span>
@@ -193,6 +206,20 @@ export function BibleTab({ projectId }: { projectId: string }) {
       {/* Main content */}
       <div className="bb-main">
         <div className="bb-section-header">
+          {isMobile && (
+            <button
+              type="button"
+              className="bb-drawer-toggle"
+              aria-label="Open sections"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          )}
           <div className="bb-section-title">{currentSection.num} — {currentSection.title}</div>
           <div className="bb-section-meta">Last updated today</div>
         </div>

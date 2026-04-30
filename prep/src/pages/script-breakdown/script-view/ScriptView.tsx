@@ -456,7 +456,30 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
         </div>
       )}
 
-      {scenes.map((scene) => (
+      {scenes.map((scene) => {
+        // Omitted scenes get a thin placeholder strip in the script
+        // viewer — no slugline, no content, just "SC N OMITTED" so
+        // the reader knows the gap is intentional.
+        if (scene.isOmitted) {
+          return (
+            <div
+              key={scene.id}
+              ref={(el) => setPageRef(scene.id, el)}
+              data-scene-id={scene.id}
+              className={`sv-paper sv-paper--omitted ${scene.id === selectedSceneId ? 'sv-paper--active' : ''}`}
+              style={{ fontSize: `${fontSize}px` }}
+            >
+              {/* Render the verbatim line from the script (e.g.
+                  "30 OMITTED 30") so the page matches the PDF
+                  exactly. Falls back to a synthesised label when
+                  the parser couldn't capture the original line. */}
+              <div className="sv-heading sv-heading--omitted">
+                {scene.scriptContent || `${scene.number}  OMITTED`}
+              </div>
+            </div>
+          );
+        }
+        return (
         <div
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
@@ -470,7 +493,8 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
             {memoRenderSceneContent(scene)}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <ScriptTagPopup
         popup={popup}

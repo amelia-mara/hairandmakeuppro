@@ -221,6 +221,14 @@ function UploadZone({
 function OverviewTab({ schedule }: { schedule: ProductionSchedule }) {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
+  // Cast number → display name lookup so we can show e.g. [BRY],
+  // [TOM] pills under each scene instead of the raw cast numbers
+  // the parser stores.
+  const castNameByNumber = new Map<number, string>();
+  for (const c of schedule.castList) {
+    castNameByNumber.set(c.number, c.character || c.name);
+  }
+
   return (
     <div className="sch-overview">
       {/* Stats row */}
@@ -307,13 +315,24 @@ function OverviewTab({ schedule }: { schedule: ProductionSchedule }) {
                     <div className="sch-scene-list">
                       {day.scenes.map((scene, idx) => (
                         <div key={idx} className="sch-scene-row">
-                          <span className="sch-scene-num">{scene.sceneNumber}</span>
-                          <span className={`sch-scene-badge sch-scene-badge--${scene.intExt.toLowerCase()}`}>
-                            {scene.intExt}
-                          </span>
-                          <span className="sch-scene-loc">{scene.setLocation}</span>
-                          <span className="sch-scene-dn">{scene.dayNight}</span>
-                          {scene.pages && <span className="sch-scene-pages">{scene.pages} pgs</span>}
+                          <div className="sch-scene-row-main">
+                            <span className="sch-scene-num">{scene.sceneNumber}</span>
+                            <span className={`sch-scene-badge sch-scene-badge--${scene.intExt.toLowerCase()}`}>
+                              {scene.intExt}
+                            </span>
+                            <span className="sch-scene-loc">{scene.setLocation}</span>
+                            <span className="sch-scene-dn">{scene.dayNight}</span>
+                            {scene.pages && <span className="sch-scene-pages">{scene.pages} pgs</span>}
+                          </div>
+                          {scene.castNumbers.length > 0 && (
+                            <div className="sch-scene-cast">
+                              {scene.castNumbers.map((n) => (
+                                <span key={n} className="sch-scene-cast-pill" title={`Cast ${n}`}>
+                                  {castNameByNumber.get(n) || `Cast ${n}`}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -325,12 +344,21 @@ function OverviewTab({ schedule }: { schedule: ProductionSchedule }) {
         </div>
       )}
 
-      {/* Raw text preview when no day breakdown available */}
+      {/* Format-not-recognised banner — surfaces clearly when
+          neither the Movie-Magic nor the production-stationery
+          walker matched the upload, so the user knows the import
+          succeeded but a new parser handler is needed. */}
       {schedule.days.length === 0 && schedule.rawText && (
         <div className="sch-section">
+          <div className="sch-unrecognised-banner">
+            <strong>Schedule format not recognised yet.</strong>
+            <span>
+              The PDF uploaded fine and the cast list (where present) was extracted, but the day-by-day breakdown couldn't be parsed automatically. Send the PDF on so a handler for this layout can be added.
+            </span>
+          </div>
           <h2 className="sch-section-title">Extracted Text</h2>
           <p className="sch-section-hint">
-            The schedule has been parsed for cast data. Full day-by-day breakdown can be added with AI processing.
+            Below is the raw text extracted from the schedule, so you can see what the parser had to work with.
           </p>
           <pre className="sch-raw-text">{schedule.rawText.slice(0, 5000)}</pre>
         </div>

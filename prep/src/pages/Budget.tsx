@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS,
   useBreakdownStore, useParsedScriptStore, useCharacterOverridesStore,
@@ -6,8 +6,11 @@ import {
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useBudgetStore, CURRENCY_SYMBOLS, type BudgetLineItem } from '@/stores/budgetStore';
-import { useTimesheetStore } from '@/stores/timesheetStore';
+import { useTimesheetStore, getEffectiveRate } from '@/stores/timesheetStore';
+import { useShoppingFlagStore, SHOPPING_FLAG_KINDS, type ShoppingFlag } from '@/stores/shoppingFlagStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { ReceiptConfirmPanel, type ConfirmData } from '@/components/budget/receipts/ReceiptConfirmPanel';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /* ━━━ Types ━━━ */
 
@@ -36,6 +39,14 @@ export function Budget({ projectId }: BudgetProps) {
   const [activePanel, setActivePanel] = useState('overview');
   const [expensePanelOpen, setExpensePanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  /* Mobile-only — phone viewport (≤768px) hides the 210px sidebar by
+     default and slides it in from the left when ☰ is tapped. Picking
+     a section auto-closes the drawer. */
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
+  const pickPanel = (id: string) => { setActivePanel(id); setDrawerOpen(false); };
   const project = useProjectStore((s) => s.getProject(projectId));
   const deptLabel = project?.department === 'costume' ? 'Costume' : 'Hair & Makeup';
 
@@ -48,10 +59,14 @@ export function Budget({ projectId }: BudgetProps) {
   const setIsLTD = store(s => s.setIsLTD);
   const addLineItem = store(s => s.addLineItem);
   const addExpense = store(s => s.addExpense);
+  const projectInfo = store(s => s.projectInfo);
+  const setBudgetLimit = store(s => s.setBudgetLimit);
+  /** Production-set fixed budget. Some productions skip the proposal
+   *  flow and just hand the department a number — when this is > 0
+   *  it overrides the bottom-up approvedBudget calculation. */
+  const productionBudget = projectInfo?.budgetLimit || 0;
   const getTotalBudget = store(s => s.getTotalBudget);
   const getTotalSpent = store(s => s.getTotalSpent);
-  const getRemaining = store(s => s.getRemaining);
-  const getBudgetUsedPercent = store(s => s.getBudgetUsedPercent);
   const getPerCategoryBudget = store(s => s.getPerCategoryBudget);
   const getPerCategorySpend = store(s => s.getPerCategorySpend);
   const getLineItemTotal = store(s => s.getLineItemTotal);
@@ -85,8 +100,6 @@ export function Budget({ projectId }: BudgetProps) {
   /* ── Computed budget values ── */
   const totalBudget = getTotalBudget();
   const totalSpent = getTotalSpent();
-  const remaining = getRemaining();
-  const percentUsed = getBudgetUsedPercent();
   const perCategoryBudget = getPerCategoryBudget();
   const perCategorySpend = getPerCategorySpend();
 
@@ -95,10 +108,152 @@ export function Budget({ projectId }: BudgetProps) {
   const fullBudgetAsk = isLTD
     ? totalBudget + totalCrewCost + contingencyAmount
     : totalBudget + contingencyAmount;
+  /** Final budget the department is working against — production-set
+   *  amount when supplied, otherwise the bottom-up proposal total.
+   *  Used for "Approved Budget", spend %, remaining, variance. */
+  const approvedBudget = productionBudget > 0 ? productionBudget : fullBudgetAsk;
+  const remainingApproved = approvedBudget - totalSpent;
+  const pctApproved = approvedBudget > 0 ? (totalSpent / approvedBudget) * 100 : 0;
 
   const sym = CURRENCY_SYMBOLS[currency] || '£';
   const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   const fmtSigned = (n: number) => n < 0 ? `-${fmt(n)}` : n > 0 ? `+${fmt(n)}` : '—';
+
+  /* ── Shopping list rollup ──────────────────────────────────
+     Per-character "major item" flags (wig / facial hair / tattoo /
+     prosthetic) ticked in the breakdown panel. The store dedupes by
+     (character, kind, scope, scopeRef), so each entry here maps to
+     one budget line item. We expand each flag to the scenes it
+     covers and, if a schedule is parsed, count unique shoot days. */
+  const shoppingStore = useShoppingFlagStore(projectId);
+  const shoppingFlags = shoppingStore((s) => s.flags);
+  const scheduleStore = useScheduleStore(projectId);
+  const schedule = scheduleStore((s) => s.current);
+
+  const allLooks = useMemo(
+    () => parsedData ? parsedData.looks : [],
+    [parsedData],
+  );
+
+  /** Map sceneNumber (int) → unique shoot day count from the parsed
+   *  schedule. Returns 0 when the scene doesn't appear in the schedule
+   *  or no schedule has been uploaded. */
+  const scheduleDaysFor = useCallback((sceneNumbers: number[]): number => {
+    if (!schedule) return 0;
+    const wanted = new Set(sceneNumbers.map(String));
+    const days = new Set<number>();
+    for (const day of schedule.days) {
+      for (const s of day.scenes) {
+        if (wanted.has(String(parseInt(s.sceneNumber, 10)))) {
+          days.add(day.dayNumber);
+          break;
+        }
+      }
+    }
+    return days.size;
+  }, [schedule]);
+
+  interface ShoppingRollupRow {
+    flag: ShoppingFlag;
+    kindLabel: string;
+    characterName: string;
+    scopeLabel: string;
+    sceneNumbers: number[];
+    dayCount: number;
+  }
+
+  const shoppingRollup: ShoppingRollupRow[] = useMemo(() => {
+    if (shoppingFlags.length === 0) return [];
+
+    /** Compact a sorted array of scene numbers into "1, 4-7, 12" form. */
+    const formatSceneRange = (nums: number[]): string => {
+      if (nums.length === 0) return '—';
+      const sorted = [...nums].sort((a, b) => a - b);
+      const ranges: string[] = [];
+      let start = sorted[0];
+      let prev = sorted[0];
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === prev + 1) {
+          prev = sorted[i];
+        } else {
+          ranges.push(start === prev ? `${start}` : `${start}–${prev}`);
+          start = sorted[i];
+          prev = sorted[i];
+        }
+      }
+      ranges.push(start === prev ? `${start}` : `${start}–${prev}`);
+      return ranges.join(', ');
+    };
+
+    return shoppingFlags
+      .map((flag): ShoppingRollupRow | null => {
+        const kindDef = SHOPPING_FLAG_KINDS.find((k) => k.id === flag.kind);
+        const ch = characters.find((c) => c.id === flag.characterId);
+        if (!kindDef || !ch) return null;
+
+        let sceneNumbers: number[] = [];
+        let scopeLabel = '';
+
+        if (flag.scope === 'storyline') {
+          sceneNumbers = scenes
+            .filter((s) => s.characterIds.includes(flag.characterId) && !s.isOmitted)
+            .map((s) => s.number);
+          scopeLabel = 'Storyline';
+        } else if (flag.scope === 'look' && flag.lookId) {
+          const look = allLooks.find((l) => l.id === flag.lookId);
+          scopeLabel = `Look · ${look?.name || 'Untitled'}`;
+          // Scene matches when its breakdown has this character on this look.
+          for (const scene of scenes) {
+            if (scene.isOmitted) continue;
+            const bd = breakdownStore.getBreakdown(scene.id);
+            if (!bd) continue;
+            const cb = bd.characters.find(
+              (c) => c.characterId === flag.characterId && c.lookId === flag.lookId,
+            );
+            if (cb) sceneNumbers.push(scene.number);
+          }
+        } else if (flag.scope === 'continuity' && flag.continuityEventId) {
+          // Find the event by scanning every scene's breakdown — the
+          // event lives wherever it was created, but its sceneRange
+          // covers the whole arc.
+          let event = null as null | { sceneRange: string; description?: string; type: string };
+          for (const scene of scenes) {
+            const bd = breakdownStore.getBreakdown(scene.id);
+            if (!bd) continue;
+            const found = bd.continuityEvents.find((e) => e.id === flag.continuityEventId);
+            if (found) { event = found; break; }
+          }
+          if (!event) return null;
+          scopeLabel = `Event · ${event.description || event.type}`;
+          // Parse sceneRange like "5-12" or "5"
+          const rangeMatch = event.sceneRange.match(/^(\d+)\s*[-–]\s*(\d+)?/);
+          if (rangeMatch) {
+            const start = parseInt(rangeMatch[1], 10);
+            const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : start;
+            sceneNumbers = scenes
+              .filter((s) => s.number >= start && s.number <= end && !s.isOmitted)
+              .map((s) => s.number);
+          }
+        }
+
+        return {
+          flag,
+          kindLabel: kindDef.label,
+          characterName: ch.name,
+          scopeLabel: scopeLabel + (sceneNumbers.length > 0 ? ` · Sc ${formatSceneRange(sceneNumbers)}` : ''),
+          sceneNumbers,
+          dayCount: scheduleDaysFor(sceneNumbers),
+        };
+      })
+      .filter((r): r is ShoppingRollupRow => r !== null)
+      .sort((a, b) => {
+        // Group by character name, then by kind in the canonical order.
+        if (a.characterName !== b.characterName) return a.characterName.localeCompare(b.characterName);
+        const aIdx = SHOPPING_FLAG_KINDS.findIndex((k) => k.id === a.flag.kind);
+        const bIdx = SHOPPING_FLAG_KINDS.findIndex((k) => k.id === b.flag.kind);
+        return aIdx - bIdx;
+      });
+  }, [shoppingFlags, characters, scenes, allLooks, breakdownStore, scheduleDaysFor]);
 
   /* ── Script flags (SFX/prosthetics from breakdown) ── */
   const scriptFlags: ScriptFlag[] = useMemo(() => {
@@ -193,10 +348,11 @@ export function Budget({ projectId }: BudgetProps) {
       lineItemId: data.lineItemId,
       vat: data.vat,
       amount: data.amount,
+      notes: data.notes || undefined,
       receiptImageUri: data.imageUri,
     });
     setExpensePanelOpen(false);
-    showToast('Expense logged');
+    showToast('Receipt saved');
   }, [addExpense, showToast]);
 
   /* ── Tag variant class helper ── */
@@ -215,8 +371,77 @@ export function Budget({ projectId }: BudgetProps) {
     </div>
   );
 
+  /** Approved Budget stat — same shape as StatCard but the value is
+   *  click-to-edit. Replaces the Production-set toggle on Budget
+   *  Proposal: productions that just hand you a number can click
+   *  this card and type in the figure live during shoot. */
+  const ApprovedBudgetCard = () => {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(String(productionBudget || ''));
+    useEffect(() => {
+      if (!editing) setDraft(String(productionBudget || ''));
+    }, [editing]);
+
+    const commit = () => {
+      const next = parseFloat(draft);
+      setBudgetLimit(isNaN(next) || next < 0 ? 0 : next);
+      setEditing(false);
+    };
+
+    const subText = productionBudget > 0
+      ? 'Production-set · click to edit'
+      : 'Click to set production-confirmed amount';
+
+    return (
+      <div
+        className="bg-stat-card bg-stat-card--editable"
+        onClick={() => { if (!editing) setEditing(true); }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !editing) {
+            e.preventDefault();
+            setEditing(true);
+          }
+        }}
+      >
+        <div className="bg-stat-label">Approved Budget</div>
+        {editing ? (
+          <div className="bg-stat-value-edit" onClick={(e) => e.stopPropagation()}>
+            <span className="bg-stat-value-symbol">{sym}</span>
+            <input
+              type="number"
+              min={0}
+              step={50}
+              autoFocus
+              value={draft}
+              placeholder="0"
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commit();
+                else if (e.key === 'Escape') {
+                  setDraft(String(productionBudget || ''));
+                  setEditing(false);
+                }
+              }}
+              className="bg-stat-value-input"
+            />
+          </div>
+        ) : (
+          <div className="bg-stat-value bg-stat-value--teal">{fmt(approvedBudget)}</div>
+        )}
+        <div className="bg-stat-sub">{subText}</div>
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-page">
+    <div className={`bg-page${isMobile ? ' bg-page--mobile' : ''}${isMobile && drawerOpen ? ' bg-page--drawer-open' : ''}`}>
+      {/* Mobile drawer backdrop */}
+      {isMobile && drawerOpen && (
+        <div className="bg-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
       {/* ── SIDEBAR ── */}
       <nav className="bg-sidebar">
         <div className="bg-sidebar-label">Budget Manager</div>
@@ -224,9 +449,8 @@ export function Budget({ projectId }: BudgetProps) {
           <button
             key={s.id}
             className={`bg-sidebar-item ${activePanel === s.id ? 'bg-sidebar-item--active' : ''}`}
-            onClick={() => setActivePanel(s.id)}
+            onClick={() => pickPanel(s.id)}
           >
-            <span className="bg-sidebar-num">{s.num}</span>
             <span className="bg-sidebar-text">{s.title}</span>
             <span className={`bg-sidebar-dot ${s.status === 'done' ? 'bg-sidebar-dot--done' : s.status === 'going' ? 'bg-sidebar-dot--going' : ''}`} />
           </button>
@@ -246,6 +470,21 @@ export function Budget({ projectId }: BudgetProps) {
 
       {/* ── MAIN CONTENT ── */}
       <main className="bg-main">
+        {isMobile && (
+          <button
+            type="button"
+            className="bg-drawer-toggle"
+            aria-label="Open budget sections"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span>Sections</span>
+          </button>
+        )}
         {/* ═══════════════════════════════════
             01  OVERVIEW
         ═══════════════════════════════════ */}
@@ -253,7 +492,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">01 — Overview</div>
                 <h2 className="bg-title"><span className="bg-title-italic">Budget</span>{' '}<span className="bg-title-regular">Overview</span></h2>
                 <div className="bg-subtitle">{scenes.length} scenes · {deptLabel}</div>
               </div>
@@ -263,10 +501,10 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(fullBudgetAsk)} color="bg-stat-value--teal" sub="Confirmed by production" />
+              <StatCard label="Approved Budget" value={fmt(approvedBudget)} color="bg-stat-value--teal" sub={productionBudget > 0 ? 'Production-set' : 'Bottom-up estimate'} />
               <StatCard label="Proposed Total" value={fmt(totalBudget)} color="bg-stat-value--orange" sub="Materials only" />
-              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(percentUsed)}% of approved budget`} />
-              <StatCard label="Remaining" value={fmt(remaining)} color={remaining >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={hasExpenses ? `${expenses.length} receipts logged` : 'No spend logged yet'} />
+              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(pctApproved)}% of approved budget`} />
+              <StatCard label="Remaining" value={fmt(remainingApproved)} color={remainingApproved >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={hasExpenses ? `${expenses.length} receipts logged` : 'No spend logged yet'} />
             </div>
 
             <div className="bg-section-heading">
@@ -317,7 +555,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">02 — Script Flags</div>
                 <h2 className="bg-title">Script Breakdown Flags</h2>
                 <div className="bg-subtitle">Identified during breakdown — auto-populates Budget Proposal</div>
               </div>
@@ -327,7 +564,43 @@ export function Budget({ projectId }: BudgetProps) {
               <StatCard label="Total Scenes" value={String(scenes.length)} />
               <StatCard label="Flagged" value={String(flaggedCount)} color="bg-stat-value--orange" />
               <StatCard label="SFX / Prosthetics" value={String(scriptFlags.filter(f => f.type.variant === 'teal').length)} />
-              <StatCard label="Budget Items Generated" value={String(allLineItems.length)} color="bg-stat-value--teal" />
+              <StatCard label="Shopping Items" value={String(shoppingRollup.length)} color="bg-stat-value--teal" />
+            </div>
+
+            {/* Shopping list rollup — major HMU items the production has
+                to source ahead of shooting. Each row is one budget line
+                item (deduped across scenes via the flag's scope). */}
+            <div className="bg-section-heading">
+              Shopping List <span className="bg-section-line" />
+            </div>
+            <div className="bg-card bg-card--flush">
+              <div className="bg-col-head">
+                <span className="bg-ch" style={{ width: 110 }}>Item</span>
+                <span className="bg-ch" style={{ width: 130 }}>Character</span>
+                <span className="bg-ch" style={{ flex: 1 }}>Scope · Scenes</span>
+                <span className="bg-ch" style={{ width: 80, textAlign: 'right' }}>{schedule ? 'Days' : 'Scenes'}</span>
+              </div>
+              {shoppingRollup.length === 0 && (
+                <div className="bg-empty-row">
+                  No shopping items flagged yet. Tick wig / facial hair / tattoo / prosthetic in the Script Breakdown panel.
+                </div>
+              )}
+              {shoppingRollup.map((row) => (
+                <div key={row.flag.id} className="bg-flag-row">
+                  <div className="bg-flag-sc">{row.kindLabel}</div>
+                  <div className="bg-flag-char">{row.characterName}</div>
+                  <div className="bg-flag-body">
+                    <div className="bg-flag-desc">{row.scopeLabel}</div>
+                  </div>
+                  <div className="bg-flag-type">
+                    <span className="bg-tag bg-tag--teal">
+                      {schedule
+                        ? `${row.dayCount} day${row.dayCount === 1 ? '' : 's'}`
+                        : `${row.sceneNumbers.length} sc`}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="bg-section-heading">
@@ -371,7 +644,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">03 — Budget Proposal</div>
                 <h2 className="bg-title">Budget Proposal</h2>
                 <div className="bg-subtitle">Ready to send to production</div>
               </div>
@@ -423,8 +695,8 @@ export function Budget({ projectId }: BudgetProps) {
                     {crew.map(member => (
                       <tr key={member.id}>
                         <td>{member.name} — {member.position}</td>
-                        <td className="bg-td-muted">{fmt(member.rateCard.dailyRate)}</td>
-                        <td className="bg-td-amount">{fmt(member.rateCard.dailyRate)}/day</td>
+                        <td className="bg-td-muted">{fmt(getEffectiveRate(member.rateCard, 'shoot'))}</td>
+                        <td className="bg-td-amount">{fmt(getEffectiveRate(member.rateCard, 'shoot'))}/day</td>
                       </tr>
                     ))}
                   </tbody>
@@ -496,7 +768,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">04 — Spend Tracking</div>
                 <h2 className="bg-title">Spend Tracking</h2>
                 <div className="bg-subtitle">Live during shoot — log receipts as you purchase</div>
               </div>
@@ -506,9 +777,9 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(fullBudgetAsk)} sub="Confirmed by production" />
-              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(percentUsed)}% of approved`} />
-              <StatCard label="Remaining" value={fmt(remaining)} color={remaining >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={`${100 - Math.round(percentUsed)}% left to spend`} />
+              <ApprovedBudgetCard />
+              <StatCard label="Spent to Date" value={fmt(totalSpent)} color="bg-stat-value--orange" sub={`${Math.round(pctApproved)}% of approved`} />
+              <StatCard label="Remaining" value={fmt(remainingApproved)} color={remainingApproved >= 0 ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={`${Math.max(0, 100 - Math.round(pctApproved))}% left to spend`} />
               <StatCard label="Receipts" value={String(expenses.length)} sub={`${expenses.length} logged`} />
             </div>
 
@@ -559,7 +830,10 @@ export function Budget({ projectId }: BudgetProps) {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div className="bg-receipt-name">{exp.supplier || '(no supplier)'}</div>
-                      <div className="bg-receipt-meta">{cat?.name || exp.category} · {exp.date}</div>
+                      <div className="bg-receipt-meta">
+                        {cat?.name || exp.category} · {exp.date}
+                        {exp.notes && <> · {exp.notes}</>}
+                      </div>
                     </div>
                     <div className="bg-receipt-amount">{fmt(exp.amount)}</div>
                     <span className="bg-status-dot bg-status-dot--ok" />
@@ -578,7 +852,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">05 — Reconciliation</div>
                 <h2 className="bg-title">Reconciliation</h2>
                 <div className="bg-subtitle">Post-wrap · Final account to production</div>
               </div>
@@ -589,10 +862,10 @@ export function Budget({ projectId }: BudgetProps) {
             </div>
 
             <div className="bg-stat-grid bg-stat-grid--4">
-              <StatCard label="Approved Budget" value={fmt(fullBudgetAsk)} />
+              <StatCard label="Approved Budget" value={fmt(approvedBudget)} />
               <StatCard label="Total Spent" value={fmt(totalSpent)} color="bg-stat-value--orange" />
-              <StatCard label="Variance" value={fmtSigned(totalSpent - fullBudgetAsk)} color={totalSpent <= fullBudgetAsk ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={totalSpent <= fullBudgetAsk ? 'Under budget' : 'Over budget'} />
-              <StatCard label="Status" value={totalSpent <= fullBudgetAsk ? 'Under budget' : 'Over budget'} color={totalSpent <= fullBudgetAsk ? 'bg-stat-value--teal' : 'bg-stat-value--red'} />
+              <StatCard label="Variance" value={fmtSigned(totalSpent - approvedBudget)} color={totalSpent <= approvedBudget ? 'bg-stat-value--teal' : 'bg-stat-value--red'} sub={totalSpent <= approvedBudget ? 'Under budget' : 'Over budget'} />
+              <StatCard label="Status" value={totalSpent <= approvedBudget ? 'Under budget' : 'Over budget'} color={totalSpent <= approvedBudget ? 'bg-stat-value--teal' : 'bg-stat-value--red'} />
             </div>
 
             <div className="bg-section-heading">

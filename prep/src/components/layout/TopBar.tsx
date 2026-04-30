@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { isFeatureEnabled, type FeatureFlag } from '@/utils/featureFlags';
 import { isOwnerTier } from '@/utils/tierUtils';
 import { parseScriptRevision } from '@/utils/parseScriptRevision';
+import { UserProfileModal } from '@/components/profile/UserProfileModal';
 
 interface TopBarProps {
   title?: string;
@@ -36,10 +37,19 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
   const draftDate = scriptRevision?.formattedDate || null;
   const [navOpen, setNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useThemeStore();
   const { user, isAuthenticated, logout } = useAuthStore();
+  // Subscribe to previewTier reactively so the avatar's brown
+  // owner styling toggles correctly when the user switches tiers
+  // via the dev tier picker. user.tier stays as the underlying
+  // owner role; the visual badge follows the effective preview.
+  const previewTier = useAuthStore((s) => s.previewTier);
+  const effectiveTier = previewTier && user?.tier === 'owner'
+    ? previewTier
+    : (user?.tier ?? '');
 
   // Close nav on outside click
   useEffect(() => {
@@ -149,27 +159,19 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         <div ref={accountRef} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {isAuthenticated ? (
             <>
-              {/* Owner badge */}
-              {isOwnerTier(user?.tier ?? '') && (
-                <div style={{
-                  backgroundColor: '#2A1A08',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  color: '#E8621A',
-                  letterSpacing: '0.1em',
-                  fontFamily: 'DM Sans, sans-serif',
-                }}>
-                  OWNER
-                </div>
-              )}
-              {/* Avatar — THE SUN */}
+              {/* Avatar — THE SUN.
+                  Owner tier is signalled by brown initials on the orange
+                  circle (avatar-btn--owner) instead of the standard cream;
+                  the older black "OWNER" pill that used to sit beside it
+                  is gone. Other tiers keep the cream initials. */}
               <div className="avatar-wrap">
                 <div className="avatar-halo avatar-halo--outer" />
                 <div className="avatar-halo avatar-halo--mid" />
                 <div className="avatar-halo avatar-halo--inner" />
-                <button className="avatar-btn" onClick={() => setAccountOpen(!accountOpen)}>
+                <button
+                  className={`avatar-btn${isOwnerTier(effectiveTier) ? ' avatar-btn--owner' : ''}`}
+                  onClick={() => setAccountOpen(!accountOpen)}
+                >
                   {user?.initials || 'U'}
                 </button>
               </div>
@@ -180,7 +182,13 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                     {/* Profile card */}
                     <div className="account-card">
                       <div className="account-profile">
-                        <div className="account-avatar">{user?.initials || 'U'}</div>
+                        <div
+                          className={`account-avatar${
+                            isOwnerTier(effectiveTier) ? ' avatar-btn--owner' : ''
+                          }`}
+                        >
+                          {user?.initials || 'U'}
+                        </div>
                         <div className="account-info">
                           <div className="account-name">{user?.name || 'User'}</div>
                           <div className="account-email">{user?.email || ''}</div>
@@ -188,7 +196,15 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
                         </div>
                       </div>
                       <div className="account-divider" />
-                      <button className="account-edit-btn" onClick={() => console.log('Edit profile')}>Edit Profile</button>
+                      <button
+                        className="account-edit-btn"
+                        onClick={() => {
+                          setProfileOpen(true);
+                          setAccountOpen(false);
+                        }}
+                      >
+                        Edit Profile
+                      </button>
                     </div>
 
                     {/* Account Settings */}
@@ -296,6 +312,7 @@ export function TopBar({ title = 'Projects', activePage, onNavigate, projectType
         </div>
       </div>
 
+      {profileOpen && <UserProfileModal onClose={() => setProfileOpen(false)} />}
     </header>
   );
 }

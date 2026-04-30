@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS,
   useBreakdownStore, useParsedScriptStore, useCharacterOverridesStore,
   type Scene, type Character, type Look,
 } from '@/stores/breakdownStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /* ━━━ LOOKBOOK TAB ━━━ */
 
@@ -13,6 +14,14 @@ export function LookbookTab({ projectId }: { projectId: string }) {
   const overridesStore = useCharacterOverridesStore();
 
   const [activeCharId, setActiveCharId] = useState<string>('');
+
+  /* Mobile-only — phone viewport (≤768px) hides the character sidebar
+     by default and slides it in as a drawer when ☰ is tapped. Picking
+     a character auto-closes the drawer. */
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
+  const pickChar = (id: string) => { setActiveCharId(id); setDrawerOpen(false); };
 
   /* Resolve data source */
   const parsedData = parsedScriptStore.getParsedData(projectId);
@@ -110,7 +119,11 @@ export function LookbookTab({ projectId }: { projectId: string }) {
   const MAX_DOTS = 4;
 
   return (
-    <div className="lb-page">
+    <div className={`lb-page${isMobile ? ' lb-page--mobile' : ''}${isMobile && drawerOpen ? ' lb-page--drawer-open' : ''}`}>
+      {/* Mobile drawer backdrop */}
+      {isMobile && drawerOpen && (
+        <div className="lb-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
       {/* ━━━ LEFT — Character sidebar ━━━ */}
       <div className="lb-sidebar">
         <div className="lb-sidebar-header">
@@ -127,7 +140,7 @@ export function LookbookTab({ projectId }: { projectId: string }) {
               <button
                 key={ch.id}
                 className={`lb-sidebar-item ${isActive ? 'lb-sidebar-item--active' : ''} ${!hasLooks ? 'lb-sidebar-item--dim' : ''}`}
-                onClick={() => setActiveCharId(ch.id)}
+                onClick={() => pickChar(ch.id)}
               >
                 <div className={`lb-sidebar-avatar ${isActive ? 'lb-sidebar-avatar--active' : ''}`}>
                   {initials(ch.name)}
@@ -159,6 +172,20 @@ export function LookbookTab({ projectId }: { projectId: string }) {
             {/* Hero header */}
             <div className="lb-hero">
               <div className="lb-hero-left">
+                {isMobile && (
+                  <button
+                    type="button"
+                    className="lb-drawer-toggle"
+                    aria-label="Open characters"
+                    onClick={() => setDrawerOpen(true)}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="3" y1="6" x2="21" y2="6"/>
+                      <line x1="3" y1="12" x2="21" y2="12"/>
+                      <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                  </button>
+                )}
                 <div className="lb-hero-avatar">{initials(activeChar.name)}</div>
                 <div className="lb-hero-info">
                   <h2 className="lb-hero-name">{activeChar.name}</h2>

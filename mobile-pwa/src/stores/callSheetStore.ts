@@ -119,7 +119,17 @@ export const useCallSheetStore = create<CallSheetState>()(
         set({ isUploading: true, uploadError: null });
 
         try {
-          const callSheet = await parseCallSheetPDF(file);
+          // Pull the project's cast roster (character actorNumbers) so the
+          // parser can drop misclassified tokens that aren't real cast IDs.
+          const project = useProjectStore.getState().currentProject;
+          const validCastNumbers = new Set<number>();
+          for (const c of project?.characters ?? []) {
+            if (typeof c.actorNumber === 'number') validCastNumbers.add(c.actorNumber);
+          }
+          const callSheet = await parseCallSheetPDF(
+            file,
+            validCastNumbers.size > 0 ? { validCastNumbers } : undefined,
+          );
 
           // Tag the call sheet with the current project ID
           const currentProjectId = useProjectStore.getState().currentProject?.id;

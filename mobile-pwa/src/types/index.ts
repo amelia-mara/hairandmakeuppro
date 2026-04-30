@@ -861,7 +861,16 @@ export type EntryStatus = 'draft' | 'pending' | 'approved';
 export type TimesheetView = 'week' | 'sheet';
 
 export interface RateCard {
-  dailyRate: number;
+  /** Prep-day rate (fittings, tests, R&D). */
+  prepRate: number;
+  /** Full shoot-day rate. */
+  shootRate: number;
+  /**
+   * Legacy single rate. Older persisted cards only carry this; we
+   * fall back to it when prepRate / shootRate are missing.
+   * @deprecated read via getEffectiveRate.
+   */
+  dailyRate?: number;
   baseDayHours: BaseDayHours;
   baseContract: BaseContract; // BECTU base contract (10+1 or 11+1)
   dayType: DayType; // Working day type - determines lunch duration
@@ -872,6 +881,20 @@ export interface RateCard {
   seventhDayMultiplier: number; // 2x for 7th consecutive day
   kitRental: number;
   lunchDuration: number; // in minutes - derived from dayType: SWD=60, CWD/SCWD=30
+}
+
+/**
+ * Resolve which rate applies for a given day. Falls back to the
+ * legacy dailyRate when the new fields aren't yet on the card.
+ */
+export function getEffectiveRate(
+  rateCard: RateCard,
+  rateType: 'prep' | 'shoot' = 'shoot',
+): number {
+  if (rateType === 'prep') {
+    return rateCard.prepRate ?? rateCard.dailyRate ?? rateCard.shootRate ?? 0;
+  }
+  return rateCard.shootRate ?? rateCard.dailyRate ?? rateCard.prepRate ?? 0;
 }
 
 export interface TimesheetEntry {
@@ -890,6 +913,11 @@ export interface TimesheetEntry {
   notes: string; // OT justification notes for production accounting
   status: EntryStatus;
   productionDay?: number;
+  /**
+   * Whether this day is billed at the prep or shoot rate. Defaults
+   * to 'shoot' when missing so older entries calculate the same way.
+   */
+  rateType?: 'prep' | 'shoot';
   // BECTU turnaround tracking
   previousWrapOut?: string; // previous day's wrap out time for turnaround calculation
   // Call sheet auto-fill tracking
@@ -1025,7 +1053,8 @@ export const getLunchDurationForDayType = (dayType: DayType): number => {
 };
 
 export const createDefaultRateCard = (): RateCard => ({
-  dailyRate: 0,
+  prepRate: 0,
+  shootRate: 0,
   baseDayHours: 11,
   baseContract: '11+1',
   dayType: 'SWD',

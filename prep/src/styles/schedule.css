@@ -390,12 +390,34 @@
 
 .sch-scene-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 12px;
   background: rgba(var(--a), 0.03);
   border-radius: 8px;
   font-size: 0.8125rem;
+}
+.sch-scene-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sch-scene-cast {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 50px;
+}
+.sch-scene-cast-pill {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--a), 0.20);
+  background: rgba(var(--a), 0.05);
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .sch-scene-num {
@@ -586,4 +608,97 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCHEDULE — phone (≤ 768px)
+
+   Single-column page with no permanent sidebar — just needs tighter
+   padding and a few stack/scroll tweaks so the title, re-upload
+   button, tabs row, and stat cards don't crowd a 375px viewport.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .sch-page {
+    padding: 24px 16px 60px;
+  }
+
+  /* Header — title + re-upload button stack so the title gets a
+     full row. */
+  .sch-header-top {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .sch-title {
+    font-size: 1.375rem;
+  }
+  .sch-reupload-btn {
+    align-self: flex-start;
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+
+  /* Tabs row scrolls horizontally so all tabs stay reachable
+     without overflowing the page. */
+  .sch-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .sch-tabs::-webkit-scrollbar { display: none; }
+  .sch-tab {
+    padding: 10px 12px;
+    flex-shrink: 0;
+  }
+
+  /* Upload zone padding shrinks so the dashed box doesn't push the
+     CTA below the fold. */
+  .sch-upload-zone {
+    padding: 48px 20px;
+  }
+
+  /* Stats row — 3 stats in a flex row become very narrow on a
+     phone. Drop to a 2-column grid that wraps to 3 rows max. */
+  .sch-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .sch-stat {
+    padding: 14px 12px;
+  }
+  .sch-stat-value {
+    font-size: 1.375rem;
+  }
+
+  /* Day cards — header row stacks so the meta + scene count drop
+     below the day number instead of fighting it for width. */
+  .sch-day-header {
+    padding: 14px 16px;
+  }
+  .sch-day-meta {
+    max-width: none;
+  }
+}
+
+/* Format-not-recognised banner — appears above the raw text
+   preview when neither schedule-parser walker matched. */
+.sch-unrecognised-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  border-radius: 10px;
+  background: rgba(232, 98, 26, 0.08);
+  border: 1px solid rgba(232, 98, 26, 0.25);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.sch-unrecognised-banner strong {
+  color: var(--accent);
 }

@@ -8,6 +8,15 @@
   min-height: calc(100vh - 80px);
   position: relative;
   z-index: 1;
+  /* Lock the whole budget page to DM Sans regardless of which
+     font token a child element references. Mirrors the timesheet
+     treatment for visual consistency. */
+  font-family: 'DM Sans', sans-serif;
+}
+.bg-page *,
+.bg-page *::before,
+.bg-page *::after {
+  font-family: 'DM Sans', sans-serif;
 }
 
 /* ━━━ LEFT — Sidebar Navigation ━━━ */
@@ -158,17 +167,13 @@
   margin-bottom: 26px;
 }
 
-.bg-eyebrow {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 3px;
-}
+/* Eyebrow class is no longer rendered (the "01 — …" labels were
+   stripped from the JSX), but the rule stays as a no-op in case any
+   older tree references it. */
+.bg-eyebrow { display: none; }
 
 .bg-title {
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.75rem;
   font-weight: 900;
   letter-spacing: -0.01em;
@@ -186,10 +191,17 @@
   font-family: 'DM Sans', sans-serif;
 }
 
+/* Subtitle picks up the eyebrow's old accent role — orange,
+   uppercase, letter-spaced — so the panel has a single warm
+   accent line beneath the title instead of one above and one
+   below. Mirrors the timesheet treatment. */
 .bg-subtitle {
-  font-family: var(--font-sans);
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
   margin-top: 4px;
 }
 
@@ -223,6 +235,63 @@
   border-radius: 10px;
   padding: 16px 18px 14px;
   box-shadow: var(--glass-shadow-stat);
+}
+
+/* Click-to-edit variant — used by the Approved Budget card on
+   Spend Tracking. Shows a subtle hover border so the user knows
+   the value is editable, and the inline input picks up the same
+   font + colour as the value text so the transition between read
+   and edit modes is seamless. */
+.bg-stat-card--editable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bg-stat-card--editable:hover {
+  border-color: rgba(var(--a), 0.35);
+  background: rgba(var(--a), 0.03);
+}
+.bg-stat-card--editable:focus {
+  outline: none;
+  border-color: rgba(var(--a), 0.45);
+  background: rgba(var(--a), 0.05);
+}
+.bg-stat-value-edit {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.1;
+}
+.bg-stat-value-symbol {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--brand-teal);
+}
+.bg-stat-value-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: 1.625rem;
+  font-weight: 400;
+  color: var(--brand-teal);
+  background: transparent;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+.bg-stat-value-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+/* Hide the spinner buttons so the input stays clean */
+.bg-stat-value-input::-webkit-outer-spin-button,
+.bg-stat-value-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.bg-stat-value-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .bg-stat-label {
@@ -1116,3 +1185,95 @@
 
 /* ━━━ Keep existing receipt confirm panel + modal styles ━━━ */
 /* These are imported from budget-forms.css which is still loaded */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUDGET — phone (≤ 768px)
+
+   210px sidebar collapses to a slide-in drawer; ☰ at the top of the
+   main panel opens it. 4-up / 3-up / 2-up stat grids stack to two
+   columns (single column for the BUDGET OVERVIEW value cards would
+   feel too tall). The 2-col bg-info-grid stacks 1-col so values
+   like "Hair & Makeup" stop wrapping mid-word.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .bg-page--mobile .bg-sidebar {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: min(85vw, 280px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+    background: var(--bg-surface) !important;
+  }
+  .bg-page--drawer-open .bg-sidebar {
+    transform: translateX(0);
+  }
+  .bg-drawer-backdrop {
+    position: fixed;
+    inset: 80px 0 0 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: bg-drawer-fade 0.18s ease-out;
+  }
+  @keyframes bg-drawer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .bg-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+
+  /* Main takes full width and tightens its outer padding. */
+  .bg-page--mobile .bg-main {
+    padding: 14px 14px 60px;
+  }
+
+  /* Page header: title + "Last updated" stack instead of competing
+     for the same row. */
+  .bg-page--mobile .bg-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .bg-page--mobile .bg-title {
+    font-size: 1.375rem;
+  }
+  .bg-page--mobile .bg-header-actions {
+    padding-top: 0;
+  }
+
+  /* Stat grids — drop 4-up / 3-up to 2-up so the £ values still
+     have room without wrapping. */
+  .bg-page--mobile .bg-stat-grid--4,
+  .bg-page--mobile .bg-stat-grid--3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Two-column production-details grid stacks so values aren't
+     truncated. */
+  .bg-page--mobile .bg-info-grid {
+    grid-template-columns: 1fr;
+  }
+  .bg-page--mobile .bg-info-cell {
+    border-right: none;
+  }
+}

@@ -210,8 +210,14 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             });
 
             // ── Populate breakdown store from filming_notes ──
-            // Merge with local breakdowns to preserve lookIds and other data
-            // that may not have been saved to Supabase yet (e.g. save failed).
+            // Defensive merge with local breakdowns: for every field
+            // the user can fill in (lookId + entersWith.{hair,makeup,
+            // wardrobe} + sfx + environmental + action + notes +
+            // changeNotes + exitsWith.*), prefer the LOCAL value when
+            // Supabase's is empty. This protects against a
+            // partial/stale filming_notes payload from clobbering
+            // typed data on reload — the symptom we hit was tags
+            // surviving but breakdown text fields disappearing.
             for (const row of data.scenes) {
               const filmingNotes = row.filming_notes as string | null;
               if (filmingNotes) {
@@ -220,18 +226,56 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                   if (breakdown && typeof breakdown === 'object') {
                     const localBd = useBreakdownStore.getState().getBreakdown(row.id as string);
                     if (localBd && breakdown.characters && Array.isArray(breakdown.characters)) {
-                      // Merge: keep local lookId if Supabase breakdown has empty lookId
+                      // Field-by-field merge: remote value wins if it
+                      // has content; local fills in for blanks.
+                      const pick = <T,>(remote: T | undefined, local: T | undefined): T | undefined => {
+                        const empty = (v: unknown) => v === undefined || v === null || v === '';
+                        return empty(remote) ? local : remote;
+                      };
                       breakdown.characters = breakdown.characters.map((cb: any) => {
                         const localCb = localBd.characters?.find((lc: any) => lc.characterId === cb.characterId);
-                        if (localCb && !cb.lookId && localCb.lookId) {
-                          return { ...cb, lookId: localCb.lookId };
-                        }
-                        return cb;
+                        if (!localCb) return cb;
+                        return {
+                          ...cb,
+                          lookId: pick(cb.lookId, localCb.lookId) ?? '',
+                          entersWith: {
+                            hair: pick(cb.entersWith?.hair, localCb.entersWith?.hair) ?? '',
+                            makeup: pick(cb.entersWith?.makeup, localCb.entersWith?.makeup) ?? '',
+                            wardrobe: pick(cb.entersWith?.wardrobe, localCb.entersWith?.wardrobe) ?? '',
+                          },
+                          sfx: pick(cb.sfx, localCb.sfx) ?? '',
+                          environmental: pick(cb.environmental, localCb.environmental) ?? '',
+                          action: pick(cb.action, localCb.action) ?? '',
+                          notes: pick(cb.notes, localCb.notes) ?? '',
+                          changeType: pick(cb.changeType, localCb.changeType) ?? 'no-change',
+                          changeNotes: pick(cb.changeNotes, localCb.changeNotes) ?? '',
+                          exitsWith: {
+                            hair: pick(cb.exitsWith?.hair, localCb.exitsWith?.hair) ?? '',
+                            makeup: pick(cb.exitsWith?.makeup, localCb.exitsWith?.makeup) ?? '',
+                            wardrobe: pick(cb.exitsWith?.wardrobe, localCb.exitsWith?.wardrobe) ?? '',
+                          },
+                        };
                       });
+                      // Same defence for the scene-level fields.
+                      breakdown.timeline = {
+                        day: pick(breakdown.timeline?.day, localBd.timeline?.day) ?? '',
+                        time: pick(breakdown.timeline?.time, localBd.timeline?.time) ?? '',
+                        type: pick(breakdown.timeline?.type, localBd.timeline?.type) ?? '',
+                        note: pick(breakdown.timeline?.note, localBd.timeline?.note) ?? '',
+                        dayConfirmed: breakdown.timeline?.dayConfirmed || localBd.timeline?.dayConfirmed,
+                      };
+                      // Continuity events: prefer remote, fall back to
+                      // local if remote is missing or empty.
+                      if (!breakdown.continuityEvents || breakdown.continuityEvents.length === 0) {
+                        breakdown.continuityEvents = localBd.continuityEvents ?? [];
+                      }
                     }
                     useBreakdownStore.getState().setBreakdown(row.id as string, breakdown);
                   }
                 } catch { /* not valid JSON, skip */ }
+              } else {
+                // No filming_notes at all on remote — keep whatever
+                // local has, don't replace with an empty.
               }
             }
 
@@ -609,12 +653,21 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             onContinuityInsert: (payload) => {
               handleContinuityRealtimeInsert(payload);
             },
-            // NOTE: Mobile timesheets are local-only. Prep stores timesheet
-            // state in a sentinel row (week_starting='1970-01-01') with a
-            // different structure. Full two-way timesheet sync requires a
-            // design decision on shared format. Log for now.
+            // Member timesheet rows landed via mobile or another
+            // prep client. Skip the sentinel prep-state row (the
+            // big "1970-01-01" blob); for everything else, refetch
+            // and merge so the team-ts panel shows the latest hours
+            // without the user having to re-mount the timesheet.
             onTimesheetInsert: (payload) => {
-              console.log('[PrepSync] Timesheet entry from app:', payload);
+              const newWeek = (payload.new as { week_starting?: string } | null)?.week_starting;
+              const oldWeek = (payload.old as { week_starting?: string } | null)?.week_starting;
+              if (newWeek === '1970-01-01' || oldWeek === '1970-01-01') return;
+              if (!projectId) return;
+              import('@/services/supabaseSync').then(async (mod) => {
+                const rows = await mod.fetchMemberTimesheets(projectId);
+                const tsStore = useTimesheetStore(projectId);
+                tsStore.getState().mergeMemberEntries(rows);
+              });
             },
           };
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { pushMemberWeekDebounced, getWeekStart as getMemberWeekStart } from '@/services/timesheetSync';
 import {
   calculateBECTUTimesheet,
   getLunchDuration,
@@ -25,7 +26,25 @@ export type CrewType = 'paye' | 'ltd';
 export type Department = 'hair' | 'makeup' | 'sfx' | 'prosthetics';
 
 export interface RateCard {
-  dailyRate: number;
+  /**
+   * Prep-day rate (fittings, R&D, recces, costume tests). Used when
+   * a TimesheetEntry has `rateType: 'prep'`.
+   */
+  prepRate: number;
+  /**
+   * Full shoot-day rate. Used when a TimesheetEntry has
+   * `rateType: 'shoot'` (the default for fresh entries).
+   */
+  shootRate: number;
+  /**
+   * Legacy single rate. Older persisted cards only carry this
+   * value; we fall back to it when a card is missing prepRate /
+   * shootRate, then drop it once the user resaves.
+   *
+   * @deprecated kept for backwards compatibility — read at runtime
+   *   via getEffectiveRate(); never write to it from new code.
+   */
+  dailyRate?: number;
   baseDayHours: number;
   baseContract: BaseContract;
   dayType: BECTUDayType;
@@ -38,6 +57,27 @@ export interface RateCard {
   lunchDuration: number;
 }
 
+/**
+ * Resolve which rate applies for an entry. Falls back to the legacy
+ * dailyRate when prepRate / shootRate are missing on an older card,
+ * and finally to 0 if even that's absent.
+ */
+export function getEffectiveRate(
+  rateCard: RateCard,
+  rateType: 'prep' | 'shoot' = 'shoot',
+): number {
+  if (rateType === 'prep') {
+    return rateCard.prepRate
+      ?? rateCard.dailyRate
+      ?? rateCard.shootRate
+      ?? 0;
+  }
+  return rateCard.shootRate
+    ?? rateCard.dailyRate
+    ?? rateCard.prepRate
+    ?? 0;
+}
+
 export interface CrewMember {
   id: string;
   name: string;
@@ -47,6 +87,17 @@ export interface CrewMember {
   email: string;
   phone: string;
   rateCard: RateCard;
+  // (rateType lives on the TimesheetEntry, not here — same crew
+  // member can be on prep one day and shoot the next.)
+  /**
+   * Marks the row as the *current user's* own timesheet entry. Exactly
+   * one crew member per project should carry this flag — it identifies
+   * "you" so the sidebar / crew list can visually separate your own
+   * invoice from the team's.
+   */
+  isMe?: boolean;
+  /** Auth user id linked to this crew row (only set when isMe). */
+  userId?: string;
 }
 
 export interface TimesheetEntry {
@@ -65,6 +116,20 @@ export interface TimesheetEntry {
   notes: string;
   status: 'draft' | 'submitted' | 'approved';
   previousWrapOut?: string;
+  /**
+   * Whether this day was billed at the prep or shoot rate. Drives
+   * which RateCard rate getEffectiveRate picks. Defaults to 'shoot'
+   * — the most common case — so older entries without the field
+   * still calculate the same way they used to.
+   */
+  rateType?: 'prep' | 'shoot';
+  /**
+   * Auth user id of the team member who logged this entry from
+   * mobile. Set by mergeMemberEntries when the row arrives via
+   * Supabase; absent on entries the designer added directly in
+   * prep. Used by the UI to flag the row as "synced".
+   */
+  sourceUserId?: string;
 }
 
 export interface TimesheetCalculation {
@@ -135,7 +200,8 @@ export interface ProductionSettings {
 
 export function createDefaultRateCard(): RateCard {
   return {
-    dailyRate: 200,
+    prepRate: 150,
+    shootRate: 200,
     baseDayHours: 10,
     baseContract: '10+1',
     dayType: 'SWD',
@@ -189,11 +255,71 @@ interface TimesheetState {
   updateCrew: (id: string, updates: Partial<CrewMember>) => void;
   removeCrew: (id: string) => void;
   updateCrewRateCard: (crewId: string, updates: Partial<RateCard>) => void;
+  /**
+   * Ensure a "me" crew row exists in this project, prefilled from the
+   * caller-supplied user-profile fields. When the row is created for
+   * the first time we seed it with `me.rateCard` (the user's default
+   * rate card from their profile) when supplied, otherwise we fall
+   * back to createDefaultRateCard(). Existing rows keep their rate
+   * card untouched so per-project negotiations aren't overwritten by
+   * profile edits.
+   */
+  ensureSelfCrew: (
+    me: {
+      userId: string;
+      name: string;
+      email: string;
+      phone: string;
+      crewType: CrewType;
+      rateCard?: RateCard;
+    },
+  ) => string;
+  /**
+   * Sync project team members (joined via the project invite code)
+   * into the timesheet's crew list. For each member with a userId we
+   * either add a new crew row (with a default rate card the designer
+   * can adjust later) or refresh the personal fields (name / email)
+   * on the existing row. Rate cards on existing rows are NEVER
+   * touched. Pass `removeOrphans: true` to also delete crew rows
+   * whose userId no longer matches an active team member — used when
+   * the designer removes someone from the project.
+   */
+  ensureTeamCrew: (
+    members: Array<{
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+    }>,
+    options?: { removeOrphans?: boolean },
+  ) => void;
 
   // Entries
   getEntry: (crewId: string, date: string) => TimesheetEntry;
   saveEntry: (crewId: string, entry: TimesheetEntry) => void;
   deleteEntry: (crewId: string, date: string) => void;
+  /** Toggle approval state on a single entry. Triggers a write-back
+   *  to the team member's Supabase row when the crew row is synced
+   *  so mobile sees the new status. */
+  setEntryStatus: (
+    crewId: string,
+    date: string,
+    status: TimesheetEntry['status'],
+  ) => void;
+  /**
+   * Apply timesheet rows pulled from Supabase onto the local store.
+   * Each member row contributes a list of entries that get keyed
+   * under `${crewId}:${entry.date}` for the crew row whose `userId`
+   * matches the member's user_id. Existing entries are replaced so
+   * the latest mobile log wins; entries the designer added by hand
+   * for a date the member hasn't logged yet are preserved.
+   *
+   * Returns the count of entries that were applied so callers can
+   * surface a "X new entries from your team" toast.
+   */
+  mergeMemberEntries: (
+    rows: Array<{ user_id: string; entries: unknown }>,
+  ) => number;
 
   // Navigation
   setSelectedCrew: (crewId: string | null) => void;
@@ -264,7 +390,10 @@ function emptyCalculation(): TimesheetCalculation {
 function toBECTUEntry(entry: TimesheetEntry, rateCard: RateCard, previousWrapOut?: string): BECTUTimesheetEntry {
   return {
     date: entry.date,
-    dayRate: rateCard.dailyRate,
+    // Pick prepRate for prep days, shootRate otherwise. Falls back
+    // to the legacy dailyRate when an older card is missing the new
+    // fields — see getEffectiveRate.
+    dayRate: getEffectiveRate(rateCard, entry.rateType ?? 'shoot'),
     baseContract: rateCard.baseContract,
     dayType: entry.dayType,
     preCallTime: entry.preCall || null,
@@ -338,7 +467,28 @@ function entryKey(crewId: string, date: string) {
 function createTimesheetStore(projectId: string) {
   return create<TimesheetState>()(
     persist(
-      (set, get) => ({
+      (set, get) => {
+        // Pulled out so saveEntry / deleteEntry / approveEntry don't
+        // each re-implement the same plumbing. Computes the affected
+        // user + week, gathers that week's current entries from the
+        // store, and pushes via the debounced helper. Designer-only
+        // crew rows (no userId) are no-ops.
+        const pushBackIfSynced = (crewId: string, dateInWeek: string) => {
+          const state = get();
+          const member = state.crew.find((c) => c.id === crewId);
+          if (!member?.userId) return;
+          const weekStart = getMemberWeekStart(dateInWeek);
+          const prefix = `${crewId}:`;
+          const weekEntries: TimesheetEntry[] = [];
+          for (const [k, v] of Object.entries(state.entries)) {
+            if (!k.startsWith(prefix)) continue;
+            if (getMemberWeekStart(v.date) !== weekStart) continue;
+            weekEntries.push(v);
+          }
+          pushMemberWeekDebounced(projectId, member.userId, weekStart, weekEntries);
+        };
+
+        return {
         production: {
           name: '',
           code: '',
@@ -394,6 +544,183 @@ function createTimesheetStore(projectId: string) {
           });
           triggerTsAutoSave();
         },
+        ensureSelfCrew: (me) => {
+          const state = get();
+          // Match on the userId we stamp on the row, then by email as a
+          // fallback so a row a designer added by hand earlier still
+          // gets recognised as "me".
+          const existing =
+            state.crew.find((c) => c.isMe && c.userId === me.userId) ||
+            state.crew.find((c) => c.userId === me.userId) ||
+            state.crew.find(
+              (c) =>
+                me.email.trim() !== '' &&
+                c.email.trim().toLowerCase() === me.email.trim().toLowerCase(),
+            );
+          if (existing) {
+            // Refresh the personal fields from the profile but keep the
+            // project-specific rate card and position untouched.
+            set((s) => ({
+              crew: s.crew.map((c) =>
+                c.id === existing.id
+                  ? {
+                      ...c,
+                      isMe: true,
+                      userId: me.userId,
+                      name: me.name || c.name,
+                      email: me.email || c.email,
+                      phone: me.phone || c.phone,
+                      crewType: me.crewType,
+                    }
+                  : c.isMe && c.id !== existing.id
+                  ? { ...c, isMe: false } // Only one row should carry the flag.
+                  : c,
+              ),
+              lastSaved: new Date().toISOString(),
+            }));
+            triggerTsAutoSave();
+            return existing.id;
+          }
+          // No matching crew yet — insert a fresh row with sensible
+          // defaults. The user can edit position/department/rate card
+          // from the crew settings tab.
+          const id = `crew-${Date.now()}`;
+          const member: CrewMember = {
+            id,
+            name: me.name,
+            position: 'Designer',
+            department: 'hair',
+            crewType: me.crewType,
+            email: me.email,
+            phone: me.phone,
+            rateCard: me.rateCard ?? createDefaultRateCard(),
+            isMe: true,
+            userId: me.userId,
+          };
+          set((s) => ({
+            crew: [member, ...s.crew],
+            selectedCrewId: s.selectedCrewId || id,
+            lastSaved: new Date().toISOString(),
+          }));
+          triggerTsAutoSave();
+          return id;
+        },
+        ensureTeamCrew: (members, options) => {
+          if (members.length === 0 && !options?.removeOrphans) return;
+          const state = get();
+          const memberByUserId = new Map(members.map((m) => [m.userId, m]));
+          const newCrew: CrewMember[] = [];
+          const newEntries = { ...state.entries };
+
+          // First pass: walk the existing crew and either refresh
+          // matching rows or drop them when removeOrphans is set.
+          for (const c of state.crew) {
+            // The user's own row is managed separately by ensureSelfCrew;
+            // never overwrite or delete it here.
+            if (c.isMe) { newCrew.push(c); continue; }
+            const match = c.userId ? memberByUserId.get(c.userId) : undefined;
+            if (match) {
+              newCrew.push({
+                ...c,
+                userId: match.userId,
+                name: match.name || c.name,
+                email: match.email ?? c.email,
+                phone: match.phone ?? c.phone,
+              });
+              memberByUserId.delete(match.userId);
+            } else if (c.userId && options?.removeOrphans) {
+              // Drop synced rows whose user is no longer on the team
+              // — also wipe their logged hours so we don't leak data.
+              for (const k of Object.keys(newEntries)) {
+                if (k.startsWith(`${c.id}:`)) delete newEntries[k];
+              }
+            } else {
+              newCrew.push(c);
+            }
+          }
+
+          // Second pass: anyone left in memberByUserId is a brand new
+          // team member with no crew row yet — add one with default rate.
+          let nextIdx = 0;
+          for (const m of memberByUserId.values()) {
+            const id = `crew-team-${m.userId}-${Date.now()}-${nextIdx++}`;
+            newCrew.push({
+              id,
+              name: m.name,
+              position: 'Crew',
+              department: 'hair',
+              crewType: 'paye',
+              email: m.email ?? '',
+              phone: m.phone ?? '',
+              rateCard: createDefaultRateCard(),
+              userId: m.userId,
+            });
+          }
+
+          // Skip the set when nothing actually changed (avoids
+          // touching lastSaved on every render).
+          const sameLength = newCrew.length === state.crew.length;
+          const sameOrder =
+            sameLength && newCrew.every((c, i) => c.id === state.crew[i].id);
+          const sameContent =
+            sameOrder &&
+            newCrew.every((c, i) => {
+              const o = state.crew[i];
+              return (
+                c.name === o.name &&
+                c.email === o.email &&
+                c.phone === o.phone &&
+                c.userId === o.userId
+              );
+            });
+          if (sameContent) return;
+
+          set({
+            crew: newCrew,
+            entries: newEntries,
+            selectedCrewId:
+              state.selectedCrewId &&
+              newCrew.some((c) => c.id === state.selectedCrewId)
+                ? state.selectedCrewId
+                : (newCrew[0]?.id ?? null),
+            lastSaved: new Date().toISOString(),
+          });
+          triggerTsAutoSave();
+        },
+        mergeMemberEntries: (rows) => {
+          if (rows.length === 0) return 0;
+          const state = get();
+          // Build userId → crewId map (skip rows we don't track yet —
+          // the synced crew row is created by ensureTeamCrew before
+          // this runs in the timesheet page mount sequence).
+          const crewByUserId = new Map<string, string>();
+          for (const c of state.crew) {
+            if (c.userId) crewByUserId.set(c.userId, c.id);
+          }
+
+          let applied = 0;
+          const newEntries = { ...state.entries };
+          for (const row of rows) {
+            const crewId = crewByUserId.get(row.user_id);
+            if (!crewId) continue;
+            const list = Array.isArray(row.entries)
+              ? (row.entries as TimesheetEntry[])
+              : [];
+            for (const incoming of list) {
+              if (!incoming?.date || !incoming?.id) continue;
+              const key = `${crewId}:${incoming.date}`;
+              // Tag the entry so the UI can show a "synced from
+              // mobile" badge and so write-back logic in phase 2 can
+              // tell synced from designer-added rows apart.
+              newEntries[key] = { ...incoming, sourceUserId: row.user_id };
+              applied += 1;
+            }
+          }
+          if (applied === 0) return 0;
+          set({ entries: newEntries, lastSaved: new Date().toISOString() });
+          triggerTsAutoSave();
+          return applied;
+        },
         updateCrewRateCard: (crewId, updates) => {
           set((s) => ({
             crew: s.crew.map(c =>
@@ -411,11 +738,19 @@ function createTimesheetStore(projectId: string) {
         },
         saveEntry: (crewId, entry) => {
           const key = entryKey(crewId, entry.date);
+          // Stamp sourceUserId on every entry that lives on a synced
+          // crew row so write-back / "Synced" UI logic doesn't have
+          // to re-derive ownership every time.
+          const member = get().crew.find((c) => c.id === crewId);
+          const stamped = member?.userId
+            ? { ...entry, sourceUserId: entry.sourceUserId ?? member.userId }
+            : entry;
           set((s) => ({
-            entries: { ...s.entries, [key]: entry },
+            entries: { ...s.entries, [key]: stamped },
             lastSaved: new Date().toISOString(),
           }));
           triggerTsAutoSave();
+          pushBackIfSynced(crewId, stamped.date);
         },
         deleteEntry: (crewId, date) => {
           const key = entryKey(crewId, date);
@@ -425,6 +760,20 @@ function createTimesheetStore(projectId: string) {
             return { entries: newEntries, lastSaved: new Date().toISOString() };
           });
           triggerTsAutoSave();
+          pushBackIfSynced(crewId, date);
+        },
+        setEntryStatus: (crewId, date, status) => {
+          const key = entryKey(crewId, date);
+          set((s) => {
+            const existing = s.entries[key];
+            if (!existing) return s;
+            return {
+              entries: { ...s.entries, [key]: { ...existing, status } },
+              lastSaved: new Date().toISOString(),
+            };
+          });
+          triggerTsAutoSave();
+          pushBackIfSynced(crewId, date);
         },
 
         // ── Navigation ─────────────────────────────
@@ -547,7 +896,8 @@ function createTimesheetStore(projectId: string) {
           });
           triggerTsAutoSave();
         },
-      }),
+        };
+      },
       {
         name: `prep-happy-timesheet-${projectId}`,
         storage: createJSONStorage(() => localStorage),

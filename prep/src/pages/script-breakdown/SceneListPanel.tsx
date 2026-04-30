@@ -180,6 +180,24 @@ export function SceneListPanel({
       </div>
       <div className="sl-list" ref={sceneListRef}>
         {filteredScenes.map((s) => {
+          // Omitted scenes render as a thin grey placeholder so the
+          // numbering gap stays visible without dedicating a full
+          // breakdown card to a scene that no longer exists.
+          if (s.isOmitted) {
+            const isActive = s.id === selectedSceneId;
+            return (
+              <button
+                key={s.id}
+                className={`sl-card sl-card--omitted${isActive ? ' sl-card--active' : ''}`}
+                onClick={() => onSelectScene(s.id)}
+              >
+                <div className="sl-card-top">
+                  <span className="sl-card-num">{s.number}</span>
+                  <span className="sl-card-location">OMITTED</span>
+                </div>
+              </button>
+            );
+          }
           const status = store.getCompletionStatus(s.id, s);
           const isActive = s.id === selectedSceneId;
           const bd = store.getBreakdown(s.id);

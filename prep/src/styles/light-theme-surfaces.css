@@ -128,6 +128,14 @@
 [data-theme="light"] .account-avatar {
   color: #ffffff !important;
 }
+/* Owner-tier avatar keeps the deep-brown initials in light mode too —
+   matches the mobile owner-tier styling (text-[#2A1A08]) so the badge
+   reads consistently across both surfaces. The selector is more
+   specific than the bulk override above so the !important wins. */
+[data-theme="light"] .avatar-btn.avatar-btn--owner,
+[data-theme="light"] .account-avatar.avatar-btn--owner {
+  color: #2A1A08 !important;
+}
 [data-theme="light"] .btn-ghost {
   background: transparent !important;
   border-color: rgba(0,0,0,0.12) !important;

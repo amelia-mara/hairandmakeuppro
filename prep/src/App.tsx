@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
+import { UserProfileModal } from '@/components/profile/UserProfileModal';
+import { useUserProfileStore } from '@/stores/userProfileStore';
 import { ProjectHub } from '@/pages/ProjectHub';
 import { CreateProjectModal } from '@/pages/CreateProject';
 import { ProjectLayout } from '@/components/layout/ProjectLayout';
@@ -21,6 +23,11 @@ import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
+// Scriptie chat is temporarily disabled — see commit history for the
+// full implementation. Mounting it broke the project view because
+// its module tree pulled in breakdownStore at app boot. Will be
+// re-enabled once a fully isolated load path is in place.
+// import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -191,16 +198,24 @@ function App() {
     );
   }
 
+  // Post-signup profile nudge — shown once per user when authenticated
+  // with an incomplete profile. The modal supports a Skip action that
+  // sets signupNudgeDismissed so we don't pester them on every reload.
+  const signupNudge = isAuthenticated ? <SignupProfileNudge /> : null;
+
   // Project view — TopBar with nav dropdown + content
   if (selectedProjectId) {
     return (
-      <ProjectView
-        projectId={selectedProjectId}
-        activePage={activePage}
-        onNavigate={setActivePage}
-        onBackToHub={handleBackToHub}
-        onNavigateToAuth={() => handleNavigateToAuth('login')}
-      />
+      <>
+        <ProjectView
+          projectId={selectedProjectId}
+          activePage={activePage}
+          onNavigate={setActivePage}
+          onBackToHub={handleBackToHub}
+          onNavigateToAuth={() => handleNavigateToAuth('login')}
+        />
+        {signupNudge}
+      </>
     );
   }
 
@@ -236,7 +251,43 @@ function App() {
           onCancel={handleCloseModal}
         />
       )}
+      {signupNudge}
     </div>
+  );
+}
+
+/**
+ * Renders the post-signup profile nudge once per user. The user can
+ * skip — we set signupNudgeDismissed so we don't pester them — and the
+ * timesheet page will force the modal back if they try to log hours
+ * without filling in invoicing details.
+ */
+function SignupProfileNudge() {
+  const user = useAuthStore((s) => s.user);
+  const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
+  const dismissSignupNudge = useUserProfileStore((s) => s.dismissSignupNudge);
+  const [open, setOpen] = useState(false);
+
+  // The nudge fires AT MOST once per user — the moment we see a fresh
+  // profile with the flag still false, we open the modal. Whether the
+  // user saves, skips, or clicks outside, closing it flips the flag
+  // so the prompt never auto-fires again. The Edit Profile menu item
+  // remains the only way back into the modal after that.
+  useEffect(() => {
+    if (!user) return;
+    const fresh = ensureProfile(user.id, user.name, user.email);
+    if (!fresh.signupNudgeDismissed) setOpen(true);
+  }, [user, ensureProfile]);
+
+  if (!open || !user) return null;
+  return (
+    <UserProfileModal
+      isSignupNudge
+      onClose={() => {
+        dismissSignupNudge(user.id);
+        setOpen(false);
+      }}
+    />
   );
 }
 

@@ -11,6 +11,7 @@ import { EmbeddedBreakdownTable } from './BreakdownSheet';
 import { type DiffResult } from '@/utils/scriptDiff';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useScriptDrafts } from '@/hooks/useScriptDrafts';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { ScriptUploadModal } from './script-breakdown/modals/ScriptUploadModal';
@@ -33,6 +34,14 @@ const RIGHT_DEFAULT = 400;
 const RIGHT_MIN = 300;
 const RIGHT_MAX = 560;
 
+/* Split-view (Tools → View Breakdown) needs wider bounds than the
+   form-panel above so the full breakdown table fits comfortably,
+   and a separate localStorage key so the user's split layout
+   doesn't clobber their form-panel sizing. */
+const SPLIT_DEFAULT = 700;
+const SPLIT_MIN = 400;
+const SPLIT_MAX = 1100;
+
 export function ScriptBreakdown({ projectId }: Props) {
   const [selectedSceneId, setSelectedSceneId] = useState('s1');
   const [scrollTrigger, setScrollTrigger] = useState(0);
@@ -44,6 +53,16 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [exportPreview, setExportPreview] = useState<ExportPreview | null>(null);
 
   const rightPanel = usePanelResize('prep-right-panel-w', RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX, 'right');
+  const splitPanel = usePanelResize('prep-split-breakdown-w', SPLIT_DEFAULT, SPLIT_MIN, SPLIT_MAX, 'right');
+
+  /* Mobile-only — phone viewport (≤768px) collapses the three-panel
+     layout into a stack: scene list becomes a slide-in drawer; script
+     and breakdown share the screen 50/50. The drawer state is forced
+     closed when we leave the mobile breakpoint so a desktop-resize
+     can't strand it open. */
+  const isMobile = useIsMobile();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  useEffect(() => { if (!isMobile) setMobileDrawerOpen(false); }, [isMobile]);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -198,6 +217,7 @@ export function ScriptBreakdown({ projectId }: Props) {
     setSelectedSceneId(id);
     setScrollTrigger(n => n + 1);
     setActiveTab('script');
+    setMobileDrawerOpen(false);
   }, []);
 
   /* Auto-select first matching scene when search query changes */
@@ -206,6 +226,13 @@ export function ScriptBreakdown({ projectId }: Props) {
       selectScene(filteredScenes[0].id);
     }
   }, [searchQuery, filteredScenes, selectedSceneId, selectScene]);
+
+  /* Mobile scene-strip navigation — prev/next walk the unfiltered list
+     so the user always lands on a real adjacent scene rather than the
+     next match for whatever search is open. */
+  const sceneIndex = nonPreambleScenes.findIndex((s) => s.id === validSceneId);
+  const prevScene = sceneIndex > 0 ? nonPreambleScenes[sceneIndex - 1] : null;
+  const nextScene = sceneIndex >= 0 && sceneIndex < nonPreambleScenes.length - 1 ? nonPreambleScenes[sceneIndex + 1] : null;
 
   /* Called by IntersectionObserver as user scrolls through script */
   const onSceneVisible = useCallback((id: string) => {
@@ -233,12 +260,69 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [filteredScenes, selectedSceneId, selectScene, store, triggerSave]);
 
   return (
-    <div className="bd-page">
+    <div className={`bd-page${isMobile ? ' bd-page--mobile' : ''}`}>
+      {/* Mobile-only scene navigator strip — sits above the panels.
+          Hamburger opens the scene drawer; arrows step through scenes.
+          On desktop this strip is hidden (display: none) so the layout
+          is unchanged. */}
+      {isMobile && scene && (
+        <div className="bd-mobile-strip">
+          <button
+            type="button"
+            className="bd-mobile-strip-btn"
+            aria-label="Open scene list"
+            onClick={() => setMobileDrawerOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div className="bd-mobile-strip-title" title={`${scene.number} ${scene.intExt}. ${scene.location}`}>
+            <span className="bd-mobile-strip-num">{scene.number}</span>
+            <span className="bd-mobile-strip-loc">{scene.intExt}. {scene.location}</span>
+          </div>
+          <button
+            type="button"
+            className="bd-mobile-strip-btn"
+            aria-label="Previous scene"
+            disabled={!prevScene}
+            onClick={() => prevScene && selectScene(prevScene.id)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="bd-mobile-strip-btn"
+            aria-label="Next scene"
+            disabled={!nextScene}
+            onClick={() => nextScene && selectScene(nextScene.id)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Mobile drawer backdrop — taps dismiss without selecting */}
+      {isMobile && mobileDrawerOpen && (
+        <div className="bd-mobile-drawer-backdrop" onClick={() => setMobileDrawerOpen(false)} />
+      )}
+
       {/* Three panels with draggable dividers */}
-      <div className={`bd-panels`}>
+      <div className={`bd-panels${isMobile && mobileDrawerOpen ? ' bd-panels--drawer-open' : ''}`}>
 
         {/* ━━━ LEFT — Scene List Panel ━━━ */}
-        <SceneListPanel
+        {/* Hide the scenes list when split-view is active so the
+            script (center) and breakdown (right) get the whole
+            screen for cross-referencing. The user navigates scenes
+            via the breakdown rows; the X in the breakdown header
+            restores the normal layout. */}
+        {!splitView && <SceneListPanel
           totalSceneCount={nonPreambleScenes.length}
           filteredScenes={filteredScenes}
           allCharacters={ALL_CHARACTERS}
@@ -270,7 +354,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               characterIdMap: new Map<string, string>(),
             });
           }}
-        />
+        />}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
         <div className="bd-center">
@@ -440,18 +524,51 @@ export function ScriptBreakdown({ projectId }: Props) {
           </div>
         </div>
 
-        {/* Right divider */}
-        <div className="bd-divider" onMouseDown={rightPanel.onMouseDown} onDoubleClick={rightPanel.onDoubleClick}>
+        {/* Right divider — drag-to-resize the right panel. Wired to
+            splitPanel when split-view is on (wider bounds, its own
+            saved width) and rightPanel otherwise. */}
+        <div
+          className="bd-divider"
+          onMouseDown={splitView ? splitPanel.onMouseDown : rightPanel.onMouseDown}
+          onDoubleClick={splitView ? splitPanel.onDoubleClick : rightPanel.onDoubleClick}
+        >
           <div className="bd-divider-grip" />
         </div>
 
         {/* ━━━ RIGHT — Breakdown Form or Full Breakdown Table ━━━ */}
-        <div className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`} style={splitView ? undefined : { width: rightPanel.width, minWidth: rightPanel.width }}>
-          <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <span className="fp-panel-title">{splitView ? 'Breakdown' : 'Scene Breakdown'}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {splitView && (
+        <div
+          className={`bd-right bd-panel-surface ${splitView ? 'bd-right--breakdown' : ''}`}
+          style={
+            isMobile
+              ? undefined
+              : splitView
+                ? { width: splitPanel.width, minWidth: splitPanel.width }
+                : { width: rightPanel.width, minWidth: rightPanel.width }
+          }
+        >
+          {splitView ? (
+            // Split-view header — mirrors the center panel's
+            // cp-tabstrip + cp-toolbar pattern so the right side
+            // aligns at the same height as the SCRIPT/BRY/YOUNG
+            // tab row on the left and visually feels like its
+            // pair. The "Breakdown" pill renders as a fixed active
+            // tab; the close X + Tools menu sit in the toolbar row
+            // beneath, the same vertical slot as the left's "Tags"
+            // toggle.
+            <>
+              <div className="cp-tabstrip">
+                <div className="cp-tabs-row">
+                  <button
+                    type="button"
+                    className="cp-divider-tab cp-divider-tab--active"
+                    disabled
+                  >
+                    Breakdown
+                  </button>
+                </div>
+              </div>
+              <div className="cp-toolbar cp-toolbar--actions-right">
+                <div className="cp-toolbar-actions">
                   <button
                     className="btn-ghost bd-btn bd-split-close"
                     onClick={() => setSplitView(false)}
@@ -461,13 +578,19 @@ export function ScriptBreakdown({ projectId }: Props) {
                       <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                     </svg>
                   </button>
-                )}
-            <ToolsMenu
+                  <ToolsMenu
               open={toolsOpen}
               onToggle={() => setToolsOpen(!toolsOpen)}
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
-              onOpenBreakdownView={() => setSplitView(true)}
+              onOpenBreakdownView={() => {
+                // Force Script tab on so the center panel actually
+                // shows the script — entering split-view from a
+                // character tab would otherwise leave the user with
+                // a character profile next to the breakdown.
+                setActiveTab('script');
+                setSplitView(true);
+              }}
               onExportBreakdown={async (format) => {
                 const { exportBreakdownPDF, exportBreakdownXLSX } =
                   await import('@/utils/export/breakdown');
@@ -521,16 +644,101 @@ export function ScriptBreakdown({ projectId }: Props) {
               onViewDraftPdf={handleViewDraftPdf}
               onDeleteDraft={handleDeleteDraft}
             />
+                </div>
               </div>
+            </>
+          ) : (
+            <div className="fp-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span className="fp-panel-title">Scene Breakdown</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ToolsMenu
+                    open={toolsOpen}
+                    onToggle={() => setToolsOpen(!toolsOpen)}
+                    onClose={() => setToolsOpen(false)}
+                    onImportScript={() => setShowUploadModal(true)}
+                    onOpenBreakdownView={() => {
+                      // Force Script tab on so the center panel actually
+                      // shows the script — entering split-view from a
+                      // character tab would otherwise leave the user with
+                      // a character profile next to the breakdown.
+                      setActiveTab('script');
+                      setSplitView(true);
+                    }}
+                    onExportBreakdown={async (format) => {
+                      const { exportBreakdownPDF, exportBreakdownXLSX } =
+                        await import('@/utils/export/breakdown');
+                      const preview =
+                        format === 'pdf' ? exportBreakdownPDF(projectId)
+                        : format === 'xlsx' ? exportBreakdownXLSX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    onExportLookbooks={async (format) => {
+                      const { exportLookbookPDF, exportLookbookPPTX } =
+                        await import('@/utils/export/lookbook');
+                      const preview =
+                        format === 'pdf' ? exportLookbookPDF(projectId)
+                        : format === 'pptx' ? await exportLookbookPPTX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    onExportTimeline={async (format) => {
+                      const { exportTimelinePDF, exportTimelineXLSX } =
+                        await import('@/utils/export/timeline');
+                      const preview =
+                        format === 'pdf' ? exportTimelinePDF(projectId)
+                        : format === 'xlsx' ? exportTimelineXLSX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    onExportBible={async (format) => {
+                      if (format !== 'pdf') {
+                        console.log('Export bible', format);
+                        return;
+                      }
+                      const { exportBiblePDF } = await import('@/utils/export/bible');
+                      setExportPreview(exportBiblePDF(projectId));
+                    }}
+                    onExportQueries={async (format) => {
+                      const { exportQueriesPDF, exportQueriesXLSX } =
+                        await import('@/utils/export/queries');
+                      const preview =
+                        format === 'pdf' ? exportQueriesPDF(projectId)
+                        : format === 'xlsx' ? exportQueriesXLSX(projectId)
+                        : null;
+                      if (preview) setExportPreview(preview);
+                    }}
+                    drafts={drafts}
+                    draftsLoading={draftsLoading}
+                    draftsExpanded={draftsExpanded}
+                    onToggleDraftsExpanded={() => setDraftsExpanded(!draftsExpanded)}
+                    loadingDraftId={loadingDraftId}
+                    onLoadDraft={handleLoadDraft}
+                    onViewDraftPdf={handleViewDraftPdf}
+                    onDeleteDraft={handleDeleteDraft}
+                  />
+                </div>
+              </div>
+              {scene && (
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
+                </div>
+              )}
             </div>
-            {scene && !splitView && (
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                {scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}
-              </div>
-            )}
-          </div>
+          )}
           {splitView ? (
             <EmbeddedBreakdownTable projectId={projectId} activeSceneId={validSceneId} />
+          ) : scene?.isOmitted ? (
+            <div className="bd-omitted-state">
+              <div className="bd-omitted-num">SC {scene.number}</div>
+              <div className="bd-omitted-label">Omitted</div>
+              <p className="bd-omitted-desc">
+                This scene was dropped in the current revision. The
+                placeholder is kept here so scene numbering stays
+                consistent — there's no breakdown to fill in.
+              </p>
+            </div>
           ) : (
             scene && (
             <BreakdownFormPanel

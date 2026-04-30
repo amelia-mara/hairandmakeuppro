@@ -1,5 +1,6 @@
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { BaseDayHours, BaseContract } from '@/types';
+import { getEffectiveRate } from '@/types';
 
 // BECTU Base Contract Options
 const BASE_CONTRACT_OPTIONS: { value: BaseContract; label: string; hours: number }[] = [
@@ -21,24 +22,44 @@ export function RateCardSettings() {
 
   return (
     <div className="space-y-4">
-      {/* Daily Rate */}
-      <div>
-        <label className="field-label block mb-2">DAILY RATE</label>
-        <div className="flex items-center gap-2">
-          <span className="text-text-muted">£</span>
-          <input
-            type="number"
-            value={rateCard.dailyRate || ''}
-            onChange={(e) =>
-              updateRateCard({ dailyRate: e.target.value ? parseFloat(e.target.value) : 0 })
-            }
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-            className="input-field flex-1"
-          />
+      {/* Prep + Shoot rates */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label block mb-2">PREP RATE</label>
+          <div className="flex items-center gap-2">
+            <span className="text-text-muted">£</span>
+            <input
+              type="number"
+              value={rateCard.prepRate ?? rateCard.dailyRate ?? ''}
+              onChange={(e) =>
+                updateRateCard({ prepRate: e.target.value ? parseFloat(e.target.value) : 0 })
+              }
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+              className="input-field flex-1"
+            />
+          </div>
+          <p className="text-xs text-text-muted mt-1">Fittings, R&D, prep days</p>
         </div>
-        <p className="text-xs text-text-muted mt-1">Your agreed daily rate (BECTU minimum guarantee)</p>
+        <div>
+          <label className="field-label block mb-2">SHOOT RATE</label>
+          <div className="flex items-center gap-2">
+            <span className="text-text-muted">£</span>
+            <input
+              type="number"
+              value={rateCard.shootRate ?? rateCard.dailyRate ?? ''}
+              onChange={(e) =>
+                updateRateCard({ shootRate: e.target.value ? parseFloat(e.target.value) : 0 })
+              }
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+              className="input-field flex-1"
+            />
+          </div>
+          <p className="text-xs text-text-muted mt-1">Full shoot-day rate (BECTU minimum guarantee)</p>
+        </div>
       </div>
 
       {/* Base Contract - BECTU Standard */}
@@ -191,33 +212,36 @@ export function RateCardSettings() {
         </p>
       </div>
 
-      {/* Summary preview */}
-      {rateCard.dailyRate > 0 && (
+      {/* Summary preview — derived from the shoot rate, since the
+          BECTU multipliers (OT, late night, etc.) all hang off the
+          shoot-day hourly rate. Prep days don't carry overtime in
+          the typical contract. */}
+      {getEffectiveRate(rateCard, 'shoot') > 0 && (
         <div className="bg-gold-50 rounded-card p-4 mt-6">
           <h4 className="field-label mb-3">RATE SUMMARY</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-text-muted">Hourly Rate</span>
+              <span className="text-text-muted">Hourly Rate (shoot)</span>
               <span className="text-text-primary font-medium">
-                £{(rateCard.dailyRate / rateCard.baseDayHours).toFixed(2)}/hr
+                £{(getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours).toFixed(2)}/hr
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-text-muted">Pre-Call Rate</span>
               <span className="text-text-primary font-medium">
-                £{((rateCard.dailyRate / rateCard.baseDayHours) * rateCard.preCallMultiplier).toFixed(2)}/hr
+                £{((getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours) * rateCard.preCallMultiplier).toFixed(2)}/hr
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-text-muted">OT Rate</span>
               <span className="text-text-primary font-medium">
-                £{((rateCard.dailyRate / rateCard.baseDayHours) * rateCard.otMultiplier).toFixed(2)}/hr
+                £{((getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours) * rateCard.otMultiplier).toFixed(2)}/hr
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-text-muted">Late Night Rate</span>
               <span className="text-text-primary font-medium">
-                £{((rateCard.dailyRate / rateCard.baseDayHours) * rateCard.lateNightMultiplier).toFixed(2)}/hr
+                £{((getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours) * rateCard.lateNightMultiplier).toFixed(2)}/hr
               </span>
             </div>
           </div>

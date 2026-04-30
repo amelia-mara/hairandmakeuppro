@@ -1,42 +1,398 @@
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TEAM MANAGEMENT PAGE
+   Aesthetic mirrors the breakdown page (bs-*): a thin
+   horizontal header bar with uppercase italic+regular
+   title on the left, action items on the right, then a
+   scrollable master-detail body below.
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .tm-page {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 48px 40px 80px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── Header ── */
+/* ── Header bar (mirrors .bs-header) ── */
 .tm-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: center;
+  padding: 22px 32px;
+  border-bottom: 1px solid var(--border-card);
+  background: transparent;
+  flex-shrink: 0;
   gap: 16px;
-  margin-bottom: 28px;
+}
+.tm-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tm-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .tm-title {
-  font-size: 1.75rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  margin: 0 0 4px;
-  color: var(--text-heading);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--text-heading);
+  margin: 0;
 }
 .tm-title-italic {
-  font-family: 'DM Sans', sans-serif;
   font-style: italic;
   color: var(--accent);
 }
 .tm-title-regular {
-  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
 }
 
 .tm-subtitle {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
   margin: 0;
+}
+
+/* Invite code chip — mirrors a bs-action-btn shape so it sits visually
+   in the same row as the breakdown page's action buttons. */
+.tm-invite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-card);
+  border-radius: var(--radius-button);
+}
+.tm-invite-chip-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.625rem;
+}
+.tm-invite-chip-code {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.tm-invite-chip-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.tm-invite-chip-copy:hover {
+  color: var(--accent);
+  background: rgba(var(--a), 0.08);
+}
+
+/* ── Page body — master-detail split (or single column on mobile) ── */
+.tm-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  gap: 0;
+  min-height: 0;
+}
+.tm-body--mobile {
+  display: block;
+}
+.tm-list-pane,
+.tm-detail-pane {
+  overflow-y: auto;
+  padding: 20px 24px 40px;
+}
+.tm-list-pane {
+  width: 320px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-card);
+}
+.tm-detail-pane {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 880px) {
+  .tm-body {
+    flex-direction: column;
+  }
+  .tm-list-pane {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-card);
+  }
+}
+
+.tm-list-empty {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 48px 16px;
+  line-height: 1.6;
+}
+.tm-list-empty-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.6875rem;
+  opacity: 0.7;
+}
+
+/* ── Member list rows ── */
+.tm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tm-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+.tm-list-item:hover {
+  background: var(--bg-card);
+  border-color: var(--border-card);
+}
+.tm-list-item--active {
+  background: var(--bg-card);
+  border-color: rgba(var(--a), 0.25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.tm-list-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.tm-list-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tm-list-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tm-list-role {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+.tm-list-tag {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Detail pane ── */
+.tm-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.tm-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-button);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.15s ease;
+}
+.tm-detail-back:hover {
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.tm-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-card);
+  margin-bottom: 20px;
+}
+.tm-detail-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.tm-detail-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+.tm-detail-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.tm-detail-section-title {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+.tm-detail-owner-note {
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* ── Access toggle rows ── */
+.tm-access-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tm-access-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  transition: border-color 0.15s ease;
+}
+.tm-access-row:hover {
+  border-color: rgba(var(--a), 0.18);
+}
+.tm-access-info {
+  flex: 1;
+  min-width: 0;
+}
+.tm-access-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.tm-access-desc {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.tm-access-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.tm-access-saved {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #3A6B5A;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tm-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  cursor: pointer;
+  background: var(--border-medium);
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+.tm-toggle--on {
+  background: var(--accent);
+}
+.tm-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: left 0.2s ease;
+}
+.tm-toggle--on .tm-toggle-knob {
+  left: 20px;
+}
+
+.tm-detail-danger {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-card);
+}
+.tm-remove-link {
+  background: none;
+  border: none;
+  color: #C4522A;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  font-family: var(--font-sans);
+}
+.tm-remove-link:hover {
+  text-decoration: underline;
 }
 
 .tm-add-btn {

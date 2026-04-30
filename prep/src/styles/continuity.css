@@ -576,3 +576,42 @@
   background: rgba(0, 0, 0, 0.45);
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CONTINUITY — phone (≤ 768px)
+
+   Continuity reuses the bd-page / bd-panels / bd-left layout from
+   the script page, so the bd-page--mobile rules in dashboard.css
+   already handle the drawer + scene strip + stacked panels. The
+   only ct-specific tweaks are the scene bar (where SC N · LOCATION
+   competes with the status button for one row) and the content
+   padding.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  .bd-page--mobile .ct-scene-bar {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .bd-page--mobile .ct-scene-bar-left {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+  .bd-page--mobile .ct-scene-num {
+    font-size: 0.875rem;
+  }
+  .bd-page--mobile .ct-scene-loc {
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bd-page--mobile .ct-status-btn {
+    padding: 6px 10px;
+    font-size: 0.625rem;
+  }
+  .bd-page--mobile .ct-content {
+    padding: 12px 14px;
+  }
+}
+

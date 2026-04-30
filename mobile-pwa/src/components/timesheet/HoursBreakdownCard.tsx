@@ -1,4 +1,5 @@
 import type { TimesheetCalculation, TimesheetEntry } from '@/types';
+import { getEffectiveRate } from '@/types';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import { formatCurrency } from '@/types';
 
@@ -223,7 +224,7 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
         <div className="flex justify-between items-center text-sm">
           <span style={{ color: 'var(--color-text-muted)' }}>Hourly Rate</span>
           <span style={{ color: 'var(--color-text-primary)' }} className="font-medium">
-            {formatCurrency(calculation.hourlyRate || (rateCard.dailyRate / rateCard.baseDayHours))}/hr
+            {formatCurrency(calculation.hourlyRate || (getEffectiveRate(rateCard, 'shoot') / rateCard.baseDayHours))}/hr
           </span>
         </div>
         {calculation.dayMultiplier && calculation.dayMultiplier > 1 && (
