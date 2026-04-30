@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { useScriptieChatStore } from '@/stores/scriptieChatStore';
+import { useScriptieChatStore, type ScriptieMessage } from '@/stores/scriptieChatStore';
 
 interface ScriptieChatProps {
   projectId: string;
 }
+
+const EMPTY_MESSAGES: ScriptieMessage[] = [];
 
 const SUGGESTIONS = [
   { label: "Today's question", prompt: 'What scenes need wigs prepped?' },
@@ -23,7 +25,9 @@ export function ScriptieChat({ projectId }: ScriptieChatProps) {
   const close = useScriptieChatStore((s) => s.close);
   const sendMessage = useScriptieChatStore((s) => s.sendMessage);
   const clearMessages = useScriptieChatStore((s) => s.clearMessages);
-  const messages = useScriptieChatStore((s) => s.messagesByProject[projectId] ?? []);
+  const messages = useScriptieChatStore(
+    (s) => s.messagesByProject[projectId] ?? EMPTY_MESSAGES,
+  );
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
