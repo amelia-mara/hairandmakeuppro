@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTimesheetStore, CURRENCY_SYMBOLS, createDefaultRateCard, createEmptyEntry as createEmptyEntryClient, getEffectiveRate, type CrewMember, type CurrencyCode, type RateCard, type TimesheetCalculation, type TimesheetEntry, type WeekSummary } from '@/stores/timesheetStore';
 import { AddCrewModal } from '@/components/timesheet/crew/AddCrewModal';
 import { LogDayModal } from '@/components/timesheet/LogDayModal';
+import { WeekTimesheet, MonthGrid } from '@/components/timesheet/TimesheetViews';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserProfileStore } from '@/stores/userProfileStore';
@@ -47,13 +48,6 @@ const AVATAR_COLORS = [
 
 function getAvatarColor(index: number) {
   return AVATAR_COLORS[index % AVATAR_COLORS.length];
-}
-
-/** Add `n` days to an ISO YYYY-MM-DD string and return another ISO. */
-function addDaysIso(dateStr: string, n: number): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
 }
 
 /** ISO Monday of the week containing today. */
@@ -694,6 +688,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
             onPrevWeek={() => navigateWeek('prev')}
             onNextWeek={() => navigateWeek('next')}
             onJumpToToday={() => setSelectedWeekStart(thisWeekStart())}
+            onJumpToWeek={(date) => setSelectedWeekStart(date)}
           />
         )}
 
@@ -957,129 +952,11 @@ function OverviewPanel({
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    PANEL: My Timesheets
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-/**
- * 7-day calendar-style timesheet for the current user. Renders one
- * card per day Mon→Sun, prefilled when the user has logged hours
- * and showing a tap-to-add affordance otherwise.
- */
-function WeekGrid({
-  crew,
-  weekStartDate,
-  entries,
-  calculateEntry,
-  currency,
-  onPrevWeek,
-  onNextWeek,
-  onJumpToToday,
-  onAdd,
-  onEdit,
-}: {
-  crew: CrewMember;
-  weekStartDate: string;
-  entries: TimesheetEntry[];
-  calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
-  currency: CurrencyCode;
-  onPrevWeek: () => void;
-  onNextWeek: () => void;
-  onJumpToToday: () => void;
-  onAdd: (date: string) => void;
-  onEdit: (entry: TimesheetEntry) => void;
-}) {
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const date = addDaysIso(weekStartDate, i);
-    const entry = entries.find((e) => e.date === date) ?? null;
-    const calc = entry && entry.unitCall && entry.wrapOut
-      ? calculateEntry(crew.id, entry, entry.previousWrapOut)
-      : null;
-    return { date, entry, calc, isToday: date === todayIso };
-  });
-
-  const weekEnd = addDaysIso(weekStartDate, 6);
-  const startLabel = new Date(weekStartDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  const endLabel = new Date(weekEnd + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  const weekHours = days.reduce((s, d) => s + (d.calc?.totalHours ?? 0), 0);
-  const weekEarnings = days.reduce((s, d) => s + (d.calc?.totalPay ?? 0), 0);
-  const daysLogged = days.filter((d) => d.entry?.unitCall).length;
-
-  return (
-    <div className="tsr-card flush tsr-wkg-card">
-      <div className="tsr-wkg-nav">
-        <button type="button" className="tsr-wkg-nav-btn" onClick={onPrevWeek} aria-label="Previous week">‹</button>
-        <div className="tsr-wkg-nav-label">
-          <div className="tsr-wkg-nav-range">{startLabel} – {endLabel}</div>
-          <div className="tsr-wkg-nav-sub">
-            {daysLogged} {daysLogged === 1 ? 'day' : 'days'} · {weekHours.toFixed(1)}h · {fmtDec(weekEarnings, currency)}
-          </div>
-        </div>
-        <button type="button" className="tsr-wkg-nav-btn" onClick={onNextWeek} aria-label="Next week">›</button>
-        <button type="button" className="tsr-wkg-today" onClick={onJumpToToday}>Today</button>
-      </div>
-
-      <div className="tsr-wkg-grid">
-        {days.map(({ date, entry, calc, isToday }) => {
-          const d = new Date(date + 'T12:00:00');
-          const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
-          const dayNumber = d.getDate();
-          const month = d.toLocaleDateString('en-GB', { month: 'short' });
-          const filled = !!(entry && entry.unitCall);
-          const status = entry?.status;
-
-          return (
-            <button
-              key={date}
-              type="button"
-              className={`tsr-wkg-day${isToday ? ' is-today' : ''}${filled ? ' is-filled' : ''}`}
-              onClick={() => (filled && entry ? onEdit(entry) : onAdd(date))}
-            >
-              <div className="tsr-wkg-day-head">
-                <span className="tsr-wkg-day-name">{dayName}</span>
-                <span className="tsr-wkg-day-num">{dayNumber}</span>
-                <span className="tsr-wkg-day-month">{month}</span>
-              </div>
-              {filled && entry ? (
-                <div className="tsr-wkg-day-body">
-                  <div className="tsr-wkg-day-times">
-                    {entry.unitCall} <span className="tsr-wkg-arrow">→</span> {entry.wrapOut || '—'}
-                  </div>
-                  {entry.preCall && (
-                    <div className="tsr-wkg-day-pre">Pre {entry.preCall}</div>
-                  )}
-                  <div className="tsr-wkg-day-hrs">
-                    {calc ? calc.totalHours.toFixed(1) : '—'}<span className="tsr-wkg-unit">h</span>
-                    {calc && calc.otHours > 0 && (
-                      <span className="tsr-wkg-day-ot"> · {calc.otHours.toFixed(1)}h OT</span>
-                    )}
-                  </div>
-                  <div className="tsr-wkg-day-earn">
-                    {calc ? fmtDec(calc.totalPay, currency) : ''}
-                  </div>
-                  <div className="tsr-wkg-day-tags">
-                    <span className={`tsr-wkg-status ${
-                      status === 'approved' ? 'is-approved' :
-                      status === 'submitted' ? 'is-pending' : ''
-                    }`}>
-                      {status === 'approved' ? 'Approved' :
-                       status === 'submitted' ? 'Pending' : 'Draft'}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="tsr-wkg-day-empty">
-                  <span className="tsr-wkg-day-add">+ Log day</span>
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+/* ━━━ Week view: conventional submit-to-production timesheet ━━━ */
 
 function MyTimesheetsPanel({
   crew, crewSummaries, currency, totalHours: _totalHours, totalOtHours: _totalOtHours, totalDays: _totalDays, totalLabour: _totalLabour,
-  calculateEntry, onLogDay, selectedWeekStart, onPrevWeek, onNextWeek, onJumpToToday,
+  calculateEntry, onLogDay, selectedWeekStart, onPrevWeek, onNextWeek, onJumpToToday, onJumpToWeek,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -1094,8 +971,9 @@ function MyTimesheetsPanel({
   onPrevWeek: () => void;
   onNextWeek: () => void;
   onJumpToToday: () => void;
+  onJumpToWeek: (mondayIso: string) => void;
 }) {
-  const [view, setView] = useState<'week' | 'list'>('week');
+  const [view, setView] = useState<'week' | 'month'>('week');
   // Prefer the row marked isMe so the panel always reflects the auth
   // user, falling back to the first crew row when nothing is marked.
   const myCrew = crew.find((c) => c.isMe) ?? crew[0];
@@ -1103,7 +981,6 @@ function MyTimesheetsPanel({
     ?? crewSummaries[0]?.summary;
   const myShoot = myCrew ? getEffectiveRate(myCrew.rateCard, 'shoot') : 0;
   const myPrep = myCrew ? getEffectiveRate(myCrew.rateCard, 'prep') : 0;
-  const myRate = myShoot;
   const handleNew = () => myCrew && onLogDay(myCrew, null);
   const handleEdit = (entry: TimesheetEntry) => myCrew && onLogDay(myCrew, entry);
 
@@ -1152,10 +1029,10 @@ function MyTimesheetsPanel({
         </div>
       </div>
 
-      {/* Section heading + view toggle + week navigator. The toggle
-          flips between a 7-day calendar grid (Mon→Sun) and the
-          existing chronological list. The grid lives on top because
-          most users want to see "the whole week" at a glance. */}
+      {/* Section heading + view toggle. Week shows a conventional
+          submit-to-production timesheet (one row per day, columns
+          for pre-call / call / lunch / wrap / hours / OT / earnings).
+          Month shows a 4-6 week calendar grid for quick scanning. */}
       <div className="tsr-sh tsr-hl-section-head">
         <span>Hour Log</span>
         <div className="tsr-hl-view-toggle" role="group" aria-label="Hour log view">
@@ -1168,17 +1045,17 @@ function MyTimesheetsPanel({
           </button>
           <button
             type="button"
-            className={`tsr-hl-view-btn ${view === 'list' ? 'is-active' : ''}`}
-            onClick={() => setView('list')}
+            className={`tsr-hl-view-btn ${view === 'month' ? 'is-active' : ''}`}
+            onClick={() => setView('month')}
           >
-            List
+            Month
           </button>
         </div>
         <div className="tsr-sh-line" />
       </div>
 
       {view === 'week' && myCrew && (
-        <WeekGrid
+        <WeekTimesheet
           crew={myCrew}
           weekStartDate={selectedWeekStart}
           entries={mySummary?.entries ?? []}
@@ -1192,134 +1069,20 @@ function MyTimesheetsPanel({
         />
       )}
 
-      {view === 'list' && (
-      /* Existing chronological list view kept as an opt-in. */
-      <>
-      <div className="tsr-card flush">
-        {/* Inline log-day CTA sits above the rows so the "add" action
-            is the first thing the user sees, not buried below the
-            list. The header button at the top of the page does the
-            same thing — both wired to handleNew. */}
-        <button
-          type="button"
-          className="tsr-add-btn tsr-add-btn--top"
-          onClick={handleNew}
-          disabled={!myCrew}
-        >
-          + Log Day
-        </button>
-
-        {mySummary && mySummary.entries.filter(e => e.unitCall).length > 0 ? (
-          <>
-            <div className="tsr-col-head tsr-hl-head">
-              <div className="tsr-ch tsr-hl-date">Date</div>
-              <div className="tsr-ch tsr-hl-type">Type</div>
-              <div className="tsr-ch tsr-hl-times">Times</div>
-              <div className="tsr-ch tsr-hl-hrs" style={{ textAlign: 'right' }}>Hours</div>
-              <div className="tsr-ch tsr-hl-earn" style={{ textAlign: 'right' }}>Earned</div>
-              <div className="tsr-ch tsr-hl-status" style={{ textAlign: 'right' }}>Status</div>
-            </div>
-            {mySummary.entries
-              .filter((e) => e.unitCall)
-              .sort((a, b) => (a.date < b.date ? 1 : -1)) // newest day first
-              .map((entry) => {
-              const d = new Date(entry.date + 'T12:00:00');
-              const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
-              const dateMain = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-              const dateYear = d.toLocaleDateString('en-GB', { year: 'numeric' });
-              // Run a fresh calc per row so the displayed totals
-              // always match the rate card (which can be edited per
-              // project after the entry was logged).
-              const calc = myCrew && entry.unitCall && entry.wrapOut
-                ? calculateEntry(myCrew.id, entry, entry.previousWrapOut)
-                : null;
-              const dayTypeLabel =
-                entry.dayType === 'SCWD' ? 'Semi-cont' :
-                entry.dayType === 'CWD' ? 'Continuous' :
-                'Shoot';
-              const flags: string[] = [];
-              if (entry.isSeventhDay) flags.push('7th day');
-              else if (entry.isSixthDay) flags.push('6th day');
-              if (calc?.hasLateNight) flags.push('Late night');
-              if (calc?.hasBrokenLunch) flags.push('Broken lunch');
-              const status =
-                entry.status === 'approved' ? 'Approved' :
-                entry.status === 'submitted' ? 'Pending' :
-                'Draft';
-              return (
-                <div
-                  key={entry.date}
-                  className="tsr-ts-row tsr-hl-row"
-                  onClick={() => handleEdit(entry)}
-                  title="Edit this entry"
-                >
-                  <div className="tsr-hl-date">
-                    <div className="tsr-hl-date-day">{dayName}</div>
-                    <div className="tsr-hl-date-main">{dateMain}</div>
-                    <div className="tsr-hl-date-year">{dateYear}</div>
-                  </div>
-                  <div className="tsr-hl-type">
-                    <span className="tsr-tag orange">{dayTypeLabel}</span>
-                    <span className="tsr-tag gold tsr-hl-wday-tag">
-                      {myCrew?.rateCard.baseContract ?? '11+1'}
-                    </span>
-                    {flags.length > 0 && (
-                      <span className="tsr-hl-flags">{flags.join(' · ')}</span>
-                    )}
-                  </div>
-                  <div className="tsr-hl-times">
-                    <div className="tsr-hl-times-row">
-                      <span className="tsr-hl-times-val">{entry.unitCall || '—'}</span>
-                      <span className="tsr-hl-times-arrow">→</span>
-                      <span className="tsr-hl-times-val">{entry.wrapOut || '—'}</span>
-                    </div>
-                    {entry.preCall && (
-                      <div className="tsr-hl-times-sub">Pre-call {entry.preCall}</div>
-                    )}
-                  </div>
-                  <div className="tsr-hl-hrs">
-                    <div className="tsr-hl-hrs-main">
-                      {calc ? calc.totalHours.toFixed(1) : '—'}<span className="tsr-hl-unit">h</span>
-                    </div>
-                    {calc && calc.otHours > 0 && (
-                      <div className="tsr-hl-hrs-sub">+{calc.otHours.toFixed(1)}h OT</div>
-                    )}
-                  </div>
-                  <div className="tsr-hl-earn">
-                    <div className="tsr-hl-earn-main">
-                      {calc ? fmtDec(calc.totalPay, currency) : fmt(myRate, currency)}
-                    </div>
-                    {calc && calc.kitRental > 0 && (
-                      <div className="tsr-hl-earn-sub">
-                        inc. {fmt(calc.kitRental, currency)} kit
-                      </div>
-                    )}
-                  </div>
-                  <div className="tsr-hl-status">
-                    <span
-                      className={`tsr-tag ${
-                        entry.status === 'approved'
-                          ? 'teal'
-                          : entry.status === 'submitted'
-                          ? 'gold'
-                          : ''
-                      }`}
-                    >
-                      {status}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        ) : (
-          <div className="tsr-empty" style={{ padding: '24px 18px' }}>
-            No timesheet entries logged yet. Click <strong>+ Log Day</strong> above to start tracking your hours.
-          </div>
-        )}
-      </div>
-      </>
+      {view === 'month' && myCrew && (
+        <MonthGrid
+          crew={myCrew}
+          weekStartDate={selectedWeekStart}
+          entries={mySummary?.entries ?? []}
+          calculateEntry={calculateEntry}
+          currency={currency}
+          onJumpToWeek={onJumpToWeek}
+          onJumpToToday={onJumpToToday}
+          onAdd={(date) => myCrew && onLogDay(myCrew, { ...createEmptyEntryClient(date) })}
+          onEdit={handleEdit}
+        />
       )}
+
     </div>
   );
 }
