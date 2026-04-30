@@ -492,7 +492,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">01 — Overview</div>
                 <h2 className="bg-title"><span className="bg-title-italic">Budget</span>{' '}<span className="bg-title-regular">Overview</span></h2>
                 <div className="bg-subtitle">{scenes.length} scenes · {deptLabel}</div>
               </div>
@@ -556,7 +555,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">02 — Script Flags</div>
                 <h2 className="bg-title">Script Breakdown Flags</h2>
                 <div className="bg-subtitle">Identified during breakdown — auto-populates Budget Proposal</div>
               </div>
@@ -646,7 +644,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">03 — Budget Proposal</div>
                 <h2 className="bg-title">Budget Proposal</h2>
                 <div className="bg-subtitle">Ready to send to production</div>
               </div>
@@ -771,7 +768,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">04 — Spend Tracking</div>
                 <h2 className="bg-title">Spend Tracking</h2>
                 <div className="bg-subtitle">Live during shoot — log receipts as you purchase</div>
               </div>
@@ -856,7 +852,6 @@ export function Budget({ projectId }: BudgetProps) {
           <div className="bg-panel">
             <div className="bg-page-header">
               <div>
-                <div className="bg-eyebrow">05 — Reconciliation</div>
                 <h2 className="bg-title">Reconciliation</h2>
                 <div className="bg-subtitle">Post-wrap · Final account to production</div>
               </div>
