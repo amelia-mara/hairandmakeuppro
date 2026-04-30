@@ -411,6 +411,14 @@ function SyncedPill() {
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export function Timesheet({ projectId }: TimesheetProps) {
   const [activePanel, setActivePanel] = useState<PanelId>('my-ts');
+  /** When set, the My Timesheets panel renders for that crew row
+   *  instead of the user's own. Cleared when the user navigates
+   *  away from My Timesheets or hits "Back to mine". */
+  const [viewingCrewId, setViewingCrewId] = useState<string | null>(null);
+  const openMemberTimesheet = useCallback((crewId: string) => {
+    setViewingCrewId(crewId);
+    setActivePanel('my-ts');
+  }, []);
   const [toast, setToast] = useState<string | null>(null);
   const [expandedTeam, setExpandedTeam] = useState<Record<string, boolean>>({});
   const [expandedRc, setExpandedRc] = useState<Record<string, boolean>>({});
@@ -685,6 +693,8 @@ export function Timesheet({ projectId }: TimesheetProps) {
             onNextWeek={() => navigateWeek('next')}
             onJumpToToday={() => setSelectedWeekStart(thisWeekStart())}
             onJumpToWeek={(date) => setSelectedWeekStart(date)}
+            viewingCrewId={viewingCrewId}
+            onClearViewingCrew={() => setViewingCrewId(null)}
           />
         )}
 
@@ -709,6 +719,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
               setEntryStatus(crewId, date, next);
               showToast(next === 'approved' ? 'Entry approved' : 'Approval cleared');
             }}
+            onOpenMember={openMemberTimesheet}
           />
         )}
 
@@ -723,7 +734,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
             expandedRc={expandedRc}
             toggleRcExpand={toggleRcExpand}
             onAddCrew={() => setShowAddModal(true)}
-            onNavTimesheets={() => setActivePanel('team-ts')}
+            onOpenMember={openMemberTimesheet}
             onRemoveCrew={(id) => setConfirmRemoveId(id)}
             onUpdateRateCard={updateCrewRateCard}
           />
@@ -807,6 +818,7 @@ interface CrewSummaryRow {
 function MyTimesheetsPanel({
   crew, crewSummaries, currency, totalHours: _totalHours, totalOtHours: _totalOtHours, totalDays: _totalDays, totalLabour: _totalLabour,
   calculateEntry, onLogDay, selectedWeekStart, onPrevWeek, onNextWeek, onJumpToToday, onJumpToWeek,
+  viewingCrewId, onClearViewingCrew,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -822,11 +834,19 @@ function MyTimesheetsPanel({
   onNextWeek: () => void;
   onJumpToToday: () => void;
   onJumpToWeek: (mondayIso: string) => void;
+  viewingCrewId: string | null;
+  onClearViewingCrew: () => void;
 }) {
   const [view, setView] = useState<'week' | 'month'>('week');
-  // Prefer the row marked isMe so the panel always reflects the auth
-  // user, falling back to the first crew row when nothing is marked.
-  const myCrew = crew.find((c) => c.isMe) ?? crew[0];
+  // Pick whose timesheet to show: the explicitly-selected team
+  // member when viewingCrewId is set, otherwise the auth user's
+  // own row (preferred via isMe, falling back to the first crew).
+  const ownCrew = crew.find((c) => c.isMe) ?? crew[0];
+  const targetCrew = viewingCrewId
+    ? crew.find((c) => c.id === viewingCrewId) ?? ownCrew
+    : ownCrew;
+  const isViewingTeammate = !!viewingCrewId && targetCrew?.id !== ownCrew?.id;
+  const myCrew = targetCrew;
   const mySummary = crewSummaries.find((s) => s.member.id === myCrew?.id)?.summary
     ?? crewSummaries[0]?.summary;
   const myShoot = myCrew ? getEffectiveRate(myCrew.rateCard, 'shoot') : 0;
@@ -834,13 +854,36 @@ function MyTimesheetsPanel({
   const handleNew = () => myCrew && onLogDay(myCrew, null);
   const handleEdit = (entry: TimesheetEntry) => myCrew && onLogDay(myCrew, entry);
 
+  // Title + subtitle adapt to whose timesheet we're looking at.
+  // For a teammate, the subtitle leads with their position so the
+  // designer can see at a glance who they're editing for.
+  const heading = isViewingTeammate
+    ? { italic: myCrew?.name?.split(' ')[0] ?? '', regular: 'Timesheet', verb: `Editing ${myCrew?.name}'s hours` }
+    : { italic: 'My', regular: 'Timesheets', verb: 'Track your hours' };
+
   return (
     <div>
       <div className="tsr-ph">
         <div>
-          <div className="tsr-ph-title">My Timesheets</div>
+          {isViewingTeammate && (
+            <button
+              type="button"
+              className="tsr-back-btn"
+              onClick={onClearViewingCrew}
+              title="Back to my own timesheet"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Back to mine
+            </button>
+          )}
+          <div className="tsr-ph-title">
+            <span className="tsr-ph-title-italic">{heading.italic}</span>{' '}
+            <span className="tsr-ph-title-regular">{heading.regular}</span>
+          </div>
           <div className="tsr-ph-sub">
-            Track your hours ·
+            {heading.verb} ·
             {' '}Shoot {fmt(myShoot, currency)}
             {myPrep !== myShoot ? ` · Prep ${fmt(myPrep, currency)}` : ''}
             {' '}· {myCrew?.rateCard.baseContract ?? '11+1'}
@@ -1003,7 +1046,7 @@ function InvoicesPanel({ currency, totalLabour, crew }: { currency: CurrencyCode
    PANEL: Team Timesheets
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TeamTimesheetsPanel({
-  crew, crewSummaries, currency, totalHours, totalLabour, expandedTeam, toggleTeamExpand, calculateEntry, onToggleApproval,
+  crew, crewSummaries, currency, totalHours, totalLabour, expandedTeam, toggleTeamExpand, calculateEntry, onToggleApproval, onOpenMember,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -1014,6 +1057,8 @@ function TeamTimesheetsPanel({
   toggleTeamExpand: (id: string) => void;
   calculateEntry: (crewId: string, entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
   onToggleApproval: (crewId: string, date: string, current: TimesheetEntry['status']) => void;
+  /** Open the My Timesheets panel scoped to a team member's crew row. */
+  onOpenMember: (crewId: string) => void;
 }) {
   // Count entries that arrived from a team member's mobile and
   // haven't been touched by the designer yet.
@@ -1052,10 +1097,21 @@ function TeamTimesheetsPanel({
             <div className="tsr-team-row" style={{ cursor: 'pointer' }} onClick={() => toggleTeamExpand(member.id)}>
               <div className="tsr-avatar" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {/* Clicking the name opens that member's timesheet
+                    in the My Timesheets panel — stopPropagation so
+                    it doesn't also toggle the expand/collapse. */}
+                <button
+                  type="button"
+                  className="tsr-team-name-btn"
+                  onClick={(e) => { e.stopPropagation(); onOpenMember(member.id); }}
+                  title={`Open ${member.name}'s timesheet`}
+                >
                   {member.name}
                   {member.isMe && <YouPill />}
-                </div>
+                  <svg className="tsr-team-name-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                   {member.position} · {fmt(getEffectiveRate(member.rateCard, 'shoot'), currency)}/day · {member.rateCard.baseContract}
                 </div>
@@ -1149,7 +1205,7 @@ function TeamTimesheetsPanel({
    PANEL: Team Management
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TeamManagePanel({
-  crew, crewSummaries, currency, totalLabour, totalDays, expandedRc, toggleRcExpand, onAddCrew, onNavTimesheets, onRemoveCrew, onUpdateRateCard,
+  crew, crewSummaries, currency, totalLabour, totalDays, expandedRc, toggleRcExpand, onAddCrew, onOpenMember, onRemoveCrew, onUpdateRateCard,
 }: {
   crew: CrewMember[];
   crewSummaries: CrewSummaryRow[];
@@ -1159,7 +1215,8 @@ function TeamManagePanel({
   expandedRc: Record<string, boolean>;
   toggleRcExpand: (id: string) => void;
   onAddCrew: () => void;
-  onNavTimesheets: () => void;
+  /** Open this member's timesheet in the My Timesheets panel. */
+  onOpenMember: (crewId: string) => void;
   onRemoveCrew: (id: string) => void;
   onUpdateRateCard: (crewId: string, updates: Partial<RateCard>) => void;
 }) {
@@ -1219,17 +1276,25 @@ function TeamManagePanel({
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', cursor: 'pointer' }} onClick={() => toggleRcExpand(member.id)}>
               <div className="tsr-avatar lg" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  type="button"
+                  className="tsr-team-name-btn tsr-team-name-btn--lg"
+                  onClick={(e) => { e.stopPropagation(); onOpenMember(member.id); }}
+                  title={`Open ${member.name}'s timesheet`}
+                >
                   {member.name}
                   {member.isMe && <YouPill />}
-                </div>
+                  <svg className="tsr-team-name-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{member.position}</div>
               </div>
               <span className="tsr-tag orange">{fmt(getEffectiveRate(rc, 'shoot'), currency)}/day</span>
               <span className="tsr-tag gold" style={{ marginLeft: 4 }}>{rc.baseContract} shoot</span>
               <span className="tsr-tag teal" style={{ marginLeft: 10 }}>Active</span>
               <div style={{ marginLeft: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button className="tsr-btn tsr-btn-ghost tsr-btn-sm" onClick={(e) => { e.stopPropagation(); onNavTimesheets(); }}>Timesheets</button>
+                <button className="tsr-btn tsr-btn-ghost tsr-btn-sm" onClick={(e) => { e.stopPropagation(); onOpenMember(member.id); }}>Open timesheet</button>
                 {/* Remove-crew action lives inside the expanded rate
                     card now \u2014 keeps the row chrome uniform across
                     "me" and team rows. */}
