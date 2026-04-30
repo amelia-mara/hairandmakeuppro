@@ -18,7 +18,6 @@ type PanelId = 'overview' | 'my-ts' | 'invoices' | 'team-ts' | 'team-manage';
 
 interface SidebarItem {
   id: PanelId;
-  num: string;
   label: string;
   status: 'done' | 'going' | 'none';
 }
@@ -602,11 +601,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
 
   /* Determine sidebar item status */
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', num: '01', label: 'Overview', status: crew.length > 0 ? 'done' : 'none' },
-    { id: 'my-ts', num: '02', label: 'My Timesheets', status: crew.length > 0 ? 'going' : 'none' },
-    { id: 'invoices', num: '03', label: 'My Invoices', status: 'going' },
-    { id: 'team-ts', num: '04', label: 'Team Timesheets', status: crew.length > 1 ? 'going' : 'none' },
-    { id: 'team-manage', num: '05', label: 'Team Management', status: crew.length > 0 ? 'done' : 'none' },
+    { id: 'overview', label: 'Overview', status: crew.length > 0 ? 'done' : 'none' },
+    { id: 'my-ts', label: 'My Timesheets', status: crew.length > 0 ? 'going' : 'none' },
+    { id: 'invoices', label: 'My Invoices', status: 'going' },
+    { id: 'team-ts', label: 'Team Timesheets', status: crew.length > 1 ? 'going' : 'none' },
+    { id: 'team-manage', label: 'Team Management', status: crew.length > 0 ? 'done' : 'none' },
   ];
 
   const toggleTeamExpand = (id: string) => setExpandedTeam(prev => ({ ...prev, [id]: !prev[id] }));
@@ -627,7 +626,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
             className={`tsr-sb-item ${activePanel === item.id ? 'active' : ''}`}
             onClick={() => pickPanel(item.id)}
           >
-            <span className="tsr-sb-num">{item.num}</span>
             {item.label}
             <span className={`tsr-sb-dot ${item.status}`} />
           </button>
