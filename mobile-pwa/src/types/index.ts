@@ -98,6 +98,13 @@ export interface Scene {
   hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
   prepBreakdown?: PrepSceneBreakdown; // Breakdown data from prep app
 
+  // Background presence — non-speaking labels found in the script's
+  // action paragraphs ("PASSER BY", "ELDERLY PATIENT"). Listed on the
+  // scene only; never become tracked Character profiles.
+  backgroundCharacters?: string[];
+  /** Free-text notes shown alongside the background list in the breakdown. */
+  backgroundNotes?: string;
+
   // Character confirmation state (for progressive workflow)
   characterConfirmationStatus?: CharacterConfirmationStatus;
   suggestedCharacters?: string[]; // AI/regex suggested character names before confirmation

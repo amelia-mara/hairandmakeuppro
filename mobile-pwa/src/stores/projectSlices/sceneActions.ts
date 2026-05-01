@@ -216,6 +216,37 @@ export const createSceneSlice = (set: ProjectSet, get: ProjectGet) => ({
     });
   },
 
+  // Background presence — non-speaking labels + free-text notes shown
+  // in the breakdown's background row. Does not affect tracked Characters.
+  updateSceneBackground: (
+    sceneId: string,
+    updates: { backgroundCharacters?: string[]; backgroundNotes?: string },
+  ) => {
+    set((state) => {
+      if (!state.currentProject) return state;
+      return {
+        currentProject: {
+          ...state.currentProject,
+          scenes: state.currentProject.scenes.map((s) =>
+            s.id === sceneId
+              ? {
+                  ...s,
+                  backgroundCharacters:
+                    updates.backgroundCharacters !== undefined
+                      ? updates.backgroundCharacters
+                      : s.backgroundCharacters,
+                  backgroundNotes:
+                    updates.backgroundNotes !== undefined
+                      ? updates.backgroundNotes
+                      : s.backgroundNotes,
+                }
+              : s
+          ),
+        },
+      };
+    });
+  },
+
   // Scene synopsis - update a single scene's synopsis
   updateSceneSynopsis: (sceneId: string, synopsis: string) => {
     set((state) => {
