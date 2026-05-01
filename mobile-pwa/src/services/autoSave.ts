@@ -68,9 +68,12 @@ function debounced(key: string, fn: () => Promise<void>): void {
       _consecutiveFailures = 0; // reset on success
       _lastFailureMessage = '';
       // Mirror to syncStore so any UI subscribed to it clears the
-      // "trouble saving" indicator the moment a write succeeds.
+      // "trouble saving" indicator the moment a write succeeds, and
+      // stamp lastSuccessfulSave so SyncSheet can show "Last saved
+      // X ago" without depending on the retired manual sync.
       useSyncStore.getState().setAutoSaveFailureCount(0);
       useSyncStore.getState().setAutoSaveLastError(null);
+      useSyncStore.getState().setLastSuccessfulSave(Date.now());
     } catch (err) {
       _consecutiveFailures++;
       _lastFailureMessage = err instanceof Error
