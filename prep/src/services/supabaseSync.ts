@@ -96,6 +96,60 @@ export async function flushPrepSync(): Promise<void> {
 export let receivingFromRealtime = false;
 export function setReceivingFromRealtime(v: boolean) { receivingFromRealtime = v; }
 
+/**
+ * Upsert a per-project set of rows by `id`, then delete any DB rows
+ * whose id is no longer in the local set ("orphan cleanup"). Replaces
+ * the dangerous delete-all-then-insert pattern that used to live in
+ * saveCharacters / saveLooks: both `characters` and `looks` have
+ * cascading FKs, so a brief delete-all window could wipe scene
+ * assignments / continuity captures via cascade.
+ *
+ * The empty-`rows` guard is deliberate: an empty local list almost
+ * always means the store hasn't loaded yet, not that the user deleted
+ * everything, so we'd rather leak orphans than wipe the DB.
+ */
+async function upsertWithOrphanCleanup(
+  table: 'characters' | 'looks',
+  projectId: string,
+  rows: Array<{ id: string }>,
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  const upsertResult =
+    table === 'characters'
+      ? await supabase.from('characters').upsert(rows as never, { onConflict: 'id' })
+      : await supabase.from('looks').upsert(rows as never, { onConflict: 'id' });
+  if (upsertResult.error) throw upsertResult.error;
+
+  const existingResult =
+    table === 'characters'
+      ? await supabase.from('characters').select('id').eq('project_id', projectId)
+      : await supabase.from('looks').select('id').eq('project_id', projectId);
+  if (existingResult.error) {
+    console.warn(
+      `[PrepSync] Could not list existing ${table}; skipping orphan cleanup:`,
+      existingResult.error.message,
+    );
+    return;
+  }
+
+  const localIds = new Set(rows.map((r) => r.id));
+  const orphanIds = (existingResult.data || [])
+    .map((r) => r.id as string)
+    .filter((id) => !localIds.has(id));
+  if (orphanIds.length === 0) return;
+
+  const delResult =
+    table === 'characters'
+      ? await supabase.from('characters').delete().in('id', orphanIds)
+      : await supabase.from('looks').delete().in('id', orphanIds);
+  if (delResult.error) {
+    console.warn(`[PrepSync] Failed to clean up orphan ${table}:`, delResult.error.message);
+  } else {
+    console.log(`[PrepSync] Removed ${orphanIds.length} orphan ${table} row(s)`);
+  }
+}
+
 // ============================================================================
 // FETCH — Load project data from Supabase
 // ============================================================================
@@ -360,26 +414,22 @@ export function saveScenes(
       };
     });
 
-    // Try the fast path first: upsert on id (works when IDs already match Supabase)
+    // Upsert on `id`. The previous code had a delete-all fallback for
+    // UNIQUE(project_id, scene_number) conflicts, but that path is
+    // dangerous: deleting all scenes cascades to scene_characters,
+    // continuity_events and look_scenes via FK ON DELETE CASCADE, so a
+    // concurrent save could wipe on-set continuity captures during the
+    // brief delete window. Surface the error instead — the next debounced
+    // save will retry once the local IDs / scene_numbers stabilise.
     const { error } = await supabase
       .from('scenes')
       .upsert(dbScenes, { onConflict: 'id' });
 
     if (error) {
-      // Likely a UNIQUE(project_id, scene_number) conflict because local IDs
-      // are fresh UUIDs that don't match existing rows.  Fall back to
-      // delete-then-insert so the new IDs take effect cleanly.
-      console.warn('[PrepSync] Scene upsert conflict, replacing scenes:', error.message);
-      const { error: delErr } = await supabase
-        .from('scenes')
-        .delete()
-        .eq('project_id', projectId);
-      if (delErr) throw delErr;
-
-      const { error: insErr } = await supabase
-        .from('scenes')
-        .insert(dbScenes);
-      if (insErr) throw insErr;
+      // Re-throw so the debounced wrapper logs and runs its single retry.
+      // The previous fallback (delete-all + insert) is gone — see comment
+      // above for why.
+      throw error;
     }
 
     // Sync scene_characters junction (non-fatal — data still saved above)
@@ -457,16 +507,27 @@ export function saveCharacters(
       } as unknown as Json,
     }));
 
-    // Delete existing characters for this project first, then insert.
-    // On script re-upload, new UUIDs are generated for all characters.
-    // Without deleting first, old character rows accumulate as orphans.
-    await supabase.from('characters').delete().eq('project_id', projectId);
-    const { error } = await supabase
-      .from('characters')
-      .insert(dbChars);
-    if (error) throw error;
+    await upsertWithOrphanCleanup('characters', projectId, dbChars);
     console.log('[PrepSync] Characters saved');
   });
+}
+
+/**
+ * Delete a single character from Supabase. Used by the store's explicit
+ * removeCharacterEntirely action so the user sees the deletion reflected
+ * in the DB (and propagated via realtime) without waiting for the next
+ * debounced save. FK ON DELETE CASCADE handles scene_characters and
+ * continuity_events for this character only — no project-wide damage.
+ */
+export async function removeCharacterFromSupabase(characterId: string): Promise<void> {
+  const { error } = await supabase
+    .from('characters')
+    .delete()
+    .eq('id', characterId);
+  if (error) {
+    console.error('[PrepSync] removeCharacterFromSupabase failed:', error.message);
+    throw error;
+  }
 }
 
 /**
@@ -497,13 +558,7 @@ export function saveLooks(
       makeup_details: { notes: l.makeup, _wardrobe: l.wardrobe } as unknown as Json,
     }));
 
-    // Delete existing looks for this project first, then insert.
-    // On script re-upload, new UUIDs are generated for all looks.
-    await supabase.from('looks').delete().eq('project_id', projectId);
-    const { error } = await supabase
-      .from('looks')
-      .insert(dbLooks);
-    if (error) throw error;
+    await upsertWithOrphanCleanup('looks', projectId, dbLooks);
 
     // Sync look_scenes junction if provided (non-fatal)
     if (lookSceneMap) {
@@ -537,6 +592,23 @@ export function saveLooks(
     }
     console.log('[PrepSync] Looks saved');
   });
+}
+
+/**
+ * Delete a single look from Supabase. Used by the store's deletion path
+ * for instant DB feedback rather than waiting for the next debounced
+ * save's diff cleanup. look_scenes cascade-deletes; continuity_events
+ * SET NULL on look_id, preserving on-set capture history.
+ */
+export async function removeLookFromSupabase(lookId: string): Promise<void> {
+  const { error } = await supabase
+    .from('looks')
+    .delete()
+    .eq('id', lookId);
+  if (error) {
+    console.error('[PrepSync] removeLookFromSupabase failed:', error.message);
+    throw error;
+  }
 }
 
 /**
