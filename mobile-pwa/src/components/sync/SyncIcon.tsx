@@ -18,19 +18,23 @@ export function SyncIcon({ onClick }: { onClick: () => void }) {
     hasPendingOutbox,
     deadOutboxCount,
     autoSaveFailureCount,
+    realtimeDisconnected,
   } = useSyncStore();
   const pendingCount = pendingChanges.size;
   const isBusy = status === 'uploading' || status === 'downloading';
   const isSynced = pendingCount === 0 && !isBusy && status === 'synced';
 
   // Attention dot: appears whenever something needs the user's eye.
-  // Terracotta when a write has permanently failed (dead outbox entries
-  // or 10+ consecutive autoSave failures). Amber otherwise.
+  // Terracotta when something has permanently failed (dead outbox,
+  // 10+ autoSave failures, or realtime gave up reconnecting). Amber
+  // for transient/warning states.
   const hasDead = deadOutboxCount > 0;
   const hasSevereAutoSave = autoSaveFailureCount >= 10;
   const hasWarnAutoSave = autoSaveFailureCount >= 3;
-  const showAttentionDot = hasDead || hasWarnAutoSave || hasPendingOutbox;
-  const dotColor = hasDead || hasSevereAutoSave ? '#C4522A' : '#F59E0B';
+  const showAttentionDot =
+    hasDead || hasWarnAutoSave || hasPendingOutbox || realtimeDisconnected;
+  const dotColor =
+    hasDead || hasSevereAutoSave || realtimeDisconnected ? '#C4522A' : '#F59E0B';
 
   // Pulse animation when badge count increases
   const prevCount = useRef(pendingCount);

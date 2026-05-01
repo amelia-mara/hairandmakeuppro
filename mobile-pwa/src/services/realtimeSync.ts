@@ -13,6 +13,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSyncStore } from '@/stores/syncStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { loadProjectFromSupabase } from '@/services/projectLoader';
 import type { Look, ProductionSchedule, ScheduleCastMember, ScheduleDay, CallSheet } from '@/types';
@@ -22,6 +23,50 @@ type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 let activeChannel: RealtimeChannel | null = null;
 let activeProjectId: string | null = null;
+
+// Reconnect state — bounded exponential backoff after CHANNEL_ERROR /
+// TIMED_OUT. Reset on every successful SUBSCRIBED status, on explicit
+// unsubscribe (project change), and when the user manually retries.
+const MAX_RECONNECT_ATTEMPTS = 8;
+let reconnectAttempts = 0;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearReconnectState() {
+  reconnectAttempts = 0;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  useSyncStore.getState().setRealtimeDisconnected(false);
+}
+
+function scheduleReconnect(projectId: string) {
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    console.warn('[AppRealtime] Reconnect budget exhausted; surfacing disconnected state');
+    useSyncStore.getState().setRealtimeDisconnected(true);
+    return;
+  }
+  // 2s, 4s, 8s, 16s, 32s, 60s (capped), 60s, 60s — ~3.5 minutes total.
+  const delayMs = Math.min(2000 * Math.pow(2, reconnectAttempts), 60_000);
+  reconnectAttempts++;
+  console.log(
+    `[AppRealtime] Channel dropped — scheduling reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delayMs}ms`,
+  );
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    // Don't reconnect if the user has navigated away from this project.
+    const currentId = useProjectStore.getState().currentProject?.id;
+    if (!currentId || currentId !== projectId) {
+      clearReconnectState();
+      return;
+    }
+    // resubscribeToProject tears down the old channel and creates a
+    // new one, then runs a full project reload to catch up missed events.
+    resubscribeToProject(projectId).catch((err) => {
+      console.error('[AppRealtime] Reconnect attempt failed:', err);
+    });
+  }, delayMs);
+}
 
 /**
  * Subscribe to Realtime changes for a project.
@@ -176,13 +221,28 @@ export function subscribeToProject(projectId: string): () => void {
 
     .subscribe((status) => {
       console.log(`[AppRealtime] Channel app:project:${projectId} status:`, status);
+      switch (status) {
+        case 'SUBSCRIBED':
+          // Successful (re-)connect. Drop any pending retry and clear
+          // the persistent disconnected indicator.
+          clearReconnectState();
+          break;
+        case 'CHANNEL_ERROR':
+        case 'TIMED_OUT':
+          // Network drop or server-side error — back off and try
+          // again. CLOSED is intentional teardown so it's not handled.
+          scheduleReconnect(projectId);
+          break;
+      }
     });
 
   return () => unsubscribeFromProject();
 }
 
 /**
- * Unsubscribe from the active project channel.
+ * Unsubscribe from the active project channel. Also clears any
+ * pending reconnect state so a stale retry doesn't fire after the
+ * user navigates away.
  */
 export function unsubscribeFromProject(): void {
   if (activeChannel) {
@@ -191,6 +251,7 @@ export function unsubscribeFromProject(): void {
     activeProjectId = null;
     console.log('[AppRealtime] Unsubscribed from project');
   }
+  clearReconnectState();
 }
 
 /**
