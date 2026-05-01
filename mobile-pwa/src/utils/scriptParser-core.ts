@@ -32,6 +32,11 @@ export interface ParsedScene {
   backgroundNotes?: string;
   content: string;
   synopsis?: string;
+  /** True when the script marks this scene as removed in the current
+   *  revision (e.g. "30. OMITTED" or "98 OMITTED 98"). The verbatim
+   *  line is preserved in `content` so the breakdown can show it as
+   *  the script wrote it. */
+  isOmitted?: boolean;
 }
 
 export interface ParsedCharacter {
@@ -87,6 +92,48 @@ export function parseScriptText(text: string): ParsedScript {
 
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
+
+    // ── Omitted scene placeholder ─────────────────────────────────
+    // Scripts mark deleted scenes with a stub line that retains the
+    // scene number — common formats:
+    //   "12. OMITTED"    "12 OMITTED."    "OMITTED."
+    //   "12A. OMITTED."  "SCENE 12 OMITTED."
+    //   "98 OMITTED 98"  "30 OMITTED 30."  ← number at both ends (revisions)
+    // We emit a ParsedScene with isOmitted:true so the scene list keeps
+    // numbering coherent and the verbatim line survives in `content`
+    // for display.
+    const omittedMatch = trimmed.match(
+      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*(?:\d+[A-Z]{0,4})?\.?\s*$/i,
+    );
+    if (omittedMatch) {
+      // Close out the current scene first.
+      if (current) {
+        current.endLineExclusive = i;
+        current.content = lines.slice(current.headLine, i).join('\n').trim();
+        builds.push(current);
+        current = null;
+      }
+      fallbackSceneNumber++;
+      const sceneNum = (omittedMatch[1] || String(fallbackSceneNumber)).toUpperCase();
+      builds.push({
+        sceneNumber: sceneNum,
+        slugline: trimmed,
+        intExt: 'INT',
+        location: 'OMITTED',
+        timeOfDay: 'DAY',
+        characters: [],
+        backgroundCharacters: [],
+        backgroundNotes: '',
+        // Verbatim line so the breakdown can render exactly what the
+        // script wrote (e.g. "30 OMITTED 30.").
+        content: trimmed,
+        isOmitted: true,
+        headLine: i,
+        endLineExclusive: i + 1,
+      });
+      continue;
+    }
+
     const heading = parseSceneHeadingLine(trimmed);
     if (heading.isValid) {
       // First scene heading encountered. If there's substantive text
@@ -420,7 +467,10 @@ export function convertParsedScriptToProject(
     return {
       id: uuidv4(),
       sceneNumber: sceneNum,
-      slugline: `${ps.intExt}. ${ps.location} - ${ps.timeOfDay}`,
+      // For OMITTED scenes the verbatim line IS the slugline (e.g.
+      // "30 OMITTED 30."). For real scenes synthesise the standard
+      // form so the breakdown header reads as expected.
+      slugline: ps.isOmitted ? ps.content : `${ps.intExt}. ${ps.location} - ${ps.timeOfDay}`,
       intExt: ps.intExt,
       timeOfDay: ps.timeOfDay,
       synopsis: ps.synopsis,
@@ -429,6 +479,7 @@ export function convertParsedScriptToProject(
       backgroundCharacters: ps.backgroundCharacters,
       backgroundNotes: ps.backgroundNotes,
       isComplete: false,
+      isOmitted: ps.isOmitted,
     };
   });
 

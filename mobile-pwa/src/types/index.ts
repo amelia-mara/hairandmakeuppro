@@ -108,6 +108,12 @@ export interface Scene {
   backgroundCharacters?: string[];
   /** Free-text notes shown alongside the background list in the breakdown. */
   backgroundNotes?: string;
+  /** True when the script marks this scene as removed in the current
+   *  revision (e.g. "30. OMITTED" or "98 OMITTED 98"). The breakdown
+   *  shows it as a thin grey placeholder card displaying the verbatim
+   *  line from `scriptContent`, so production crews can see scene 30
+   *  used to exist even after it's gone. */
+  isOmitted?: boolean;
 
   // Character confirmation state (for progressive workflow)
   characterConfirmationStatus?: CharacterConfirmationStatus;
