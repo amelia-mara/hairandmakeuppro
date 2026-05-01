@@ -359,6 +359,32 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           </p>
         ) : (
           scenesWithCast.map((scene) => {
+            // OMITTED scenes from script revisions render as a thin
+            // placeholder card showing the verbatim script line (e.g.
+            // "30 OMITTED 30."). They have no characters and no breakdown
+            // — the card exists so production crews can see scene 30
+            // used to exist even after it's been removed.
+            if (scene.isOmitted) {
+              return (
+                <div
+                  key={scene.id}
+                  ref={(el) => { if (el) sceneRefs.current.set(scene.id, el); }}
+                  className="rounded-[14px] px-4 py-3 flex items-center gap-3 opacity-60"
+                  style={{
+                    border: '1px dashed rgba(0,0,0,0.18)',
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                  }}
+                >
+                  <span className="flex-shrink-0" style={{ color: '#8A7B5C', fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.02em' }}>
+                    SC {scene.sceneNumber}
+                  </span>
+                  <span className="text-[0.8125rem] font-mono text-text-muted flex-1 truncate">
+                    {scene.scriptContent || scene.slugline || 'OMITTED'}
+                  </span>
+                </div>
+              );
+            }
+
             const globalIdx = sortedScenes.indexOf(scene);
             const bd = scene.prepBreakdown;
             const charIds = filterChar

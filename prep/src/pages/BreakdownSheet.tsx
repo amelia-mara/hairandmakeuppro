@@ -557,7 +557,14 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               >
                 <div className="bs-scene-header bs-scene-header--omitted">
                   <span className="bs-scene-num">SC {scene.number}</span>
-                  <span className="bs-scene-omitted-label">OMITTED</span>
+                  {/* Show the verbatim line from the script (e.g.
+                      "30 OMITTED 30." or "30. OMITTED.") instead of the
+                      generic label. The parser stores the exact line in
+                      scriptContent so production crews see what the
+                      revision page actually printed. */}
+                  <span className="bs-scene-omitted-label">
+                    {(scene.scriptContent && scene.scriptContent.trim()) || 'OMITTED'}
+                  </span>
                 </div>
               </div>
             );
