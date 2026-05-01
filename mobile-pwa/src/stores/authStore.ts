@@ -131,6 +131,7 @@ function toProjectMembership(
     status: (project.status as ProjectMembership['status']) || 'active',
     ownerName: project.owner_name,
     pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
+    hasPrepAccess: !!(project as any).has_prep_access,
     access_breakdown: project.access_breakdown,
     access_script: project.access_script,
     access_lookbook: project.access_lookbook,

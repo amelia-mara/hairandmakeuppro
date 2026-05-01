@@ -788,6 +788,7 @@ export function ProjectHubScreen() {
           id: membership.projectId,
           name: membership.projectName,
           department: membership.department || 'hmu',
+          hasPrepAccess: !!membership.hasPrepAccess,
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
           scenes: localScenes,

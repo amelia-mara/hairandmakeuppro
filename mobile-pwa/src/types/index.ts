@@ -7,6 +7,10 @@ export interface Project {
   id: string;
   name: string;
   department?: 'hmu' | 'costume'; // Department mode: "hmu" (default) or "costume". Set at creation, cannot change.
+  /** True for Designer-led projects that sync with Prep Happy. False
+   *  for app-only projects (Supervisor / Artist tier). Drives every
+   *  Prep-specific sync gate per ARCHITECTURE.md rule #5. */
+  hasPrepAccess?: boolean;
   createdAt: Date;
   updatedAt: Date;
   scenes: Scene[];
@@ -1451,6 +1455,8 @@ export interface ProjectMembership {
   status: ProjectStatus;
   ownerName?: string;
   pendingDeletionAt?: Date | null;
+  /** Designer-led project (`projects.has_prep_access` from DB). */
+  hasPrepAccess?: boolean;
   // Per-member access toggles (set by project owner)
   access_breakdown?: boolean;
   access_script?: boolean;
