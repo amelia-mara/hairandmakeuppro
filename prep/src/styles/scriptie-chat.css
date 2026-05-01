@@ -114,6 +114,95 @@
   cursor: not-allowed;
 }
 
+/* ── Mode tabs ─────────────────────────────────────── */
+.scriptie-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.scriptie-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-card);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+}
+.scriptie-tab:hover:not(.active) {
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+.scriptie-tab.active {
+  background: rgba(var(--a), 0.12);
+  border-color: rgba(var(--a), 0.45);
+  color: var(--accent);
+}
+.scriptie-tab-main {
+  font-weight: 600;
+}
+.scriptie-tab-sub {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
+/* ── Placeholder (Team Chat) ───────────────────────── */
+.scriptie-body--placeholder {
+  align-items: center;
+  justify-content: center;
+}
+.scriptie-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 18px;
+  color: var(--text-muted);
+}
+.scriptie-placeholder svg {
+  margin-bottom: 14px;
+  opacity: 0.55;
+}
+.scriptie-placeholder-title {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+.scriptie-placeholder-desc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 14px;
+  max-width: 280px;
+}
+.scriptie-placeholder-tag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(var(--a), 0.12);
+  color: var(--accent);
+}
+
 /* ── Body ──────────────────────────────────────────── */
 .scriptie-body {
   flex: 1;
