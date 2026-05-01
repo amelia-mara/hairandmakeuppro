@@ -45,14 +45,17 @@ export function subscribeToProject(projectId: string): () => void {
   activeChannel = supabase
     .channel(`app:project:${projectId}`)
 
-    // Prep assigned a look — update look label on breakdown screen
+    // Prep added/removed a character on a scene. The junction table has
+    // no project_id column (only scene_id, character_id), so we cannot
+    // filter at the subscription level — we filter in the handler by
+    // checking that the affected scene belongs to the active project.
     .on('postgres_changes', {
-      event: 'UPDATE',
+      event: '*',
       schema: 'public',
       table: 'scene_characters',
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
-        console.log('[AppRealtime] scene_characters updated:', payload);
+        handleSceneCharacterChange(payload);
       });
     })
 
@@ -254,6 +257,43 @@ function handleTimesheetChange(payload: ChangePayload) {
   });
 }
 
+/**
+ * scene_characters has no `project_id` column, so the subscription
+ * cannot be filtered at the database level. Each event is checked
+ * client-side by looking up the affected scene_id in the active project.
+ */
+function handleSceneCharacterChange(payload: ChangePayload) {
+  const store = useProjectStore.getState();
+  const project = store.currentProject;
+  if (!project) return;
+
+  const newRow = payload.new as { scene_id?: string; character_id?: string } | null;
+  const oldRow = payload.old as { scene_id?: string; character_id?: string } | null;
+  const sceneId = newRow?.scene_id ?? oldRow?.scene_id;
+  const characterId = newRow?.character_id ?? oldRow?.character_id;
+  if (!sceneId || !characterId) return;
+
+  // Only react to junction rows for scenes in the currently-loaded project.
+  if (!project.scenes.some((s) => s.id === sceneId)) return;
+
+  if (payload.eventType === 'INSERT') {
+    store.addCharacterToScene(sceneId, characterId);
+    console.log('[AppRealtime] Scene character added:', sceneId, characterId);
+    return;
+  }
+
+  if (payload.eventType === 'DELETE') {
+    store.removeCharacterFromScene(sceneId, characterId);
+    console.log('[AppRealtime] Scene character removed:', sceneId, characterId);
+    return;
+  }
+
+  // UPDATE on this junction is rare (only key columns exist) — log and ignore.
+  if (payload.eventType === 'UPDATE') {
+    console.log('[AppRealtime] scene_characters UPDATE ignored (no mutable fields):', sceneId, characterId);
+  }
+}
+
 function handleSceneChange(payload: ChangePayload) {
   const store = useProjectStore.getState();
   const project = store.currentProject;
@@ -338,6 +378,12 @@ function handleSceneChange(payload: ChangePayload) {
       characters: [],
     });
     console.log('[AppRealtime] Scene inserted:', rowId);
+  } else if (payload.eventType === 'DELETE' && payload.old) {
+    const sceneId = (payload.old as Record<string, unknown>).id as string | undefined;
+    if (!sceneId) return;
+    if (!project.scenes.some((s) => s.id === sceneId)) return;
+    store.deleteScene(sceneId);
+    console.log('[AppRealtime] Scene deleted:', sceneId);
   }
 }
 
@@ -369,6 +415,12 @@ function handleCharacterChange(payload: ChangePayload) {
     const updatedCharacters = [...project.characters, newChar];
     store.mergeServerData({ characters: updatedCharacters });
     console.log('[AppRealtime] Character inserted:', row.id);
+  } else if (payload.eventType === 'DELETE' && payload.old) {
+    const characterId = (payload.old as Record<string, unknown>).id as string | undefined;
+    if (!characterId) return;
+    if (!project.characters.some((c) => c.id === characterId)) return;
+    store.deleteCharacter(characterId);
+    console.log('[AppRealtime] Character deleted:', characterId);
   }
 }
 

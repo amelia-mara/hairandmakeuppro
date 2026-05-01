@@ -73,6 +73,49 @@ export const createSceneSlice = (set: ProjectSet, get: ProjectGet) => ({
     });
   },
 
+  removeCharacterFromScene: (sceneId: string, characterId: string) => {
+    set((state) => {
+      if (!state.currentProject) return state;
+
+      const captureKey = `${sceneId}-${characterId}`;
+      const nextCaptures = { ...state.sceneCaptures };
+      delete nextCaptures[captureKey];
+
+      return {
+        currentProject: {
+          ...state.currentProject,
+          scenes: state.currentProject.scenes.map((s) =>
+            s.id === sceneId
+              ? { ...s, characters: s.characters.filter((id) => id !== characterId) }
+              : s
+          ),
+        },
+        sceneCaptures: nextCaptures,
+      };
+    });
+  },
+
+  deleteScene: (sceneId: string) => {
+    set((state) => {
+      if (!state.currentProject) return state;
+
+      // Drop any captures keyed to this scene so we don't keep ghosts.
+      const nextCaptures: typeof state.sceneCaptures = {};
+      for (const [key, capture] of Object.entries(state.sceneCaptures)) {
+        if (capture.sceneId !== sceneId) nextCaptures[key] = capture;
+      }
+
+      return {
+        currentProject: {
+          ...state.currentProject,
+          scenes: state.currentProject.scenes.filter((s) => s.id !== sceneId),
+        },
+        sceneCaptures: nextCaptures,
+        currentSceneId: state.currentSceneId === sceneId ? null : state.currentSceneId,
+      };
+    });
+  },
+
   // Scene completion
   markSceneComplete: (sceneId: string) => {
     set((state) => {
