@@ -2,7 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useSyncStore } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { uploadToServer, downloadFromServer } from '@/services/manualSync';
+import { flushAutoSave } from '@/services/autoSave';
 import { OutboxDeadList } from '@/components/sync/OutboxDeadList';
+
+/** Threshold below which transient network hiccups are ignored. */
+const AUTO_SAVE_WARNING_THRESHOLD = 3;
+/** Threshold at which the warning escalates from amber to terracotta. */
+const AUTO_SAVE_SEVERE_THRESHOLD = 10;
 
 /**
  * Sync bottom sheet — slides up from the bottom when opened.
@@ -25,8 +31,23 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     progress,
     hasPendingOutbox,
     deadOutboxCount,
+    autoSaveFailureCount,
+    autoSaveLastError,
   } = useSyncStore();
   const [showDeadList, setShowDeadList] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const showAutoSaveWarning = autoSaveFailureCount >= AUTO_SAVE_WARNING_THRESHOLD;
+  const isAutoSaveSevere = autoSaveFailureCount >= AUTO_SAVE_SEVERE_THRESHOLD;
+
+  const handleRetryAutoSave = async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      await flushAutoSave();
+    } finally {
+      setIsRetrying(false);
+    }
+  };
   const currentProject = useProjectStore((s) => s.currentProject);
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -163,6 +184,45 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.696a8.25 8.25 0 00-11.667 0l-3.181 3.183" />
               </svg>
               <span className="flex-1">Some data is waiting to sync</span>
+            </div>
+          )}
+
+          {/* AutoSave: 3+ consecutive failures across any category. Local
+              edits are still safe in IndexedDB — this surfaces that they
+              haven't reached Supabase yet. Amber for 3-9 failures,
+              terracotta for 10+ where something is genuinely wrong. */}
+          {showAutoSaveWarning && (
+            <div
+              className="text-sm rounded-xl px-4 py-3 mb-3"
+              style={
+                isAutoSaveSevere
+                  ? { backgroundColor: 'rgba(196, 82, 42, 0.1)', color: '#C4522A' }
+                  : { backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#92400E' }
+              }
+            >
+              <div className="flex items-start gap-3">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">Having trouble saving changes</div>
+                  <div className="text-xs opacity-80 mt-0.5">
+                    Your edits are stored on your device.
+                  </div>
+                  {autoSaveLastError && (
+                    <div className="text-[11px] opacity-70 mt-1 break-words">
+                      {autoSaveLastError}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleRetryAutoSave}
+                  disabled={isRetrying || !isOnline}
+                  className="text-xs font-semibold underline disabled:opacity-50"
+                >
+                  {isRetrying ? 'Retrying...' : 'Retry now'}
+                </button>
+              </div>
             </div>
           )}
 
