@@ -386,7 +386,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const [viewingCrewId, setViewingCrewId] = useState<string | null>(null);
   const openMemberTimesheet = useCallback((crewId: string) => {
     setViewingCrewId(crewId);
-    setActivePanel('my-ts');
   }, []);
   const [toast, setToast] = useState<string | null>(null);
   const [expandedTeam, setExpandedTeam] = useState<Record<string, boolean>>({});
@@ -399,7 +398,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
-  const pickPanel = (id: PanelId) => { setActivePanel(id); setDrawerOpen(false); };
+  const pickPanel = (id: PanelId) => {
+    setActivePanel(id);
+    setViewingCrewId(null);
+    setDrawerOpen(false);
+  };
 
   const store = useTimesheetStore(projectId);
   const production = store(s => s.production);
@@ -567,7 +570,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
         {sidebarItems.map(item => (
           <button
             key={item.id}
-            className={`tsr-sb-item ${activePanel === item.id ? 'active' : ''}`}
+            className={`tsr-sb-item ${!viewingCrewId && activePanel === item.id ? 'active' : ''}`}
             onClick={() => pickPanel(item.id)}
           >
             {item.label}
@@ -581,7 +584,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
           <div className="tsr-sb-team-empty">No team yet</div>
         ) : (
           sidebarTeam.map(member => {
-            const isActive = activePanel === 'my-ts' && viewingCrewId === member.id;
+            const isActive = viewingCrewId === member.id;
             const synced = !!member.userId;
             return (
               <button
@@ -648,8 +651,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
             <span>Sections</span>
           </button>
         )}
-        {/* ══════════════ MY TIMESHEETS ══════════════ */}
-        {activePanel === 'my-ts' && (
+        {/* ══════════════ MY / MEMBER TIMESHEET ══════════════
+            When viewingCrewId is set, this panel renders that member's
+            timesheet regardless of which sidebar tab is active — so the
+            "My Timesheets" tab itself always shows the user's own data. */}
+        {(activePanel === 'my-ts' || viewingCrewId) && (
           <MyTimesheetsPanel
             crew={crew}
             crewSummaries={crewSummaries}
@@ -671,12 +677,12 @@ export function Timesheet({ projectId }: TimesheetProps) {
         )}
 
         {/* ══════════════ 03 MY INVOICES ══════════════ */}
-        {activePanel === 'invoices' && (
+        {activePanel === 'invoices' && !viewingCrewId && (
           <InvoicesPanel currency={currency} totalLabour={totalLabour} crew={crew} />
         )}
 
         {/* ══════════════ 04 TEAM TIMESHEETS ══════════════ */}
-        {activePanel === 'team-ts' && (
+        {activePanel === 'team-ts' && !viewingCrewId && (
           <TeamTimesheetsPanel
             crew={crew}
             crewSummaries={crewSummaries}
@@ -696,7 +702,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
         )}
 
         {/* ══════════════ 05 TEAM MANAGEMENT ══════════════ */}
-        {activePanel === 'team-manage' && (
+        {activePanel === 'team-manage' && !viewingCrewId && (
           <TeamManagePanel
             crew={crew}
             crewSummaries={crewSummaries}
