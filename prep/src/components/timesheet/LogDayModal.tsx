@@ -11,16 +11,9 @@ import {
 interface LogDayModalProps {
   crew: CrewMember;
   currency: CurrencyCode;
-  /** Initial entry to edit. Pass undefined / null when creating a
-   *  brand new day; the modal seeds it with `defaultDate`. */
   initialEntry?: TimesheetEntry | null;
-  /** Date to seed when creating a new entry. Defaults to today. */
   defaultDate?: string;
-  /** The previous shoot day's wrapOut so the calculator can flag a
-   *  broken turnaround on this one. */
   previousWrapOut?: string;
-  /** Run a fresh calculation for the in-progress draft so the modal
-   *  can preview hours / OT / earnings as the user types. */
   calculate: (entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
   onSave: (entry: TimesheetEntry) => void;
   onDelete?: (date: string) => void;
@@ -43,7 +36,6 @@ export function LogDayModal({
     () => initialEntry ?? createEmptyEntry(seedDate),
   );
 
-  // Re-seed if the caller swaps the entry (rare, but cheap to handle).
   useEffect(() => {
     if (initialEntry) setDraft(initialEntry);
   }, [initialEntry]);
@@ -51,7 +43,6 @@ export function LogDayModal({
   const set = <K extends keyof TimesheetEntry>(key: K, value: TimesheetEntry[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  // Live preview — only meaningful once we have unit-call + wrap.
   const calc = useMemo(
     () => (draft.unitCall && draft.wrapOut ? calculate(draft, previousWrapOut) : null),
     [draft, calculate, previousWrapOut],

@@ -30,7 +30,7 @@ export function RateCardSettings() {
             <span className="text-text-muted">£</span>
             <input
               type="number"
-              value={rateCard.prepRate ?? rateCard.dailyRate ?? ''}
+              value={rateCard.prepRate || ''}
               onChange={(e) =>
                 updateRateCard({ prepRate: e.target.value ? parseFloat(e.target.value) : 0 })
               }
@@ -48,7 +48,7 @@ export function RateCardSettings() {
             <span className="text-text-muted">£</span>
             <input
               type="number"
-              value={rateCard.shootRate ?? rateCard.dailyRate ?? ''}
+              value={rateCard.shootRate || ''}
               onChange={(e) =>
                 updateRateCard({ shootRate: e.target.value ? parseFloat(e.target.value) : 0 })
               }

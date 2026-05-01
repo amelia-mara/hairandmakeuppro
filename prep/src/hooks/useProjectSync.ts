@@ -394,20 +394,63 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             if (data.callSheets.length > 0) {
               const csStore = useCallSheetStore(projectId!);
               const existingIds = new Set(csStore.getState().sheets.map(s => s.id));
+              const SIGNED_TTL = 60 * 60 * 24 * 7;
+
               for (const row of data.callSheets) {
                 const id = row.id as string;
                 if (existingIds.has(id)) continue;
-                const parsed = row.parsed_data as Record<string, unknown> | null;
-                if (parsed?.pdfUrl) {
-                  csStore.getState().addSheet({
-                    id,
-                    name: (parsed.name as string) || '',
-                    date: (row.shoot_date as string) || '',
-                    dataUri: parsed.pdfUrl as string,
-                    thumbnailUri: (parsed.thumbnailUrl as string) || '',
-                    uploadedAt: (parsed.uploadedAt as string) || (row.created_at as string) || '',
-                  });
-                }
+
+                const parsed = (row.parsed_data ?? {}) as Record<string, unknown>;
+                const storagePath =
+                  (parsed.storagePath as string | undefined) ||
+                  (row.storage_path as string | undefined);
+                const thumbnailPath = parsed.thumbnailPath as string | undefined;
+
+                // Generate fresh signed URLs from the storage paths so the
+                // PDF + thumbnail load against the private bucket. Paths
+                // are durable; URLs expire.
+                const [pdfSigned, thumbSigned] = await Promise.all([
+                  storagePath
+                    ? supabase.storage
+                        .from('project-documents')
+                        .createSignedUrl(storagePath, SIGNED_TTL)
+                    : Promise.resolve({ data: null }),
+                  thumbnailPath
+                    ? supabase.storage
+                        .from('project-documents')
+                        .createSignedUrl(thumbnailPath, SIGNED_TTL)
+                    : Promise.resolve({ data: null }),
+                ]);
+
+                // Strip storage-meta keys from parsed before passing it as
+                // the parsed CallSheet — they're carried separately on the
+                // sheet record.
+                const {
+                  storagePath: _sp,
+                  thumbnailPath: _tp,
+                  pdfUrl: _pu,
+                  thumbnailUrl: _tu,
+                  name: _n,
+                  uploadedAt: _ua,
+                  ...parsedSheet
+                } = parsed;
+
+                csStore.getState().addSheet({
+                  id,
+                  name: (parsed.name as string) || '',
+                  date: (row.shoot_date as string) || '',
+                  uploadedAt:
+                    (parsed.uploadedAt as string) ||
+                    (row.created_at as string) ||
+                    '',
+                  dataUri: pdfSigned?.data?.signedUrl,
+                  thumbnailUri: thumbSigned?.data?.signedUrl,
+                  storagePath,
+                  thumbnailPath,
+                  parsed: Object.keys(parsedSheet).length > 0
+                    ? (parsedSheet as unknown as import('@/utils/callSheet/types').CallSheet)
+                    : undefined,
+                });
               }
             }
 
@@ -1176,17 +1219,23 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
       // Detect new sheets (added)
       for (const sheet of state.sheets) {
-        if (!prevSheetIds.has(sheet.id) && sheet.dataUri.startsWith('data:')) {
+        if (!prevSheetIds.has(sheet.id) && sheet.dataUri?.startsWith('data:')) {
           // Upload new sheet to Supabase Storage
           uploadCallSheetToStorage(projectId, sheet).then((urls) => {
             if (urls) {
-              // Replace data URIs with storage URLs in the store
+              // Replace local data URI with storage URLs + paths.
               setReceivingFromRealtime(true);
               try {
                 csStore.setState((s) => ({
                   sheets: s.sheets.map(sh =>
                     sh.id === sheet.id
-                      ? { ...sh, dataUri: urls.pdfUrl, thumbnailUri: urls.thumbnailUrl }
+                      ? {
+                          ...sh,
+                          dataUri: urls.pdfUrl,
+                          thumbnailUri: urls.thumbnailUrl,
+                          storagePath: urls.storagePath,
+                          thumbnailPath: urls.thumbnailPath,
+                        }
                       : sh,
                   ),
                 }));

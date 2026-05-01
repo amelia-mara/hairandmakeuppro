@@ -112,10 +112,64 @@
   margin: 14px 18px;
 }
 
-/* Legend rules kept as no-ops in case any older tree references
-   them — the sidebar now shows the at-a-glance stats below. */
-.tsr-sb-legend-row { display: none; }
-.tsr-sb-legend-dot { display: none; }
+.tsr-sb-team-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-left: 2.5px solid transparent;
+  transition: all 0.12s;
+  background: none;
+  border-top: none;
+  border-bottom: none;
+  border-right: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.tsr-sb-team-item:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+.tsr-sb-team-item.active {
+  background: var(--bg-primary);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.tsr-sb-team-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tsr-sb-team-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.tsr-sb-team-tag.synced {
+  background: rgba(74, 191, 176, 0.14);
+  color: var(--brand-teal, #4ABFB0);
+}
+.tsr-sb-team-tag.manual {
+  background: rgba(var(--a), 0.12);
+  color: var(--accent);
+}
+.tsr-sb-team-empty {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  padding: 4px 18px 6px;
+  font-style: italic;
+}
 
 /* At-a-glance summary that replaced the Completion legend.
    One row per stat, label left, value right. Picks up the same
@@ -168,11 +222,6 @@
   justify-content: space-between;
   margin-bottom: 26px;
 }
-
-/* Eyebrow class is no longer rendered (the "01 — …" labels were
-   stripped from the JSX), but the rule stays as a safe no-op in
-   case any older tree references it. */
-.tsr-ph-eyebrow { display: none; }
 
 /* "Back to mine" pill that appears at the top of the My Timesheets
    panel when the designer is viewing a teammate's timesheet. Quiet

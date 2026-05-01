@@ -13,6 +13,8 @@ export interface User {
   email: string;
   initials: string;
   tier: UserTier;
+  signupNudgeDismissed: boolean;
+  timesheetNudgeDismissed: boolean;
 }
 
 function getInitials(name: string): string {
@@ -40,6 +42,8 @@ function toAppUser(supabaseUser: SupabaseUser, profileName?: string, profileTier
     email: supabaseUser.email || '',
     initials: getInitials(name),
     tier,
+    signupNudgeDismissed: !!supabaseUser.user_metadata?.signup_nudge_dismissed,
+    timesheetNudgeDismissed: !!supabaseUser.user_metadata?.timesheet_nudge_dismissed,
   };
 }
 
@@ -128,6 +132,11 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+
+  // Onboarding nudges — persisted to Supabase user_metadata so the
+  // dismissal sticks across sign-out cycles and devices.
+  dismissSignupNudge: () => Promise<void>;
+  dismissTimesheetNudge: () => Promise<void>;
 
   // Tier preview mode (owner only, local state only, not persisted)
   previewTier: UserTier | null;
@@ -305,6 +314,28 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   logout: async () => {
     await get().signOut();
+  },
+
+  dismissSignupNudge: async () => {
+    const u = get().user;
+    if (!u) return;
+    set({ user: { ...u, signupNudgeDismissed: true } });
+    try {
+      await supabase.auth.updateUser({ data: { signup_nudge_dismissed: true } });
+    } catch (e) {
+      console.warn('[Auth] Failed to persist signup nudge dismissal', e);
+    }
+  },
+
+  dismissTimesheetNudge: async () => {
+    const u = get().user;
+    if (!u) return;
+    set({ user: { ...u, timesheetNudgeDismissed: true } });
+    try {
+      await supabase.auth.updateUser({ data: { timesheet_nudge_dismissed: true } });
+    } catch (e) {
+      console.warn('[Auth] Failed to persist timesheet nudge dismissal', e);
+    }
   },
 }));
 

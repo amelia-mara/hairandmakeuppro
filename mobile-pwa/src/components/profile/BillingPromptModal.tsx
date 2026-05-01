@@ -1,29 +1,10 @@
 interface BillingPromptModalProps {
-  /** Pulled from where the prompt fired so the copy is contextual. */
   reason: 'signup' | 'timesheet';
-  /** Take the user to the full Billing Details screen. */
   onFillIn: () => void;
-  /** Close the prompt without further action. Skip also flips
-   *  signupNudgeDismissed so we don't auto-fire again. */
   onClose: () => void;
 }
 
-/**
- * Small modal that nudges the user to fill in their invoicing
- * details. Shown:
- *
- *  1. Once after sign-up (skippable).
- *  2. When the user opens the timesheet with incomplete billing
- *     details (also skippable — invoicing from Checks Happy is
- *     optional).
- *
- * Skip is sticky — once dismissed, the only way to fill the
- * details in is via the user profile menu (More → Billing).
- */
 export function BillingPromptModal({ reason, onFillIn, onClose }: BillingPromptModalProps) {
-  // Whichever button closes the modal, the parent (App-level
-  // useEffects) is responsible for flipping the matching
-  // one-time-shown flag — Skip just calls onClose like the rest.
   const handleSkip = () => onClose();
 
   const title = reason === 'signup' ? 'Add invoicing details?' : 'Finish your billing details';

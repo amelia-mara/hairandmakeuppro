@@ -102,7 +102,16 @@ function createStore(projectId: string) {
         clear: () =>
           set({ current: null, isUploading: false, uploadError: null }),
       }),
-      { name: `prep-schedule-${projectId}` },
+      {
+        name: `prep-schedule-${projectId}`,
+        partialize: (s) => ({
+          current: s.current ? { ...s.current, pdfUri: undefined } : null,
+          versions: s.versions.map((v) => ({
+            ...v,
+            schedule: { ...v.schedule, pdfUri: undefined },
+          })),
+        }),
+      },
     ),
   );
 }

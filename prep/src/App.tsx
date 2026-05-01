@@ -23,11 +23,7 @@ import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
-// Scriptie chat is temporarily disabled — see commit history for the
-// full implementation. Mounting it broke the project view because
-// its module tree pulled in breakdownStore at app boot. Will be
-// re-enabled once a fully isolated load path is in place.
-// import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
+import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
 
 function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -198,9 +194,6 @@ function App() {
     );
   }
 
-  // Post-signup profile nudge — shown once per user when authenticated
-  // with an incomplete profile. The modal supports a Skip action that
-  // sets signupNudgeDismissed so we don't pester them on every reload.
   const signupNudge = isAuthenticated ? <SignupProfileNudge /> : null;
 
   // Project view — TopBar with nav dropdown + content
@@ -256,35 +249,29 @@ function App() {
   );
 }
 
-/**
- * Renders the post-signup profile nudge once per user. The user can
- * skip — we set signupNudgeDismissed so we don't pester them — and the
- * timesheet page will force the modal back if they try to log hours
- * without filling in invoicing details.
- */
 function SignupProfileNudge() {
   const user = useAuthStore((s) => s.user);
   const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
-  const dismissSignupNudge = useUserProfileStore((s) => s.dismissSignupNudge);
+  const dismissSignupNudge = useAuthStore((s) => s.dismissSignupNudge);
   const [open, setOpen] = useState(false);
 
-  // The nudge fires AT MOST once per user — the moment we see a fresh
-  // profile with the flag still false, we open the modal. Whether the
-  // user saves, skips, or clicks outside, closing it flips the flag
-  // so the prompt never auto-fires again. The Edit Profile menu item
-  // remains the only way back into the modal after that.
+  // Fires once per user — checks the dismissal flag on the auth user
+  // (Supabase user_metadata), so closing the modal once persists across
+  // sign-out cycles and devices. Opening it once per session is enough;
+  // we capture the flag on the first mount with a non-null user.
   useEffect(() => {
     if (!user) return;
-    const fresh = ensureProfile(user.id, user.name, user.email);
-    if (!fresh.signupNudgeDismissed) setOpen(true);
-  }, [user, ensureProfile]);
+    ensureProfile(user.id, user.name, user.email);
+    if (!user.signupNudgeDismissed) setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   if (!open || !user) return null;
   return (
     <UserProfileModal
       isSignupNudge
       onClose={() => {
-        dismissSignupNudge(user.id);
+        dismissSignupNudge();
         setOpen(false);
       }}
     />
@@ -429,6 +416,9 @@ function ProjectView({
           <Team projectId={projectId} />
         )}
       </ProjectLayout>
+      {isFeatureEnabled('aiAssistantChat', userTier) && (
+        <ScriptieChat projectId={projectId} />
+      )}
     </div>
   );
 }
