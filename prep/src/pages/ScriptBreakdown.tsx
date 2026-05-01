@@ -126,11 +126,26 @@ export function ScriptBreakdown({ projectId }: Props) {
    * numbered scene) IS now surfaced as a scene card so the user can
    * confirm characters and add notes against it like any other scene.
    * `preambleScene` is still extracted separately because ScriptView
-   * uses it to render the script's opening pages above scene 1. */
+   * uses it to render the script's opening pages above scene 1.
+   *
+   * Defensive dedupe: keep at most one PRELUDE/PREAMBLE in the scene
+   * list. A historic parser bug (OMITTED stubs retriggering preamble
+   * accumulation) could leave multiple PRELUDE rows in projects
+   * uploaded before that fix; collapse them to one here so old data
+   * doesn't show 6 prelude cards. */
   const preambleScene = ALL_SCENES.find(
     (s) => s.location === 'PREAMBLE' || s.location === 'PRELUDE',
   );
-  const nonPreambleScenes = ALL_SCENES;
+  const nonPreambleScenes = useMemo(() => {
+    let preludeKept = false;
+    return ALL_SCENES.filter((s) => {
+      const isPrelude = s.location === 'PREAMBLE' || s.location === 'PRELUDE';
+      if (!isPrelude) return true;
+      if (preludeKept) return false;
+      preludeKept = true;
+      return true;
+    });
+  }, [ALL_SCENES]);
 
   /* Auto-show upload modal when no script is uploaded */
   useEffect(() => {
