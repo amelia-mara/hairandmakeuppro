@@ -125,6 +125,12 @@ export interface ProjectState {
   updateSceneSynopsis: (sceneId: string, synopsis: string) => void;
   updateAllSceneSynopses: (scenes: Scene[]) => void;
 
+  /** Update background presence + notes shown in the breakdown background row. */
+  updateSceneBackground: (
+    sceneId: string,
+    updates: { backgroundCharacters?: string[]; backgroundNotes?: string },
+  ) => void;
+
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
   updateLookWithPropagation: (lookId: string, updates: Partial<Look>) => void;

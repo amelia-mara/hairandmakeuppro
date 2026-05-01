@@ -558,6 +558,12 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                           );
                         })
                       )}
+                      <BackgroundRow
+                        sceneId={scene.id}
+                        names={scene.backgroundCharacters || []}
+                        notes={scene.backgroundNotes || ''}
+                        colSpan={COLUMNS.length}
+                      />
                     </tbody>
                   </table>
                 </div>
@@ -586,6 +592,98 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         />
       )}
     </div>
+  );
+}
+
+/* ─── Background row — one row per scene listing non-speaking presence ─── */
+
+function BackgroundRow({
+  sceneId,
+  names,
+  notes,
+  colSpan,
+}: {
+  sceneId: string;
+  names: string[];
+  notes: string;
+  colSpan: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(notes);
+  const updateSceneBackground = useProjectStore((s) => s.updateSceneBackground);
+
+  // Hide the row entirely when there's nothing to show and the user hasn't
+  // opened the editor yet — keeps the breakdown clean when a scene has no
+  // background presence.
+  if (names.length === 0 && !notes && !editing) {
+    return (
+      <tr className="border-t border-black/5">
+        <td colSpan={colSpan} className="px-4 py-2">
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[11px] text-text-muted hover:text-text-secondary transition-colors"
+          >
+            + Add background
+          </button>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr
+      className="border-t border-black/5"
+      style={{ backgroundColor: 'rgba(210, 195, 165, 0.10)' }}
+    >
+      <td colSpan={colSpan} className="px-4 py-3 text-[0.8125rem]">
+        <div className="flex items-start gap-3">
+          <span className="flex-shrink-0 text-[10px] font-bold tracking-[0.08em] text-text-muted uppercase pt-0.5">
+            Background
+          </span>
+          <div className="flex-1 min-w-0 space-y-1">
+            {names.length > 0 ? (
+              <div className="text-text-primary">{names.join(', ')}</div>
+            ) : (
+              <div className="text-text-light italic text-[11px]">No background listed</div>
+            )}
+            {editing ? (
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => {
+                  updateSceneBackground(sceneId, { backgroundNotes: draft });
+                  setEditing(false);
+                }}
+                placeholder="Notes (e.g. 6 background, hospital scrubs, no SA prep needed)"
+                className="w-full text-[12px] text-text-primary bg-transparent border border-black/10 rounded px-2 py-1 resize-y min-h-[2.25rem] focus:outline-none focus:border-black/25"
+                autoFocus
+                rows={2}
+              />
+            ) : notes ? (
+              <button
+                onClick={() => {
+                  setDraft(notes);
+                  setEditing(true);
+                }}
+                className="text-left text-[12px] text-text-secondary hover:text-text-primary transition-colors w-full"
+              >
+                {notes}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setDraft('');
+                  setEditing(true);
+                }}
+                className="text-[11px] text-text-muted hover:text-text-secondary transition-colors"
+              >
+                + Add notes
+              </button>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
   );
 }
 

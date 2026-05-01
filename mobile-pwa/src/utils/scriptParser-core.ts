@@ -1,15 +1,14 @@
 import type { Scene, Character } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { parseScriptWithAI, checkAIAvailability } from '@/services/aiService';
 import { extractTextFromPDF, extractTextFromFDX } from './scriptParser-pdf';
 import {
   normalizeCharacterName,
-  extractCharactersFromActionLine,
-  isCharacterCue,
+  variantKey,
+  extractCueLines,
+  extractBackgroundFromAction,
 } from './scriptParser-character';
 import {
   normalizeTimeOfDayForScene,
-  normalizeTimeOfDay,
   parseSceneHeadingLine,
 } from './scriptParser-helpers';
 
@@ -26,7 +25,11 @@ export interface ParsedScene {
   intExt: 'INT' | 'EXT';
   location: string;
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
-  characters: string[]; // Character names appearing in scene
+  characters: string[]; // Speaking character names (canonical, uppercase)
+  /** Non-speaking presence labels found in the scene's action paragraphs. */
+  backgroundCharacters?: string[];
+  /** Free-text notes for the breakdown background row. */
+  backgroundNotes?: string;
   content: string;
   synopsis?: string;
 }
@@ -60,197 +63,214 @@ export interface FastParsedScript {
 }
 
 /**
- * Parse script text to extract scenes and characters
+ * Parse script text to extract scenes and characters.
+ *
+ * Two-pass approach:
+ *   1. Walk lines to identify scene boundaries and capture each scene's
+ *      raw content range (line indexes).
+ *   2. Run the structural cue extractor across the whole script, then
+ *      assign each cue to the scene whose line range it falls in. A
+ *      character is in a scene iff their cue fires inside that scene.
+ *
+ * Per-scene background labels are extracted from action paragraphs only —
+ * they do not become tracked Character profiles.
  */
 export function parseScriptText(text: string): ParsedScript {
   const lines = text.split('\n');
-  const scenes: ParsedScene[] = [];
-  const characterMap = new Map<string, ParsedCharacter>();
 
-  let currentScene: ParsedScene | null = null;
-  let fallbackSceneNumber = 0; // Used only if script doesn't have scene numbers
-  let currentSceneContent = '';
-  let lastLineWasCharacter = false;
-  let dialogueCount = 0;
+  // ── Pass 1 — scene boundaries ─────────────────────────────────────
+  type SceneBuild = ParsedScene & { headLine: number; endLineExclusive: number };
+  const builds: SceneBuild[] = [];
+  let fallbackSceneNumber = 0;
+  let current: SceneBuild | null = null;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // Check for scene heading using the new robust parser
-    const parsedHeading = parseSceneHeadingLine(trimmed);
-
-    if (parsedHeading.isValid) {
-      // Save previous scene
-      if (currentScene) {
-        currentScene.content = currentSceneContent.trim();
-        scenes.push(currentScene);
+    const trimmed = lines[i].trim();
+    const heading = parseSceneHeadingLine(trimmed);
+    if (heading.isValid) {
+      if (current) {
+        current.endLineExclusive = i;
+        current.content = lines.slice(current.headLine, i).join('\n').trim();
+        builds.push(current);
       }
-
-      // Use scene number from script, or fall back to sequential
       fallbackSceneNumber++;
-      const sceneNum = parsedHeading.sceneNumber || String(fallbackSceneNumber);
-
-      // Normalize time of day to our expected types
-      const normalizedTime = normalizeTimeOfDayForScene(parsedHeading.timeOfDay);
-
-      currentScene = {
+      const sceneNum = heading.sceneNumber || String(fallbackSceneNumber);
+      current = {
         sceneNumber: sceneNum,
-        slugline: trimmed, // Keep original for display
-        intExt: parsedHeading.intExt,
-        location: parsedHeading.location,
-        timeOfDay: normalizedTime,
+        slugline: trimmed,
+        intExt: heading.intExt,
+        location: heading.location,
+        timeOfDay: normalizeTimeOfDayForScene(heading.timeOfDay),
         characters: [],
+        backgroundCharacters: [],
+        backgroundNotes: '',
         content: '',
+        headLine: i,
+        endLineExclusive: lines.length,
       };
-      currentSceneContent = trimmed + '\n';
-      lastLineWasCharacter = false;
-      continue;
     }
+  }
+  if (current) {
+    current.endLineExclusive = lines.length;
+    current.content = lines.slice(current.headLine).join('\n').trim();
+    builds.push(current);
+  }
 
-    // Add to current scene content
-    if (currentScene) {
-      currentSceneContent += line + '\n';
+  // ── Pass 2 — cue extraction (whole script in one go) ──────────────
+  const cues = extractCueLines(lines);
+  const characterMap = new Map<string, ParsedCharacter>();
+
+  // Bucket cues into scenes by line index. Cues outside any scene
+  // (e.g. before the first slugline) are dropped.
+  const cuesPerScene: Map<number, typeof cues> = new Map();
+  for (const cue of cues) {
+    const sceneIdx = builds.findIndex(
+      (s) => cue.lineIndex >= s.headLine && cue.lineIndex < s.endLineExclusive,
+    );
+    if (sceneIdx < 0) continue;
+    if (!cuesPerScene.has(sceneIdx)) cuesPerScene.set(sceneIdx, []);
+    cuesPerScene.get(sceneIdx)!.push(cue);
+
+    // Build the speaker map keyed by canonical name so age variants
+    // (BRY / YOUNG BRY) merge into one tracked character.
+    const key = variantKey(cue.name);
+    let entry = characterMap.get(key);
+    if (!entry) {
+      entry = {
+        name: cue.name,
+        normalizedName: key,
+        sceneCount: 0,
+        dialogueCount: 0,
+        scenes: [],
+        variants: [],
+      };
+      characterMap.set(key, entry);
     }
-
-    // Check for character cue
-    if (isCharacterCue(trimmed)) {
-      const charName = trimmed;
-      const normalized = normalizeCharacterName(charName);
-
-      if (normalized.length >= 2) {
-        // Add to scene's characters
-        if (currentScene && !currentScene.characters.includes(normalized)) {
-          currentScene.characters.push(normalized);
-        }
-
-        // Add to character map
-        if (!characterMap.has(normalized)) {
-          characterMap.set(normalized, {
-            name: normalized,
-            normalizedName: normalized,
-            sceneCount: 0,
-            dialogueCount: 0,
-            scenes: [],
-            variants: [],
-          });
-        }
-
-        const char = characterMap.get(normalized)!;
-
-        // Track variant names
-        if (!char.variants.includes(charName)) {
-          char.variants.push(charName);
-        }
-
-        // Track scenes
-        if (currentScene && !char.scenes.includes(currentScene.sceneNumber)) {
-          char.scenes.push(currentScene.sceneNumber);
-          char.sceneCount++;
-        }
-
-        lastLineWasCharacter = true;
-        dialogueCount = 0;
-      }
-    } else if (lastLineWasCharacter && trimmed.length > 0) {
-      // This is dialogue following a character cue
-      dialogueCount++;
-      if (dialogueCount <= 3) {
-        // Count dialogue for the character
-        // We already tracked them, just confirming they have dialogue
-      }
-      if (dialogueCount > 3 || trimmed.length === 0) {
-        lastLineWasCharacter = false;
-      }
-    } else {
-      lastLineWasCharacter = false;
-
-      // Also check for characters mentioned in action/description lines
-      // This catches characters who are physically present but not speaking
-      if (currentScene && trimmed.length > 10) {
-        const actionCharacters = extractCharactersFromActionLine(trimmed);
-        for (const charName of actionCharacters) {
-          const normalized = normalizeCharacterName(charName);
-
-          if (normalized.length >= 2) {
-            // Add to scene's characters
-            if (!currentScene.characters.includes(normalized)) {
-              currentScene.characters.push(normalized);
-            }
-
-            // Add to character map (mark as non-speaking/action appearance)
-            if (!characterMap.has(normalized)) {
-              characterMap.set(normalized, {
-                name: normalized,
-                normalizedName: normalized,
-                sceneCount: 0,
-                dialogueCount: 0,
-                scenes: [],
-                variants: [],
-              });
-            }
-
-            const char = characterMap.get(normalized)!;
-
-            // Track scenes
-            if (!char.scenes.includes(currentScene.sceneNumber)) {
-              char.scenes.push(currentScene.sceneNumber);
-              char.sceneCount++;
-            }
-          }
-        }
-      }
+    if (!entry.variants.includes(cue.name)) entry.variants.push(cue.name);
+    entry.dialogueCount++;
+    const sceneNum = builds[sceneIdx].sceneNumber;
+    if (!entry.scenes.includes(sceneNum)) {
+      entry.scenes.push(sceneNum);
+      entry.sceneCount++;
     }
   }
 
-  // Save last scene
-  if (currentScene) {
-    currentScene.content = currentSceneContent.trim();
-    scenes.push(currentScene);
+  // Build per-scene speaking character lists from their cues only.
+  // No substring propagation — cues are the sole signal for membership.
+  const knownSpeakerSet = new Set<string>();
+  for (const ch of characterMap.values()) {
+    knownSpeakerSet.add(ch.name);
+    knownSpeakerSet.add(ch.normalizedName);
+    for (const v of ch.variants) knownSpeakerSet.add(normalizeCharacterName(v));
   }
 
-  // Known-character action-line scan: if a known character's name appears
-  // in a scene's content but they weren't detected via dialogue cues, add them.
-  const knownNames = Array.from(characterMap.keys()).filter(n => n.length >= 3);
-  for (const scene of scenes) {
-    const contentLower = scene.content.toLowerCase();
-    for (const name of knownNames) {
-      if (scene.characters.includes(name)) continue;
-      if (contentLower.includes(name.toLowerCase())) {
-        scene.characters.push(name);
-      }
+  for (let i = 0; i < builds.length; i++) {
+    const scene = builds[i];
+    const sceneCues = cuesPerScene.get(i) || [];
+    const seen = new Set<string>();
+    for (const c of sceneCues) {
+      const key = variantKey(c.name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Use the canonical key as the per-scene character name so that
+      // BRY and YOUNG BRY don't both appear on one scene.
+      scene.characters.push(key);
     }
-    scene.characters = [...new Set(scene.characters)];
+
+    // Background extraction: action lines only — strip cue lines and the
+    // dialogue runs that follow them, keep the rest.
+    scene.backgroundCharacters = extractSceneBackground(
+      lines,
+      scene.headLine,
+      scene.endLineExclusive,
+      sceneCues.map((c) => c.lineIndex),
+      knownSpeakerSet,
+    );
   }
 
-  // Convert character map to array and update dialogue counts
-  const characters = Array.from(characterMap.values())
-    .filter(c => c.sceneCount >= 1)
-    .sort((a, b) => b.sceneCount - a.sceneCount);
+  // Strip the helper line-index fields before returning.
+  const scenes: ParsedScene[] = builds.map((b) => ({
+    sceneNumber: b.sceneNumber,
+    slugline: b.slugline,
+    intExt: b.intExt,
+    location: b.location,
+    timeOfDay: b.timeOfDay,
+    characters: b.characters,
+    backgroundCharacters: b.backgroundCharacters,
+    backgroundNotes: b.backgroundNotes,
+    content: b.content,
+    synopsis: b.synopsis,
+  }));
 
-  // Update dialogue counts based on variants
-  characters.forEach(char => {
-    char.dialogueCount = char.variants.length;
-  });
+  // Sort speakers by scene count desc.
+  const characters = Array.from(characterMap.values()).sort(
+    (a, b) => b.sceneCount - a.sceneCount,
+  );
 
-  // Try to extract title from the beginning of the script
-  const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
+  // Title from the start of the script.
+  const titleMatch = text
+    .slice(0, 1000)
+    .match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
   const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
 
-  return {
-    title,
-    scenes,
-    characters,
-    rawText: text,
-  };
+  return { title, scenes, characters, rawText: text };
 }
 
 /**
- * Parse a script file (PDF, FDX, or plain text/fountain)
- * @param file - The script file to parse
- * @param options - Parsing options
- * @param options.useAI - Whether to use AI for parsing (recommended for better accuracy)
- * @param options.onProgress - Progress callback for status updates
+ * Slice action lines out of a scene (everything that's not a cue and not
+ * the dialogue immediately following a cue) and run background detection
+ * on the joined text.
+ */
+function extractSceneBackground(
+  lines: string[],
+  startLine: number,
+  endLineExclusive: number,
+  cueLineIndexes: number[],
+  knownSpeakers: Set<string>,
+): string[] {
+  const cueSet = new Set(cueLineIndexes);
+  const actionLines: string[] = [];
+  let inDialogue = false;
+  let blanksSinceDialogue = 0;
+
+  for (let i = startLine; i < endLineExclusive; i++) {
+    const t = lines[i].trim();
+    if (cueSet.has(i)) {
+      inDialogue = true;
+      blanksSinceDialogue = 0;
+      continue;
+    }
+    if (inDialogue) {
+      // Parenthetical-only stays in dialogue mode.
+      if (/^\(.*\)$/.test(t)) continue;
+      // Blank line: one blank stays in dialogue, two ends it.
+      if (!t) {
+        blanksSinceDialogue++;
+        if (blanksSinceDialogue >= 1) inDialogue = false;
+        continue;
+      }
+      // Non-blank line — heuristic: short uppercase-y indented lines look
+      // like dialogue continuation. If we hit a clearly action-shaped line
+      // (sentence with lowercase letters), it's action again.
+      if (/[a-z]/.test(t)) {
+        inDialogue = false;
+        actionLines.push(t);
+      }
+      continue;
+    }
+    if (!t) continue;
+    actionLines.push(t);
+  }
+
+  return extractBackgroundFromAction(actionLines.join(' '), knownSpeakers);
+}
+
+/**
+ * Parse a script file (PDF, FDX, or plain text/fountain).
+ *
+ * Regex-only — character extraction is deterministic and runs entirely
+ * locally. The `useAI` option is accepted for backwards compatibility
+ * with existing callers but has no effect.
  */
 export async function parseScriptFile(
   file: File,
@@ -259,7 +279,7 @@ export async function parseScriptFile(
     onProgress?: (status: string) => void;
   } = {}
 ): Promise<ParsedScript> {
-  const { useAI = true, onProgress } = options;
+  const { onProgress } = options;
   const fileName = file.name.toLowerCase();
   let text: string;
 
@@ -271,193 +291,11 @@ export async function parseScriptFile(
     const xmlContent = await file.text();
     text = extractTextFromFDX(xmlContent);
   } else {
-    // Assume plain text or fountain format
     text = await file.text();
-  }
-
-  // Try AI parsing first if enabled
-  if (useAI) {
-    onProgress?.('Checking smart parsing availability...');
-    const aiAvailable = await checkAIAvailability();
-
-    if (aiAvailable) {
-      try {
-        onProgress?.('Analyzing script...');
-        return await parseScriptWithAIFallback(text, onProgress);
-      } catch (error) {
-        onProgress?.('Smart parsing unavailable, using standard parsing...');
-      }
-    } else {
-      onProgress?.('Smart parsing unavailable, using standard parsing...');
-    }
   }
 
   onProgress?.('Parsing script format...');
   return parseScriptText(text);
-}
-
-/**
- * Extract scene content from raw script text using slugline matching
- * Handles various script formats including scene numbers before/after INT/EXT
- */
-function extractSceneContent(slugline: string, text: string): string {
-  // Normalize dashes in both slugline and text for matching
-  // Convert en-dash and em-dash to regular hyphen for comparison
-  const normalizedSlugline = slugline.replace(/[–—]/g, '-');
-  const normalizedText = text.replace(/[–—]/g, '-');
-
-  // Extract the key parts from the slugline
-  const intExtMatch = normalizedSlugline.match(/^(INT|EXT)\.?\/?(?:INT|EXT)?\.?\s*/i);
-  const intExt = intExtMatch ? intExtMatch[1].toUpperCase() : 'INT';
-
-  // Get the location and time part (everything after INT./EXT.)
-  const locationPart = normalizedSlugline.replace(/^(?:INT|EXT)\.?\/?(?:INT|EXT)?\.?\s*/i, '').trim();
-
-  // Escape special regex characters in location part
-  const escapedLocation = locationPart
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\s+/g, '\\s+')
-    .replace(/-/g, '[-–—]'); // Match any dash type
-
-  // Strategy 1: Try exact slugline match (with flexible whitespace)
-  const escapedSlugline = normalizedSlugline
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\s+/g, '\\s+')
-    .replace(/-/g, '[-–—]');
-  const exactPattern = new RegExp(escapedSlugline, 'im');
-  let match = normalizedText.match(exactPattern);
-
-  if (match && match.index !== undefined) {
-    return extractContentFromPosition(text, match.index);
-  }
-
-  // Strategy 2: Match with optional scene numbers before INT/EXT
-  // Pattern handles: "4 INT. LOCATION", "4A INT. LOCATION", "INT. LOCATION"
-  const sceneNumPattern = new RegExp(
-    `(?:\\d+[A-Z]?\\s+)?(?:${intExt}|INT|EXT)[\\.\\s/]*(?:INT|EXT)?[\\./]?\\s*${escapedLocation}`,
-    'im'
-  );
-  match = normalizedText.match(sceneNumPattern);
-
-  if (match && match.index !== undefined) {
-    return extractContentFromPosition(text, match.index);
-  }
-
-  // Strategy 3: Just match INT/EXT followed by the location name (most flexible)
-  // Extract just the location name without time of day for fuzzy matching
-  const locationOnly = locationPart.replace(/\s*[-–—]\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS|CONT|LATER|SAME|DAWN|DUSK|SUNSET|SUNRISE).*$/i, '').trim();
-  if (locationOnly.length > 3) {
-    const escapedLocationOnly = locationOnly
-      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/\s+/g, '\\s+');
-    const locationOnlyPattern = new RegExp(
-      `(?:\\d+[A-Z]?\\s+)?(?:INT|EXT)[\\./\\s]*(?:INT|EXT)?[\\./]?\\s*${escapedLocationOnly}`,
-      'im'
-    );
-    match = normalizedText.match(locationOnlyPattern);
-
-    if (match && match.index !== undefined) {
-      return extractContentFromPosition(text, match.index);
-    }
-  }
-
-  // Strategy 4: Search for any line starting with the INT/EXT and containing keywords from location
-  // Split location into words and search for a line containing most of them
-  const locationWords = locationOnly.split(/\s+/).filter(w => w.length > 2);
-  if (locationWords.length > 0) {
-    const lines = normalizedText.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      // Check if line looks like a scene heading with INT/EXT
-      if (/^(?:\d+[A-Z]?\s+)?(?:INT|EXT)/i.test(line)) {
-        // Count how many location words are in this line
-        const matchingWords = locationWords.filter(word =>
-          line.toUpperCase().includes(word.toUpperCase())
-        );
-        // If at least half the words match, this is likely our scene
-        if (matchingWords.length >= Math.ceil(locationWords.length / 2)) {
-          // Find the position of this line in the original text
-          const lineIndex = text.indexOf(lines[i]);
-          if (lineIndex !== -1) {
-            return extractContentFromPosition(text, lineIndex);
-          }
-        }
-      }
-    }
-  }
-
-  return '';
-}
-
-/**
- * Extract content from a position until the next scene heading
- * Handles various scene heading formats with or without periods
- */
-function extractContentFromPosition(text: string, startIndex: number): string {
-  // Find the next scene heading pattern
-  // More flexible pattern: handles INT., INT, INT/, EXT., EXT, EXT/, etc.
-  // Also handles scene numbers before INT/EXT like "4 INT." or "12A EXT."
-  const nextScenePattern = /\n\s*(?:\d+[A-Z]?\s+)?(?:INT|EXT)[\s./]/gi;
-  nextScenePattern.lastIndex = startIndex + 1;
-
-  // Skip past the current scene heading line to avoid matching it
-  const firstNewline = text.indexOf('\n', startIndex);
-  if (firstNewline !== -1) {
-    nextScenePattern.lastIndex = firstNewline + 1;
-  }
-
-  const nextMatch = nextScenePattern.exec(text);
-
-  const endIndex = nextMatch ? nextMatch.index : text.length;
-  return text.slice(startIndex, endIndex).trim();
-}
-
-/**
- * Parse script using AI with fallback to regex parsing
- */
-async function parseScriptWithAIFallback(
-  text: string,
-  onProgress?: (status: string) => void
-): Promise<ParsedScript> {
-  const aiResult = await parseScriptWithAI(text, onProgress);
-
-  // Convert AI results to ParsedScript format
-  // Extract actual scene content from the raw text using the sluglines
-  const scenes: ParsedScene[] = aiResult.scenes.map(s => {
-    // Extract content from the original text using the slugline
-    const content = extractSceneContent(s.slugline, text);
-    return {
-      sceneNumber: s.sceneNumber,
-      slugline: s.slugline,
-      intExt: s.intExt,
-      location: s.location,
-      timeOfDay: normalizeTimeOfDay(s.timeOfDay),
-      characters: s.characters,
-      content: content,
-      synopsis: s.synopsis,
-    };
-  });
-
-  const characters: ParsedCharacter[] = aiResult.characters.map(c => ({
-    name: c.name,
-    normalizedName: c.normalizedName,
-    sceneCount: c.sceneCount,
-    dialogueCount: c.dialogueCount,
-    scenes: c.scenes,
-    variants: c.variants,
-    description: c.description,
-  }));
-
-  // Extract title
-  const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
-  const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
-
-  return {
-    title,
-    scenes,
-    characters,
-    rawText: text,
-  };
 }
 
 /**
@@ -518,6 +356,8 @@ export function convertParsedScriptToProject(
       synopsis: ps.synopsis,
       scriptContent: ps.content,
       characters: sceneCharIds,
+      backgroundCharacters: ps.backgroundCharacters,
+      backgroundNotes: ps.backgroundNotes,
       isComplete: false,
     };
   });
@@ -656,155 +496,61 @@ export async function parseScenesFast(file: File): Promise<FastParsedScript> {
 }
 
 /**
- * Detect characters for a single scene or batch of scenes
- * Can use AI for better accuracy or fall back to regex
- * @param sceneContent - The script content for the scene
- * @param rawText - The full raw script text (for context)
- * @param options - Optional settings including known characters from schedule
- * @returns Array of character names detected in this scene
+ * Detect characters appearing in a single scene's script content.
+ *
+ * Regex-only — runs the structural cue extractor on the scene's lines.
+ * The `useAI` option is accepted for backwards compatibility but has
+ * no effect. When `knownCharacters` is supplied (e.g. from the call
+ * sheet) those names are matched against the scene's cue lines and
+ * action text by word boundary, providing a deterministic schedule
+ * cross-reference.
+ *
+ * @returns Canonical character names found in this scene.
  */
 export async function detectCharactersForScene(
   sceneContent: string,
   _rawText: string,
   options?: { useAI?: boolean; knownCharacters?: string[] }
 ): Promise<string[]> {
-  const useAI = options?.useAI ?? false;
   const knownCharacters = options?.knownCharacters ?? [];
   const characters: string[] = [];
   const characterSet = new Set<string>();
 
-  // First, search for known characters from schedule (if provided)
-  // This is the most reliable method when a schedule is uploaded
+  // 1) Strict cue extraction across this scene only.
+  const lines = sceneContent.split('\n');
+  const cues = extractCueLines(lines);
+  for (const cue of cues) {
+    const key = variantKey(cue.name);
+    if (!characterSet.has(key)) {
+      characterSet.add(key);
+      characters.push(key);
+    }
+  }
+
+  // 2) Schedule cross-reference: if the call sheet supplied known names,
+  // also include any that match within the scene by word boundary. This
+  // catches characters who appear by name in action lines but don't
+  // speak in this particular scene.
   if (knownCharacters.length > 0) {
     const contentUpper = sceneContent.toUpperCase();
     for (const charName of knownCharacters) {
       const normalized = normalizeCharacterName(charName);
       if (normalized.length < 2) continue;
-
-      // Check if character name appears in the scene (as character cue or in action)
-      // Use word boundary matching to avoid partial matches
+      const key = variantKey(normalized);
+      if (characterSet.has(key)) continue;
       const namePattern = new RegExp(`\\b${escapeRegExp(normalized)}\\b`, 'i');
-      if (namePattern.test(contentUpper) && !characterSet.has(normalized)) {
-        characterSet.add(normalized);
-        characters.push(normalized);
+      if (namePattern.test(contentUpper)) {
+        characterSet.add(key);
+        characters.push(key);
       }
-    }
-  }
-
-  // Always try regex detection for character cues (fast, reliable for dialogue)
-  const lines = sceneContent.split('\n');
-  let lastLineWasCharacter = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // Check for character cue
-    if (isCharacterCue(trimmed)) {
-      const normalized = normalizeCharacterName(trimmed);
-
-      if (normalized.length >= 2 && !characterSet.has(normalized)) {
-        characterSet.add(normalized);
-        characters.push(normalized);
-      }
-      lastLineWasCharacter = true;
-    } else if (lastLineWasCharacter && trimmed.length > 0) {
-      // This is dialogue following a character cue
-      // Keep lastLineWasCharacter true for multi-line dialogue
-    } else {
-      lastLineWasCharacter = false;
-
-      // Also check for characters mentioned in action/description lines
-      // Only do this if we don't have known characters (to avoid noise)
-      if (trimmed.length > 10 && knownCharacters.length === 0) {
-        const actionCharacters = extractCharactersFromActionLine(trimmed);
-        for (const charName of actionCharacters) {
-          const normalized = normalizeCharacterName(charName);
-          if (normalized.length >= 2 && !characterSet.has(normalized)) {
-            characterSet.add(normalized);
-            characters.push(normalized);
-          }
-        }
-      }
-    }
-  }
-
-  // If AI is requested and available, use it to enhance detection
-  if (useAI) {
-    try {
-      const aiAvailable = await checkAIAvailability();
-      if (aiAvailable) {
-        const aiCharacters = await detectCharactersWithAI(sceneContent);
-        // Merge AI results with regex results, avoiding duplicates
-        for (const char of aiCharacters) {
-          const normalized = normalizeCharacterName(char);
-          if (normalized.length >= 2 && !characterSet.has(normalized)) {
-            characterSet.add(normalized);
-            characters.push(normalized);
-          }
-        }
-      }
-    } catch {
-      // AI enhancement is optional, fall back to regex results
     }
   }
 
   return characters;
 }
 
-/**
- * Escape special regex characters in a string
- */
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Detect characters in a scene using AI
- * This is called by detectCharactersForScene when AI is enabled
- */
-async function detectCharactersWithAI(sceneContent: string): Promise<string[]> {
-  // Import the AI service dynamically to avoid circular dependencies
-  const { callAI } = await import('@/services/aiService');
-
-  const prompt = `You are a screenplay analyzer. Identify ALL characters who appear in this scene.
-
-Rules:
-1. Include characters who speak (have dialogue)
-2. Include characters who are physically present but don't speak
-3. Include characters referenced by role (e.g., "TAXI DRIVER", "YOUNG WOMAN")
-4. Exclude location names, objects, and directions
-5. Return ONLY character names, one per line
-6. Use the name as it appears in the script (e.g., "JOHN", "MARY SMITH", "COP #1")
-
-Scene content:
-${sceneContent}
-
-Return only character names, one per line:`;
-
-  try {
-    const response = await callAI(prompt);
-    if (!response) return [];
-
-    // Parse the response - expect one character name per line
-    const lines = response.split('\n');
-    const characters: string[] = [];
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      // Skip empty lines and lines that look like explanations
-      if (!trimmed || trimmed.length > 30 || trimmed.includes(':')) continue;
-      // Remove common prefixes like "- " or "* " or numbers
-      const cleaned = trimmed.replace(/^[-*\d.)\s]+/, '').trim();
-      if (cleaned.length >= 2 && cleaned.length <= 25) {
-        characters.push(cleaned.toUpperCase());
-      }
-    }
-
-    return characters;
-  } catch (error) {
-    return [];
-  }
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
