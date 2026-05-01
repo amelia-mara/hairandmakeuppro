@@ -384,6 +384,16 @@ function dbToSceneCapture(
 // Upload: Push all local data to Supabase
 // ============================================================================
 
+/**
+ * @internal No longer wired to any UI — autoSave replaced the manual
+ * Upload button (see Fix 7). Retained because the data mappers in this
+ * file are still imported by autoSave.ts. The DELETE-all-then-INSERT
+ * pattern below is unsafe under concurrent writes; do not call this
+ * from new code without first auditing the cascade implications.
+ *
+ * TODO: extract the data mappers to a separate file and delete this
+ * function (and downloadFromServer) entirely.
+ */
 export async function uploadToServer(): Promise<{ error: Error | null }> {
   if (!isSupabaseConfigured) {
     return { error: new Error('Supabase not configured') };
@@ -670,6 +680,12 @@ async function uploadCapturePhotos(projectId: string, capture: SceneCapture): Pr
 // Download: Pull all data from Supabase → local stores
 // ============================================================================
 
+/**
+ * @internal No longer wired to any UI — projectLoader.loadProjectFromSupabase
+ * handles the read path on app foreground / project open (see Fix 7). The
+ * function is retained alongside uploadToServer for symmetry until the
+ * mappers in this file are extracted and both can be deleted.
+ */
 export async function downloadFromServer(): Promise<{ error: Error | null }> {
   if (!isSupabaseConfigured) {
     return { error: new Error('Supabase not configured') };
