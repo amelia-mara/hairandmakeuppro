@@ -368,23 +368,3 @@ export function extractBackgroundFromAction(
 
   return out;
 }
-
-/**
- * Backwards-compatible shim. Older callers import `isCharacterCue` —
- * keep the name available but route through the strict shape check.
- * Note: this only validates SHAPE; for the full structural test, use
- * `extractCueLines`.
- */
-export function isCharacterCue(line: string): boolean {
-  return looksLikeCueShape(line.trim());
-}
-
-/**
- * Backwards-compatible shim. The old action-line extractor is no longer
- * the primary path — speakers come from cue detection only. We keep this
- * export so existing imports type-check, but it now returns ONLY entries
- * that would pass the background filter.
- */
-export function extractCharactersFromActionLine(line: string): string[] {
-  return extractBackgroundFromAction(line, new Set());
-}
