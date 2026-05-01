@@ -5,13 +5,18 @@ import type { CallSheet } from '@/utils/callSheet/types';
 export interface CallSheetFile {
   id: string;
   name: string;
-  date: string;          // ISO date string for sorting
-  dataUri: string;       // base64 data URI of the PDF
-  thumbnailUri: string;  // rendered first-page thumbnail
-  uploadedAt: string;    // ISO timestamp
-  // Parsed call sheet data — present when the PDF has been run through
-  // the regex parser so mobile and prep dashboard widgets can consume
-  // it. Older records may not have it yet; treat as optional.
+  date: string;
+  uploadedAt: string;
+  // PDF and thumbnail are derived: a base64 data URI immediately after
+  // upload, then short-lived signed URLs from Supabase Storage on
+  // subsequent loads. Stripped from the persist payload (too large for
+  // localStorage), so they may be undefined until hydration runs.
+  dataUri?: string;
+  thumbnailUri?: string;
+  // Storage paths — the source of truth for re-generating signed URLs.
+  storagePath?: string;
+  thumbnailPath?: string;
+  // Parsed call-sheet data — scene rows, cast calls, etc.
   parsed?: CallSheet;
 }
 
@@ -33,7 +38,12 @@ function createStore(projectId: string) {
         removeSheet: (id) =>
           set((s) => ({ sheets: s.sheets.filter((sh) => sh.id !== id) })),
       }),
-      { name: `prep-callsheets-${projectId}` },
+      {
+        name: `prep-callsheets-${projectId}`,
+        partialize: (s) => ({
+          sheets: s.sheets.map(({ dataUri: _du, thumbnailUri: _tu, ...rest }) => rest),
+        }),
+      },
     ),
   );
 }
