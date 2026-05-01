@@ -1,12 +1,10 @@
-import * as pdfjsLib from 'pdfjs-dist';
+// Worker setup centralised in @/utils/pdfjs.
+import { pdfjsLib } from '@/utils/pdfjs';
 import type {
   ProductionSchedule,
   ScheduleCastMember,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 // ============================================
 // STAGE 1: INSTANT PARSE (Cast List Only)
