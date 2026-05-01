@@ -12,6 +12,7 @@ import {
   unsubscribeFromProject as unsubscribeRealtime,
   resubscribeToProject,
 } from '@/services/realtimeSync';
+import { outboxService } from '@/services/outboxService';
 
 // Initialize change tracking (idempotent, runs once)
 initChangeTracking();
@@ -141,6 +142,17 @@ function AppContent() {
       console.error('[Storage] Migration failed:', error);
     });
 
+    // Refresh outbox counters from IndexedDB and try to flush anything
+    // that was queued in a previous session.
+    outboxService.refreshSyncStoreCounts()
+      .then(() => outboxService.flushOutbox())
+      .then(({ flushed, failed }) => {
+        if (flushed > 0 || failed > 0) {
+          console.log(`[Outbox] Startup flush — flushed ${flushed}, failed ${failed}`);
+        }
+      })
+      .catch((err) => console.error('[Outbox] Startup flush error:', err));
+
     // Flush pending writes before page unload
     const handleBeforeUnload = () => {
       flushPendingWrites();
@@ -160,6 +172,10 @@ function AppContent() {
         if (projectId) {
           resubscribeToProject(projectId);
         }
+        // Drain any failed writes that piled up while we were backgrounded.
+        outboxService.flushOutbox().catch((err) =>
+          console.error('[Outbox] Foreground flush error:', err),
+        );
       } else if (document.visibilityState === 'hidden') {
         // Unsubscribe on background to save resources
         unsubscribeRealtime();
@@ -252,7 +268,13 @@ function AppContent() {
 
   // Online/offline detection for manual sync
   useEffect(() => {
-    const handleOnline = () => useSyncStore.getState().setOnline(true);
+    const handleOnline = () => {
+      useSyncStore.getState().setOnline(true);
+      // Reconnected — drain any queued failed writes.
+      outboxService.flushOutbox().catch((err) =>
+        console.error('[Outbox] Online flush error:', err),
+      );
+    };
     const handleOffline = () => useSyncStore.getState().setOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);

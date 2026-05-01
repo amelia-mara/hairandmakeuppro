@@ -33,6 +33,10 @@ interface SyncState {
   progress: number;
   /** Whether the sync panel is open */
   isPanelOpen: boolean;
+  /** Outbox has at least one entry (pending or scheduled) waiting to sync */
+  hasPendingOutbox: boolean;
+  /** Outbox entries that have exhausted retries — need user attention */
+  deadOutboxCount: number;
 
   // Actions
   markChanged: (category: ChangeCategory) => void;
@@ -53,6 +57,8 @@ interface SyncState {
   reset: () => void;
   hasPendingChanges: () => boolean;
   getPendingCount: () => number;
+  setHasPendingOutbox: (value: boolean) => void;
+  setDeadOutboxCount: (count: number) => void;
 }
 
 export const useSyncStore = create<SyncState>()(
@@ -66,6 +72,8 @@ export const useSyncStore = create<SyncState>()(
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       progress: 0,
       isPanelOpen: false,
+      hasPendingOutbox: false,
+      deadOutboxCount: 0,
 
       markChanged: (category) =>
         set((s) => {
@@ -115,6 +123,9 @@ export const useSyncStore = create<SyncState>()(
 
       hasPendingChanges: () => get().pendingChanges.size > 0,
       getPendingCount: () => get().pendingChanges.size,
+
+      setHasPendingOutbox: (value) => set({ hasPendingOutbox: value }),
+      setDeadOutboxCount: (count) => set({ deadOutboxCount: count }),
     }),
     {
       name: 'hair-makeup-sync',

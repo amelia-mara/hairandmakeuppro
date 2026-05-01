@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSyncStore } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { uploadToServer, downloadFromServer } from '@/services/manualSync';
+import { OutboxDeadList } from '@/components/sync/OutboxDeadList';
 
 /**
  * Sync bottom sheet — slides up from the bottom when opened.
@@ -22,7 +23,10 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     isOnline,
     error,
     progress,
+    hasPendingOutbox,
+    deadOutboxCount,
   } = useSyncStore();
+  const [showDeadList, setShowDeadList] = useState(false);
   const currentProject = useProjectStore((s) => s.currentProject);
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -133,6 +137,32 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3 mb-5 text-center">
               {error}
+            </div>
+          )}
+
+          {/* Outbox: dead entries — needs user attention */}
+          {deadOutboxCount > 0 && (
+            <button
+              onClick={() => setShowDeadList(true)}
+              className="w-full text-sm text-left rounded-xl px-4 py-3 mb-3 flex items-center gap-3 transition-colors active:opacity-80"
+              style={{ backgroundColor: 'rgba(196, 82, 42, 0.1)', color: '#C4522A' }}
+            >
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <span className="flex-1 font-medium">
+                {deadOutboxCount} {deadOutboxCount === 1 ? 'capture' : 'captures'} could not be saved. Tap to review.
+              </span>
+            </button>
+          )}
+
+          {/* Outbox: pending entries — data safe locally, syncing in background */}
+          {hasPendingOutbox && deadOutboxCount === 0 && (
+            <div className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 mb-3 flex items-center gap-3">
+              <svg className="w-4 h-4 flex-shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.696a8.25 8.25 0 00-11.667 0l-3.181 3.183" />
+              </svg>
+              <span className="flex-1">Some data is waiting to sync</span>
             </div>
           )}
 
@@ -249,6 +279,11 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
           )}
         </div>
       </div>
+
+      {/* Dead-outbox review modal */}
+      {showDeadList && (
+        <OutboxDeadList onClose={() => setShowDeadList(false)} />
+      )}
     </div>
   );
 }
