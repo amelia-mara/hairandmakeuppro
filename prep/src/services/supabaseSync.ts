@@ -743,21 +743,23 @@ export async function uploadCallSheetToStorage(
       .from('project-documents')
       .upload(thumbPath, thumbBlob, { upsert: true, contentType: 'image/png' });
 
-    // Get public URLs
-    const { data: pdfUrlData } = supabase.storage.from('project-documents').getPublicUrl(pdfPath);
-    const { data: thumbUrlData } = supabase.storage.from('project-documents').getPublicUrl(thumbPath);
+    // Signed URLs — bucket is private so getPublicUrl wouldn't actually
+    // serve the file. The signed URL is short-lived; treat it as a hint
+    // for the immediate post-upload session. On rehydration we re-sign
+    // from storagePath / thumbnailPath.
+    const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 days
+    const [{ data: pdfSigned }, { data: thumbSigned }] = await Promise.all([
+      supabase.storage.from('project-documents').createSignedUrl(pdfPath, SIGNED_URL_TTL),
+      supabase.storage.from('project-documents').createSignedUrl(thumbPath, SIGNED_URL_TTL),
+    ]);
 
-    // Compose parsed_data: PDF storage metadata always present; merge in
-    // structured fields (scenes/castCalls/preCalls/etc.) when the local
-    // parser produced them. Mobile's mergeCallSheetData spreads the whole
-    // parsed_data object into the CallSheet, so the field names must match
-    // the mobile CallSheet shape.
+    // Compose parsed_data: keep paths (durable) but not URLs (expire).
+    // Merge in structured parser fields when present so the dashboard
+    // widgets get scenes/castCalls/preCalls without re-parsing.
     const storageMeta = {
       name: sheet.name,
       storagePath: pdfPath,
       thumbnailPath: thumbPath,
-      pdfUrl: pdfUrlData.publicUrl,
-      thumbnailUrl: thumbUrlData.publicUrl,
       uploadedAt: sheet.uploadedAt,
     };
     // Spread the parsed CallSheet (when present) underneath the storage
@@ -795,7 +797,12 @@ export async function uploadCallSheetToStorage(
     if (error) throw error;
 
     console.log('[PrepSync] Call sheet uploaded:', sheet.id);
-    return { pdfUrl: pdfUrlData.publicUrl, thumbnailUrl: thumbUrlData.publicUrl };
+    return {
+      pdfUrl: pdfSigned?.signedUrl ?? '',
+      thumbnailUrl: thumbSigned?.signedUrl ?? '',
+      storagePath: pdfPath,
+      thumbnailPath: thumbPath,
+    };
   } catch (err) {
     console.error('[PrepSync] Call sheet upload failed:', err);
     return null;
