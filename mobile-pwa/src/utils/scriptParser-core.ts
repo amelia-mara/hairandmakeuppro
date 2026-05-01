@@ -83,11 +83,36 @@ export function parseScriptText(text: string): ParsedScript {
   const builds: SceneBuild[] = [];
   let fallbackSceneNumber = 0;
   let current: SceneBuild | null = null;
+  let firstHeadingLine = -1;
 
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
     const heading = parseSceneHeadingLine(trimmed);
     if (heading.isValid) {
+      // First scene heading encountered. If there's substantive text
+      // before it (a title page + cold-open / prelude that doesn't
+      // start with INT./EXT.), emit a synthetic PRELUDE scene so the
+      // breakdown UI shows a card for it. Common in scripts that
+      // open with a wordless teaser before "1 EXT. ..." kicks in.
+      if (firstHeadingLine < 0) {
+        firstHeadingLine = i;
+        const preludeText = lines.slice(0, i).join('\n').trim();
+        if (preludeText.length > 0) {
+          builds.push({
+            sceneNumber: '0',
+            slugline: 'PRELUDE',
+            intExt: 'INT',
+            location: 'PRELUDE',
+            timeOfDay: 'DAY',
+            characters: [],
+            backgroundCharacters: [],
+            backgroundNotes: '',
+            content: preludeText,
+            headLine: 0,
+            endLineExclusive: i,
+          });
+        }
+      }
       if (current) {
         current.endLineExclusive = i;
         current.content = lines.slice(current.headLine, i).join('\n').trim();

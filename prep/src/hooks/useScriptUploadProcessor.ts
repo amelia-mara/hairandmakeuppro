@@ -128,7 +128,9 @@ export function useScriptUploadProcessor({
           : ps.timeOfDay as 'DAY' | 'NIGHT';
 
         const parsedNum = parseInt(sceneNum, 10);
-        const isPreamble = ps.location === 'PREAMBLE';
+        // Accept both legacy 'PREAMBLE' (existing data) and the new
+        // 'PRELUDE' string emitted by the current parser.
+        const isPreamble = ps.location === 'PREAMBLE' || ps.location === 'PRELUDE';
         // Infer the breakdown form's Timeline → Type from the script's
         // own markers — `[FLASHBACK]`, `[MONTAGE]`, `[PRESENT]`, etc.
         // appear in the slugline or on the title card line above the
@@ -139,7 +141,7 @@ export function useScriptUploadProcessor({
           number: isNaN(parsedNum) ? idx + 1 : parsedNum,
           intExt: ps.intExt,
           dayNight,
-          location: isPreamble ? 'PREAMBLE' : ps.location,
+          location: isPreamble ? 'PRELUDE' : ps.location,
           storyDay: '',
           titleCardBefore: ps.titleCardBefore ?? null,
           timelineType: timelineType || undefined,

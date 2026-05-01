@@ -50,12 +50,12 @@ export function diffScripts(
   // Build maps keyed by scene number
   const oldByNumber = new Map<number, Scene>();
   for (const s of oldScenes) {
-    if (s.location !== 'PREAMBLE') oldByNumber.set(s.number, s);
+    if (s.location !== 'PREAMBLE' && s.location !== 'PRELUDE') oldByNumber.set(s.number, s);
   }
 
   const newByNumber = new Map<number, Scene>();
   for (const s of newScenes) {
-    if (s.location !== 'PREAMBLE') newByNumber.set(s.number, s);
+    if (s.location !== 'PREAMBLE' && s.location !== 'PRELUDE') newByNumber.set(s.number, s);
   }
 
   let modified = 0;
