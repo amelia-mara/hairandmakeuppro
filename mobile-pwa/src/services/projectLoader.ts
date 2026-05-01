@@ -168,11 +168,14 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
       // 5. Apply to stores
       const currentProject = useProjectStore.getState().currentProject;
       if (currentProject && currentProject.id === projectId) {
-        // Merge server data into the existing project
+        // Merge server data into the existing project. has_prep_access
+        // gates every Prep-specific sync path (ARCHITECTURE.md rule #5),
+        // so it's plumbed through here from the project record.
         useProjectStore.getState().mergeServerData({
           scenes: mappedScenes,
           characters: mappedCharacters,
           looks: mappedLooks,
+          hasPrepAccess: !!(project as any).has_prep_access,
         });
       }
 

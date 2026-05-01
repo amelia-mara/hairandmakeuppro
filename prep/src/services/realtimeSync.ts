@@ -34,13 +34,25 @@ let activeProjectId: string | null = null;
 
 /**
  * Subscribe to Realtime changes for a project.
- * Only subscribes if project has_prep_access === true.
- * Returns an unsubscribe function.
+ *
+ * Only subscribes if `hasPrepAccess === true` per ARCHITECTURE.md
+ * rule #5 — app-only projects don't have a Prep surface, so there's
+ * nothing for Prep to listen to. Returns an unsubscribe function in
+ * all cases (no-op when access is denied) so callers can store the
+ * return value unconditionally.
  */
 export function subscribeToProject(
   projectId: string,
   handlers: PrepRealtimeHandlers,
+  hasPrepAccess: boolean = true,
 ): () => void {
+  if (!hasPrepAccess) {
+    console.log(
+      '[PrepRealtime] Skipping subscription — project has_prep_access is false (app-only project)',
+    );
+    return () => {};
+  }
+
   // Don't create duplicate subscriptions
   if (activeProjectId === projectId && activeChannel) {
     return () => unsubscribeFromProject();

@@ -42,7 +42,20 @@ export function subscribeToProject(projectId: string): () => void {
 
   activeProjectId = projectId;
 
-  activeChannel = supabase
+  // ARCHITECTURE.md rule #5: gate Prep-specific subscriptions on
+  // has_prep_access. Looks and look_scenes are 99% Prep-driven (the
+  // mobile lookbook UI is rarely used on app-only projects), so we
+  // skip those subscriptions when this isn't a Designer-led project.
+  //
+  // Note: scenes / characters / scene_characters / schedule_data /
+  // call_sheet_data / timesheets stay always-on because mobile users
+  // can still legitimately edit those on app-only projects, and the
+  // subscriptions provide multi-device same-user sync for those
+  // tables regardless of whether Prep is involved.
+  const currentProject = useProjectStore.getState().currentProject;
+  const hasPrepAccess = !!currentProject?.hasPrepAccess;
+
+  let chan = supabase
     .channel(`app:project:${projectId}`)
 
     // Prep added/removed a character on a scene. The junction table has
@@ -81,30 +94,33 @@ export function subscribeToProject(projectId: string): () => void {
       handleWithFlag(() => {
         handleCharacterChange(payload);
       });
-    })
+    });
 
-    // Prep updated looks
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'looks',
-      filter: `project_id=eq.${projectId}`,
-    }, (payload: ChangePayload) => {
-      handleWithFlag(() => {
-        handleLookChange(payload);
+  // Prep-only subscriptions: looks and the look_scenes junction.
+  if (hasPrepAccess) {
+    chan = chan
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'looks',
+        filter: `project_id=eq.${projectId}`,
+      }, (payload: ChangePayload) => {
+        handleWithFlag(() => {
+          handleLookChange(payload);
+        });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'look_scenes',
+      }, (payload: ChangePayload) => {
+        handleWithFlag(() => {
+          handleLookScenesChange(payload);
+        });
       });
-    })
+  }
 
-    // Prep assigned looks to scenes (look_scenes junction)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'look_scenes',
-    }, (payload: ChangePayload) => {
-      handleWithFlag(() => {
-        handleLookScenesChange(payload);
-      });
-    })
+  activeChannel = chan
 
     // Timesheet rows updated by prep (or another tab) — reflect the
     // change locally so approval / edits the designer just saved

@@ -69,7 +69,7 @@ export interface ProjectState {
   setScriptPdf: (pdfData: string, filename?: string) => void;
   /** Merge server data into the current project without resetting lifecycle or other state.
    *  Used by sync pull to safely update scenes/characters/looks. */
-  mergeServerData: (updates: Partial<Pick<Project, 'scenes' | 'characters' | 'looks'>>) => void;
+  mergeServerData: (updates: Partial<Pick<Project, 'scenes' | 'characters' | 'looks' | 'hasPrepAccess'>>) => void;
   clearProject: () => void;
   saveAndClearProject: () => void;
   restoreSavedProject: (projectId: string) => boolean;
