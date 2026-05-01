@@ -164,6 +164,34 @@ export function parseScriptText(text: string): ParsedScript {
     for (const v of ch.variants) knownSpeakerSet.add(normalizeCharacterName(v));
   }
 
+  // Pass 2 prep: build a per-character regex that matches the
+  // canonical name OR any of its variants, word-bounded, in Title
+  // Case or ALL CAPS form. Lowercase-only matches are intentionally
+  // skipped — character names in action lines are virtually always
+  // capitalised, and matching lowercase would false-positive on
+  // common English words for character names like "Will" / "May" /
+  // "Hope" (the modal verb / month / noun).
+  const charScanPatterns: Array<{ key: string; re: RegExp }> = [];
+  for (const ch of characterMap.values()) {
+    const terms = new Set<string>();
+    terms.add(ch.normalizedName);
+    for (const v of ch.variants) terms.add(normalizeCharacterName(v));
+    // Drop very short names (< 3 chars) and any with non-letter chars
+    // beyond apostrophe/hyphen/space — too risky for fuzzy matching.
+    const safe = [...terms].filter((t) => t.length >= 3 && /^[A-Z][A-Z'\- ]*$/.test(t));
+    if (safe.length === 0) continue;
+    const alts = new Set<string>();
+    for (const t of safe) {
+      alts.add(t);
+      alts.add(toTitleCase(t));
+    }
+    const escaped = [...alts].map(escapeRegExp).join('|');
+    charScanPatterns.push({
+      key: ch.normalizedName,
+      re: new RegExp(`\\b(?:${escaped})\\b`),
+    });
+  }
+
   for (let i = 0; i < builds.length; i++) {
     const scene = builds[i];
     const sceneCues = cuesPerScene.get(i) || [];
@@ -175,6 +203,25 @@ export function parseScriptText(text: string): ParsedScript {
       // Use the canonical key as the per-scene character name so that
       // BRY and YOUNG BRY don't both appear on one scene.
       scene.characters.push(key);
+    }
+
+    // Pass 2: known-name scan. Pick up any speaker who is named in
+    // this scene's content but doesn't have a dialogue cue here —
+    // typically wordless scenes that only describe the character in
+    // action ("Young Bry stands on the bridge"). Bounded to names
+    // already validated as real speakers via cue extraction, so it
+    // can't introduce new false positives.
+    for (const { key, re } of charScanPatterns) {
+      if (seen.has(key)) continue;
+      if (re.test(scene.content)) {
+        seen.add(key);
+        scene.characters.push(key);
+        const ch = characterMap.get(key);
+        if (ch && !ch.scenes.includes(scene.sceneNumber)) {
+          ch.scenes.push(scene.sceneNumber);
+          ch.sceneCount++;
+        }
+      }
     }
 
     // Background extraction: action lines only — strip cue lines and the
@@ -523,19 +570,24 @@ export async function detectCharactersForScene(
     }
   }
 
-  // 2) Schedule cross-reference: if the call sheet supplied known names,
-  // also include any that match within the scene by word boundary. This
-  // catches characters who appear by name in action lines but don't
-  // speak in this particular scene.
+  // 2) Known-name pass-2 scan. When called from the per-scene
+  // confirmation modal we receive the project's existing character
+  // names; when called from the schedule cross-reference flow we
+  // receive the call sheet's cast list. Either way, match each name
+  // word-bounded in Title Case OR ALL CAPS — never lowercase, so a
+  // character named "Will" doesn't pick up the modal verb "will".
   if (knownCharacters.length > 0) {
-    const contentUpper = sceneContent.toUpperCase();
     for (const charName of knownCharacters) {
       const normalized = normalizeCharacterName(charName);
-      if (normalized.length < 2) continue;
+      if (normalized.length < 3) continue;
+      if (!/^[A-Z][A-Z'\- ]*$/.test(normalized)) continue;
       const key = variantKey(normalized);
       if (characterSet.has(key)) continue;
-      const namePattern = new RegExp(`\\b${escapeRegExp(normalized)}\\b`, 'i');
-      if (namePattern.test(contentUpper)) {
+      const alts = new Set([normalized, toTitleCase(normalized)]);
+      const pattern = new RegExp(
+        `\\b(?:${[...alts].map(escapeRegExp).join('|')})\\b`,
+      );
+      if (pattern.test(sceneContent)) {
         characterSet.add(key);
         characters.push(key);
       }
@@ -547,6 +599,19 @@ export async function detectCharactersForScene(
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Convert "BRY" → "Bry", "YOUNG BRY" → "Young Bry", "MISS NAIR" →
+ * "Miss Nair". Used by the pass-2 known-name scan so we match the
+ * Title Case form characters typically take in action lines.
+ */
+function toTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .split(/(\s+|-)/)
+    .map((part) => (part && /^[a-z]/.test(part) ? part[0].toUpperCase() + part.slice(1) : part))
+    .join('');
 }
 
 /**
