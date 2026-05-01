@@ -25,8 +25,6 @@ export interface UserProfile {
   postcode: string;
   country: string;
   rateCard: RateCard;
-  signupNudgeDismissed: boolean;
-  timesheetNudgeDismissed?: boolean;
   updatedAt: string;
 }
 
@@ -63,8 +61,6 @@ export function createEmptyProfile(userId: string, fullName = '', email = ''): U
     postcode: '',
     country: '',
     rateCard: createDefaultRateCard(),
-    signupNudgeDismissed: false,
-    timesheetNudgeDismissed: false,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -86,8 +82,6 @@ interface UserProfileState {
   ensureProfile: (userId: string, fullName?: string, email?: string) => UserProfile;
   getProfile: (userId: string) => UserProfile | undefined;
   updateProfile: (userId: string, updates: Partial<UserProfile>) => void;
-  dismissSignupNudge: (userId: string) => void;
-  dismissTimesheetNudge: (userId: string) => void;
   clearProfile: (userId: string) => void;
 }
 
@@ -118,28 +112,6 @@ export const useUserProfileStore = create<UserProfileState>()(
                 userId,
                 updatedAt: new Date().toISOString(),
               },
-            },
-          };
-        }),
-
-      dismissSignupNudge: (userId) =>
-        set((s) => {
-          const existing = s.profiles[userId] ?? createEmptyProfile(userId);
-          return {
-            profiles: {
-              ...s.profiles,
-              [userId]: { ...existing, signupNudgeDismissed: true, userId },
-            },
-          };
-        }),
-
-      dismissTimesheetNudge: (userId) =>
-        set((s) => {
-          const existing = s.profiles[userId] ?? createEmptyProfile(userId);
-          return {
-            profiles: {
-              ...s.profiles,
-              [userId]: { ...existing, timesheetNudgeDismissed: true, userId },
             },
           };
         }),
