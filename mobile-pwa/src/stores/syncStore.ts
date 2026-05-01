@@ -44,6 +44,11 @@ interface SyncState {
   /** Most recent auto-save error message, or null if the last write
    *  succeeded. Shown alongside the warning when present. */
   autoSaveLastError: string | null;
+  /** True after the realtime channel has exhausted its reconnect
+   *  budget. Drives a persistent "live sync disconnected" indicator
+   *  in SyncSheet. Reset to false on the next successful SUBSCRIBED
+   *  status (auto reconnect) or on a manual project reload. */
+  realtimeDisconnected: boolean;
 
   // Actions
   markChanged: (category: ChangeCategory) => void;
@@ -68,6 +73,7 @@ interface SyncState {
   setDeadOutboxCount: (count: number) => void;
   setAutoSaveFailureCount: (count: number) => void;
   setAutoSaveLastError: (error: string | null) => void;
+  setRealtimeDisconnected: (value: boolean) => void;
 }
 
 export const useSyncStore = create<SyncState>()(
@@ -85,6 +91,7 @@ export const useSyncStore = create<SyncState>()(
       deadOutboxCount: 0,
       autoSaveFailureCount: 0,
       autoSaveLastError: null,
+      realtimeDisconnected: false,
 
       markChanged: (category) =>
         set((s) => {
@@ -139,6 +146,7 @@ export const useSyncStore = create<SyncState>()(
       setDeadOutboxCount: (count) => set({ deadOutboxCount: count }),
       setAutoSaveFailureCount: (count) => set({ autoSaveFailureCount: count }),
       setAutoSaveLastError: (error) => set({ autoSaveLastError: error }),
+      setRealtimeDisconnected: (value) => set({ realtimeDisconnected: value }),
     }),
     {
       name: 'hair-makeup-sync',

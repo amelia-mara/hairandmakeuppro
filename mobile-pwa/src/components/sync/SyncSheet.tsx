@@ -3,6 +3,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { uploadToServer, downloadFromServer } from '@/services/manualSync';
 import { flushAutoSave } from '@/services/autoSave';
+import { resubscribeToProject } from '@/services/realtimeSync';
 import { OutboxDeadList } from '@/components/sync/OutboxDeadList';
 
 /** Threshold below which transient network hiccups are ignored. */
@@ -33,9 +34,11 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     deadOutboxCount,
     autoSaveFailureCount,
     autoSaveLastError,
+    realtimeDisconnected,
   } = useSyncStore();
   const [showDeadList, setShowDeadList] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const showAutoSaveWarning = autoSaveFailureCount >= AUTO_SAVE_WARNING_THRESHOLD;
   const isAutoSaveSevere = autoSaveFailureCount >= AUTO_SAVE_SEVERE_THRESHOLD;
 
@@ -46,6 +49,19 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
       await flushAutoSave();
     } finally {
       setIsRetrying(false);
+    }
+  };
+
+  const handleReconnectRealtime = async () => {
+    if (isReconnecting || !currentProject) return;
+    setIsReconnecting(true);
+    try {
+      // Tear down the dead channel and start fresh — also pulls a
+      // full project snapshot so any events missed during the dead
+      // window are reflected locally.
+      await resubscribeToProject(currentProject.id);
+    } finally {
+      setIsReconnecting(false);
     }
   };
   const currentProject = useProjectStore((s) => s.currentProject);
@@ -159,6 +175,29 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             <div className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3 mb-5 text-center">
               {error}
             </div>
+          )}
+
+          {/* Realtime channel exhausted its reconnect budget. Manual
+              retry runs resubscribeToProject which tears down the dead
+              channel, opens a fresh one, and pulls a full snapshot to
+              cover anything missed in the meantime. */}
+          {realtimeDisconnected && (
+            <button
+              onClick={handleReconnectRealtime}
+              disabled={isReconnecting || !isOnline}
+              className="w-full text-sm text-left rounded-xl px-4 py-3 mb-3 flex items-center gap-3 transition-colors active:opacity-80 disabled:opacity-60"
+              style={{ backgroundColor: 'rgba(196, 82, 42, 0.1)', color: '#C4522A' }}
+            >
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+              </svg>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">Live sync disconnected</div>
+                <div className="text-xs opacity-80 mt-0.5">
+                  {isReconnecting ? 'Reconnecting…' : 'Tap to reconnect and refresh your data'}
+                </div>
+              </div>
+            </button>
           )}
 
           {/* Outbox: dead entries — needs user attention */}
