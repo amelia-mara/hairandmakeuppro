@@ -5,6 +5,8 @@ interface ScriptieChatProps {
   projectId: string;
 }
 
+type ChatMode = 'team' | 'scriptie';
+
 const EMPTY_MESSAGES: ScriptieMessage[] = [];
 
 const SUGGESTIONS = [
@@ -13,11 +15,6 @@ const SUGGESTIONS = [
   { label: 'Budget status', prompt: 'How much budget is left, and what categories have I been spending in?' },
 ];
 
-/**
- * Floating "Ask Scriptie" button + side panel chat. Mirrors the
- * mobile ChatAssistant layout adapted for desktop. Owner-tier
- * gating happens in App.tsx — this component just renders.
- */
 export function ScriptieChat({ projectId }: ScriptieChatProps) {
   const isOpen = useScriptieChatStore((s) => s.isOpen);
   const isLoading = useScriptieChatStore((s) => s.isLoading);
@@ -29,17 +26,20 @@ export function ScriptieChat({ projectId }: ScriptieChatProps) {
     (s) => s.messagesByProject[projectId] ?? EMPTY_MESSAGES,
   );
 
+  const [mode, setMode] = useState<ChatMode>('team');
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isOpen, isLoading]);
+    if (isOpen && mode === 'scriptie') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isOpen, isLoading, mode]);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
-  }, [isOpen]);
+    if (isOpen && mode === 'scriptie') inputRef.current?.focus();
+  }, [isOpen, mode]);
 
   const send = async (text: string) => {
     const t = text.trim();
@@ -62,8 +62,8 @@ export function ScriptieChat({ projectId }: ScriptieChatProps) {
           type="button"
           className="scriptie-fab"
           onClick={toggleOpen}
-          aria-label="Open Scriptie chat"
-          title="Ask Scriptie"
+          aria-label="Open project chat"
+          title="Project chat"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -74,28 +74,30 @@ export function ScriptieChat({ projectId }: ScriptieChatProps) {
       {isOpen && (
         <>
           <div className="scriptie-backdrop" onClick={close} />
-          <aside className="scriptie-panel" role="dialog" aria-label="Ask Scriptie">
+          <aside className="scriptie-panel" role="dialog" aria-label="Project chat">
             <div className="scriptie-header">
               <div className="scriptie-title">
                 <span className="scriptie-status-dot" />
                 <span className="scriptie-title-text">
-                  <span className="heading-italic">Ask</span>{' '}
-                  <span className="heading-regular">Scriptie</span>
+                  <span className="heading-italic">Project</span>{' '}
+                  <span className="heading-regular">Chat</span>
                 </span>
               </div>
               <div className="scriptie-header-actions">
-                <button
-                  type="button"
-                  className="scriptie-icon-btn"
-                  onClick={() => clearMessages(projectId)}
-                  title="Clear conversation"
-                  aria-label="Clear conversation"
-                  disabled={messages.length === 0}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                  </svg>
-                </button>
+                {mode === 'scriptie' && (
+                  <button
+                    type="button"
+                    className="scriptie-icon-btn"
+                    onClick={() => clearMessages(projectId)}
+                    title="Clear conversation"
+                    aria-label="Clear conversation"
+                    disabled={messages.length === 0}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="scriptie-icon-btn"
@@ -109,70 +111,43 @@ export function ScriptieChat({ projectId }: ScriptieChatProps) {
               </div>
             </div>
 
-            <div className="scriptie-body">
-              {messages.length === 0 && !isLoading && (
-                <div className="scriptie-welcome">
-                  <div className="scriptie-welcome-title">Hi, I'm Scriptie</div>
-                  <p className="scriptie-welcome-desc">
-                    I know this project's scenes, characters, looks, breakdowns, schedule, and budget. Ask me anything.
-                  </p>
-                  <div className="scriptie-suggestions">
-                    {SUGGESTIONS.map((s) => (
-                      <button
-                        key={s.label}
-                        type="button"
-                        className="scriptie-suggestion"
-                        onClick={() => send(s.prompt)}
-                      >
-                        <span className="scriptie-suggestion-label">{s.label}</span>
-                        <span className="scriptie-suggestion-prompt">{s.prompt}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {messages.map((m) => (
-                <div key={m.id} className={`scriptie-msg scriptie-msg--${m.role}`}>
-                  <div className="scriptie-msg-bubble">{formatContent(m.content)}</div>
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="scriptie-msg scriptie-msg--assistant">
-                  <div className="scriptie-msg-bubble scriptie-msg-bubble--typing">
-                    <span /><span /><span />
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="scriptie-input-row">
-              <textarea
-                ref={inputRef}
-                className="scriptie-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder="Ask Scriptie about this project…"
-                rows={1}
-                disabled={isLoading}
-              />
+            <div className="scriptie-tabs" role="tablist">
               <button
                 type="button"
-                className="scriptie-send"
-                onClick={() => send(input)}
-                disabled={!input.trim() || isLoading}
-                aria-label="Send"
+                role="tab"
+                aria-selected={mode === 'team'}
+                className={`scriptie-tab ${mode === 'team' ? 'active' : ''}`}
+                onClick={() => setMode('team')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
+                Team Chat
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'scriptie'}
+                className={`scriptie-tab ${mode === 'scriptie' ? 'active' : ''}`}
+                onClick={() => setMode('scriptie')}
+              >
+                <span className="scriptie-tab-main">Ask Scriptie</span>
+                <span className="scriptie-tab-sub">Project assistant</span>
               </button>
             </div>
+
+            {mode === 'team' ? (
+              <TeamChatPanel />
+            ) : (
+              <ScriptiePanel
+                messages={messages}
+                isLoading={isLoading}
+                input={input}
+                inputRef={inputRef}
+                messagesEndRef={messagesEndRef}
+                onChange={setInput}
+                onKeyDown={onKeyDown}
+                onSend={() => send(input)}
+                onSuggestion={send}
+              />
+            )}
           </aside>
         </>
       )}
@@ -180,10 +155,132 @@ export function ScriptieChat({ projectId }: ScriptieChatProps) {
   );
 }
 
-/**
- * Render a message body with minimal markdown — **bold**, *italic*,
- * `code`, and line breaks. Mirrors the mobile assistant's helper.
- */
+function TeamChatPanel() {
+  return (
+    <>
+      <div className="scriptie-body scriptie-body--placeholder">
+        <div className="scriptie-placeholder">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          </svg>
+          <div className="scriptie-placeholder-title">Team Chat</div>
+          <p className="scriptie-placeholder-desc">
+            Synced project messaging for your team. Share updates, notes, and coordinate on set.
+          </p>
+          <div className="scriptie-placeholder-tag">Coming soon</div>
+        </div>
+      </div>
+      <div className="scriptie-input-row">
+        <textarea
+          className="scriptie-input"
+          placeholder="Message your team…"
+          rows={1}
+          disabled
+        />
+        <button type="button" className="scriptie-send" disabled aria-label="Send">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface ScriptiePanelProps {
+  messages: ScriptieMessage[];
+  isLoading: boolean;
+  input: string;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  onChange: (v: string) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+  onSend: () => void;
+  onSuggestion: (text: string) => void;
+}
+
+function ScriptiePanel({
+  messages,
+  isLoading,
+  input,
+  inputRef,
+  messagesEndRef,
+  onChange,
+  onKeyDown,
+  onSend,
+  onSuggestion,
+}: ScriptiePanelProps) {
+  return (
+    <>
+      <div className="scriptie-body">
+        {messages.length === 0 && !isLoading && (
+          <div className="scriptie-welcome">
+            <div className="scriptie-welcome-title">Hi, I'm Scriptie</div>
+            <p className="scriptie-welcome-desc">
+              I know this project's scenes, characters, looks, breakdowns, schedule, and budget. Ask me anything.
+            </p>
+            <div className="scriptie-suggestions">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  className="scriptie-suggestion"
+                  onClick={() => onSuggestion(s.prompt)}
+                >
+                  <span className="scriptie-suggestion-label">{s.label}</span>
+                  <span className="scriptie-suggestion-prompt">{s.prompt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map((m) => (
+          <div key={m.id} className={`scriptie-msg scriptie-msg--${m.role}`}>
+            <div className="scriptie-msg-bubble">{formatContent(m.content)}</div>
+          </div>
+        ))}
+
+        {isLoading && (
+          <div className="scriptie-msg scriptie-msg--assistant">
+            <div className="scriptie-msg-bubble scriptie-msg-bubble--typing">
+              <span /><span /><span />
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="scriptie-input-row">
+        <textarea
+          ref={inputRef}
+          className="scriptie-input"
+          value={input}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Ask Scriptie about this project…"
+          rows={1}
+          disabled={isLoading}
+        />
+        <button
+          type="button"
+          className="scriptie-send"
+          onClick={onSend}
+          disabled={!input.trim() || isLoading}
+          aria-label="Send"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </>
+  );
+}
+
 function formatContent(content: string): ReactNode[] {
   return content.split('\n').flatMap((line, lineIdx, lines) => {
     const out: ReactNode[] = [];
