@@ -77,7 +77,15 @@ export function SceneCharacterConfirmation({
 
     if ((status === 'pending' || !status) && hasScript && !alreadyDetected) {
       setIsDetecting(true);
-      detectCharactersForScene(scene.scriptContent!, '', {})
+      // Pass the project's existing character names as `knownCharacters`
+      // so the detector also runs the pass-2 known-name scan: a scene
+      // with no dialogue cues that mentions an established character
+      // by name in its action text (e.g. "Young Bry stands on the
+      // bridge" in a wordless opening) still picks them up.
+      const knownCharacters = (currentProject?.characters || [])
+        .map((c) => c.name)
+        .filter(Boolean);
+      detectCharactersForScene(scene.scriptContent!, '', { knownCharacters })
         .then((characters) => {
           if (characters.length > 0) {
             updateSceneSuggestedCharacters(scene.id, characters);

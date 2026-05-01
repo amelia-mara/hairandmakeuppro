@@ -286,6 +286,43 @@ export function parseScriptText(text: string): ParsedScript {
     registerCharacter(cue.raw, canonical, scene);
   }
 
+  /* ── Pass 2: known-name scan ─────────────────────────────────────
+   * Pick up speakers who are named in a scene's text but don't have
+   * a dialogue cue there. Bounded to canonical names already
+   * validated as real speakers via cue extraction, so it can't
+   * introduce new false positives. Matches Title Case OR ALL CAPS
+   * forms (word-bounded) — never lowercase, so a character named
+   * "Will" won't match the modal verb "will". */
+  const charScanPatterns: Array<{ key: string; re: RegExp }> = [];
+  for (const ch of characterMap.values()) {
+    const terms = new Set<string>();
+    terms.add(ch.normalizedName);
+    for (const v of ch.variants) terms.add(normalizeCharacterName(v));
+    const safe = [...terms].filter((t) => t.length >= 3 && /^[A-Z][A-Z'\- ]*$/.test(t));
+    if (safe.length === 0) continue;
+    const alts = new Set<string>();
+    for (const t of safe) {
+      alts.add(t);
+      alts.add(prepToTitleCase(t));
+    }
+    const escaped = [...alts].map(prepEscapeRegExp).join('|');
+    charScanPatterns.push({
+      key: ch.normalizedName,
+      re: new RegExp(`\\b(?:${escaped})\\b`),
+    });
+  }
+  for (const scene of scenes) {
+    if (scene.isOmitted) continue;
+    const have = new Set(scene.characters);
+    for (const { key, re } of charScanPatterns) {
+      if (have.has(key)) continue;
+      if (re.test(scene.content)) {
+        registerCharacter(key, key, scene);
+        have.add(key);
+      }
+    }
+  }
+
   /* ── Per-scene background extraction ─────────────────────────────── */
   const knownSpeakerSet = new Set<string>();
   for (const ch of characterMap.values()) {
@@ -468,3 +505,18 @@ export async function parseScriptFile(
   return parseScriptText(text);
 }
 
+
+function prepEscapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** "BRY" -> "Bry", "YOUNG BRY" -> "Young Bry". Used by the pass-2
+ *  known-name scan to match the Title Case form character names
+ *  typically take in action lines. */
+function prepToTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .split(/(\s+|-)/)
+    .map((part) => (part && /^[a-z]/.test(part) ? part[0].toUpperCase() + part.slice(1) : part))
+    .join('');
+}
