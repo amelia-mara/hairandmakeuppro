@@ -111,6 +111,13 @@ export function parseScriptText(text: string): ParsedScript {
   let fallbackSceneNumber = 0;
   let currentSceneContent = '';
   let preambleContent = ''; // Text before the first scene heading
+  // Once the first real INT./EXT. heading has been seen, the PRELUDE
+  // scene must not be created again. Without this guard, OMITTED stubs
+  // scattered through the script (which reset currentScene to null)
+  // cause `preambleContent` to keep accumulating between them and the
+  // next real heading, and each gap pushes a duplicate PRELUDE — six
+  // PRELUDE cards on Killa Bee, one per OMITTED gap.
+  let seenFirstRealScene = false;
 
   // Line ranges per scene index — used after the walk to bucket cue
   // hits into the scene whose [head, end) range contains them.
@@ -178,7 +185,7 @@ export function parseScriptText(text: string): ParsedScript {
       // and `location` are 'PRELUDE' — older uploads still have
       // 'PREAMBLE' which the breakdown layer recognises as the same
       // thing.
-      if (!currentScene && preambleContent.trim()) {
+      if (!seenFirstRealScene && preambleContent.trim()) {
         scenes.push({
           sceneNumber: '0',
           slugline: 'PRELUDE',
@@ -192,6 +199,7 @@ export function parseScriptText(text: string): ParsedScript {
         // can scan the prelude for known character mentions.
         sceneLineRanges.push({ head: 0, endExclusive: i });
       }
+      seenFirstRealScene = true;
 
       // Check the line immediately preceding this heading for a temporal marker.
       // Temporal markers (e.g. "FLASHBACK: 2 WEEKS AGO", "6 MONTHS LATER")
@@ -247,8 +255,11 @@ export function parseScriptText(text: string): ParsedScript {
 
     if (currentScene) {
       currentSceneContent += line + '\n';
-    } else {
-      // Accumulate text before the first scene heading
+    } else if (!seenFirstRealScene) {
+      // Accumulate text before the first scene heading. Once a real
+      // INT./EXT. has been seen, lines that fall outside any
+      // currentScene (e.g. between an OMITTED stub and the next real
+      // heading) are dropped so they can't produce a second PRELUDE.
       preambleContent += line + '\n';
     }
   }
