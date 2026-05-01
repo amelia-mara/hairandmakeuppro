@@ -25,6 +25,12 @@ export interface Scene {
    *  cross-references remain coherent, but it gets a thin grey
    *  placeholder row rather than full breakdown UI. */
   isOmitted?: boolean;
+  /** Non-speaking presence labels found in this scene's action text
+   *  ("PASSER BY", "ELDERLY PATIENT"). Listed on the scene only;
+   *  never become tracked Character profiles. */
+  backgroundCharacters?: string[];
+  /** Free-text notes shown alongside the background list. */
+  backgroundNotes?: string;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';

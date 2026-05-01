@@ -173,124 +173,6 @@ export function normalizeCharacterName(name: string): string {
   return normalized.replace(/\s+/g, ' ').trim();
 }
 
-/**
- * True if the first ALL-CAPS word in `name` is something the parser
- * should never treat as a character — transitions ("CUT", "FADE"),
- * scene-heading prefixes ("INT", "EXT", "SCENE", "TITLE"), conjunctions
- * ("AND", "BUT"), and any single-word non-character noun on the shared
- * denylist. Replaces the old hand-rolled `/^(INT|EXT|CUT|FADE...)\b/`
- * inline regex so the four inline call sites in
- * `extractCharactersFromActionLine` stay in sync with the rest of the
- * parser.
- */
-function isExcludedFirstWord(name: string): boolean {
-  const firstWord = name.split(/\s+/)[0];
-  if (!firstWord) return true;
-  if (NON_CHARACTER_SINGLE_WORDS.has(firstWord)) return true;
-  if (NAME_SCAN_EXCLUSIONS.has(firstWord)) return true;
-  return false;
-}
-
-export function extractCharactersFromActionLine(line: string): string[] {
-  const characters: string[] = [];
-  const trimmed = line.trim();
-
-  if (trimmed.length < 5) return characters;
-  if (/^(INT\.|EXT\.|INT\/EXT|CUT TO|FADE|DISSOLVE|CONTINUED)/i.test(trimmed)) return characters;
-
-  let match;
-
-  /* Character introduction pattern: ALL CAPS NAME followed by comma, age, or
-     parenthetical — e.g. "LENNON BOWIE, 28" or "DEDRA MONTGOMERY 29, an icy beauty"
-     This is the standard screenplay way to introduce a character in action lines. */
-  const introPattern = /^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,3})\s*[,(\s]\s*\d{1,3}\b/;
-  const introMatch = trimmed.match(introPattern);
-  if (introMatch) {
-    const name = introMatch[1].trim();
-    if (name.length >= 3 && !isExcludedFirstWord(name)) {
-      characters.push(name);
-    }
-  }
-
-  /* Also detect ALL CAPS names (2+ words) at start of line followed by comma —
-     standard character intro even without age: "LENNON BOWIE, is a cowboy..." */
-  const capsCommaPattern = /^([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})\s*,/;
-  const capsCommaMatch = trimmed.match(capsCommaPattern);
-  if (capsCommaMatch) {
-    const name = capsCommaMatch[1].trim();
-    if (name.length >= 3 && !isExcludedFirstWord(name)) {
-      characters.push(name);
-    }
-  }
-
-  /* Mid-line character introduction: ALL CAPS NAME (2+ words) after a sentence break
-     or mid-sentence, followed by comma + age or comma + lowercase description.
-     e.g. "...on foot. JASPER MONTGOMERY, 70, he looks like..."
-     e.g. "Her husband, ARCHIBALD CHRISTIE, dashing, holds her hand."
-     e.g. "...the door for NAN WATTS, a prim-looking woman"
-     e.g. "...on foot. JASPER MONTGOMERY 70, he looks like..." (space before age) */
-  const midLineIntroRe = /(?:[.!?]\s+|,\s+|\bfor\s+)([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*(?:\d{1,3}\b|[a-z])|\s+\d{1,3}\s*,)/g;
-  while ((match = midLineIntroRe.exec(trimmed)) !== null) {
-    const name = match[1].trim();
-    if (name.length >= 3 && !isExcludedFirstWord(name)) {
-      characters.push(name);
-    }
-  }
-
-  const actionVerbs = 'enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates|pulls|pushes|picks|puts|takes|gives|throws|catches|drops|lifts|carries|follows|leads|chases|hugs|kisses|slaps|punches|kicks|shoots|stabs|struggles|fights|ducks|dodges|rolls|slides|stumbles|trips|collapses|faints|wakes|sleeps|eats|drinks|reads|writes|drives|flies|swims|dances|sings|plays|works|tries|helps|saves|kills|dies';
-
-  /* Title Case name + action verb: "Lennon rides", "Dedra watches"
-     Skip pronouns/articles/common words that aren't character names */
-  const nonNameWords = new Set([
-    // Pronouns & determiners
-    'SHE', 'HER', 'HIS', 'HIM', 'THE', 'THEY', 'THEM', 'THIS', 'THAT',
-    'WHO', 'WHAT', 'ITS', 'OUR', 'YOUR', 'ONE', 'TWO', 'ALL', 'EACH',
-    'SOME', 'BOTH', 'FEW', 'MANY', 'MOST', 'OTHER', 'SUCH',
-    // Common nouns / generic roles — never character names from action lines
-    'MAN', 'WOMAN', 'BOY', 'GIRL', 'CHILD', 'BABY', 'TEEN', 'KID', 'LADY', 'GUY',
-    'COWBOY', 'HORSE', 'DOG', 'CAT', 'ANIMAL', 'BIRD',
-    'DRIVER', 'OFFICER', 'GUARD', 'SOLDIER', 'DOCTOR', 'NURSE', 'JUDGE',
-    'WAITER', 'WAITRESS', 'BARTENDER', 'CLERK', 'MAID', 'BUTLER',
-    'STRANGER', 'FIGURE', 'PERSON', 'PEOPLE', 'CROWD', 'GROUP',
-    'DANCER', 'SINGER', 'CYCLIST', 'JOGGER', 'RUNNER', 'SWIMMER',
-    'THUG', 'THIEF', 'VICTIM', 'WITNESS', 'SUSPECT', 'PASSENGER',
-    'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'HUSBAND', 'WIFE',
-    // Common verbs that appear in Title Case at sentence start
-    'ANOTHER', 'INSIDE', 'OUTSIDE', 'BEHIND', 'AROUND', 'THROUGH',
-    'BEFORE', 'AFTER', 'ABOUT', 'BETWEEN', 'AGAINST', 'WITHOUT',
-    'NOTHING', 'SOMETHING', 'EVERYTHING', 'EVERYONE', 'SOMEONE', 'NOBODY',
-  ]);
-
-  const titleCasePattern = new RegExp(
-    `(?:^|[,;]\\s*|\\.\\s+)([A-Z][a-z]{2,}(?:\\s+(?:and|&)\\s+[A-Z][a-z]{2,})*)\\s+(?:${actionVerbs})`,
-    'g'
-  );
-
-  while ((match = titleCasePattern.exec(trimmed)) !== null) {
-    const names = match[1].split(/\s+(?:and|&)\s+/i);
-    for (const name of names) {
-      const upperName = name.trim().toUpperCase();
-      if (upperName.length >= 3 && upperName.length <= 20 && !nonNameWords.has(upperName)) {
-        characters.push(upperName);
-      }
-    }
-  }
-
-  /* Catch-all: ANY ALL CAPS multi-word (2+) name followed by age digits anywhere in the
-     line. This is the broadest pattern and handles cases where the text before the name
-     has unexpected formatting from PDF extraction (e.g., missing space after period).
-     Requires 2+ ALL CAPS words to minimise false positives. */
-  const catchAllIntroRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
-  while ((match = catchAllIntroRe.exec(trimmed)) !== null) {
-    const name = match[1].trim();
-    if (name.length >= 3 && !isExcludedFirstWord(name)) {
-      characters.push(name);
-    }
-  }
-
-  return [...new Set(characters)];
-}
-
 /* ━━━ Character cue detection ━━━ */
 
 export function isCharacterCue(line: string): boolean {
@@ -298,6 +180,11 @@ export function isCharacterCue(line: string): boolean {
 
   if (trimmed !== trimmed.toUpperCase()) return false;
   if (trimmed.length > 50) return false;
+  // Reject prose punctuation, revision marks, and stray quote glyphs.
+  // Real cues are name + optional (V.O./CONT'D) — none of these chars
+  // belong in a cue line. Catches "NOW!", "GREG*" (revision flag),
+  // "KEY CORONAVIRUS SYMPTOM\"", "[FLASHBACK]", etc.
+  if (/[!?:;,*\[\]"“”]/.test(trimmed)) return false;
 
   const nonCharPatterns = [
     /^\[?(INT\.|EXT\.|INT\/EXT|EXT\/INT|I\/E\.)/i,
@@ -637,3 +524,198 @@ export function prescanCharacterIntros(lines: string[]): Map<string, string> {
 
 
 
+
+/* ━━━ Strict structural extractors (regex-only, no AI) ━━━ */
+
+/**
+ * Person-descriptor lexicon used for background detection. Generic
+ * enough to work on any script — covers the most common "the X" /
+ * "another X" roles that appear in action lines as background presence.
+ */
+const PERSON_DESCRIPTORS_BG = new Set([
+  'MAN', 'WOMAN', 'MEN', 'WOMEN', 'BOY', 'GIRL', 'BOYS', 'GIRLS',
+  'PERSON', 'PEOPLE', 'KID', 'KIDS', 'CHILD', 'CHILDREN', 'TEEN', 'TEENAGER',
+  'BABY', 'INFANT', 'TODDLER', 'YOUTH', 'ADULT', 'ELDER',
+  'GUY', 'GUYS', 'LADY', 'LADIES', 'STRANGER', 'FIGURE', 'CROWD',
+  'NURSE', 'DOCTOR', 'SURGEON', 'PATIENT', 'PARAMEDIC', 'MEDIC', 'ORDERLY',
+  'COP', 'COPS', 'OFFICER', 'DETECTIVE', 'AGENT', 'GUARD', 'SOLDIER', 'TROOP',
+  'TROOPS', 'WARRIOR', 'WARRIORS', 'KNIGHT', 'CAPTAIN', 'LIEUTENANT', 'SERGEANT',
+  'CORPORAL', 'PRIVATE', 'COLONEL', 'GENERAL', 'COMMANDER', 'CHIEF',
+  'KING', 'QUEEN', 'PRINCE', 'PRINCESS', 'LORD', 'DUKE',
+  'PRIEST', 'PASTOR', 'NUN', 'MONK', 'JUDGE', 'LAWYER', 'TEACHER', 'STUDENT',
+  'PROFESSOR', 'SCIENTIST', 'TECHNICIAN', 'ENGINEER',
+  'WORKER', 'CLERK', 'WAITER', 'WAITRESS', 'BARTENDER', 'BARMAN', 'BARMAID',
+  'DRIVER', 'PILOT', 'SAILOR', 'CREWMAN', 'CREWMEMBER',
+  'CYCLIST', 'JOGGER', 'RUNNER', 'PASSER-BY', 'PASSERBY', 'PEDESTRIAN',
+  'BYSTANDER', 'ONLOOKER', 'WITNESS', 'VICTIM', 'SUSPECT',
+  'DOORMAN', 'BUTLER', 'MAID', 'HOUSEKEEPER', 'CHAUFFEUR', 'JANITOR',
+  'BODYGUARD', 'BOUNCER', 'THUG', 'GANGSTER', 'HENCHMAN', 'PRISONER', 'INMATE',
+  'REFEREE', 'COACH', 'PLAYER', 'OPPONENT',
+  'REPORTER', 'JOURNALIST', 'ANCHOR', 'PHOTOGRAPHER', 'CAMERAMAN',
+  'SINGER', 'DANCER', 'ACTOR', 'ACTRESS', 'MUSICIAN',
+  'CIVILIAN', 'TOURIST', 'VISITOR', 'CUSTOMER', 'GUEST',
+  'FATHER', 'MOTHER', 'BROTHER', 'SISTER', 'SON', 'DAUGHTER',
+  'HUSBAND', 'WIFE', 'GRANDFATHER', 'GRANDMOTHER', 'GRANDPA', 'GRANDMA',
+  'UNCLE', 'AUNT', 'COUSIN', 'NEPHEW', 'NIECE', 'FRIEND', 'NEIGHBOR', 'NEIGHBOUR',
+  'COMMENTATOR', 'ANNOUNCER', 'INTERVIEWER', 'PRESENTER', 'HOST', 'HOSTESS',
+]);
+
+/**
+ * Variant key for collapsing "YOUNG BRY" / "BRY" / "OLDER BRY" into one
+ * canonical character when grouping. Strips age-descriptor prefixes.
+ */
+export function variantKey(name: string): string {
+  const n = normalizeCharacterName(name);
+  return n.replace(/^(YOUNG|YOUNGER|OLD|OLDER|TEEN|LITTLE|LIL)\s+/, '');
+}
+
+function leadingSpacesPrep(line: string): number {
+  const m = line.match(/^( *)/);
+  return m ? m[1].length : 0;
+}
+
+/**
+ * After a candidate cue line, look ahead to confirm the next non-blank,
+ * non-parenthetical-only line is dialogue (not another cue, scene
+ * heading, or transition). When the cue is indented but the following
+ * line sits at the left margin, it's a centred title card or sub-header,
+ * not a real cue.
+ */
+function isFollowedByDialoguePrep(lines: string[], cueIdx: number): boolean {
+  const cueIndent = leadingSpacesPrep(lines[cueIdx]);
+  for (let i = cueIdx + 1; i < lines.length && i <= cueIdx + 5; i++) {
+    const raw = lines[i];
+    const t = raw.trim();
+    if (!t) continue;
+    if (/^\(.*\)$/.test(t)) continue;          // skip "(faintly)" / "(MORE)"
+    if (/^\d+\.?$/.test(t)) continue;          // skip page numbers
+    if (/^Page\s+\d+/i.test(t)) continue;
+    if (isCharacterCue(t)) return false;       // another cue right after → fake
+    if (/^(INT\.?|EXT\.?|I\/E\.?)\s/.test(t.toUpperCase())) return false;
+    if (/^\d+\s*[A-Z]?\s+(INT|EXT)/.test(t.toUpperCase())) return false;
+    if (/^(CUT |FADE |DISSOLVE )/.test(t.toUpperCase())) return false;
+    if (cueIndent > 0 && leadingSpacesPrep(raw) === 0) return false;
+    return true;
+  }
+  return false;
+}
+
+export interface CueHit {
+  /** Line index in the source array. */
+  lineIndex: number;
+  /** Canonical name with parentheticals stripped. */
+  name: string;
+  /** Variant key (age prefixes collapsed) — groups BRY / YOUNG BRY. */
+  variantKey: string;
+  /** Original raw line text with extension parentheticals intact. */
+  raw: string;
+}
+
+/**
+ * Single-pass cue extraction across the whole script.
+ *
+ * Two filters apply: a per-line structural test (next non-blank line is
+ * dialogue) and a per-script indentation cluster check. Industry-format
+ * scripts indent dialogue cues to a consistent column; centred sub-headers
+ * sit at the left margin. We compute the dominant cue indent from the
+ * candidate set and drop anything far below it. Scripts that are entirely
+ * flush-left (e.g. Fountain exports) skip the second filter automatically.
+ */
+export function extractCueLines(lines: string[]): CueHit[] {
+  type Cand = { i: number; t: string; indent: number };
+  const candidates: Cand[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t) continue;
+    if (!isCharacterCue(t)) continue;
+    if (!isFollowedByDialoguePrep(lines, i)) continue;
+    candidates.push({ i, t, indent: leadingSpacesPrep(lines[i]) });
+  }
+
+  let minIndent = 0;
+  if (candidates.length >= 4) {
+    const indents = candidates.map((c) => c.indent).sort((a, b) => a - b);
+    const median = indents[Math.floor(indents.length / 2)];
+    if (median >= 6) {
+      minIndent = Math.floor(median / 2);
+    }
+  }
+
+  const hits: CueHit[] = [];
+  for (const c of candidates) {
+    if (c.indent < minIndent) continue;
+    const name = normalizeCharacterName(c.t);
+    if (name.length < 2 || name.length > 35) continue;
+    if (NON_CHARACTER_SINGLE_WORDS.has(name)) continue;
+    hits.push({
+      lineIndex: c.i,
+      name,
+      variantKey: variantKey(name),
+      raw: c.t,
+    });
+  }
+  return hits;
+}
+
+/**
+ * Background extraction from a scene's action text.
+ *
+ * Returns a small ordered list of background labels (e.g. "PASSER BY",
+ * "ELDERLY PATIENT") found in the action text. Speaker names supplied
+ * via `knownSpeakers` are excluded so leads aren't double-listed as
+ * background.
+ *
+ * Rules:
+ *   - Multi-word ALL CAPS phrases (2–4 words) where a person-descriptor
+ *     word is in the last two positions.
+ *   - Single-word ALL CAPS tokens that are themselves person-descriptors
+ *     (e.g. "NURSE", "REFEREE") and are introduced with an article
+ *     (a/an/the/another/two/three/HER/HIS) immediately before them.
+ */
+export function extractBackgroundFromAction(
+  actionText: string,
+  knownSpeakers: Set<string>,
+): string[] {
+  if (!actionText) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const speakerVariants = new Set<string>();
+  for (const s of knownSpeakers) {
+    speakerVariants.add(s);
+    speakerVariants.add(variantKey(s));
+  }
+
+  // Multi-word ALL CAPS phrases (2–4 words).
+  const multi = /\b([A-Z][A-Z'-]{1,}(?:\s+[A-Z][A-Z'-]{1,}){1,3})\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = multi.exec(actionText)) !== null) {
+    const phrase = m[1].trim();
+    const words = phrase.split(/\s+/);
+    if (words.some((w) => w === 'INT' || w === 'EXT')) continue;
+    if (words.every((w) => NON_CHARACTER_SINGLE_WORDS.has(w))) continue;
+    const tail = words.slice(-2);
+    if (!tail.some((w) => PERSON_DESCRIPTORS_BG.has(w))) continue;
+    if (speakerVariants.has(phrase) || speakerVariants.has(variantKey(phrase))) continue;
+    if (seen.has(phrase)) continue;
+    seen.add(phrase);
+    out.push(phrase);
+    if (out.length >= 12) break;
+  }
+
+  // Single-word descriptors introduced by an article — "the NURSE",
+  // "another COP", "a JANITOR".
+  const single = /\b(?:a|an|the|another|two|three|four|five|her|his|their|some|several)\s+([A-Z][A-Z'-]{2,})\b/gi;
+  while ((m = single.exec(actionText)) !== null) {
+    const word = m[1].toUpperCase();
+    if (!PERSON_DESCRIPTORS_BG.has(word)) continue;
+    if (NON_CHARACTER_SINGLE_WORDS.has(word)) continue;
+    if (speakerVariants.has(word)) continue;
+    if (seen.has(word)) continue;
+    seen.add(word);
+    out.push(word);
+    if (out.length >= 12) break;
+  }
+
+  return out;
+}
