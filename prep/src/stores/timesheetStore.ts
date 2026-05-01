@@ -26,25 +26,8 @@ export type CrewType = 'paye' | 'ltd';
 export type Department = 'hair' | 'makeup' | 'sfx' | 'prosthetics';
 
 export interface RateCard {
-  /**
-   * Prep-day rate (fittings, R&D, recces, costume tests). Used when
-   * a TimesheetEntry has `rateType: 'prep'`.
-   */
   prepRate: number;
-  /**
-   * Full shoot-day rate. Used when a TimesheetEntry has
-   * `rateType: 'shoot'` (the default for fresh entries).
-   */
   shootRate: number;
-  /**
-   * Legacy single rate. Older persisted cards only carry this
-   * value; we fall back to it when a card is missing prepRate /
-   * shootRate, then drop it once the user resaves.
-   *
-   * @deprecated kept for backwards compatibility — read at runtime
-   *   via getEffectiveRate(); never write to it from new code.
-   */
-  dailyRate?: number;
   baseDayHours: number;
   baseContract: BaseContract;
   dayType: BECTUDayType;
@@ -57,25 +40,11 @@ export interface RateCard {
   lunchDuration: number;
 }
 
-/**
- * Resolve which rate applies for an entry. Falls back to the legacy
- * dailyRate when prepRate / shootRate are missing on an older card,
- * and finally to 0 if even that's absent.
- */
 export function getEffectiveRate(
   rateCard: RateCard,
   rateType: 'prep' | 'shoot' = 'shoot',
 ): number {
-  if (rateType === 'prep') {
-    return rateCard.prepRate
-      ?? rateCard.dailyRate
-      ?? rateCard.shootRate
-      ?? 0;
-  }
-  return rateCard.shootRate
-    ?? rateCard.dailyRate
-    ?? rateCard.prepRate
-    ?? 0;
+  return rateType === 'prep' ? rateCard.prepRate : rateCard.shootRate;
 }
 
 export interface CrewMember {
@@ -900,6 +869,7 @@ function createTimesheetStore(projectId: string) {
       },
       {
         name: `prep-happy-timesheet-${projectId}`,
+        version: 2,
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           production: state.production,
@@ -909,6 +879,22 @@ function createTimesheetStore(projectId: string) {
           selectedWeekStart: state.selectedWeekStart,
           lastSaved: state.lastSaved,
         }),
+        migrate: (persisted: unknown, version: number) => {
+          if (version >= 2) return persisted;
+          const s = persisted as { crew?: Array<{ rateCard?: Record<string, unknown> }> };
+          if (!s?.crew) return persisted;
+          for (const m of s.crew) {
+            const rc = m.rateCard;
+            if (!rc) continue;
+            const legacy = typeof rc.dailyRate === 'number' ? rc.dailyRate : undefined;
+            if (legacy != null) {
+              if (rc.shootRate == null) rc.shootRate = legacy;
+              if (rc.prepRate == null) rc.prepRate = legacy;
+              delete rc.dailyRate;
+            }
+          }
+          return s;
+        },
       }
     )
   );

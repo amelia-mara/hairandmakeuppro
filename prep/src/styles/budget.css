@@ -167,11 +167,6 @@
   margin-bottom: 26px;
 }
 
-/* Eyebrow class is no longer rendered (the "01 — …" labels were
-   stripped from the JSX), but the rule stays as a no-op in case any
-   older tree references it. */
-.bg-eyebrow { display: none; }
-
 .bg-title {
   font-family: 'DM Sans', sans-serif;
   font-size: 1.75rem;

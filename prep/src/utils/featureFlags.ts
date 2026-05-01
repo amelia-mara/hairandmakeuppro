@@ -17,6 +17,7 @@ export const FEATURE_FLAGS = {
   budget:                 false,  // Budget page — not yet released
   timesheets:             false,  // Timesheet page — not yet released
   teamManagement:         false,  // Team management page — not yet released
+  aiAssistantChat:        false,  // Ask Scriptie chat — not yet released
 
   // ── Future features ───────────────────────────────────────
   // Add unreleased Prep features here as false

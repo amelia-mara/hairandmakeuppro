@@ -5,7 +5,7 @@ import { LogDayModal } from '@/components/timesheet/LogDayModal';
 import { WeekTimesheet, MonthGrid } from '@/components/timesheet/TimesheetViews';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAuthStore } from '@/stores/authStore';
-import { useUserProfileStore } from '@/stores/userProfileStore';
+import { useUserProfileStore, isProfileComplete } from '@/stores/userProfileStore';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { useTeamStore } from '@/stores/teamStore';
 import { fetchMemberTimesheets } from '@/services/supabaseSync';
@@ -60,10 +60,6 @@ function thisWeekStart(): string {
   return m.toISOString().slice(0, 10);
 }
 
-/**
- * Confirmation dialog shown before deleting a crew member. Removing
- * the row also wipes their logged hours, so we never auto-confirm.
- */
 function RemoveCrewConfirm({
   member,
   onCancel,
@@ -111,19 +107,6 @@ function RemoveCrewConfirm({
   );
 }
 
-/**
- * Small "You" pill used to mark the current user's crew row so the
- * designer can spot their own invoice apart from the team's at a
- * glance. Rendered alongside the member's name everywhere the crew
- * list shows up.
- */
-/**
- * Inline rate-card editor used inside the team-manage Crew Roster
- * card. Each input is autosaved on blur via the callback so a burst
- * of edits doesn't spam triggerTsAutoSave. The base-contract picker
- * keeps `baseDayHours` aligned to the contract so the calculator
- * doesn't end up in an inconsistent state.
- */
 function RateCardEditor({
   member,
   currency,
@@ -141,8 +124,6 @@ function RateCardEditor({
   const rc = member.rateCard;
   const sym = CURRENCY_SYMBOLS[currency] ?? '£';
   const shootRate = getEffectiveRate(rc, 'shoot');
-  // Hourly OT rate is derived from the shoot rate — the prep rate
-  // doesn't get overtime in the typical BECTU model.
   const otRate = (shootRate / (rc.baseDayHours || 10)) * rc.otMultiplier;
 
   return (
@@ -171,14 +152,14 @@ function RateCardEditor({
           value={getEffectiveRate(rc, 'prep')}
           step={10}
           prefix={sym}
-          onCommit={(v) => onUpdate({ prepRate: v, dailyRate: undefined })}
+          onCommit={(v) => onUpdate({ prepRate: v })}
         />
         <RcField
           label="Shoot rate"
           value={shootRate}
           step={10}
           prefix={sym}
-          onCommit={(v) => onUpdate({ shootRate: v, dailyRate: undefined })}
+          onCommit={(v) => onUpdate({ shootRate: v })}
         />
         <RcSelect
           label="Base contract"
@@ -245,9 +226,6 @@ function RateCardEditor({
         />
       </div>
 
-      {/* Danger action — removed from the row chrome so prep/me/team
-          rows look uniform. Confirmation dialog is mounted at the
-          page root and warns about the cascade-delete of hours. */}
       {onRemove && (
         <div className="tsr-rc-danger">
           <button
@@ -269,10 +247,6 @@ function RateCardEditor({
   );
 }
 
-/**
- * Numeric rate-card input. Keeps a local string draft so partial
- * edits don't churn the store; commits on blur and on Enter.
- */
 function RcField({
   label,
   value,
@@ -291,8 +265,6 @@ function RcField({
   onCommit: (value: number) => void;
 }) {
   const [draft, setDraft] = useState(String(value));
-  // Keep the input in sync if the underlying value changes from
-  // somewhere else (e.g. profile-seeded rate card).
   useEffect(() => { setDraft(String(value)); }, [value]);
 
   const commit = () => {
@@ -375,9 +347,6 @@ function YouPill() {
   );
 }
 
-/** Marks a timesheet entry that arrived from a team member's mobile
- *  log via Supabase. Helps the designer spot which rows are
- *  authoritative team input vs. ones they keyed in themselves. */
 function SyncedPill() {
   return (
     <span
@@ -417,7 +386,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const [viewingCrewId, setViewingCrewId] = useState<string | null>(null);
   const openMemberTimesheet = useCallback((crewId: string) => {
     setViewingCrewId(crewId);
-    setActivePanel('my-ts');
   }, []);
   const [toast, setToast] = useState<string | null>(null);
   const [expandedTeam, setExpandedTeam] = useState<Record<string, boolean>>({});
@@ -430,7 +398,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
-  const pickPanel = (id: PanelId) => { setActivePanel(id); setDrawerOpen(false); };
+  const pickPanel = (id: PanelId) => {
+    setActivePanel(id);
+    setViewingCrewId(null);
+    setDrawerOpen(false);
+  };
 
   const store = useTimesheetStore(projectId);
   const production = store(s => s.production);
@@ -452,7 +424,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const calculateEntry = store(s => s.calculateEntry);
   const getPreviousWrapOut = store(s => s.getPreviousWrapOut);
 
-  // Log-day modal state — `null` for closed, `{ crew, entry }` for open.
   const [logDayState, setLogDayState] = useState<{
     crew: CrewMember;
     entry: TimesheetEntry | null;
@@ -463,56 +434,44 @@ export function Timesheet({ projectId }: TimesheetProps) {
     [],
   );
 
-  // Pull project team members so anyone joined via the invite code
-  // automatically appears as a crew row in the timesheet.
   const teamStore = useTeamStore(projectId);
   const teamMembers = teamStore((s) => s.members);
   const loadTeam = teamStore((s) => s.loadFromSupabase);
   useEffect(() => { loadTeam(projectId); }, [projectId, loadTeam]);
 
-  // Remove-crew confirmation. Deleting also wipes that crew's logged
-  // hours, so we never auto-confirm — the user has to acknowledge.
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const confirmRemoveMember = useMemo(
     () => crew.find((c) => c.id === confirmRemoveId) ?? null,
     [crew, confirmRemoveId],
   );
-  // handleRemoveCrew is declared further down once showToast exists —
-  // see below.
 
   const { currency } = production;
 
   /* ── Personal-details reminder ────────────────────────────────────
-     Fires once, the very first time the user opens the timesheet
-     for this account. Independent of the post-signup nudge — the
-     two prompts each get their own flag so opening the timesheet
-     re-prompts even if the user already saw the signup nudge. After
-     close (Save, Skip, or click outside), the flag flips and the
-     prompt never auto-fires again. The Edit Profile menu item is
-     the only way back in. */
+     Fires once, the first time the user opens the timesheet IF they
+     skipped the signup nudge (profile incomplete). Dismissal is
+     persisted on the auth user (Supabase user_metadata) so it sticks
+     across sign-out cycles and devices. After dismiss, the Edit
+     Profile menu item is the only way back in. */
   const authUser = useAuthStore((s) => s.user);
+  const dismissTimesheetNudge = useAuthStore((s) => s.dismissTimesheetNudge);
   const profile = useUserProfileStore((s) =>
     authUser ? s.profiles[authUser.id] : undefined,
   );
   const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
-  const dismissTimesheetNudge = useUserProfileStore((s) => s.dismissTimesheetNudge);
   const [showProfileReminder, setShowProfileReminder] = useState(false);
 
   useEffect(() => {
     if (!authUser) return;
-    const fresh = profile ?? ensureProfile(authUser.id, authUser.name, authUser.email);
-    if (!fresh.timesheetNudgeDismissed) setShowProfileReminder(true);
-    // Intentionally only reads the dismissed flag once per mount — we
-    // don't want the modal to re-open if the user closes it then
-    // navigates away and back.
+    const p = profile ?? ensureProfile(authUser.id, authUser.name, authUser.email);
+    if (!authUser.timesheetNudgeDismissed && !isProfileComplete(p)) {
+      setShowProfileReminder(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser?.id]);
 
   useEffect(() => {
     if (!authUser) return;
-    // Always make sure a "me" crew row exists, even when the user
-    // skipped the profile. We fall back to the auth user's name/email
-    // and a sensible default crew type.
     const p = profile ?? ensureProfile(authUser.id, authUser.name, authUser.email);
     ensureSelfCrew({
       userId: authUser.id,
@@ -520,19 +479,10 @@ export function Timesheet({ projectId }: TimesheetProps) {
       email: p.email || authUser.email,
       phone: p.phone,
       crewType: p.crewType,
-      // Profile's default rate card seeds new "Me" rows. ensureSelfCrew
-      // ignores it on rows that already exist so we never overwrite a
-      // per-project rate the user already negotiated.
       rateCard: p.rateCard,
     });
   }, [authUser, profile, ensureProfile, ensureSelfCrew]);
 
-  // Mirror the project team into the crew list. Anyone joined via the
-  // invite code (i.e. visible on the Team page) gets an auto-created
-  // crew row with a default rate card the designer can then adjust.
-  // The user's own row is excluded — it's managed by ensureSelfCrew.
-  // removeOrphans cleans up rows for people the designer kicked off
-  // the project so their hours don't keep showing up.
   useEffect(() => {
     if (!authUser) return;
     const synced = teamMembers
@@ -546,10 +496,6 @@ export function Timesheet({ projectId }: TimesheetProps) {
     ensureTeamCrew(synced, { removeOrphans: true });
   }, [authUser, teamMembers, ensureTeamCrew]);
 
-  // Pull every team member's timesheet rows from Supabase and merge
-  // them onto the synced crew rows. Re-runs when the membership list
-  // changes so a freshly-added team member's history surfaces too.
-  // (Phase 1: pull-only — designer edits don't write back yet.)
   useEffect(() => {
     let cancelled = false;
     if (!projectId || teamMembers.length === 0) return;
@@ -610,6 +556,8 @@ export function Timesheet({ projectId }: TimesheetProps) {
   const toggleTeamExpand = (id: string) => setExpandedTeam(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleRcExpand = (id: string) => setExpandedRc(prev => ({ ...prev, [id]: !prev[id] }));
 
+  const sidebarTeam = crew.filter(c => !c.isMe);
+
   return (
     <div className={`tsr-layout${isMobile ? ' tsr-layout--mobile' : ''}${isMobile && drawerOpen ? ' tsr-layout--drawer-open' : ''}`}>
       {/* Mobile drawer backdrop */}
@@ -622,7 +570,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
         {sidebarItems.map(item => (
           <button
             key={item.id}
-            className={`tsr-sb-item ${activePanel === item.id ? 'active' : ''}`}
+            className={`tsr-sb-item ${!viewingCrewId && activePanel === item.id ? 'active' : ''}`}
             onClick={() => pickPanel(item.id)}
           >
             {item.label}
@@ -631,10 +579,37 @@ export function Timesheet({ projectId }: TimesheetProps) {
         ))}
         <hr className="tsr-sb-divider" />
 
-        {/* At-a-glance summary — replaces the old Completion legend.
-            Same numbers the dropped Overview panel used to show, in
-            a compact stacked layout that sits comfortably under the
-            sidebar nav. Updates live with selected week + crew. */}
+        <div className="tsr-sb-label">Team</div>
+        {sidebarTeam.length === 0 ? (
+          <div className="tsr-sb-team-empty">No team yet</div>
+        ) : (
+          sidebarTeam.map(member => {
+            const isActive = viewingCrewId === member.id;
+            const synced = !!member.userId;
+            return (
+              <button
+                key={member.id}
+                type="button"
+                className={`tsr-sb-team-item ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  openMemberTimesheet(member.id);
+                  setDrawerOpen(false);
+                }}
+                title={member.position || member.name}
+              >
+                <span className="tsr-sb-team-name">{member.name || 'Unnamed'}</span>
+                <span
+                  className={`tsr-sb-team-tag ${synced ? 'synced' : 'manual'}`}
+                  title={synced ? 'Synced from app' : 'Manually added'}
+                >
+                  {synced ? 'Synced' : 'Manual'}
+                </span>
+              </button>
+            );
+          })
+        )}
+        <hr className="tsr-sb-divider" />
+
         <div className="tsr-sb-label">At a glance</div>
         <div className="tsr-sb-stat">
           <span className="tsr-sb-stat-label">Total earnings</span>
@@ -676,8 +651,11 @@ export function Timesheet({ projectId }: TimesheetProps) {
             <span>Sections</span>
           </button>
         )}
-        {/* ══════════════ MY TIMESHEETS ══════════════ */}
-        {activePanel === 'my-ts' && (
+        {/* ══════════════ MY / MEMBER TIMESHEET ══════════════
+            When viewingCrewId is set, this panel renders that member's
+            timesheet regardless of which sidebar tab is active — so the
+            "My Timesheets" tab itself always shows the user's own data. */}
+        {(activePanel === 'my-ts' || viewingCrewId) && (
           <MyTimesheetsPanel
             crew={crew}
             crewSummaries={crewSummaries}
@@ -699,12 +677,12 @@ export function Timesheet({ projectId }: TimesheetProps) {
         )}
 
         {/* ══════════════ 03 MY INVOICES ══════════════ */}
-        {activePanel === 'invoices' && (
+        {activePanel === 'invoices' && !viewingCrewId && (
           <InvoicesPanel currency={currency} totalLabour={totalLabour} crew={crew} />
         )}
 
         {/* ══════════════ 04 TEAM TIMESHEETS ══════════════ */}
-        {activePanel === 'team-ts' && (
+        {activePanel === 'team-ts' && !viewingCrewId && (
           <TeamTimesheetsPanel
             crew={crew}
             crewSummaries={crewSummaries}
@@ -724,7 +702,7 @@ export function Timesheet({ projectId }: TimesheetProps) {
         )}
 
         {/* ══════════════ 05 TEAM MANAGEMENT ══════════════ */}
-        {activePanel === 'team-manage' && (
+        {activePanel === 'team-manage' && !viewingCrewId && (
           <TeamManagePanel
             crew={crew}
             crewSummaries={crewSummaries}
@@ -788,9 +766,9 @@ export function Timesheet({ projectId }: TimesheetProps) {
 
       {showProfileReminder && (
         <UserProfileModal
-          isSignupNudge
+          isTimesheetReminder
           onClose={() => {
-            if (authUser) dismissTimesheetNudge(authUser.id);
+            dismissTimesheetNudge();
             setShowProfileReminder(false);
           }}
         />
@@ -838,9 +816,6 @@ function MyTimesheetsPanel({
   onClearViewingCrew: () => void;
 }) {
   const [view, setView] = useState<'week' | 'month'>('week');
-  // Pick whose timesheet to show: the explicitly-selected team
-  // member when viewingCrewId is set, otherwise the auth user's
-  // own row (preferred via isMe, falling back to the first crew).
   const ownCrew = crew.find((c) => c.isMe) ?? crew[0];
   const targetCrew = viewingCrewId
     ? crew.find((c) => c.id === viewingCrewId) ?? ownCrew
@@ -854,9 +829,6 @@ function MyTimesheetsPanel({
   const handleNew = () => myCrew && onLogDay(myCrew, null);
   const handleEdit = (entry: TimesheetEntry) => myCrew && onLogDay(myCrew, entry);
 
-  // Title + subtitle adapt to whose timesheet we're looking at.
-  // For a teammate, the subtitle leads with their position so the
-  // designer can see at a glance who they're editing for.
   const heading = isViewingTeammate
     ? { italic: myCrew?.name?.split(' ')[0] ?? '', regular: 'Timesheet', verb: `Editing ${myCrew?.name}'s hours` }
     : { italic: 'My', regular: 'Timesheets', verb: 'Track your hours' };
@@ -921,10 +893,6 @@ function MyTimesheetsPanel({
         </div>
       </div>
 
-      {/* Section heading + view toggle. Week shows a conventional
-          submit-to-production timesheet (one row per day, columns
-          for pre-call / call / lunch / wrap / hours / OT / earnings).
-          Month shows a 4-6 week calendar grid for quick scanning. */}
       <div className="tsr-sh tsr-hl-section-head">
         <span>Hour Log</span>
         <div className="tsr-hl-view-toggle" role="group" aria-label="Hour log view">
@@ -1060,8 +1028,6 @@ function TeamTimesheetsPanel({
   /** Open the My Timesheets panel scoped to a team member's crew row. */
   onOpenMember: (crewId: string) => void;
 }) {
-  // Count entries that arrived from a team member's mobile and
-  // haven't been touched by the designer yet.
   const pendingCount = crewSummaries.reduce(
     (sum, { summary }) =>
       sum + summary.entries.filter((e) => e.sourceUserId && e.status !== 'approved').length,
@@ -1097,9 +1063,6 @@ function TeamTimesheetsPanel({
             <div className="tsr-team-row" style={{ cursor: 'pointer' }} onClick={() => toggleTeamExpand(member.id)}>
               <div className="tsr-avatar" style={{ background: ac.bg, color: ac.color }}>{getInitials(member.name)}</div>
               <div style={{ flex: 1 }}>
-                {/* Clicking the name opens that member's timesheet
-                    in the My Timesheets panel — stopPropagation so
-                    it doesn't also toggle the expand/collapse. */}
                 <button
                   type="button"
                   className="tsr-team-name-btn"
@@ -1295,9 +1258,6 @@ function TeamManagePanel({
               <span className="tsr-tag teal" style={{ marginLeft: 10 }}>Active</span>
               <div style={{ marginLeft: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button className="tsr-btn tsr-btn-ghost tsr-btn-sm" onClick={(e) => { e.stopPropagation(); onOpenMember(member.id); }}>Open timesheet</button>
-                {/* Remove-crew action lives inside the expanded rate
-                    card now \u2014 keeps the row chrome uniform across
-                    "me" and team rows. */}
                 <span className="tsr-chevron">{isOpen ? '\u25B2 Rate card' : '\u25BC Rate card'}</span>
               </div>
             </div>

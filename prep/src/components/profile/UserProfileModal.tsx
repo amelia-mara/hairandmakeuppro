@@ -12,9 +12,12 @@ interface UserProfileModalProps {
   /** When true, the user can't dismiss without completing all required
    *  fields. Used by the timesheet gate. */
   required?: boolean;
-  /** When true, we're inviting the user post-signup; dismiss is allowed
-   *  but we keep a "skip for now" affordance. */
+  /** Post-signup nudge — dismissable. */
   isSignupNudge?: boolean;
+  /** First-visit reminder on the timesheet page. Shown once if the
+   *  user skipped the signup nudge. Copy directs them to the user
+   *  profile menu for any future changes. */
+  isTimesheetReminder?: boolean;
   onClose: () => void;
 }
 
@@ -24,7 +27,7 @@ interface UserProfileModalProps {
  * every project — only the rate card on each project's crew row
  * differs.
  */
-export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfileModalProps) {
+export function UserProfileModal({ required, isSignupNudge, isTimesheetReminder, onClose }: UserProfileModalProps) {
   const user = useAuthStore((s) => s.user);
   const ensureProfile = useUserProfileStore((s) => s.ensureProfile);
   const updateProfile = useUserProfileStore((s) => s.updateProfile);
@@ -73,6 +76,8 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
 
   const subtitle = isSignupNudge
     ? "Add your invoicing details now so they're ready when you log hours. You can skip and come back later — we'll prompt you when you open the timesheet."
+    : isTimesheetReminder
+    ? "One last reminder — add your invoicing details so we can generate invoices for you. After this, you can update them any time from the user menu (top right)."
     : required
     ? 'Fill in your invoicing details before you can log hours. These details follow you across every project — only the rate card changes.'
     : 'Update the details that follow you across every project.';
@@ -297,9 +302,7 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
                   inputMode="decimal"
                   min={0}
                   step={10}
-                  value={
-                    draft.rateCard.prepRate ?? draft.rateCard.dailyRate ?? 0
-                  }
+                  value={draft.rateCard.prepRate}
                   onChange={(e) =>
                     setRate('prepRate', Number(e.target.value) || 0)
                   }
@@ -312,9 +315,7 @@ export function UserProfileModal({ required, isSignupNudge, onClose }: UserProfi
                   inputMode="decimal"
                   min={0}
                   step={10}
-                  value={
-                    draft.rateCard.shootRate ?? draft.rateCard.dailyRate ?? 0
-                  }
+                  value={draft.rateCard.shootRate}
                   onChange={(e) =>
                     setRate('shootRate', Number(e.target.value) || 0)
                   }

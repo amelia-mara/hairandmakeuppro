@@ -476,6 +476,7 @@ export const useTimesheetStore = create<TimesheetState>()(
     }),
     {
       name: 'hair-makeup-timesheet-storage',
+      version: 2,
       storage: createHybridStorage('hair-makeup-timesheet-storage'),
       // Deep-merge entries so rehydration doesn't overwrite entries added before hydration completed
       merge: (persistedState, currentState) => ({
@@ -486,6 +487,20 @@ export const useTimesheetStore = create<TimesheetState>()(
           ...((persistedState as Partial<TimesheetState>)?.entries || {}),
         },
       }),
+      migrate: (persisted: unknown, version: number) => {
+        if (version >= 2) return persisted;
+        const s = persisted as { rateCard?: Record<string, unknown> };
+        const rc = s?.rateCard;
+        if (rc) {
+          const legacy = typeof rc.dailyRate === 'number' ? rc.dailyRate : undefined;
+          if (legacy != null) {
+            if (rc.shootRate == null) rc.shootRate = legacy;
+            if (rc.prepRate == null) rc.prepRate = legacy;
+            delete rc.dailyRate;
+          }
+        }
+        return s;
+      },
     }
   )
 );

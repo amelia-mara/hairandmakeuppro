@@ -77,7 +77,7 @@ export function RateCardPanel({ crew, onUpdateCrew, onUpdateRateCard }: RateCard
               type="number"
               min={0}
               step={10}
-              value={rc.prepRate ?? rc.dailyRate ?? 0}
+              value={rc.prepRate}
               onChange={e => onUpdateRateCard({ prepRate: parseFloat(e.target.value) || 0 })}
             />
           </div>
@@ -88,7 +88,7 @@ export function RateCardPanel({ crew, onUpdateCrew, onUpdateRateCard }: RateCard
               type="number"
               min={0}
               step={10}
-              value={rc.shootRate ?? rc.dailyRate ?? 0}
+              value={rc.shootRate}
               onChange={e => onUpdateRateCard({ shootRate: parseFloat(e.target.value) || 0 })}
             />
           </div>

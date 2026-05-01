@@ -3,31 +3,19 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { TimesheetEntry } from '@/types';
 
-// Mobile timesheet entries are stored locally; this thin layer pushes
-// each week's entries to Supabase so the project's prep designer sees
-// them on their crew row. One row per (project, user, week_starting).
-//
-// Failures are swallowed — losing a sync cycle shouldn't block local
-// logging. Realtime push-back / approval flow lands in a follow-up.
-
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const DEBOUNCE_MS = 600;
 
-/** Monday of the week containing `dateStr`, in YYYY-MM-DD. */
 export function getWeekStart(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // ISO Monday start
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(date);
   monday.setDate(diff);
   return monday.toISOString().slice(0, 10);
 }
 
-/**
- * Push the user's entries for one specific week to Supabase. Caller
- * supplies the slice of entries already filtered to that week so this
- * stays a pure I/O function.
- */
+/** Empty `entries` deletes the row instead of upserting. */
 export async function pushTimesheetWeek(
   projectId: string,
   userId: string,
@@ -35,8 +23,6 @@ export async function pushTimesheetWeek(
   entries: TimesheetEntry[],
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
-  // Empty week → delete the row so we don't leave stale data after the
-  // user clears all their entries for that week.
   if (entries.length === 0) {
     const { error } = await supabase
       .from('timesheets')
@@ -65,11 +51,6 @@ export async function pushTimesheetWeek(
   }
 }
 
-/**
- * Convenience wrapper: pull project id + user id + the week's entries
- * straight from the local stores and push. Debounced per-week so a
- * burst of edits in the LogDay modal collapses into a single round-trip.
- */
 export function syncWeekForCurrentUser(
   weekStarting: string,
   entries: TimesheetEntry[],
@@ -92,11 +73,6 @@ export function syncWeekForCurrentUser(
   );
 }
 
-/**
- * One-shot pull on app load — fetch every week the user has on this
- * project so a fresh device sees prior history. Returns a flat array
- * of entries the caller can merge into their local store.
- */
 export async function pullTimesheetForCurrentUser(): Promise<TimesheetEntry[]> {
   if (!isSupabaseConfigured) return [];
   const project = useProjectStore.getState().currentProject;
