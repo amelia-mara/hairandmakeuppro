@@ -172,19 +172,25 @@ export function parseScriptText(text: string): ParsedScript {
     const parsedHeading = parseSceneHeadingLine(trimmed);
 
     if (parsedHeading.isValid) {
-      // If there's preamble text before the first scene, create a preamble scene
+      // If there's substantive text before the first numbered scene
+      // (title page + cold open / prelude), emit a synthetic PRELUDE
+      // scene so the breakdown UI shows a card for it. Both `slugline`
+      // and `location` are 'PRELUDE' — older uploads still have
+      // 'PREAMBLE' which the breakdown layer recognises as the same
+      // thing.
       if (!currentScene && preambleContent.trim()) {
         scenes.push({
           sceneNumber: '0',
-          slugline: 'PREAMBLE',
+          slugline: 'PRELUDE',
           intExt: 'EXT',
-          location: 'PREAMBLE',
+          location: 'PRELUDE',
           timeOfDay: 'DAY',
           characters: [],
           content: preambleContent.trim(),
         });
-        // Empty range — preamble doesn't have dialogue cues.
-        sceneLineRanges.push({ head: 0, endExclusive: 0 });
+        // Range covers lines 0 .. start of first heading so pass-2
+        // can scan the prelude for known character mentions.
+        sceneLineRanges.push({ head: 0, endExclusive: i });
       }
 
       // Check the line immediately preceding this heading for a temporal marker.
@@ -438,7 +444,9 @@ export function parseScriptText(text: string): ParsedScript {
   }
 
   // Filter out PREAMBLE scene from comparison
-  const outputScenes = scenes.filter(s => s.location !== 'PREAMBLE');
+  const outputScenes = scenes.filter(
+    (s) => s.location !== 'PREAMBLE' && s.location !== 'PRELUDE',
+  );
   if (detectedHeadings.length !== outputScenes.length) {
     const outputSlugs = new Set(outputScenes.map(s => s.slugline));
     const missing = detectedHeadings.filter(h => !outputSlugs.has(h.text));
