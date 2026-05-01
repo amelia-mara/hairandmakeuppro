@@ -77,7 +77,7 @@ export function SceneCharacterConfirmation({
 
     if ((status === 'pending' || !status) && hasScript && !alreadyDetected) {
       setIsDetecting(true);
-      detectCharactersForScene(scene.scriptContent!, '', { useAI: false })
+      detectCharactersForScene(scene.scriptContent!, '', {})
         .then((characters) => {
           if (characters.length > 0) {
             updateSceneSuggestedCharacters(scene.id, characters);

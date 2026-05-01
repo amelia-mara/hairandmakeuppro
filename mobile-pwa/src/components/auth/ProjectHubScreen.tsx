@@ -906,7 +906,7 @@ export function ProjectHubScreen() {
             try {
               for (const scene of pendingDetectionScenes) {
                 const detected = await detectCharactersForScene(
-                  scene.scriptContent!, '', { useAI: false }
+                  scene.scriptContent!, '', {}
                 );
                 if (detected.length > 0) {
                   useProjectStore.getState().updateSceneSuggestedCharacters(

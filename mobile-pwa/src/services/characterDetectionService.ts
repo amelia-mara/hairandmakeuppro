@@ -36,7 +36,6 @@ export async function runBackgroundCharacterDetection(
       scenesToDetect,
       rawText,
       {
-        useAI: false, // Use regex only for fast initial detection
         knownCharacters: knownCharacters.length > 0 ? knownCharacters : undefined,
         onProgress: () => {},
       }

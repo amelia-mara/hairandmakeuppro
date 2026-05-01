@@ -269,13 +269,11 @@ function extractSceneBackground(
  * Parse a script file (PDF, FDX, or plain text/fountain).
  *
  * Regex-only — character extraction is deterministic and runs entirely
- * locally. The `useAI` option is accepted for backwards compatibility
- * with existing callers but has no effect.
+ * locally.
  */
 export async function parseScriptFile(
   file: File,
   options: {
-    useAI?: boolean;
     onProgress?: (status: string) => void;
   } = {}
 ): Promise<ParsedScript> {
@@ -499,18 +497,16 @@ export async function parseScenesFast(file: File): Promise<FastParsedScript> {
  * Detect characters appearing in a single scene's script content.
  *
  * Regex-only — runs the structural cue extractor on the scene's lines.
- * The `useAI` option is accepted for backwards compatibility but has
- * no effect. When `knownCharacters` is supplied (e.g. from the call
- * sheet) those names are matched against the scene's cue lines and
- * action text by word boundary, providing a deterministic schedule
- * cross-reference.
+ * When `knownCharacters` is supplied (e.g. from the call sheet) those
+ * names are matched against the scene's cue lines and action text by
+ * word boundary, providing a deterministic schedule cross-reference.
  *
  * @returns Canonical character names found in this scene.
  */
 export async function detectCharactersForScene(
   sceneContent: string,
   _rawText: string,
-  options?: { useAI?: boolean; knownCharacters?: string[] }
+  options?: { knownCharacters?: string[] }
 ): Promise<string[]> {
   const knownCharacters = options?.knownCharacters ?? [];
   const characters: string[] = [];
@@ -564,7 +560,6 @@ export async function detectCharactersForScenesBatch(
   scenes: Array<{ sceneNumber: string; scriptContent: string }>,
   rawText: string,
   options?: {
-    useAI?: boolean;
     knownCharacters?: string[];
     onProgress?: (completed: number, total: number) => void;
   }
@@ -584,7 +579,7 @@ export async function detectCharactersForScenesBatch(
         const characters = await detectCharactersForScene(
           scene.scriptContent,
           rawText,
-          { useAI: options?.useAI, knownCharacters: options?.knownCharacters }
+          { knownCharacters: options?.knownCharacters }
         );
         return { sceneNumber: scene.sceneNumber, characters };
       })
