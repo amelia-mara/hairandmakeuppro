@@ -11,6 +11,7 @@ import { ordinal } from '@/utils/ordinal';
 import { ExportIcon } from '@/components/icons/ScriptBreakdownIcons';
 import { ExportPreviewModal } from '@/components/ExportPreviewModal';
 import type { ExportPreview } from '@/utils/export/common';
+import { SceneBackgroundRow } from './script-breakdown/SceneBackgroundRow';
 
 /* ━━━ Helpers ━━━ */
 
@@ -747,6 +748,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                       </tr>
                     );
                   })}
+                  <SceneBackgroundRow
+                    projectId={projectId}
+                    sceneId={scene.id}
+                    names={scene.backgroundCharacters || []}
+                    notes={scene.backgroundNotes || ''}
+                    colSpan={9}
+                  />
                 </tbody>
               </table>
             </div>

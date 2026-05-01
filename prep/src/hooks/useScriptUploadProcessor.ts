@@ -156,6 +156,8 @@ export function useScriptUploadProcessor({
               ? ps.content.trim()
               : ps.content.replace(/^[^\n]*\n/, '').trim(),
           isOmitted: ps.isOmitted || undefined,
+          backgroundCharacters: ps.backgroundCharacters,
+          backgroundNotes: ps.backgroundNotes,
         };
       });
 
