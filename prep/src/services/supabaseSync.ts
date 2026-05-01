@@ -717,17 +717,18 @@ export async function uploadCallSheetToStorage(
     id: string;
     name: string;
     date: string;
-    dataUri: string;
-    thumbnailUri: string;
+    dataUri?: string;
+    thumbnailUri?: string;
     uploadedAt: string;
-    // Optional regex-parsed CallSheet object. When present, its fields go
-    // into parsed_data so mobile's call-sheet store picks up scenes,
-    // castCalls, preCalls, etc. without needing to re-parse the PDF.
-    // Typed as `unknown` so the call site can pass either the strict
-    // CallSheet shape from the parser or a generic record.
     parsed?: unknown;
   },
-): Promise<{ pdfUrl: string; thumbnailUrl: string } | null> {
+): Promise<{
+  pdfUrl: string;
+  thumbnailUrl: string;
+  storagePath: string;
+  thumbnailPath: string;
+} | null> {
+  if (!sheet.dataUri || !sheet.thumbnailUri) return null;
   try {
     // Upload PDF
     const pdfPath = `${projectId}/callsheets/${sheet.id}.pdf`;
