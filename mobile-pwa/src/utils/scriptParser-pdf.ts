@@ -1,7 +1,8 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Worker is configured once in @/utils/pdfjs (locally bundled via Vite,
+// not loaded from a CDN). Replaces the old runtime cdnjs.cloudflare.com
+// reference that broke when cdnjs was blocked or returned a 404 for the
+// requested pdfjs-dist version.
+import { pdfjsLib } from '@/utils/pdfjs';
 
 interface TextItem {
   str: string;
