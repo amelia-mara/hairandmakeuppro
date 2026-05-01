@@ -96,14 +96,15 @@ export function parseScriptText(text: string): ParsedScript {
     // ── Omitted scene placeholder ─────────────────────────────────
     // Scripts mark deleted scenes with a stub line that retains the
     // scene number — common formats:
-    //   "12. OMITTED"    "12 OMITTED."    "OMITTED."
+    //   "12. OMITTED"    "12 OMITTED."    "OMITTED."     "(OMITTED)"
     //   "12A. OMITTED."  "SCENE 12 OMITTED."
     //   "98 OMITTED 98"  "30 OMITTED 30."  ← number at both ends (revisions)
+    //   "54 OMITTED 54 *"  "153 OMITTED 153 ***"  ← Final Draft revision asterisks
     // We emit a ParsedScene with isOmitted:true so the scene list keeps
     // numbering coherent and the verbatim line survives in `content`
     // for display.
     const omittedMatch = trimmed.match(
-      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*(?:\d+[A-Z]{0,4})?\.?\s*$/i,
+      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*\(?OMITTED\)?\.?\s*(?:\d+[A-Z]{0,4})?\s*\.?\s*\*{0,4}\s*$/i,
     );
     if (omittedMatch) {
       // Close out the current scene first.

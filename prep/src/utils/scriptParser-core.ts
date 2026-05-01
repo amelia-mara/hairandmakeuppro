@@ -144,8 +144,12 @@ export function parseScriptText(text: string): ParsedScript {
     // keeps numbering coherent (29, 30, 31 with 30 marked omitted)
     // and store the verbatim trimmed line in `content` so the
     // script viewer can render it exactly as it appears in the PDF.
+    // Hardened to also catch parenthesised "(OMITTED)" and Final
+    // Draft revision-asterisk variants like "54 OMITTED 54 *" and
+    // "12 OMITTED **". `He omitted the fact...` and similar
+    // mid-sentence usage are still rejected by the line anchors.
     const omittedMatch = trimmed.match(
-      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*(?:\d+[A-Z]{0,4})?\.?\s*$/i,
+      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*\(?OMITTED\)?\.?\s*(?:\d+[A-Z]{0,4})?\s*\.?\s*\*{0,4}\s*$/i,
     );
     if (omittedMatch) {
       // Close out the current scene first.
