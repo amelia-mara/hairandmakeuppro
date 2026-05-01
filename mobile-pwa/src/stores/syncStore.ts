@@ -37,6 +37,13 @@ interface SyncState {
   hasPendingOutbox: boolean;
   /** Outbox entries that have exhausted retries — need user attention */
   deadOutboxCount: number;
+  /** Consecutive auto-save failures across any category. Resets to 0 on
+   *  the next successful write. Drives the "having trouble saving"
+   *  indicator at >=3. */
+  autoSaveFailureCount: number;
+  /** Most recent auto-save error message, or null if the last write
+   *  succeeded. Shown alongside the warning when present. */
+  autoSaveLastError: string | null;
 
   // Actions
   markChanged: (category: ChangeCategory) => void;
@@ -59,6 +66,8 @@ interface SyncState {
   getPendingCount: () => number;
   setHasPendingOutbox: (value: boolean) => void;
   setDeadOutboxCount: (count: number) => void;
+  setAutoSaveFailureCount: (count: number) => void;
+  setAutoSaveLastError: (error: string | null) => void;
 }
 
 export const useSyncStore = create<SyncState>()(
@@ -74,6 +83,8 @@ export const useSyncStore = create<SyncState>()(
       isPanelOpen: false,
       hasPendingOutbox: false,
       deadOutboxCount: 0,
+      autoSaveFailureCount: 0,
+      autoSaveLastError: null,
 
       markChanged: (category) =>
         set((s) => {
@@ -126,6 +137,8 @@ export const useSyncStore = create<SyncState>()(
 
       setHasPendingOutbox: (value) => set({ hasPendingOutbox: value }),
       setDeadOutboxCount: (count) => set({ deadOutboxCount: count }),
+      setAutoSaveFailureCount: (count) => set({ autoSaveFailureCount: count }),
+      setAutoSaveLastError: (error) => set({ autoSaveLastError: error }),
     }),
     {
       name: 'hair-makeup-sync',

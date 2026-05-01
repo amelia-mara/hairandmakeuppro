@@ -14,6 +14,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { useSyncStore } from '@/stores/syncStore';
 import {
   sceneToDb,
   characterToDb,
@@ -65,6 +66,11 @@ function debounced(key: string, fn: () => Promise<void>): void {
       }
       await fn();
       _consecutiveFailures = 0; // reset on success
+      _lastFailureMessage = '';
+      // Mirror to syncStore so any UI subscribed to it clears the
+      // "trouble saving" indicator the moment a write succeeds.
+      useSyncStore.getState().setAutoSaveFailureCount(0);
+      useSyncStore.getState().setAutoSaveLastError(null);
     } catch (err) {
       _consecutiveFailures++;
       _lastFailureMessage = err instanceof Error
@@ -73,6 +79,8 @@ function debounced(key: string, fn: () => Promise<void>): void {
           ? (err as any).message
           : String(err);
       console.error(`[AutoSave] ${key} failed (failure #${_consecutiveFailures}):`, err);
+      useSyncStore.getState().setAutoSaveFailureCount(_consecutiveFailures);
+      useSyncStore.getState().setAutoSaveLastError(_lastFailureMessage);
     }
   }, DEBOUNCE_MS);
 }
