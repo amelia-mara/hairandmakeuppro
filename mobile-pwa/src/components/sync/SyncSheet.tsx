@@ -156,8 +156,10 @@ export function SyncSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
         <div className="px-6 pb-8 pt-2">
           <h2 className="text-lg font-bold text-text-primary text-center mb-6">Sync</h2>
 
-          {/* Generic transient error from manualSync (kept for backwards
-              compatibility with the syncStore.error field). */}
+          {/* Generic transient error surface from syncStore.error.
+              Field is kept on syncStore for back-compat with persisted
+              state; nothing in the live codebase writes to it any more
+              after the manual Upload/Download retirement. */}
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3 mb-3 text-center">
               {error}

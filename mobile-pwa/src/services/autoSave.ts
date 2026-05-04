@@ -20,7 +20,7 @@ import {
   characterToDb,
   lookToDb,
   sceneCaptureToDb,
-} from '@/services/manualSync';
+} from '@/services/syncMappers';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { getPhotoBlob } from '@/db';
 import { outboxService } from '@/services/outboxService';
