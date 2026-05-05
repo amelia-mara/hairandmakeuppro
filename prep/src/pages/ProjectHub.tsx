@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { deleteProjectFromSupabase } from '@/services/projectService';
+import { clearProjectLocalData } from '@/utils/localStorageCleanup';
 import { Film, Tv, Clapperboard, Music, Video, Plus, FileText, DollarSign, Eye, Trash2 } from 'lucide-react';
 import type { ProjectType } from '@/types';
 
@@ -55,6 +56,9 @@ export function ProjectHub({ onCreateProject, onSelectProject, onNavigateToAuth 
       console.error('Failed to delete from Supabase:', error);
     }
     deleteProject(deleteConfirm.id);
+    // Cascade delete the per-project entries in heavy local stores so
+    // they don't stick around in localStorage and blow the origin quota.
+    clearProjectLocalData(deleteConfirm.id);
     setDeleting(false);
     setDeleteConfirm(null);
   };
