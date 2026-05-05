@@ -106,7 +106,13 @@ export function parseScriptText(text: string): ParsedScript {
     const omittedMatch = trimmed.match(
       /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*\(?OMITTED\)?\.?\s*(?:\d+[A-Z]{0,4})?\s*\.?\s*\*{0,4}\s*$/i,
     );
-    if (omittedMatch) {
+    // Doubled-number-only shorthand for an omitted scene, e.g. "44 44"
+    // with no OMITTED word. Backreference `\1` ensures both numbers
+    // match so unrelated numeric pairs aren't swallowed.
+    const doubledNumberOmitted = omittedMatch
+      ? null
+      : trimmed.match(/^(\d+[A-Z]{0,4})\s+\1\s*\*{0,4}\s*$/i);
+    if (omittedMatch || doubledNumberOmitted) {
       // Close out the current scene first.
       if (current) {
         current.endLineExclusive = i;
@@ -115,7 +121,9 @@ export function parseScriptText(text: string): ParsedScript {
         current = null;
       }
       fallbackSceneNumber++;
-      const sceneNum = (omittedMatch[1] || String(fallbackSceneNumber)).toUpperCase();
+      const sceneNum = (
+        omittedMatch?.[1] || doubledNumberOmitted?.[1] || String(fallbackSceneNumber)
+      ).toUpperCase();
       builds.push({
         sceneNumber: sceneNum,
         slugline: trimmed,
