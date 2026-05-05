@@ -1248,6 +1248,15 @@ export const useScriptUploadStore = create<ScriptUploadState>()(
     {
       name: 'prep-happy-script-uploads',
       storage: createJSONStorage(() => localStorage),
+      // rawText can be hundreds of KB per script and is the source of
+      // the localStorage quota errors when multiple scripts pile up.
+      // The server is the source of truth — strip rawText from persisted
+      // copies and rely on useProjectSync to repopulate it on load.
+      partialize: (state) => ({
+        scripts: Object.fromEntries(
+          Object.entries(state.scripts).map(([k, v]) => [k, { ...v, rawText: '' }])
+        ),
+      }),
     }
   )
 );
