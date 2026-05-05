@@ -255,43 +255,73 @@ export interface CueHit {
  * Fountain-style exports) skip the second filter automatically.
  */
 export function extractCueLines(lines: string[]): CueHit[] {
-  // Pass 1 — collect candidates passing the structural test.
-  type Cand = { i: number; t: string; indent: number };
-  const candidates: Cand[] = [];
+  // Pass 1 — collect every line that PASSES SHAPE only. We don't apply
+  // the structural follow-by-dialogue check here yet because it can
+  // false-reject real cues whose dialogue happens to be a short
+  // ALL-CAPS reaction (e.g. JOHN -> "RUN!" / "JESUS" / "HELP") that
+  // also passes shape.
+  type Cand = { i: number; t: string; indent: number; canonical: string };
+  const shapeCandidates: Cand[] = [];
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
     if (!t) continue;
     if (!looksLikeCueShape(t)) continue;
-    if (!isFollowedByDialogue(lines, i)) continue;
-    candidates.push({ i, t, indent: leadingSpaces(lines[i]) });
+    const canonical = normalizeCharacterName(t);
+    if (canonical.length < 2 || canonical.length > 35) continue;
+    if (NON_CHARACTER_SINGLE.has(canonical)) continue;
+    if (NON_CHARACTER_PHRASES.has(canonical)) continue;
+    shapeCandidates.push({
+      i,
+      t,
+      indent: leadingSpaces(lines[i]),
+      canonical,
+    });
   }
 
-  // Compute the script's "cue column" — the median indent across
-  // candidates. If the median is meaningfully indented (>= 6 cols),
-  // require accepted cues to be within tolerance of it. This filters
-  // out left-margin sub-headers in scripts that DO indent dialogue.
+  // Pass 2 — frequency table. A canonical name that appears ≥ 3 times
+  // in cue position is almost certainly a real character; one-off
+  // matches are usually centred title cards or shouted exclamations.
+  const FREQUENCY_FLOOR = 3;
+  const freqByCanonical = new Map<string, number>();
+  for (const c of shapeCandidates) {
+    freqByCanonical.set(c.canonical, (freqByCanonical.get(c.canonical) ?? 0) + 1);
+  }
+
+  // Pass 3 — accept each candidate iff EITHER:
+  //   (a) it passes the structural follow-by-dialogue test, OR
+  //   (b) its canonical name has at least FREQUENCY_FLOOR shape matches
+  //       across the whole script — frequency tells us this is a real
+  //       speaker and the structural test was rejecting on a noisy
+  //       dialogue line (e.g. a one-word ALL CAPS reaction).
+  const accepted: Cand[] = [];
+  for (const c of shapeCandidates) {
+    const isFrequent = (freqByCanonical.get(c.canonical) ?? 0) >= FREQUENCY_FLOOR;
+    if (isFrequent || isFollowedByDialogue(lines, c.i)) {
+      accepted.push(c);
+    }
+  }
+
+  // Pass 4 — indent cluster filter. Industry-format scripts indent
+  // dialogue cues to a consistent column; centred sub-headers sit at
+  // the left margin. Compute the dominant cue indent from the accepted
+  // set and drop anything far below it. Scripts that are entirely
+  // flush-left (e.g. Fountain exports) skip this filter automatically.
   let minIndent = 0;
-  if (candidates.length >= 4) {
-    const indents = candidates.map(c => c.indent).sort((a, b) => a - b);
+  if (accepted.length >= 4) {
+    const indents = accepted.map((c) => c.indent).sort((a, b) => a - b);
     const median = indents[Math.floor(indents.length / 2)];
     if (median >= 6) {
-      // Allow anything from half the median upwards — keeps cues that
-      // are slightly off-centre while rejecting flush-left noise.
       minIndent = Math.floor(median / 2);
     }
   }
 
   const hits: CueHit[] = [];
-  for (const c of candidates) {
+  for (const c of accepted) {
     if (c.indent < minIndent) continue;
-    const name = normalizeCharacterName(c.t);
-    if (name.length < 2 || name.length > 35) continue;
-    if (NON_CHARACTER_SINGLE.has(name)) continue;
-    if (NON_CHARACTER_PHRASES.has(name)) continue;
     hits.push({
       lineIndex: c.i,
-      name,
-      variantKey: variantKey(name),
+      name: c.canonical,
+      variantKey: variantKey(c.canonical),
       raw: c.t,
     });
   }
