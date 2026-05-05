@@ -1,7 +1,5 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Worker setup centralised in @/utils/pdfjs.
+import { pdfjsLib } from '@/utils/pdfjs';
 
 // Row-aware extraction: groups items by y, sorts by x within each row, and
 // emits tabs between large horizontal gaps so column structure survives. This

@@ -13,6 +13,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSyncStore } from '@/stores/syncStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { loadProjectFromSupabase } from '@/services/projectLoader';
 import type { Look, ProductionSchedule, ScheduleCastMember, ScheduleDay, CallSheet } from '@/types';
@@ -22,6 +23,50 @@ type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 let activeChannel: RealtimeChannel | null = null;
 let activeProjectId: string | null = null;
+
+// Reconnect state — bounded exponential backoff after CHANNEL_ERROR /
+// TIMED_OUT. Reset on every successful SUBSCRIBED status, on explicit
+// unsubscribe (project change), and when the user manually retries.
+const MAX_RECONNECT_ATTEMPTS = 8;
+let reconnectAttempts = 0;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearReconnectState() {
+  reconnectAttempts = 0;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  useSyncStore.getState().setRealtimeDisconnected(false);
+}
+
+function scheduleReconnect(projectId: string) {
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    console.warn('[AppRealtime] Reconnect budget exhausted; surfacing disconnected state');
+    useSyncStore.getState().setRealtimeDisconnected(true);
+    return;
+  }
+  // 2s, 4s, 8s, 16s, 32s, 60s (capped), 60s, 60s — ~3.5 minutes total.
+  const delayMs = Math.min(2000 * Math.pow(2, reconnectAttempts), 60_000);
+  reconnectAttempts++;
+  console.log(
+    `[AppRealtime] Channel dropped — scheduling reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delayMs}ms`,
+  );
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    // Don't reconnect if the user has navigated away from this project.
+    const currentId = useProjectStore.getState().currentProject?.id;
+    if (!currentId || currentId !== projectId) {
+      clearReconnectState();
+      return;
+    }
+    // resubscribeToProject tears down the old channel and creates a
+    // new one, then runs a full project reload to catch up missed events.
+    resubscribeToProject(projectId).catch((err) => {
+      console.error('[AppRealtime] Reconnect attempt failed:', err);
+    });
+  }, delayMs);
+}
 
 /**
  * Subscribe to Realtime changes for a project.
@@ -42,17 +87,33 @@ export function subscribeToProject(projectId: string): () => void {
 
   activeProjectId = projectId;
 
-  activeChannel = supabase
+  // ARCHITECTURE.md rule #5: gate Prep-specific subscriptions on
+  // has_prep_access. Looks and look_scenes are 99% Prep-driven (the
+  // mobile lookbook UI is rarely used on app-only projects), so we
+  // skip those subscriptions when this isn't a Designer-led project.
+  //
+  // Note: scenes / characters / scene_characters / schedule_data /
+  // call_sheet_data / timesheets stay always-on because mobile users
+  // can still legitimately edit those on app-only projects, and the
+  // subscriptions provide multi-device same-user sync for those
+  // tables regardless of whether Prep is involved.
+  const currentProject = useProjectStore.getState().currentProject;
+  const hasPrepAccess = !!currentProject?.hasPrepAccess;
+
+  let chan = supabase
     .channel(`app:project:${projectId}`)
 
-    // Prep assigned a look — update look label on breakdown screen
+    // Prep added/removed a character on a scene. The junction table has
+    // no project_id column (only scene_id, character_id), so we cannot
+    // filter at the subscription level — we filter in the handler by
+    // checking that the affected scene belongs to the active project.
     .on('postgres_changes', {
-      event: 'UPDATE',
+      event: '*',
       schema: 'public',
       table: 'scene_characters',
     }, (payload: ChangePayload) => {
       handleWithFlag(() => {
-        console.log('[AppRealtime] scene_characters updated:', payload);
+        handleSceneCharacterChange(payload);
       });
     })
 
@@ -78,30 +139,33 @@ export function subscribeToProject(projectId: string): () => void {
       handleWithFlag(() => {
         handleCharacterChange(payload);
       });
-    })
+    });
 
-    // Prep updated looks
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'looks',
-      filter: `project_id=eq.${projectId}`,
-    }, (payload: ChangePayload) => {
-      handleWithFlag(() => {
-        handleLookChange(payload);
+  // Prep-only subscriptions: looks and the look_scenes junction.
+  if (hasPrepAccess) {
+    chan = chan
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'looks',
+        filter: `project_id=eq.${projectId}`,
+      }, (payload: ChangePayload) => {
+        handleWithFlag(() => {
+          handleLookChange(payload);
+        });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'look_scenes',
+      }, (payload: ChangePayload) => {
+        handleWithFlag(() => {
+          handleLookScenesChange(payload);
+        });
       });
-    })
+  }
 
-    // Prep assigned looks to scenes (look_scenes junction)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'look_scenes',
-    }, (payload: ChangePayload) => {
-      handleWithFlag(() => {
-        handleLookScenesChange(payload);
-      });
-    })
+  activeChannel = chan
 
     // Timesheet rows updated by prep (or another tab) — reflect the
     // change locally so approval / edits the designer just saved
@@ -157,13 +221,28 @@ export function subscribeToProject(projectId: string): () => void {
 
     .subscribe((status) => {
       console.log(`[AppRealtime] Channel app:project:${projectId} status:`, status);
+      switch (status) {
+        case 'SUBSCRIBED':
+          // Successful (re-)connect. Drop any pending retry and clear
+          // the persistent disconnected indicator.
+          clearReconnectState();
+          break;
+        case 'CHANNEL_ERROR':
+        case 'TIMED_OUT':
+          // Network drop or server-side error — back off and try
+          // again. CLOSED is intentional teardown so it's not handled.
+          scheduleReconnect(projectId);
+          break;
+      }
     });
 
   return () => unsubscribeFromProject();
 }
 
 /**
- * Unsubscribe from the active project channel.
+ * Unsubscribe from the active project channel. Also clears any
+ * pending reconnect state so a stale retry doesn't fire after the
+ * user navigates away.
  */
 export function unsubscribeFromProject(): void {
   if (activeChannel) {
@@ -172,6 +251,7 @@ export function unsubscribeFromProject(): void {
     activeProjectId = null;
     console.log('[AppRealtime] Unsubscribed from project');
   }
+  clearReconnectState();
 }
 
 /**
@@ -252,6 +332,43 @@ function handleTimesheetChange(payload: ChangePayload) {
       return { entries: next };
     });
   });
+}
+
+/**
+ * scene_characters has no `project_id` column, so the subscription
+ * cannot be filtered at the database level. Each event is checked
+ * client-side by looking up the affected scene_id in the active project.
+ */
+function handleSceneCharacterChange(payload: ChangePayload) {
+  const store = useProjectStore.getState();
+  const project = store.currentProject;
+  if (!project) return;
+
+  const newRow = payload.new as { scene_id?: string; character_id?: string } | null;
+  const oldRow = payload.old as { scene_id?: string; character_id?: string } | null;
+  const sceneId = newRow?.scene_id ?? oldRow?.scene_id;
+  const characterId = newRow?.character_id ?? oldRow?.character_id;
+  if (!sceneId || !characterId) return;
+
+  // Only react to junction rows for scenes in the currently-loaded project.
+  if (!project.scenes.some((s) => s.id === sceneId)) return;
+
+  if (payload.eventType === 'INSERT') {
+    store.addCharacterToScene(sceneId, characterId);
+    console.log('[AppRealtime] Scene character added:', sceneId, characterId);
+    return;
+  }
+
+  if (payload.eventType === 'DELETE') {
+    store.removeCharacterFromScene(sceneId, characterId);
+    console.log('[AppRealtime] Scene character removed:', sceneId, characterId);
+    return;
+  }
+
+  // UPDATE on this junction is rare (only key columns exist) — log and ignore.
+  if (payload.eventType === 'UPDATE') {
+    console.log('[AppRealtime] scene_characters UPDATE ignored (no mutable fields):', sceneId, characterId);
+  }
 }
 
 function handleSceneChange(payload: ChangePayload) {
@@ -338,6 +455,12 @@ function handleSceneChange(payload: ChangePayload) {
       characters: [],
     });
     console.log('[AppRealtime] Scene inserted:', rowId);
+  } else if (payload.eventType === 'DELETE' && payload.old) {
+    const sceneId = (payload.old as Record<string, unknown>).id as string | undefined;
+    if (!sceneId) return;
+    if (!project.scenes.some((s) => s.id === sceneId)) return;
+    store.deleteScene(sceneId);
+    console.log('[AppRealtime] Scene deleted:', sceneId);
   }
 }
 
@@ -369,6 +492,12 @@ function handleCharacterChange(payload: ChangePayload) {
     const updatedCharacters = [...project.characters, newChar];
     store.mergeServerData({ characters: updatedCharacters });
     console.log('[AppRealtime] Character inserted:', row.id);
+  } else if (payload.eventType === 'DELETE' && payload.old) {
+    const characterId = (payload.old as Record<string, unknown>).id as string | undefined;
+    if (!characterId) return;
+    if (!project.characters.some((c) => c.id === characterId)) return;
+    store.deleteCharacter(characterId);
+    console.log('[AppRealtime] Character deleted:', characterId);
   }
 }
 

@@ -7,6 +7,10 @@ export interface Project {
   id: string;
   name: string;
   department?: 'hmu' | 'costume'; // Department mode: "hmu" (default) or "costume". Set at creation, cannot change.
+  /** True for Designer-led projects that sync with Prep Happy. False
+   *  for app-only projects (Supervisor / Artist tier). Drives every
+   *  Prep-specific sync gate per ARCHITECTURE.md rule #5. */
+  hasPrepAccess?: boolean;
   createdAt: Date;
   updatedAt: Date;
   scenes: Scene[];
@@ -97,6 +101,19 @@ export interface Scene {
   shootingDay?: number; // Which production day this scene is scheduled
   hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
   prepBreakdown?: PrepSceneBreakdown; // Breakdown data from prep app
+
+  // Background presence — non-speaking labels found in the script's
+  // action paragraphs ("PASSER BY", "ELDERLY PATIENT"). Listed on the
+  // scene only; never become tracked Character profiles.
+  backgroundCharacters?: string[];
+  /** Free-text notes shown alongside the background list in the breakdown. */
+  backgroundNotes?: string;
+  /** True when the script marks this scene as removed in the current
+   *  revision (e.g. "30. OMITTED" or "98 OMITTED 98"). The breakdown
+   *  shows it as a thin grey placeholder card displaying the verbatim
+   *  line from `scriptContent`, so production crews can see scene 30
+   *  used to exist even after it's gone. */
+  isOmitted?: boolean;
 
   // Character confirmation state (for progressive workflow)
   characterConfirmationStatus?: CharacterConfirmationStatus;
@@ -1444,6 +1461,8 @@ export interface ProjectMembership {
   status: ProjectStatus;
   ownerName?: string;
   pendingDeletionAt?: Date | null;
+  /** Designer-led project (`projects.has_prep_access` from DB). */
+  hasPrepAccess?: boolean;
   // Per-member access toggles (set by project owner)
   access_breakdown?: boolean;
   access_script?: boolean;

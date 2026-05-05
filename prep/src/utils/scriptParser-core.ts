@@ -4,9 +4,10 @@ import {
   NON_CHARACTER_SINGLE_WORDS,
   isSupportingArtistRole,
   normalizeCharacterName,
-  extractCharactersFromActionLine,
-  isCharacterCue,
   prescanCharacterIntros,
+  extractCueLines,
+  extractBackgroundFromAction,
+  variantKey,
 } from './scriptParser-character';
 import {
   normalizeTimeOfDay,
@@ -30,7 +31,7 @@ export interface ParsedScene {
   intExt: 'INT' | 'EXT';
   location: string;
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
-  characters: string[]; // Character names appearing in scene
+  characters: string[]; // Speaking character names found via dialogue cues
   content: string;
   titleCardBefore?: string | null; // ALL-CAPS title card found before this scene's slug
   /** Set when the script marks a scene as removed in this revision
@@ -38,6 +39,12 @@ export interface ParsedScene {
    *  list so numbering stays coherent — production crews need to know
    *  scene 12 used to exist even if it's gone now. */
   isOmitted?: boolean;
+  /** Non-speaking presence labels found in this scene's action text
+   *  ("PASSER BY", "ELDERLY PATIENT"). Listed on the scene only;
+   *  never become tracked Character profiles. */
+  backgroundCharacters?: string[];
+  /** Free-text notes shown alongside the background list. */
+  backgroundNotes?: string;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -104,8 +111,21 @@ export function parseScriptText(text: string): ParsedScript {
   let fallbackSceneNumber = 0;
   let currentSceneContent = '';
   let preambleContent = ''; // Text before the first scene heading
-  let lastLineWasCharacter = false;
-  let dialogueCount = 0;
+  // Once the first real INT./EXT. heading has been seen, the PRELUDE
+  // scene must not be created again. Without this guard, OMITTED stubs
+  // scattered through the script (which reset currentScene to null)
+  // cause `preambleContent` to keep accumulating between them and the
+  // next real heading, and each gap pushes a duplicate PRELUDE — six
+  // PRELUDE cards on Killa Bee, one per OMITTED gap.
+  let seenFirstRealScene = false;
+
+  // Line ranges per scene index — used after the walk to bucket cue
+  // hits into the scene whose [head, end) range contains them.
+  // Indexes are line numbers in the source `lines` array. Omitted-scene
+  // placeholders are not added (they're a single-line stub and have no
+  // characters by definition).
+  const sceneLineRanges: Array<{ head: number; endExclusive: number }> = [];
+  let currentSceneHeadLine = -1;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -124,16 +144,22 @@ export function parseScriptText(text: string): ParsedScript {
     // keeps numbering coherent (29, 30, 31 with 30 marked omitted)
     // and store the verbatim trimmed line in `content` so the
     // script viewer can render it exactly as it appears in the PDF.
+    // Hardened to also catch parenthesised "(OMITTED)" and Final
+    // Draft revision-asterisk variants like "54 OMITTED 54 *" and
+    // "12 OMITTED **". `He omitted the fact...` and similar
+    // mid-sentence usage are still rejected by the line anchors.
     const omittedMatch = trimmed.match(
-      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*OMITTED\.?\s*(?:\d+[A-Z]{0,4})?\.?\s*$/i,
+      /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*\(?OMITTED\)?\.?\s*(?:\d+[A-Z]{0,4})?\s*\.?\s*\*{0,4}\s*$/i,
     );
     if (omittedMatch) {
       // Close out the current scene first.
       if (currentScene) {
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
+        sceneLineRanges.push({ head: currentSceneHeadLine, endExclusive: i });
         currentScene = null;
         currentSceneContent = '';
+        currentSceneHeadLine = -1;
       }
       fallbackSceneNumber++;
       const sceneNum = (omittedMatch[1] || String(fallbackSceneNumber)).toUpperCase();
@@ -149,25 +175,35 @@ export function parseScriptText(text: string): ParsedScript {
         content: trimmed,
         isOmitted: true,
       });
-      lastLineWasCharacter = false;
+      // Empty range — omitted scenes have no characters.
+      sceneLineRanges.push({ head: i, endExclusive: i });
       continue;
     }
 
     const parsedHeading = parseSceneHeadingLine(trimmed);
 
     if (parsedHeading.isValid) {
-      // If there's preamble text before the first scene, create a preamble scene
-      if (!currentScene && preambleContent.trim()) {
+      // If there's substantive text before the first numbered scene
+      // (title page + cold open / prelude), emit a synthetic PRELUDE
+      // scene so the breakdown UI shows a card for it. Both `slugline`
+      // and `location` are 'PRELUDE' — older uploads still have
+      // 'PREAMBLE' which the breakdown layer recognises as the same
+      // thing.
+      if (!seenFirstRealScene && preambleContent.trim()) {
         scenes.push({
           sceneNumber: '0',
-          slugline: 'PREAMBLE',
+          slugline: 'PRELUDE',
           intExt: 'EXT',
-          location: 'PREAMBLE',
+          location: 'PRELUDE',
           timeOfDay: 'DAY',
           characters: [],
           content: preambleContent.trim(),
         });
+        // Range covers lines 0 .. start of first heading so pass-2
+        // can scan the prelude for known character mentions.
+        sceneLineRanges.push({ head: 0, endExclusive: i });
       }
+      seenFirstRealScene = true;
 
       // Check the line immediately preceding this heading for a temporal marker.
       // Temporal markers (e.g. "FLASHBACK: 2 WEEKS AGO", "6 MONTHS LATER")
@@ -196,6 +232,7 @@ export function parseScriptText(text: string): ParsedScript {
         }
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
+        sceneLineRanges.push({ head: currentSceneHeadLine, endExclusive: i });
       } else if (preambleContent.trim()) {
         // Also check preamble for title cards before the first scene
         titleCardBefore = extractTitleCardFromInterstitial(preambleContent);
@@ -216,275 +253,153 @@ export function parseScriptText(text: string): ParsedScript {
         titleCardBefore,
       };
       currentSceneContent = trimmed + '\n';
-      lastLineWasCharacter = false;
+      currentSceneHeadLine = i;
       continue;
     }
 
     if (currentScene) {
       currentSceneContent += line + '\n';
-    } else {
-      // Accumulate text before the first scene heading
+    } else if (!seenFirstRealScene) {
+      // Accumulate text before the first scene heading. Once a real
+      // INT./EXT. has been seen, lines that fall outside any
+      // currentScene (e.g. between an OMITTED stub and the next real
+      // heading) are dropped so they can't produce a second PRELUDE.
       preambleContent += line + '\n';
-    }
-
-    // Before treating a line as a dialogue cue, check if it's actually the
-    // first half of a character introduction split across two lines by PDF
-    // word-wrap.  e.g. "JASPER\nMONTGOMERY, 70, he looks like..."
-    // Without this check, "JASPER" is consumed as a dialogue cue and the
-    // next line ("MONTGOMERY, 70, ...") is treated as dialogue — so the
-    // character introduction is completely missed.
-    let isSplitCharacterIntro = false;
-    if (
-      isCharacterCue(trimmed) &&
-      /^[A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,2}$/.test(trimmed) &&
-      i + 1 < lines.length
-    ) {
-      const nextTrimmed = lines[i + 1].trim();
-      // Next line starts with ALL CAPS word(s) followed by age/comma → split intro
-      if (/^[A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){0,2}\s*(?:[,(]\s*\d{1,3}\b|\d{1,3}\s*[,)])/.test(nextTrimmed)) {
-        isSplitCharacterIntro = true;
-      }
-    }
-
-    if (!isSplitCharacterIntro && isCharacterCue(trimmed)) {
-      const charName = trimmed;
-      let normalized = normalizeCharacterName(charName);
-      // Resolve single-name cues: "LENNON" → "LENNON BOWIE"
-      normalized = resolveCharacterName(normalized);
-
-      registerCharacter(charName, normalized, currentScene);
-      lastLineWasCharacter = true;
-      dialogueCount = 0;
-    } else if (!isSplitCharacterIntro && lastLineWasCharacter && trimmed.length > 0) {
-      dialogueCount++;
-      if (dialogueCount > 3 || trimmed.length === 0) {
-        lastLineWasCharacter = false;
-      }
-    } else {
-      lastLineWasCharacter = false;
-
-      if (currentScene && trimmed.length > 3) {
-        // Try extracting characters from this line alone (only if long enough for patterns)
-        let actionCharacters = trimmed.length > 10
-          ? extractCharactersFromActionLine(trimmed)
-          : [];
-
-        // Cross-line detection: if this line ends with ALL CAPS word(s) (potential
-        // split character name), combine with the next line and re-extract.
-        // This catches "...on foot. JASPER\nMONTGOMERY, 70, ..." even when the
-        // normalizeScriptText join regex didn't merge the lines.
-        // Also handles short lines like just "JASPER" on its own line.
-        if (/[A-Z][A-Z'-]{2,}\s*$/.test(trimmed) && i + 1 < lines.length) {
-          const nextTrimmed = lines[i + 1].trim();
-          if (nextTrimmed && nextTrimmed.length > 2) {
-            const combinedCharacters = extractCharactersFromActionLine(trimmed + ' ' + nextTrimmed);
-            // Merge: keep any names from the combined line that weren't in the single line
-            for (const name of combinedCharacters) {
-              if (!actionCharacters.includes(name)) {
-                actionCharacters.push(name);
-              }
-            }
-          }
-        }
-
-        for (const charName of actionCharacters) {
-          let normalized = normalizeCharacterName(charName);
-          // Resolve single-name action references: "Lennon" → "LENNON BOWIE"
-          normalized = resolveCharacterName(normalized);
-          registerCharacter(charName, normalized, currentScene);
-        }
-      }
     }
   }
 
   if (currentScene) {
     currentScene.content = currentSceneContent.trim();
     scenes.push(currentScene);
+    sceneLineRanges.push({
+      head: currentSceneHeadLine,
+      endExclusive: lines.length,
+    });
   }
 
-  /* ── Post-processing safety net: scan each scene's raw content for character ──
-     introductions that the line-by-line parser may have missed.
-     Standard screenplay character introduction: ALL CAPS FULL NAME, age,
-     e.g. "JASPER MONTGOMERY, 70, he looks like a grandpa"
-     This catches intros that were:
-     - Merged with scene headings (PDF extraction artifact)
-     - Split across lines and not recombined
-     - On lines incorrectly consumed as dialogue cues
-     After finding names, also scan the ENTIRE raw text so that a character
-     introduced in one scene is known globally for first-name resolution. */
-  const introSafetyRe = /\b([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+){1,3})(?:\s*[,(]\s*|\s+)\d{1,3}\b/g;
-  const introExcludeFirstWord = new Set([
-    'INT', 'EXT', 'CUT', 'FADE', 'SCENE', 'THE', 'AND', 'BUT', 'FOR', 'NOR',
-    'YET', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON',
-    'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'SAME', 'ANGLE', 'CLOSE',
-    'WIDE', 'SHOT', 'FADE', 'TITLE', 'SUPER', 'CHAPTER', 'EPISODE',
-  ]);
+  /* ── Strict cue extraction ────────────────────────────────────────
+   * Extract every dialogue cue from the whole script in a single pass.
+   * `extractCueLines` enforces: ALL-CAPS short line + next non-blank
+   * line is dialogue + script-level indent cluster check. False
+   * positives like centred title cards ("ELEVEN MISSING DAYS",
+   * "LIBRARY") and action-line intros ("JASPER MONTGOMERY, 70") are
+   * filtered out. Cues are bucketed into scenes by line index.
+   *
+   * Names are resolved through `prescanCharacterIntros` so a cue
+   * "LENNON" merges with an introduction "LENNON BOWIE, 28" found
+   * earlier in the script.
+   */
+  const cues = extractCueLines(lines);
+  for (const cue of cues) {
+    const sceneIdx = sceneLineRanges.findIndex(
+      (r) => cue.lineIndex >= r.head && cue.lineIndex < r.endExclusive,
+    );
+    if (sceneIdx < 0) continue;
+    const scene = scenes[sceneIdx];
+    if (!scene || scene.isOmitted) continue;
 
-  // Helper: scan text for character intros, handling greedy match backtracking.
-  // When a match like "DAY JASPER MONTGOMERY, 70" is excluded (first word "DAY"),
-  // retry from after the excluded word so "JASPER MONTGOMERY, 70" can still match.
-  function scanForIntroductions(source: string, re: RegExp): string[] {
-    const results: string[] = [];
-    re.lastIndex = 0;
-    let m;
-    while ((m = re.exec(source)) !== null) {
-      const name = m[1].trim();
-      const words = name.split(/\s+/);
-      const firstWord = words[0];
-      if (name.length >= 5 && !introExcludeFirstWord.has(firstWord) && !isSupportingArtistRole(name)) {
-        results.push(name);
-      } else if (words.length > 1 && introExcludeFirstWord.has(firstWord)) {
-        // Greedy match consumed a good name after an excluded word — retry
-        // from just after the excluded word so the shorter match can succeed
-        re.lastIndex = m.index + firstWord.length + 1;
-      }
+    // Drop one-off generic supporting-artist labels (MAN, COP, NURSE)
+    // — they live in `backgroundCharacters` instead, not as profiles.
+    if (isSupportingArtistRole(cue.name)) continue;
+
+    let canonical = resolveCharacterName(cue.name);
+    canonical = variantKey(canonical);
+    registerCharacter(cue.raw, canonical, scene);
+  }
+
+  /* ── Pass 2: known-name scan ─────────────────────────────────────
+   * Pick up speakers who are named in a scene's text but don't have
+   * a dialogue cue there. Bounded to canonical names already
+   * validated as real speakers via cue extraction, so it can't
+   * introduce new false positives. Matches Title Case OR ALL CAPS
+   * forms (word-bounded) — never lowercase, so a character named
+   * "Will" won't match the modal verb "will". */
+  const charScanPatterns: Array<{ key: string; re: RegExp }> = [];
+  for (const ch of characterMap.values()) {
+    const terms = new Set<string>();
+    terms.add(ch.normalizedName);
+    for (const v of ch.variants) terms.add(normalizeCharacterName(v));
+    const safe = [...terms].filter((t) => t.length >= 3 && /^[A-Z][A-Z'\- ]*$/.test(t));
+    if (safe.length === 0) continue;
+    const alts = new Set<string>();
+    for (const t of safe) {
+      alts.add(t);
+      alts.add(prepToTitleCase(t));
     }
-    return results;
+    const escaped = [...alts].map(prepEscapeRegExp).join('|');
+    charScanPatterns.push({
+      key: ch.normalizedName,
+      re: new RegExp(`\\b(?:${escaped})\\b`),
+    });
   }
-
-  // First pass: collect all full names from the entire raw text
-  const safetyFullNames = scanForIntroductions(text, introSafetyRe);
-
-  // Build a first-name → full-name map from safety-net names
-  // (supplements the prescan resolveMap for first-name mentions later)
-  const safetyResolve = new Map<string, string>();
-  for (const fullName of safetyFullNames) {
-    const parts = fullName.split(/\s+/);
-    for (const part of parts) {
-      if (part.length < 3 || NAME_SCAN_EXCLUSIONS.has(part)) continue;
-      if (!safetyResolve.has(part)) {
-        safetyResolve.set(part, fullName);
-      } else if (safetyResolve.get(part) !== fullName) {
-        safetyResolve.set(part, ''); // ambiguous
-      }
-    }
-  }
-  for (const [k, v] of safetyResolve) {
-    if (v === '') safetyResolve.delete(k);
-  }
-
-  // Second pass: for each scene, find character intros in scene.content
   for (const scene of scenes) {
-    const sceneNames = scanForIntroductions(scene.content, introSafetyRe);
-    for (const name of sceneNames) {
-      const normalized = normalizeCharacterName(name);
-      registerCharacter(name, normalized, scene);
-    }
-  }
-
-  // Also resolve first-name-only mentions using the safety-net map.
-  // If a character was registered as just "JASPER" but the safety net found
-  // "JASPER MONTGOMERY", merge them.
-  for (const [fragment, fullName] of safetyResolve) {
-    if (characterMap.has(fragment) && !characterMap.has(fullName)) {
-      // The full name wasn't registered yet but a fragment was — register the full name
-      // and transfer the fragment's scenes
-      const fragChar = characterMap.get(fragment)!;
-      for (const sceneNum of fragChar.scenes) {
-        const scene = scenes.find(s => s.sceneNumber === sceneNum);
-        if (scene) registerCharacter(fragment, fullName, scene);
+    if (scene.isOmitted) continue;
+    const have = new Set(scene.characters);
+    for (const { key, re } of charScanPatterns) {
+      if (have.has(key)) continue;
+      if (re.test(scene.content)) {
+        registerCharacter(key, key, scene);
+        have.add(key);
       }
     }
   }
 
-  /* ── Deduplication safety net: merge any remaining single-name fragments ──
-     If the pre-scan missed an intro but a full name was detected during parsing,
-     merge fragments that match exactly one full-name parent. */
-  const fullNames = Array.from(characterMap.keys()).filter(k => k.includes(' '));
-  const singleNames = Array.from(characterMap.keys()).filter(k => !k.includes(' ') && k.length >= 3);
-  const fragmentsToRemove = new Set<string>();
+  /* ── Per-scene background extraction ─────────────────────────────── */
+  const knownSpeakerSet = new Set<string>();
+  for (const ch of characterMap.values()) {
+    knownSpeakerSet.add(ch.name);
+    knownSpeakerSet.add(ch.normalizedName);
+    for (const v of ch.variants) {
+      knownSpeakerSet.add(normalizeCharacterName(v));
+    }
+  }
 
-  for (const fragment of singleNames) {
-    const parents = fullNames.filter(fn => fn.split(/\s+/).includes(fragment));
-    if (parents.length === 1) {
-      const parentName = parents[0];
-      const fragChar = characterMap.get(fragment)!;
-      const parentChar = characterMap.get(parentName)!;
+  for (let i = 0; i < scenes.length; i++) {
+    const scene = scenes[i];
+    if (scene.isOmitted) continue;
+    const range = sceneLineRanges[i];
+    if (!range || range.head < 0) continue;
 
-      for (const sceneNum of fragChar.scenes) {
-        if (!parentChar.scenes.includes(sceneNum)) {
-          parentChar.scenes.push(sceneNum);
-          parentChar.sceneCount++;
+    // Walk this scene's lines and accumulate action-only text (skip
+    // cue lines and the dialogue runs that follow them).
+    const cueLineSet = new Set(
+      cues
+        .filter((c) => c.lineIndex >= range.head && c.lineIndex < range.endExclusive)
+        .map((c) => c.lineIndex),
+    );
+    const actionLines: string[] = [];
+    let inDialogue = false;
+    for (let j = range.head; j < range.endExclusive; j++) {
+      const t = lines[j].trim();
+      if (cueLineSet.has(j)) {
+        inDialogue = true;
+        continue;
+      }
+      if (inDialogue) {
+        if (/^\(.*\)$/.test(t)) continue;
+        if (!t) {
+          inDialogue = false;
+          continue;
         }
-      }
-      for (const v of fragChar.variants) {
-        if (!parentChar.variants.includes(v)) parentChar.variants.push(v);
-      }
-      for (const scene of scenes) {
-        const idx = scene.characters.indexOf(fragment);
-        if (idx !== -1) {
-          scene.characters.splice(idx, 1);
-          if (!scene.characters.includes(parentName)) {
-            scene.characters.push(parentName);
-          }
+        if (/[a-z]/.test(t)) {
+          inDialogue = false;
+          actionLines.push(t);
         }
+        continue;
       }
-      fragmentsToRemove.add(fragment);
+      if (!t) continue;
+      actionLines.push(t);
     }
-  }
-
-  for (const key of fragmentsToRemove) {
-    characterMap.delete(key);
-  }
-
-  // Deduplicate scene character lists
-  for (const scene of scenes) {
-    scene.characters = [...new Set(scene.characters)];
-  }
-
-  /* ── Location-based false positive removal ──
-     Reject any "character" whose name matches a location extracted from a scene
-     heading. This catches false positives like "FARM LAND", "STREET CORNER",
-     "OFFICE BUILDING" that get picked up by the catch-all intro patterns.
-     Only applies to multi-word names — single-word names like "LENNON" are
-     never locations (locations are always multi-segment in scene headings). */
-  const sceneLocations = new Set<string>();
-  for (const scene of scenes) {
-    const loc = scene.location.toUpperCase().trim();
-    if (loc && loc !== 'PREAMBLE') {
-      sceneLocations.add(loc);
-      // Also add individual segments for compound locations:
-      // "FARMHOUSE - KITCHEN" → "FARMHOUSE", "KITCHEN", "FARMHOUSE - KITCHEN"
-      for (const segment of loc.split(/\s*[-–—\/]\s*/)) {
-        const seg = segment.trim();
-        if (seg.length >= 3) sceneLocations.add(seg);
-      }
-    }
-  }
-
-  const locationFalsePositives = new Set<string>();
-  for (const [name] of characterMap) {
-    // Only check multi-word names (single words like "LENNON" are never locations)
-    if (!name.includes(' ')) continue;
-    if (sceneLocations.has(name)) {
-      locationFalsePositives.add(name);
-    }
-  }
-
-  for (const name of locationFalsePositives) {
-    characterMap.delete(name);
-    for (const scene of scenes) {
-      const idx = scene.characters.indexOf(name);
-      if (idx !== -1) scene.characters.splice(idx, 1);
-    }
+    scene.backgroundCharacters = extractBackgroundFromAction(
+      actionLines.join(' '),
+      knownSpeakerSet,
+    );
   }
 
   /* ── Common-noun false-positive filter ──
-     Drop any "character" whose name is composed of generic nouns the
-     screenplay parser can mistake for a cue — sound effects (SOUND,
-     RAIN, WIND), transitions (CUT, FADE), time markers (LATER,
-     CONTINUOUS, MORNING), or sensory beats (LIGHT, SHADOW). Three
-     conditions land a name in the drop set:
-       - the whole name is one denylisted word ("LATER", "RAIN")
-       - every non-digit word is on the denylist ("LATER 9",
-         "DAY LATER", "TIME CUT")
-       - the FIRST word is on the denylist ("LATER ALICE",
-         "FLASHBACK 12") — these are scene/time markers the parser
-         occasionally sweeps into a multi-word "name". Real characters
-         never start with one of these words, so this is safe.
-     Genuine multi-word characters like "OLD MAN" or "YOUNG BRY"
-     survive because their first word ("OLD", "YOUNG") is not on
-     the denylist. */
+     Keep the existing belt-and-braces filter. With cues now structurally
+     validated this rarely fires, but it's cheap insurance against any
+     edge case where a transition / sound word slipped through. */
   const commonNounFalsePositives = new Set<string>();
   for (const [name] of characterMap) {
     const words = name.split(/\s+/).filter((w) => !/^\d+$/.test(w));
@@ -508,41 +423,20 @@ export function parseScriptText(text: string): ParsedScript {
     }
   }
 
+  // Suppress "unused" warnings for legacy helpers that may still be
+  // used by future revisions or by other utilities. NAME_SCAN_EXCLUSIONS
+  // is referenced indirectly through prescanCharacterIntros' name map.
+  void NAME_SCAN_EXCLUSIONS;
+
   const characters = Array.from(characterMap.values())
-    .filter(c => c.sceneCount >= 1)
+    .filter((c) => c.sceneCount >= 1)
     .sort((a, b) => b.sceneCount - a.sceneCount);
 
-  characters.forEach(char => {
+  characters.forEach((char) => {
     char.dialogueCount = char.variants.length;
   });
 
-  /* NOTE: We intentionally do NOT do a broad "name-mention scan" of scene content.
-     Characters are only associated with a scene if they have a dialogue cue or
-     are detected in an action line (intro pattern or Title Case + action verb).
-     A character merely *mentioned* in dialogue ("Told Dedra to pack her bags")
-     is NOT physically present in the scene — for hair & makeup departments,
-     only physically present characters matter. The pre-scan + main parse +
-     dedup safety net above handle detection accurately. */
-
-  /* ── Known-character action-line scan ──
-     If a known character's name appears in a scene's content (action lines)
-     in any case (Title Case, ALL CAPS, etc.) and they aren't already in the
-     scene's character list, add them. This catches characters introduced in
-     action text like "Young Bry, (hollow eyed...) stands on the bridge."
-     where the name isn't in the standard ALL-CAPS dialogue cue format.
-     Only checks against already-confirmed characters to avoid false positives. */
-  const knownNames = Array.from(characterMap.keys()).filter(n => n.length >= 3);
-  for (const scene of scenes) {
-    const contentLower = scene.content.toLowerCase();
-    for (const name of knownNames) {
-      if (scene.characters.includes(name)) continue;
-      if (contentLower.includes(name.toLowerCase())) {
-        scene.characters.push(name);
-      }
-    }
-  }
-
-  // Re-deduplicate after the scan
+  // Deduplicate scene character lists (defensive — should already be unique).
   for (const scene of scenes) {
     scene.characters = [...new Set(scene.characters)];
   }
@@ -565,7 +459,9 @@ export function parseScriptText(text: string): ParsedScript {
   }
 
   // Filter out PREAMBLE scene from comparison
-  const outputScenes = scenes.filter(s => s.location !== 'PREAMBLE');
+  const outputScenes = scenes.filter(
+    (s) => s.location !== 'PREAMBLE' && s.location !== 'PRELUDE',
+  );
   if (detectedHeadings.length !== outputScenes.length) {
     const outputSlugs = new Set(outputScenes.map(s => s.slugline));
     const missing = detectedHeadings.filter(h => !outputSlugs.has(h.text));
@@ -632,3 +528,18 @@ export async function parseScriptFile(
   return parseScriptText(text);
 }
 
+
+function prepEscapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** "BRY" -> "Bry", "YOUNG BRY" -> "Young Bry". Used by the pass-2
+ *  known-name scan to match the Title Case form character names
+ *  typically take in action lines. */
+function prepToTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .split(/(\s+|-)/)
+    .map((part) => (part && /^[a-z]/.test(part) ? part[0].toUpperCase() + part.slice(1) : part))
+    .join('');
+}

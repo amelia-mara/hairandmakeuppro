@@ -134,11 +134,16 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
 
         const project = data.project;
         const prepAccess = !!(project as any).has_prep_access;
-        setHasPrepAccess(true); // Always true in Prep — this is the Prep app
 
-        // Only auto-enable has_prep_access if the current user is a
-        // designer (by tier) or the project owner. Other users opening
-        // the project in Prep should not silently upgrade it.
+        // ARCHITECTURE.md rule #5: hasPrepAccess gates every Prep
+        // sync path. The previous code hard-coded this to `true`,
+        // which made Prep write to app-only projects regardless of
+        // their flag — a violation of the architecture. Now we read
+        // the actual DB value, with one exception: designer / owner
+        // users opening an as-yet-unflagged project of theirs auto-
+        // enable it (existing behaviour).
+        let effectiveAccess = prepAccess;
+
         if (!prepAccess) {
           const { data: { user: authUser } } = await supabase.auth.getUser();
           if (authUser) {
@@ -147,6 +152,9 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               supabase.from('project_members').select('is_owner').eq('project_id', projectId!).eq('user_id', authUser.id).single(),
             ]);
             if (profile?.tier === 'designer' || membership?.is_owner) {
+              // Auto-enable: flip the DB flag and reflect it locally
+              // so watchers immediately start syncing.
+              effectiveAccess = true;
               supabase
                 .from('projects')
                 .update({ has_prep_access: true })
@@ -158,6 +166,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             }
           }
         }
+        setHasPrepAccess(effectiveAccess);
 
         // Build scene → character ID map
         const scMap = new Map<string, string[]>();
@@ -681,7 +690,8 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           }
         }
 
-        // Subscribe to Realtime (always enabled in Prep app)
+        // Subscribe to Realtime — only when this project has Prep
+        // access. App-only projects skip the subscription entirely.
         {
           const handlers: PrepRealtimeHandlers = {
             onSceneUpdate: (payload) => {
@@ -714,7 +724,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             },
           };
 
-          unsubRef.current = subscribeToProject(projectId!, handlers);
+          unsubRef.current = subscribeToProject(projectId!, handlers, effectiveAccess);
         }
 
         console.log(`[useProjectSync] Project ${projectId} loaded from Supabase`);

@@ -69,7 +69,7 @@ export interface ProjectState {
   setScriptPdf: (pdfData: string, filename?: string) => void;
   /** Merge server data into the current project without resetting lifecycle or other state.
    *  Used by sync pull to safely update scenes/characters/looks. */
-  mergeServerData: (updates: Partial<Pick<Project, 'scenes' | 'characters' | 'looks'>>) => void;
+  mergeServerData: (updates: Partial<Pick<Project, 'scenes' | 'characters' | 'looks' | 'hasPrepAccess'>>) => void;
   clearProject: () => void;
   saveAndClearProject: () => void;
   restoreSavedProject: (projectId: string) => boolean;
@@ -109,6 +109,9 @@ export interface ProjectState {
   // Actions - Scene Management
   addScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => Scene;
   addCharacterToScene: (sceneId: string, characterId: string) => void;
+  removeCharacterFromScene: (sceneId: string, characterId: string) => void;
+  /** Remove a scene and its associated captures from local state. Used by realtime DELETE. */
+  deleteScene: (sceneId: string) => void;
 
   // Actions - Scene Completion
   markSceneComplete: (sceneId: string) => void;
@@ -121,6 +124,12 @@ export interface ProjectState {
   // Actions - Scene Synopsis
   updateSceneSynopsis: (sceneId: string, synopsis: string) => void;
   updateAllSceneSynopses: (scenes: Scene[]) => void;
+
+  /** Update background presence + notes shown in the breakdown background row. */
+  updateSceneBackground: (
+    sceneId: string,
+    updates: { backgroundCharacters?: string[]; backgroundNotes?: string },
+  ) => void;
 
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
@@ -138,6 +147,8 @@ export interface ProjectState {
   confirmSceneCharacters: (sceneId: string, confirmedCharacterIds: string[]) => void;
   addCharacterFromScene: (sceneId: string, characterName: string, role?: CharacterRole) => Character;
   updateCharacter: (characterId: string, updates: Partial<Pick<Character, 'name' | 'role'>>) => void;
+  /** Remove a character from local state, including any references in scenes. Used by realtime DELETE. */
+  deleteCharacter: (characterId: string) => void;
   getUnconfirmedScenesCount: () => number;
   getConfirmedScenesCount: () => number;
 

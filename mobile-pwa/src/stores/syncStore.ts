@@ -33,6 +33,27 @@ interface SyncState {
   progress: number;
   /** Whether the sync panel is open */
   isPanelOpen: boolean;
+  /** Outbox has at least one entry (pending or scheduled) waiting to sync */
+  hasPendingOutbox: boolean;
+  /** Outbox entries that have exhausted retries — need user attention */
+  deadOutboxCount: number;
+  /** Consecutive auto-save failures across any category. Resets to 0 on
+   *  the next successful write. Drives the "having trouble saving"
+   *  indicator at >=3. */
+  autoSaveFailureCount: number;
+  /** Most recent auto-save error message, or null if the last write
+   *  succeeded. Shown alongside the warning when present. */
+  autoSaveLastError: string | null;
+  /** True after the realtime channel has exhausted its reconnect
+   *  budget. Drives a persistent "live sync disconnected" indicator
+   *  in SyncSheet. Reset to false on the next successful SUBSCRIBED
+   *  status (auto reconnect) or on a manual project reload. */
+  realtimeDisconnected: boolean;
+  /** Epoch ms of the last successful auto-save write. Used to display
+   *  "Last saved X ago" in the SyncSheet. Replaces the manual-sync
+   *  lastUploadedAt / lastDownloadedAt timestamps which only ever
+   *  reflected the now-retired Upload / Download buttons. */
+  lastSuccessfulSave: number | null;
 
   // Actions
   markChanged: (category: ChangeCategory) => void;
@@ -53,6 +74,12 @@ interface SyncState {
   reset: () => void;
   hasPendingChanges: () => boolean;
   getPendingCount: () => number;
+  setHasPendingOutbox: (value: boolean) => void;
+  setDeadOutboxCount: (count: number) => void;
+  setAutoSaveFailureCount: (count: number) => void;
+  setAutoSaveLastError: (error: string | null) => void;
+  setRealtimeDisconnected: (value: boolean) => void;
+  setLastSuccessfulSave: (timestamp: number) => void;
 }
 
 export const useSyncStore = create<SyncState>()(
@@ -66,6 +93,12 @@ export const useSyncStore = create<SyncState>()(
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       progress: 0,
       isPanelOpen: false,
+      hasPendingOutbox: false,
+      deadOutboxCount: 0,
+      autoSaveFailureCount: 0,
+      autoSaveLastError: null,
+      realtimeDisconnected: false,
+      lastSuccessfulSave: null,
 
       markChanged: (category) =>
         set((s) => {
@@ -115,12 +148,20 @@ export const useSyncStore = create<SyncState>()(
 
       hasPendingChanges: () => get().pendingChanges.size > 0,
       getPendingCount: () => get().pendingChanges.size,
+
+      setHasPendingOutbox: (value) => set({ hasPendingOutbox: value }),
+      setDeadOutboxCount: (count) => set({ deadOutboxCount: count }),
+      setAutoSaveFailureCount: (count) => set({ autoSaveFailureCount: count }),
+      setAutoSaveLastError: (error) => set({ autoSaveLastError: error }),
+      setRealtimeDisconnected: (value) => set({ realtimeDisconnected: value }),
+      setLastSuccessfulSave: (timestamp) => set({ lastSuccessfulSave: timestamp }),
     }),
     {
       name: 'hair-makeup-sync',
       partialize: (state) => ({
         lastUploadedAt: state.lastUploadedAt,
         lastDownloadedAt: state.lastDownloadedAt,
+        lastSuccessfulSave: state.lastSuccessfulSave,
         // Serialize Set as array for JSON storage
         pendingChanges: Array.from(state.pendingChanges),
       }),
@@ -131,6 +172,9 @@ export const useSyncStore = create<SyncState>()(
           ...current,
           lastUploadedAt: p?.lastUploadedAt ? new Date(p.lastUploadedAt as string) : null,
           lastDownloadedAt: p?.lastDownloadedAt ? new Date(p.lastDownloadedAt as string) : null,
+          lastSuccessfulSave: typeof p?.lastSuccessfulSave === 'number'
+            ? (p.lastSuccessfulSave as number)
+            : null,
           pendingChanges: new Set(
             Array.isArray(p?.pendingChanges) ? (p.pendingChanges as ChangeCategory[]) : []
           ),

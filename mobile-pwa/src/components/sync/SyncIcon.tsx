@@ -11,10 +11,30 @@ import { useSyncStore } from '@/stores/syncStore';
  * - Offline: grey icon, red dot
  */
 export function SyncIcon({ onClick }: { onClick: () => void }) {
-  const { status, pendingChanges, isOnline } = useSyncStore();
+  const {
+    status,
+    pendingChanges,
+    isOnline,
+    hasPendingOutbox,
+    deadOutboxCount,
+    autoSaveFailureCount,
+    realtimeDisconnected,
+  } = useSyncStore();
   const pendingCount = pendingChanges.size;
   const isBusy = status === 'uploading' || status === 'downloading';
   const isSynced = pendingCount === 0 && !isBusy && status === 'synced';
+
+  // Attention dot: appears whenever something needs the user's eye.
+  // Terracotta when something has permanently failed (dead outbox,
+  // 10+ autoSave failures, or realtime gave up reconnecting). Amber
+  // for transient/warning states.
+  const hasDead = deadOutboxCount > 0;
+  const hasSevereAutoSave = autoSaveFailureCount >= 10;
+  const hasWarnAutoSave = autoSaveFailureCount >= 3;
+  const showAttentionDot =
+    hasDead || hasWarnAutoSave || hasPendingOutbox || realtimeDisconnected;
+  const dotColor =
+    hasDead || hasSevereAutoSave || realtimeDisconnected ? '#C4522A' : '#F59E0B';
 
   // Pulse animation when badge count increases
   const prevCount = useRef(pendingCount);
@@ -76,6 +96,18 @@ export function SyncIcon({ onClick }: { onClick: () => void }) {
       {/* Red dot — offline */}
       {!isOnline && (
         <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-card" />
+      )}
+
+      {/* Attention dot — outbox pending / dead, or 3+ autoSave failures.
+          Suppressed when a more specific dot/badge is already present
+          (offline red, pending-uploads gold, all-synced green) so we
+          only stack at most one indicator at a time. */}
+      {showAttentionDot && isOnline && pendingCount === 0 && !isSynced && (
+        <span
+          aria-label="Sync needs attention"
+          className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-card"
+          style={{ backgroundColor: dotColor }}
+        />
       )}
     </button>
   );

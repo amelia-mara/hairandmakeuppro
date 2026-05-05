@@ -380,6 +380,35 @@ export const createCharacterSlice = (set: ProjectSet, get: ProjectGet) => ({
     });
   },
 
+  deleteCharacter: (characterId: string) => {
+    set((state) => {
+      if (!state.currentProject) return state;
+
+      // Drop captures referencing this character so we don't keep ghosts.
+      const nextCaptures: typeof state.sceneCaptures = {};
+      for (const [key, capture] of Object.entries(state.sceneCaptures)) {
+        if (capture.characterId !== characterId) nextCaptures[key] = capture;
+      }
+
+      return {
+        currentProject: {
+          ...state.currentProject,
+          characters: state.currentProject.characters.filter((c) => c.id !== characterId),
+          // Strip the character from every scene's characters[] list.
+          scenes: state.currentProject.scenes.map((s) => ({
+            ...s,
+            characters: s.characters.filter((id) => id !== characterId),
+          })),
+          // Looks belonging to this character are no longer meaningful locally.
+          looks: state.currentProject.looks.filter((l) => l.characterId !== characterId),
+        },
+        sceneCaptures: nextCaptures,
+        currentCharacterId:
+          state.currentCharacterId === characterId ? null : state.currentCharacterId,
+      };
+    });
+  },
+
   getCharacter: (characterId: string) => {
     return get().currentProject?.characters.find(c => c.id === characterId);
   },

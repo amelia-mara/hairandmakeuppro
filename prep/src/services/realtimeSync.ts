@@ -31,16 +31,71 @@ export interface PrepRealtimeHandlers {
 
 let activeChannel: RealtimeChannel | null = null;
 let activeProjectId: string | null = null;
+let activeHandlers: PrepRealtimeHandlers | null = null;
+let activeHasPrepAccess: boolean = true;
+
+// Reconnect state — bounded exponential backoff after CHANNEL_ERROR /
+// TIMED_OUT. Prep desktop doesn't background like a phone, so the
+// state machine is simpler than mobile's: just retry until budget
+// runs out, no UI surface (the user notices a stale designer panel
+// faster than a phone-side dropout).
+const MAX_PREP_RECONNECT_ATTEMPTS = 8;
+let prepReconnectAttempts = 0;
+let prepReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearPrepReconnectState() {
+  prepReconnectAttempts = 0;
+  if (prepReconnectTimer) {
+    clearTimeout(prepReconnectTimer);
+    prepReconnectTimer = null;
+  }
+}
+
+function schedulePrepReconnect(projectId: string) {
+  if (prepReconnectAttempts >= MAX_PREP_RECONNECT_ATTEMPTS) {
+    console.warn('[PrepRealtime] Reconnect budget exhausted — giving up');
+    return;
+  }
+  const delayMs = Math.min(2000 * Math.pow(2, prepReconnectAttempts), 60_000);
+  prepReconnectAttempts++;
+  console.log(
+    `[PrepRealtime] Channel dropped — scheduling reconnect attempt ${prepReconnectAttempts}/${MAX_PREP_RECONNECT_ATTEMPTS} in ${delayMs}ms`,
+  );
+  prepReconnectTimer = setTimeout(() => {
+    prepReconnectTimer = null;
+    if (activeProjectId !== projectId || !activeHandlers) {
+      // User has navigated to a different project (or unsubscribed).
+      // Drop the retry quietly.
+      clearPrepReconnectState();
+      return;
+    }
+    // Re-enter subscribe; it tears down the existing channel and
+    // creates a fresh one. Pass through the cached handlers + access.
+    subscribeToProject(projectId, activeHandlers, activeHasPrepAccess);
+  }, delayMs);
+}
 
 /**
  * Subscribe to Realtime changes for a project.
- * Only subscribes if project has_prep_access === true.
- * Returns an unsubscribe function.
+ *
+ * Only subscribes if `hasPrepAccess === true` per ARCHITECTURE.md
+ * rule #5 — app-only projects don't have a Prep surface, so there's
+ * nothing for Prep to listen to. Returns an unsubscribe function in
+ * all cases (no-op when access is denied) so callers can store the
+ * return value unconditionally.
  */
 export function subscribeToProject(
   projectId: string,
   handlers: PrepRealtimeHandlers,
+  hasPrepAccess: boolean = true,
 ): () => void {
+  if (!hasPrepAccess) {
+    console.log(
+      '[PrepRealtime] Skipping subscription — project has_prep_access is false (app-only project)',
+    );
+    return () => {};
+  }
+
   // Don't create duplicate subscriptions
   if (activeProjectId === projectId && activeChannel) {
     return () => unsubscribeFromProject();
@@ -52,6 +107,8 @@ export function subscribeToProject(
   }
 
   activeProjectId = projectId;
+  activeHandlers = handlers;
+  activeHasPrepAccess = hasPrepAccess;
 
   const wrapHandler = (handler?: (payload: ChangePayload) => void) => {
     return (payload: ChangePayload) => {
@@ -124,6 +181,15 @@ export function subscribeToProject(
 
     .subscribe((status) => {
       console.log(`[PrepRealtime] Channel prep:project:${projectId} status:`, status);
+      switch (status) {
+        case 'SUBSCRIBED':
+          clearPrepReconnectState();
+          break;
+        case 'CHANNEL_ERROR':
+        case 'TIMED_OUT':
+          schedulePrepReconnect(projectId);
+          break;
+      }
     });
 
   return () => unsubscribeFromProject();
@@ -137,8 +203,10 @@ export function unsubscribeFromProject(): void {
     supabase.removeChannel(activeChannel);
     activeChannel = null;
     activeProjectId = null;
+    activeHandlers = null;
     console.log('[PrepRealtime] Unsubscribed from project');
   }
+  clearPrepReconnectState();
 }
 
 /**
