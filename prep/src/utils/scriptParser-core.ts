@@ -151,7 +151,15 @@ export function parseScriptText(text: string): ParsedScript {
     const omittedMatch = trimmed.match(
       /^(?:SCENE\s+)?(\d+[A-Z]{0,4})?\s*[\.\-:]?\s*\(?OMITTED\)?\.?\s*(?:\d+[A-Z]{0,4})?\s*\.?\s*\*{0,4}\s*$/i,
     );
-    if (omittedMatch) {
+    // Some scripts skip the literal "OMITTED" word and just print the
+    // doubled scene number on its own line (e.g. "44     44") to mark
+    // a deleted scene. Catch those too — backreference `\1` enforces
+    // that both numbers are identical so we don't swallow unrelated
+    // numeric pairs.
+    const doubledNumberOmitted = omittedMatch
+      ? null
+      : trimmed.match(/^(\d+[A-Z]{0,4})\s+\1\s*\*{0,4}\s*$/i);
+    if (omittedMatch || doubledNumberOmitted) {
       // Close out the current scene first.
       if (currentScene) {
         currentScene.content = currentSceneContent.trim();
@@ -162,7 +170,9 @@ export function parseScriptText(text: string): ParsedScript {
         currentSceneHeadLine = -1;
       }
       fallbackSceneNumber++;
-      const sceneNum = (omittedMatch[1] || String(fallbackSceneNumber)).toUpperCase();
+      const sceneNum = (
+        omittedMatch?.[1] || doubledNumberOmitted?.[1] || String(fallbackSceneNumber)
+      ).toUpperCase();
       scenes.push({
         sceneNumber: sceneNum,
         slugline: trimmed,
