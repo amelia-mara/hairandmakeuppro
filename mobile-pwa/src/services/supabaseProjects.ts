@@ -643,42 +643,66 @@ export async function finalizeProjectDeletion(
     if (memberError) throw new Error('Failed to verify project ownership');
     if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
 
-    // Delete in order to respect foreign key constraints
-    const { data: scenes } = await supabase
-      .from('scenes')
-      .select('id')
-      .eq('project_id', projectId);
-    const sceneIds = scenes?.map(s => s.id) || [];
-
-    const { data: looks } = await supabase
-      .from('looks')
-      .select('id')
-      .eq('project_id', projectId);
-    const lookIds = looks?.map(l => l.id) || [];
-
-    if (sceneIds.length > 0) {
-      await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
-    }
-    if (lookIds.length > 0) {
-      await supabase.from('look_scenes').delete().in('look_id', lookIds);
-    }
-
-    await supabase.from('looks').delete().eq('project_id', projectId);
-    await supabase.from('characters').delete().eq('project_id', projectId);
-    await supabase.from('scenes').delete().eq('project_id', projectId);
-    await supabase.from('project_members').delete().eq('project_id', projectId);
-
-    const { error: deleteError } = await supabase
+    // Delete the project itself first. Every project-scoped table has
+    // ON DELETE CASCADE on its project_id FK (scenes, characters,
+    // scene_characters, looks, continuity_events, photo_metadata,
+    // script_uploads, project_documents, project_members, …), so this
+    // single delete tears down the whole subtree.
+    //
+    // Deleting child rows manually first — in particular project_members —
+    // breaks the projects DELETE RLS policy `is_project_owner(id)`, which
+    // checks the owner row in project_members. Without it the project
+    // DELETE silently fails RLS (returns [] with no error) and the entire
+    // project subtree is orphaned in the DB.
+    const { data: deleted, error: deleteError } = await supabase
       .from('projects')
       .delete()
-      .eq('id', projectId);
+      .eq('id', projectId)
+      .select('id');
 
     if (deleteError) throw deleteError;
+    if (!deleted || deleted.length === 0) {
+      throw new Error('Project delete blocked by RLS — verify ownership.');
+    }
+
+    // Storage objects don't follow DB FK cascades. Clean up everything
+    // under the project's prefix in each bucket.
+    await Promise.all([
+      removeStoragePrefix('project-documents', projectId),
+      removeStoragePrefix('continuity-photos', projectId),
+    ]);
 
     return { error: null };
   } catch (error) {
     return { error: error as Error };
   }
+}
+
+async function removeStoragePrefix(bucket: string, projectId: string): Promise<void> {
+  try {
+    const paths = await listAllPathsRecursive(bucket, projectId);
+    if (paths.length === 0) return;
+    const { error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) console.warn(`[supabaseProjects] ${bucket} cleanup:`, error);
+  } catch (err) {
+    console.warn(`[supabaseProjects] ${bucket} cleanup failed:`, err);
+  }
+}
+
+async function listAllPathsRecursive(bucket: string, prefix: string): Promise<string[]> {
+  const { data, error } = await supabase.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error || !data) return [];
+  const paths: string[] = [];
+  for (const entry of data) {
+    const fullPath = `${prefix}/${entry.name}`;
+    if (entry.id === null) {
+      const nested = await listAllPathsRecursive(bucket, fullPath);
+      paths.push(...nested);
+    } else {
+      paths.push(fullPath);
+    }
+  }
+  return paths;
 }
 
 // Check if a pending deletion's grace period has elapsed

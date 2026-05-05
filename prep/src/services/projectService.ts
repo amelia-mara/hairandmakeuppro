@@ -72,29 +72,84 @@ export async function createProjectInSupabase(
 
 // ---------- Delete ----------
 
+/**
+ * Delete a project from Supabase, cascading through every child table
+ * via FK ON DELETE CASCADE (scenes, characters, scene_characters,
+ * looks, continuity_events, photo_metadata, script_uploads,
+ * project_documents, project_members, prep_budget, script_tags,
+ * script_revisions, …) and removing the project's storage objects.
+ *
+ * Order matters: the projects DELETE RLS policy is `is_project_owner(id)`,
+ * which checks `project_members.is_owner = true` for the current user.
+ * If we delete project_members first, the owner row disappears and the
+ * project DELETE silently fails RLS, leaving the project + its entire
+ * subtree orphaned in the database. So we delete the project itself
+ * first; the FK cascade takes care of project_members and everything else.
+ */
 export async function deleteProjectFromSupabase(
   projectId: string,
 ): Promise<{ error: Error | null }> {
   try {
-    // Remove project membership first (RLS may block direct project delete)
-    const { error: memberError } = await supabase
-      .from('project_members')
-      .delete()
-      .eq('project_id', projectId);
-    if (memberError) console.warn('[ProjectService] member cleanup:', memberError);
-
-    // Delete the project itself
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', projectId);
+      .eq('id', projectId)
+      .select('id');
     if (error) throw error;
+    // RLS-blocked deletes return [] with no error. Surface that as a
+    // failure so the caller doesn't think the project was removed.
+    if (!data || data.length === 0) {
+      throw new Error(
+        'Project delete blocked — only the project owner can delete this project.',
+      );
+    }
+
+    // Storage objects don't cascade with DB FKs. Remove anything under
+    // the project's prefix in each bucket so PDFs, thumbnails, and
+    // continuity photos don't accumulate forever.
+    await Promise.all([
+      removeStoragePrefix('project-documents', projectId),
+      removeStoragePrefix('continuity-photos', projectId),
+    ]);
 
     return { error: null };
   } catch (err) {
     console.error('[ProjectService] delete failed:', err);
     return { error: err as Error };
   }
+}
+
+/**
+ * Recursively list everything under `${projectId}/` in a bucket and
+ * remove it. Best-effort — logs warnings but doesn't throw, since the
+ * DB row is already gone and the storage cleanup is just hygiene.
+ */
+async function removeStoragePrefix(bucket: string, projectId: string): Promise<void> {
+  try {
+    const paths = await listAllPathsRecursive(bucket, projectId);
+    if (paths.length === 0) return;
+    const { error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) console.warn(`[ProjectService] ${bucket} cleanup:`, error);
+  } catch (err) {
+    console.warn(`[ProjectService] ${bucket} cleanup failed:`, err);
+  }
+}
+
+async function listAllPathsRecursive(bucket: string, prefix: string): Promise<string[]> {
+  const { data, error } = await supabase.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error || !data) return [];
+  const paths: string[] = [];
+  for (const entry of data) {
+    const fullPath = `${prefix}/${entry.name}`;
+    // Folders have null id and metadata; recurse into them.
+    if (entry.id === null) {
+      const nested = await listAllPathsRecursive(bucket, fullPath);
+      paths.push(...nested);
+    } else {
+      paths.push(fullPath);
+    }
+  }
+  return paths;
 }
 
 // ---------- Load user projects ----------
