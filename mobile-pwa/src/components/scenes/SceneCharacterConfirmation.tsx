@@ -63,6 +63,7 @@ export function SceneCharacterConfirmation({
     addCharacterFromScene,
     updateCharacter,
     updateSceneSuggestedCharacters,
+    updateSceneBackground,
   } = useProjectStore();
 
   // On-demand character detection: if detection never ran for this scene
@@ -158,6 +159,14 @@ export function SceneCharacterConfirmation({
   // New character name input
   const [newCharacterName, setNewCharacterName] = useState('');
   const [showAddCharacter, setShowAddCharacter] = useState(false);
+
+  // Background presence — non-speaking labels + free-text notes
+  const [backgroundNamesDraft, setBackgroundNamesDraft] = useState(
+    () => (scene.backgroundCharacters || []).join(', ')
+  );
+  const [backgroundNotesDraft, setBackgroundNotesDraft] = useState(
+    () => scene.backgroundNotes || ''
+  );
 
   // Get all existing project characters
   const projectCharacters = currentProject?.characters || [];
@@ -314,6 +323,23 @@ export function SceneCharacterConfirmation({
         finalCharacterIds.add(newChar.id);
       }
     });
+
+    // Persist background presence (names + notes) alongside character confirm
+    const parsedNames = backgroundNamesDraft
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean);
+    const prevNames = scene.backgroundCharacters || [];
+    const namesChanged =
+      parsedNames.length !== prevNames.length ||
+      parsedNames.some((n, i) => n !== prevNames[i]);
+    const notesChanged = backgroundNotesDraft !== (scene.backgroundNotes || '');
+    if (namesChanged || notesChanged) {
+      updateSceneBackground(scene.id, {
+        ...(namesChanged ? { backgroundCharacters: parsedNames } : {}),
+        ...(notesChanged ? { backgroundNotes: backgroundNotesDraft } : {}),
+      });
+    }
 
     // Confirm the scene with final character IDs
     confirmSceneCharacters(scene.id, Array.from(finalCharacterIds));
@@ -614,6 +640,31 @@ export function SceneCharacterConfirmation({
                 Add character not detected
               </button>
             )}
+          </div>
+
+          {/* Background presence — non-speaking labels + notes. Shows as a
+              single row in the breakdown table; doesn't create characters. */}
+          <div className="mt-6">
+            <h4 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+              BACKGROUND
+            </h4>
+            <input
+              type="text"
+              value={backgroundNamesDraft}
+              onChange={(e) => setBackgroundNamesDraft(e.target.value)}
+              placeholder="e.g. passer by, cyclist"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary placeholder:text-text-light"
+            />
+            <textarea
+              value={backgroundNotesDraft}
+              onChange={(e) => setBackgroundNotesDraft(e.target.value)}
+              placeholder="Notes (e.g. 6 background, hospital scrubs, no SA prep needed)"
+              rows={2}
+              className="w-full mt-2 px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary placeholder:text-text-light resize-y min-h-[2.5rem]"
+            />
+            <p className="text-[10px] text-text-light mt-1">
+              Comma-separated. Saves when you confirm.
+            </p>
           </div>
         </div>
 

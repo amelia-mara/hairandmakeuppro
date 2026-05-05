@@ -671,22 +671,10 @@ function BackgroundRow({
   const [draft, setDraft] = useState(notes);
   const updateSceneBackground = useProjectStore((s) => s.updateSceneBackground);
 
-  // Hide the row entirely when there's nothing to show and the user hasn't
-  // opened the editor yet — keeps the breakdown clean when a scene has no
-  // background presence.
+  // Hide the row entirely when there's no background presence yet.
+  // Background is added via the "+" character confirmation modal.
   if (names.length === 0 && !notes && !editing) {
-    return (
-      <tr className="border-t border-black/5">
-        <td colSpan={colSpan} className="px-4 py-2">
-          <button
-            onClick={() => setEditing(true)}
-            className="text-[11px] text-text-muted hover:text-text-secondary transition-colors"
-          >
-            + Add background
-          </button>
-        </td>
-      </tr>
-    );
+    return null;
   }
 
   return (
