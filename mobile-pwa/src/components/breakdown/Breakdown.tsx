@@ -489,11 +489,44 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                     </thead>
                     <tbody>
                       {charIds.length === 0 ? (
-                        <tr>
-                          <td colSpan={COLUMNS.length} className="px-4 py-4 text-text-muted text-center text-[0.8125rem]">
-                            No characters confirmed
-                          </td>
-                        </tr>
+                        (scene.suggestedCharacters && scene.suggestedCharacters.length > 0) ? (
+                          // Auto-detected but not yet confirmed. Render greyed
+                          // rows so the user gets an at-a-glance preview of
+                          // what the parser found; rows are non-interactive
+                          // here — confirmation happens via the "+" button
+                          // which opens the SceneCharacterConfirmation modal.
+                          scene.suggestedCharacters.map((name) => {
+                            const matched = characters.find(
+                              (c) => c.name.toUpperCase() === name.toUpperCase(),
+                            );
+                            return (
+                              <tr
+                                key={`suggested-${name}`}
+                                className="align-top opacity-50 italic"
+                                style={{ borderBottom: '1px solid rgba(180, 160, 120, 0.18)' }}
+                                title="Detected from script — tap + to confirm"
+                              >
+                                <td className="px-4 py-3 text-[0.8125rem]">
+                                  {matched?.name || name}
+                                  <span className="ml-2 text-[10px] uppercase tracking-wide text-text-muted">
+                                    suggested
+                                  </span>
+                                </td>
+                                {COLUMNS.slice(1).map((col) => (
+                                  <td key={col.key} className="px-4 py-3 text-[0.8125rem]">
+                                    <span className="text-text-light">—</span>
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={COLUMNS.length} className="px-4 py-4 text-text-muted text-center text-[0.8125rem]">
+                              No characters confirmed
+                            </td>
+                          </tr>
+                        )
                       ) : (
                         charIds.map((cid) => {
                           const ch = characterMap.get(cid);

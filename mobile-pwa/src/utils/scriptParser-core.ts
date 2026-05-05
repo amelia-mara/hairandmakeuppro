@@ -477,6 +477,12 @@ export function convertParsedScriptToProject(
       synopsis: ps.synopsis,
       scriptContent: ps.content,
       characters: sceneCharIds,
+      // Always carry the parser's per-scene name list through as a
+      // suggestion. The breakdown UI shows these greyed-out so the user
+      // can preview detected characters without opening each scene's
+      // confirmation modal first. Cleared automatically when the user
+      // confirms via that modal (see confirmSceneCharacters).
+      suggestedCharacters: ps.characters.length > 0 ? [...ps.characters] : undefined,
       backgroundCharacters: ps.backgroundCharacters,
       backgroundNotes: ps.backgroundNotes,
       isComplete: false,
