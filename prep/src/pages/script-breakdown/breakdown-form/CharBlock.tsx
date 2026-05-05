@@ -437,11 +437,22 @@ function ShoppingListSection({
       <label className="cb-label">Shopping list</label>
       <div className="cb-shopping-grid">
         {SHOPPING_FLAG_KINDS.map(({ id: kind, label }) => {
-          // Show as ticked if ANY flag exists for this character/kind,
-          // regardless of scope — the scope picker below shows which.
-          const charFlags = flags.filter(
-            (f) => f.characterId === characterId && f.kind === kind,
-          );
+          // Only consider flags that actually apply to the current
+          // (scene, look) context — otherwise a flag scoped to one
+          // look would show as ticked on every other scene/look too.
+          //   storyline → applies in every scene the character is in
+          //   look      → only the matching lookId
+          //   continuity → only when this scene sources that event
+          //                (characterEvents is already this-scene-scoped)
+          const eventIdsForScene = new Set(characterEvents.map((e) => e.id));
+          const charFlags = flags.filter((f) => {
+            if (f.characterId !== characterId || f.kind !== kind) return false;
+            if (f.scope === 'storyline') return true;
+            if (f.scope === 'look') return f.lookId === lookId;
+            if (f.scope === 'continuity')
+              return !!f.continuityEventId && eventIdsForScene.has(f.continuityEventId);
+            return false;
+          });
           const ticked = charFlags.length > 0;
           // The active flag (if any) — used for the scope picker.
           // Prefer one matching the current look; fall back to any.
