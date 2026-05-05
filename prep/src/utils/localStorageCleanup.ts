@@ -24,6 +24,7 @@ import {
   useSceneMetaStore,
   useContinuityTrackerStore,
   useContinuityPhotosStore,
+  useBookmarkStore,
 } from '@/stores/breakdownStore';
 
 /**
@@ -42,6 +43,7 @@ export function clearProjectLocalData(projectId: string): void {
   useScriptUploadStore.getState().clearScript(projectId);
   useParsedScriptStore.getState().clearParsedData(projectId);
   useRevisedScenesStore.getState().clearRevision(projectId);
+  useBookmarkStore.getState().clearBookmark(projectId);
 
   if (sceneIds.size === 0 && characterIds.size === 0) return;
 
@@ -93,10 +95,13 @@ export function purgeOrphanedProjectData(activeProjectIds: string[]): void {
   const parsedStore = useParsedScriptStore.getState();
   const revisedStore = useRevisedScenesStore.getState();
 
+  const bookmarkStore = useBookmarkStore.getState();
+
   const orphanIds = new Set<string>();
   for (const id of Object.keys(scriptStore.scripts)) if (!active.has(id)) orphanIds.add(id);
   for (const id of Object.keys(parsedStore.projects)) if (!active.has(id)) orphanIds.add(id);
   for (const id of Object.keys(revisedStore.revisions)) if (!active.has(id)) orphanIds.add(id);
+  for (const id of Object.keys(bookmarkStore.bookmarks)) if (!active.has(id)) orphanIds.add(id);
 
   if (orphanIds.size === 0) return;
 

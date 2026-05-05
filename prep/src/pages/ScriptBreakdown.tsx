@@ -3,7 +3,7 @@ import {
   MOCK_SCENES, MOCK_CHARACTERS, MOCK_LOOKS, BREAKDOWN_CATEGORIES,
   getBreakdownCategoriesForDepartment,
   useBreakdownStore, useSynopsisStore, useScriptUploadStore, useParsedScriptStore,
-  useCharacterOverridesStore, useRevisedScenesStore,
+  useCharacterOverridesStore, useRevisedScenesStore, useBookmarkStore,
   type Scene, type Character, type Look,
 } from '@/stores/breakdownStore';
 import { useProjectStore } from '@/stores/projectStore';
@@ -155,8 +155,16 @@ export function ScriptBreakdown({ projectId }: Props) {
   }, [hasScript, parsedData]);
 
   /* Reset selected scene when data source changes — synchronous derivation
-     avoids a render frame where scene is undefined */
-  const validSceneId = nonPreambleScenes.find(s => s.id === selectedSceneId) ? selectedSceneId : nonPreambleScenes[0]?.id ?? '';
+     avoids a render frame where scene is undefined.
+     On first load (selected scene not yet in the loaded list), prefer
+     the bookmarked scene if there is one; otherwise fall back to the
+     first non-preamble scene. */
+  const bookmarkedSceneId = useBookmarkStore((s) => s.bookmarks[projectId]);
+  const validSceneId = nonPreambleScenes.find(s => s.id === selectedSceneId)
+    ? selectedSceneId
+    : (bookmarkedSceneId && nonPreambleScenes.find(s => s.id === bookmarkedSceneId)
+        ? bookmarkedSceneId
+        : nonPreambleScenes[0]?.id ?? '');
   useEffect(() => {
     if (validSceneId !== selectedSceneId) {
       setSelectedSceneId(validSceneId);

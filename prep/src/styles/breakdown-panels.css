@@ -224,6 +224,60 @@
   opacity: 0.95;
 }
 
+/* ── Bookmark — "resume here" feature ─────────────────────────
+   One bookmark per project. The banner sits between the header
+   and the search row when the bookmarked scene isn't already
+   selected; clicking jumps to it. The per-card icon at top-right
+   toggles the bookmark on / off. */
+.sl-bookmark-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 14px 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(196, 82, 42, 0.10);
+  border: 1px solid rgba(196, 82, 42, 0.25);
+  color: #C4522A;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.sl-bookmark-banner:hover { background: rgba(196, 82, 42, 0.18); }
+.sl-bookmark-banner-label { flex: 1; text-align: left; }
+
+.sl-card { position: relative; }
+.sl-card-bookmark {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.sl-card:hover .sl-card-bookmark,
+.sl-card-bookmark--on { opacity: 1; }
+.sl-card-bookmark--on { color: #C4522A; }
+.sl-card-bookmark:hover { background: rgba(0, 0, 0, 0.06); color: #C4522A; }
+
+.sl-card--bookmarked {
+  box-shadow: inset 3px 0 0 0 #C4522A;
+}
+
 .sl-card-top {
   display: flex;
   align-items: baseline;

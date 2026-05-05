@@ -980,6 +980,43 @@ export const useSynopsisStore = create<SynopsisState>()(
   )
 );
 
+/* ━━━ Bookmark Store — one "resume here" scene per project ━━━
+
+   Breakdowns are long, so users rarely finish in one sitting. The
+   bookmark records the scene they last marked so reopening a project
+   can offer a "Jump to bookmark" banner. One bookmark per project;
+   toggling on a different scene moves it. */
+
+interface BookmarkState {
+  bookmarks: Record<string, string>; // projectId -> sceneId
+  getBookmark: (projectId: string) => string | undefined;
+  setBookmark: (projectId: string, sceneId: string) => void;
+  clearBookmark: (projectId: string) => void;
+}
+
+export const useBookmarkStore = create<BookmarkState>()(
+  persist(
+    (set, get) => ({
+      bookmarks: {},
+
+      getBookmark: (projectId) => get().bookmarks[projectId],
+
+      setBookmark: (projectId, sceneId) =>
+        set((s) => ({ bookmarks: { ...s.bookmarks, [projectId]: sceneId } })),
+
+      clearBookmark: (projectId) =>
+        set((s) => {
+          const { [projectId]: _, ...rest } = s.bookmarks;
+          return { bookmarks: rest };
+        }),
+    }),
+    {
+      name: 'prep-happy-bookmarks',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
 /* ━━━ Scene Metadata Store — editable overrides for auto-detected scene heading fields ━━━ */
 
 export interface SceneMeta {
