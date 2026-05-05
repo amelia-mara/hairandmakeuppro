@@ -788,6 +788,7 @@ export function ProjectHubScreen() {
           id: membership.projectId,
           name: membership.projectName,
           department: membership.department || 'hmu',
+          hasPrepAccess: !!membership.hasPrepAccess,
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
           scenes: localScenes,
@@ -906,7 +907,7 @@ export function ProjectHubScreen() {
             try {
               for (const scene of pendingDetectionScenes) {
                 const detected = await detectCharactersForScene(
-                  scene.scriptContent!, '', { useAI: false }
+                  scene.scriptContent!, '', {}
                 );
                 if (detected.length > 0) {
                   useProjectStore.getState().updateSceneSuggestedCharacters(

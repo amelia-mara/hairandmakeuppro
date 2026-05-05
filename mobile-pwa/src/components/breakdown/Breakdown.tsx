@@ -359,6 +359,32 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           </p>
         ) : (
           scenesWithCast.map((scene) => {
+            // OMITTED scenes from script revisions render as a thin
+            // placeholder card showing the verbatim script line (e.g.
+            // "30 OMITTED 30."). They have no characters and no breakdown
+            // — the card exists so production crews can see scene 30
+            // used to exist even after it's been removed.
+            if (scene.isOmitted) {
+              return (
+                <div
+                  key={scene.id}
+                  ref={(el) => { if (el) sceneRefs.current.set(scene.id, el); }}
+                  className="rounded-[14px] px-4 py-3 flex items-center gap-3 opacity-60"
+                  style={{
+                    border: '1px dashed rgba(0,0,0,0.18)',
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                  }}
+                >
+                  <span className="flex-shrink-0" style={{ color: '#8A7B5C', fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.02em' }}>
+                    SC {scene.sceneNumber}
+                  </span>
+                  <span className="text-[0.8125rem] font-mono text-text-muted flex-1 truncate">
+                    {scene.scriptContent || scene.slugline || 'OMITTED'}
+                  </span>
+                </div>
+              );
+            }
+
             const globalIdx = sortedScenes.indexOf(scene);
             const bd = scene.prepBreakdown;
             const charIds = filterChar
@@ -463,11 +489,44 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                     </thead>
                     <tbody>
                       {charIds.length === 0 ? (
-                        <tr>
-                          <td colSpan={COLUMNS.length} className="px-4 py-4 text-text-muted text-center text-[0.8125rem]">
-                            No characters confirmed
-                          </td>
-                        </tr>
+                        (scene.suggestedCharacters && scene.suggestedCharacters.length > 0) ? (
+                          // Auto-detected but not yet confirmed. Render greyed
+                          // rows so the user gets an at-a-glance preview of
+                          // what the parser found; rows are non-interactive
+                          // here — confirmation happens via the "+" button
+                          // which opens the SceneCharacterConfirmation modal.
+                          scene.suggestedCharacters.map((name) => {
+                            const matched = characters.find(
+                              (c) => c.name.toUpperCase() === name.toUpperCase(),
+                            );
+                            return (
+                              <tr
+                                key={`suggested-${name}`}
+                                className="align-top opacity-50 italic"
+                                style={{ borderBottom: '1px solid rgba(180, 160, 120, 0.18)' }}
+                                title="Detected from script — tap + to confirm"
+                              >
+                                <td className="px-4 py-3 text-[0.8125rem]">
+                                  {matched?.name || name}
+                                  <span className="ml-2 text-[10px] uppercase tracking-wide text-text-muted">
+                                    suggested
+                                  </span>
+                                </td>
+                                {COLUMNS.slice(1).map((col) => (
+                                  <td key={col.key} className="px-4 py-3 text-[0.8125rem]">
+                                    <span className="text-text-light">—</span>
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={COLUMNS.length} className="px-4 py-4 text-text-muted text-center text-[0.8125rem]">
+                              No characters confirmed
+                            </td>
+                          </tr>
+                        )
                       ) : (
                         charIds.map((cid) => {
                           const ch = characterMap.get(cid);
@@ -558,6 +617,12 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                           );
                         })
                       )}
+                      <BackgroundRow
+                        sceneId={scene.id}
+                        names={scene.backgroundCharacters || []}
+                        notes={scene.backgroundNotes || ''}
+                        colSpan={COLUMNS.length}
+                      />
                     </tbody>
                   </table>
                 </div>
@@ -586,6 +651,86 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         />
       )}
     </div>
+  );
+}
+
+/* ─── Background row — one row per scene listing non-speaking presence ─── */
+
+function BackgroundRow({
+  sceneId,
+  names,
+  notes,
+  colSpan,
+}: {
+  sceneId: string;
+  names: string[];
+  notes: string;
+  colSpan: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(notes);
+  const updateSceneBackground = useProjectStore((s) => s.updateSceneBackground);
+
+  // Hide the row entirely when there's no background presence yet.
+  // Background is added via the "+" character confirmation modal.
+  if (names.length === 0 && !notes && !editing) {
+    return null;
+  }
+
+  return (
+    <tr
+      className="border-t border-black/5"
+      style={{ backgroundColor: 'rgba(210, 195, 165, 0.10)' }}
+    >
+      <td colSpan={colSpan} className="px-4 py-3 text-[0.8125rem]">
+        <div className="flex items-start gap-3">
+          <span className="flex-shrink-0 text-[10px] font-bold tracking-[0.08em] text-text-muted uppercase pt-0.5">
+            Background
+          </span>
+          <div className="flex-1 min-w-0 space-y-1">
+            {names.length > 0 ? (
+              <div className="text-text-primary">{names.join(', ')}</div>
+            ) : (
+              <div className="text-text-light italic text-[11px]">No background listed</div>
+            )}
+            {editing ? (
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => {
+                  updateSceneBackground(sceneId, { backgroundNotes: draft });
+                  setEditing(false);
+                }}
+                placeholder="Notes (e.g. 6 background, hospital scrubs, no SA prep needed)"
+                className="w-full text-[12px] text-text-primary bg-transparent border border-black/10 rounded px-2 py-1 resize-y min-h-[2.25rem] focus:outline-none focus:border-black/25"
+                autoFocus
+                rows={2}
+              />
+            ) : notes ? (
+              <button
+                onClick={() => {
+                  setDraft(notes);
+                  setEditing(true);
+                }}
+                className="text-left text-[12px] text-text-secondary hover:text-text-primary transition-colors w-full"
+              >
+                {notes}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setDraft('');
+                  setEditing(true);
+                }}
+                className="text-[11px] text-text-muted hover:text-text-secondary transition-colors"
+              >
+                + Add notes
+              </button>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
   );
 }
 

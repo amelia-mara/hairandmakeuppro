@@ -11,6 +11,7 @@ import { ordinal } from '@/utils/ordinal';
 import { ExportIcon } from '@/components/icons/ScriptBreakdownIcons';
 import { ExportPreviewModal } from '@/components/ExportPreviewModal';
 import type { ExportPreview } from '@/utils/export/common';
+import { SceneBackgroundRow } from './script-breakdown/SceneBackgroundRow';
 
 /* ━━━ Helpers ━━━ */
 
@@ -556,7 +557,14 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               >
                 <div className="bs-scene-header bs-scene-header--omitted">
                   <span className="bs-scene-num">SC {scene.number}</span>
-                  <span className="bs-scene-omitted-label">OMITTED</span>
+                  {/* Show the verbatim line from the script (e.g.
+                      "30 OMITTED 30." or "30. OMITTED.") instead of the
+                      generic label. The parser stores the exact line in
+                      scriptContent so production crews see what the
+                      revision page actually printed. */}
+                  <span className="bs-scene-omitted-label">
+                    {(scene.scriptContent && scene.scriptContent.trim()) || 'OMITTED'}
+                  </span>
                 </div>
               </div>
             );
@@ -747,6 +755,13 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                       </tr>
                     );
                   })}
+                  <SceneBackgroundRow
+                    projectId={projectId}
+                    sceneId={scene.id}
+                    names={scene.backgroundCharacters || []}
+                    notes={scene.backgroundNotes || ''}
+                    colSpan={9}
+                  />
                 </tbody>
               </table>
             </div>

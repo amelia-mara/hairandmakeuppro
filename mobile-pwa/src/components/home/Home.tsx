@@ -261,11 +261,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         setProcessingProgress(lastProgress);
       };
 
-      // Parse with AI support
-      const parsed = await parseScriptFile(file, {
-        useAI: true,
-        onProgress,
-      });
+      const parsed = await parseScriptFile(file, { onProgress });
 
       setProcessingProgress(95);
       setProcessingStatus('Finalizing...');

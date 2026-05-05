@@ -160,19 +160,27 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
         lookScenes = lsData || [];
       }
 
-      // 4. Map to local types
-      const mappedScenes = mapScenes(scenes, sceneCharacters);
+      // 4. Map to local types. Pass the current local scenes so the
+      // mapper can preserve local-only fields (suggestedCharacters,
+      // backgroundCharacters, backgroundNotes, characterConfirmation
+      // Status) by matching scene id. Without this, every visibility-
+      // change foreground reload wipes detected suggestions.
+      const existingLocalScenes = useProjectStore.getState().currentProject?.scenes ?? [];
+      const mappedScenes = mapScenes(scenes, sceneCharacters, existingLocalScenes);
       const mappedCharacters = mapCharacters(characters);
       const mappedLooks = mapLooks(looks, lookScenes);
 
       // 5. Apply to stores
       const currentProject = useProjectStore.getState().currentProject;
       if (currentProject && currentProject.id === projectId) {
-        // Merge server data into the existing project
+        // Merge server data into the existing project. has_prep_access
+        // gates every Prep-specific sync path (ARCHITECTURE.md rule #5),
+        // so it's plumbed through here from the project record.
         useProjectStore.getState().mergeServerData({
           scenes: mappedScenes,
           characters: mappedCharacters,
           looks: mappedLooks,
+          hasPrepAccess: !!(project as any).has_prep_access,
         });
       }
 
@@ -233,6 +241,7 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
 function mapScenes(
   dbScenes: Record<string, unknown>[],
   sceneCharacters: Record<string, unknown>[],
+  existingLocalScenes: Scene[] = [],
 ): Scene[] {
   // Build lookup: sceneId → characterIds
   const scMap = new Map<string, string[]>();
@@ -243,8 +252,17 @@ function mapScenes(
     scMap.get(sceneId)!.push(charId);
   }
 
+  // Lookup existing local scenes by id so we can preserve the
+  // local-only fields Supabase doesn't store (suggestedCharacters,
+  // backgroundCharacters, backgroundNotes). Without this, every
+  // visibility-change foreground reload wipes detected suggestions
+  // and the breakdown collapses back to "No characters confirmed".
+  const localById = new Map<string, Scene>();
+  for (const s of existingLocalScenes) localById.set(s.id, s);
+
   return dbScenes.map(row => {
     const charIds = scMap.get(row.id as string) || [];
+    const local = localById.get(row.id as string);
 
     // Parse prep breakdown from filming_notes JSON
     let prepBreakdown: PrepSceneBreakdown | undefined;
@@ -277,10 +295,18 @@ function mapScenes(
       filmingNotes: prepBreakdown ? undefined : ((row.filming_notes as string) || undefined),
       prepBreakdown,
       shootingDay: (row.shooting_day as number) || undefined,
-      // Auto-confirm scenes that have characters from the server (e.g. confirmed in Prep)
-      characterConfirmationStatus: (charIds.length > 0 || !row.script_content)
-        ? 'confirmed' as const
-        : 'pending' as const,
+      // Local-only fields that Supabase doesn't store. Preserve them
+      // from the matching local scene (by id) so detected suggestions,
+      // background labels and notes survive a foreground reload.
+      suggestedCharacters: local?.suggestedCharacters,
+      backgroundCharacters: local?.backgroundCharacters,
+      backgroundNotes: local?.backgroundNotes,
+      // Auto-confirm scenes that have characters from the server (e.g.
+      // confirmed in Prep). Otherwise keep the existing local status
+      // so a user mid-confirmation doesn't lose their state on reload.
+      characterConfirmationStatus: charIds.length > 0 || !row.script_content
+        ? ('confirmed' as const)
+        : (local?.characterConfirmationStatus ?? ('pending' as const)),
     };
   });
 }

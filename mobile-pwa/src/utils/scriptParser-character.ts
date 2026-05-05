@@ -1,301 +1,400 @@
 /**
- * Normalize character name for comparison
- * Handles dual character names like "DEAN/PUNK ROCKER" by taking the first name
+ * Character extraction utilities for screenplay parsing.
+ *
+ * Two-tier model:
+ *   Tier 1 — Speakers: a real character has at least one well-formed dialogue
+ *            cue (an ALL CAPS name on its own line followed by dialogue).
+ *            Speakers become tracked Character profiles.
+ *   Tier 2 — Background: per-scene labels for non-speaking presence
+ *            ("PASSER BY", "ELDERLY PATIENT"). Listed on the scene only;
+ *            never become Character profiles.
+ *
+ * The structural cue check (`extractCueLines`) is the heart of the system —
+ * it's deliberately permissive about NAMES (any uppercase word combo) but
+ * strict about CONTEXT (must be followed by dialogue, not by another action
+ * paragraph or scene heading). That combination keeps it generic across
+ * scripts while filtering out ALL-CAPS noise like "ELEVEN MISSING DAYS",
+ * "SUPER: BASED ON TRUE EVENTS", "THE END", etc.
+ */
+
+// Cue-extension parentheticals that are part of the cue, not dialogue:
+// (V.O.) (V/O) (O.S.) (O/S) (CONT'D) (CONTD) (CONT.) (O.C.) (MORE) (PRE-LAP)
+const CUE_PARENS = /\((?:V\.?\s*O\.?|O\.?\s*S\.?|O\.?\s*C\.?|CONT['’]?D|CONT\.?|MORE|PRE[-\s]?LAP|FILTERED|ON\s+PHONE|INTO\s+PHONE|2|3|\d+)\)/gi;
+
+// Words that should never be treated as character names. Used to reject
+// whole-line cues whose "name" is a single such word (e.g. "MORE", "END").
+const RESERVED_LINE_WORDS = new Set([
+  'INT', 'EXT', 'CUT', 'TO', 'FADE', 'IN', 'OUT', 'DISSOLVE',
+  'MORE', 'CONTINUED', 'CONTD', 'OMITTED',
+  'TITLE', 'SUPER', 'CHYRON', 'CARD', 'INSERT', 'CAPTION', 'SUBTITLE',
+  'INTERCUT', 'MONTAGE', 'FLASHBACK', 'FLASHFORWARD',
+  'BACK', 'RESUME', 'ANGLE', 'CLOSE', 'WIDE', 'POV',
+  'LATER', 'CONTINUOUS', 'PRESENT', 'PRESENTDAY', 'MEANWHILE',
+  'PROLOGUE', 'EPILOGUE', 'CHAPTER', 'PART', 'ACT', 'SCENE', 'PILOT',
+  'END', 'ENDS', 'BLACK', 'WHITE',
+]);
+
+// Person-descriptor lexicon used by background detection. Kept generic enough
+// to work on any script — it covers the most common "the X" / "another X"
+// roles that appear in action lines as background presence.
+const PERSON_DESCRIPTORS = new Set([
+  'MAN', 'WOMAN', 'MEN', 'WOMEN', 'BOY', 'GIRL', 'BOYS', 'GIRLS',
+  'PERSON', 'PEOPLE', 'KID', 'KIDS', 'CHILD', 'CHILDREN', 'TEEN', 'TEENAGER',
+  'BABY', 'INFANT', 'TODDLER', 'YOUTH', 'ADULT', 'ELDER',
+  'GUY', 'GUYS', 'LADY', 'LADIES', 'STRANGER', 'FIGURE', 'CROWD',
+  'NURSE', 'DOCTOR', 'SURGEON', 'PATIENT', 'PARAMEDIC', 'MEDIC', 'ORDERLY',
+  'COP', 'COPS', 'OFFICER', 'DETECTIVE', 'AGENT', 'GUARD', 'SOLDIER', 'TROOP',
+  'TROOPS', 'WARRIOR', 'WARRIORS', 'KNIGHT', 'CAPTAIN', 'LIEUTENANT', 'SERGEANT',
+  'CORPORAL', 'PRIVATE', 'COLONEL', 'GENERAL', 'COMMANDER', 'CHIEF',
+  'KING', 'QUEEN', 'PRINCE', 'PRINCESS', 'LORD', 'LADY', 'DUKE',
+  'PRIEST', 'PASTOR', 'NUN', 'MONK', 'JUDGE', 'LAWYER', 'TEACHER', 'STUDENT',
+  'PROFESSOR', 'SCIENTIST', 'TECHNICIAN', 'ENGINEER',
+  'WORKER', 'CLERK', 'WAITER', 'WAITRESS', 'BARTENDER', 'BARMAN', 'BARMAID',
+  'DRIVER', 'PILOT', 'SAILOR', 'CAPTAIN', 'CREWMAN', 'CREWMEMBER',
+  'CYCLIST', 'JOGGER', 'RUNNER', 'PASSER-BY', 'PASSERBY', 'PEDESTRIAN',
+  'BYSTANDER', 'ONLOOKER', 'WITNESS', 'VICTIM', 'SUSPECT',
+  'DOORMAN', 'BUTLER', 'MAID', 'HOUSEKEEPER', 'CHAUFFEUR', 'JANITOR',
+  'BODYGUARD', 'BOUNCER', 'THUG', 'GANGSTER', 'HENCHMAN', 'PRISONER', 'INMATE',
+  'REFEREE', 'COACH', 'PLAYER', 'OPPONENT',
+  'REPORTER', 'JOURNALIST', 'ANCHOR', 'PHOTOGRAPHER', 'CAMERAMAN',
+  'SINGER', 'DANCER', 'ACTOR', 'ACTRESS', 'MUSICIAN',
+  'CIVILIAN', 'TOURIST', 'VISITOR', 'CUSTOMER', 'GUEST',
+  'FATHER', 'MOTHER', 'BROTHER', 'SISTER', 'SON', 'DAUGHTER',
+  'HUSBAND', 'WIFE', 'GRANDFATHER', 'GRANDMOTHER', 'GRANDPA', 'GRANDMA',
+  'UNCLE', 'AUNT', 'COUSIN', 'NEPHEW', 'NIECE', 'FRIEND', 'NEIGHBOR', 'NEIGHBOUR',
+  'COMMENTATOR', 'ANNOUNCER', 'INTERVIEWER', 'PRESENTER', 'HOST', 'HOSTESS',
+]);
+
+// Generic non-character single words that occasionally land in CAPS in
+// action lines or get matched as cue candidates. Filtered out of both
+// speaker and background paths.
+const NON_CHARACTER_SINGLE = new Set<string>([
+  // Pronouns / function words
+  'A', 'AN', 'THE', 'HE', 'SHE', 'IT', 'WE', 'THEY', 'HIS', 'HER', 'OUR',
+  'THEIR', 'YOU', 'YOUR', 'ME', 'MY', 'I', 'US', 'HIM', 'THEM',
+  'AND', 'BUT', 'OR', 'NOR', 'IF', 'AS', 'AT', 'BY', 'OF', 'ON', 'IN', 'TO',
+  'FOR', 'WITH', 'WITHOUT', 'FROM', 'INTO', 'ONTO', 'UPON', 'OVER', 'UNDER',
+  'THIS', 'THAT', 'THESE', 'THOSE', 'WHICH', 'WHO', 'WHOM', 'WHAT', 'WHERE',
+  'WHEN', 'WHY', 'HOW', 'BACK', 'DOWN', 'UP', 'AWAY', 'OFF', 'OUT',
+  // Intensifiers / sentence-starters that can be capitalised
+  'JUST', 'NOW', 'THEN', 'EVEN', 'ALSO', 'STILL', 'ALREADY', 'HOWEVER',
+  'SUDDENLY', 'FINALLY', 'EVENTUALLY', 'MEANWHILE', 'OBVIOUSLY', 'CLEARLY',
+  'ABSOLUTELY', 'DEFINITELY', 'CERTAINLY', 'PROBABLY', 'POSSIBLY',
+  // Time / location markers that appear in caps
+  'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON', 'NOON', 'MIDNIGHT',
+  'DAWN', 'DUSK', 'LATER', 'CONTINUOUS', 'MOMENTS',
+  // Common abstract nouns
+  'TIME', 'SPACE', 'BLOOD', 'FIRE', 'WATER', 'SMOKE', 'DUST', 'SAND', 'ICE',
+  'WIND', 'RAIN', 'SUN', 'MOON', 'STARS', 'SKY', 'EARTH', 'WORLD', 'HOPE',
+  'LOVE', 'HATE', 'FEAR', 'DEATH', 'LIFE', 'TRUTH', 'POWER', 'CHAOS', 'PANIC',
+  'SILENCE', 'DARKNESS', 'LIGHT', 'SHADOW', 'NOTHING', 'EVERYTHING', 'SOMETHING',
+  'SOUND', 'NOISE', 'MUSIC', 'VOICE', 'ECHO', 'SCREAM', 'WHISPER', 'THUNDER',
+  // Common screenplay terms not in RESERVED_LINE_WORDS
+  'BEAT', 'PAUSE', 'OMITTED', 'CONTINUED',
+]);
+
+// Multi-word phrases that occasionally pass shape checks but are clearly
+// directions, not characters.
+const NON_CHARACTER_PHRASES = new Set([
+  'CUT TO', 'FADE IN', 'FADE OUT', 'FADE UP', 'SMASH CUT', 'JUMP CUT',
+  'MATCH CUT', 'HARD CUT', 'DISSOLVE TO', 'MATCH DISSOLVE',
+  'BACK TO', 'WE SEE', 'WE HEAR', 'WE FOLLOW',
+  'CLOSE ON', 'CLOSE UP', 'WIDE SHOT', 'WIDE ON', 'PUSH IN', 'PULL BACK',
+  'PAN LEFT', 'PAN RIGHT', 'ANGLE ON', 'POV ON', 'POV SHOT',
+  'TIME CUT', 'TIME LAPSE', 'TIME JUMP', 'SLOW MOTION', 'FREEZE FRAME',
+  'TITLE CARD', 'END CREDITS', 'OPENING CREDITS', 'INTRO TITLE',
+  'PRESENT DAY', 'YEARS LATER', 'MONTHS LATER', 'WEEKS LATER',
+  'DAYS LATER', 'HOURS LATER', 'MOMENTS LATER', 'NEXT MORNING',
+  'THE END', 'THE NEXT', 'THE FOLLOWING',
+  'BASED ON', 'INSPIRED BY',
+]);
+
+/**
+ * Strip cue extensions and return a canonical, uppercase-trimmed name.
+ * "BRY (V.O.)" → "BRY"
+ * "JOHN (CONT'D)" → "JOHN"
+ * "DEAN/PUNK ROCKER" → "DEAN" (first half — handled by callers if needed)
  */
 export function normalizeCharacterName(name: string): string {
-  let normalized = name.toUpperCase();
-
-  // Remove parentheticals (V.O.), (O.S.), (CONT'D), etc.
-  normalized = normalized.replace(/\s*\(.*?\)\s*/g, '');
-
-  // Handle dual character names - take the first name as primary
-  // e.g., "DEAN/PUNK ROCKER" -> "DEAN"
-  if (normalized.includes('/') && !normalized.startsWith('INT') && !normalized.startsWith('EXT')) {
-    const parts = normalized.split('/');
-    // Only split if both parts look like names (not INT/EXT)
-    if (parts[0].length >= 2 && parts[0].length <= 20) {
-      normalized = parts[0].trim();
+  let n = name.toUpperCase();
+  n = n.replace(CUE_PARENS, '');
+  // Strip any other parentheticals defensively (e.g. "(35)" age tags)
+  n = n.replace(/\s*\([^)]*\)\s*/g, ' ');
+  // Dual-cue split — only when both halves look like names
+  if (n.includes('/') && !/^(INT|EXT|I\/E)/.test(n)) {
+    const [first] = n.split('/');
+    if (first.trim().length >= 2 && first.trim().length <= 25) {
+      n = first;
     }
   }
-
-  return normalized.replace(/\s+/g, ' ').trim();
+  return n.replace(/\s+/g, ' ').trim();
 }
 
 /**
- * Extract character names mentioned in action/description lines
- * These are characters physically present in a scene but not speaking
- *
- * This function is VERY conservative to avoid false positives. In scripts,
- * many words appear in ALL CAPS that are NOT character names (locations,
- * directions, emphasis words, etc.). We only extract:
- *
- * 1. Multi-word ALL CAPS phrases containing a person-descriptor word
- *    (MAN, WOMAN, BOY, GIRL, DOCTOR, etc.)
- * 2. Title Case names followed by action verbs ("Gwen approaches")
- *
- * Single ALL CAPS words in action lines are NOT extracted — they are too
- * unreliable without a schedule to cross-reference against.
+ * Return the canonical "key" for variant grouping. Strips age prefixes
+ * (YOUNG, OLD, OLDER, YOUNGER, TEEN) only when callers want to collapse
+ * "YOUNG BRY" with "BRY". Stays a no-op when the name is already simple.
  */
-export function extractCharactersFromActionLine(line: string): string[] {
-  const characters: string[] = [];
-  const trimmed = line.trim();
-
-  // Skip scene headings, transitions, and very short lines
-  if (trimmed.length < 5) return characters;
-  if (/^(INT\.|EXT\.|INT\/EXT|CUT TO|FADE|DISSOLVE|CONTINUED)/i.test(trimmed)) return characters;
-
-  // Person-descriptor words — multi-word ALL CAPS phrases containing one of
-  // these are very likely to be character references (e.g. "YOUNG WOMAN",
-  // "OLD MAN", "TAXI DRIVER", "LITTLE GIRL")
-  const personDescriptors = /\b(MAN|WOMAN|MEN|WOMEN|PERSON|PEOPLE|DRIVER|OFFICER|DOCTOR|DR|NURSE|GUARD|SOLDIER|WORKER|GIRL|BOY|LADY|LADIES|GUY|GUYS|KID|KIDS|CHILD|CHILDREN|TEEN|TEENAGER|CLERK|WAITER|WAITRESS|COP|COPS|DETECTIVE|AGENT|STRANGER|FIGURE|BABY|INFANT|TODDLER|GRANDAD|GRANDDAD|GRANDPA|GRANDMA|GRANDMOTHER|GRANDFATHER|MOTHER|FATHER|BROTHER|SISTER|HUSBAND|WIFE|SON|DAUGHTER|UNCLE|AUNT|NEPHEW|NIECE|COUSIN|PRIEST|PASTOR|JUDGE|LAWYER|TEACHER|STUDENT|BARTENDER|DOORMAN|BODYGUARD|MAID|BUTLER|NEIGHBOR|NEIGHBOUR|PATIENT|VICTIM|SUSPECT|WITNESS|PASSENGER|PILOT|CAPTAIN|LIEUTENANT|SERGEANT|CORPORAL|PRIVATE|COLONEL|GENERAL|COMMANDER|CHIEF|KING|QUEEN|PRINCE|PRINCESS|LORD|DUKE|COUNT|BARON|KNIGHT|SURGEON|PROFESSOR|RECEPTIONIST|SECRETARY|ASSISTANT|MANAGER|BOSS|OWNER|HOST|HOSTESS|THUG|THIEF|ROBBER|MUGGER|BULLY|GANGSTER|HITMAN|ASSASSIN|VILLAIN|HENCHMAN|SIDEKICK|ACCOMPLICE|LEADER|FOLLOWER|ELDER|SENIOR|JUNIOR|HOMELESS|BEGGAR|ORPHAN|WIDOW|WIDOWER|VETERAN|INMATE|PRISONER|CONVICT|JANITOR|PORTER|VALET|USHER|BELLHOP|CONCIERGE|SALESMAN|VENDOR|MERCHANT|TRADER|BANKER|FARMER|RANCHER|COWBOY|SHERIFF|DEPUTY|MARSHAL|PARAMEDIC|FIREFIGHTER|MARINE|SAILOR|AIRMAN|TROOPER|RANGER|SCOUT|SPY|INFORMANT|SNIPER|MEDIC|ORDERLY|ATTENDANT|CHAUFFEUR|CABBIE|TRUCKER|BIKER|CYCLIST|JOGGER|RUNNER|SWIMMER|DIVER|CLIMBER|HIKER|HUNTER|FISHERMAN|SINGER|DANCER|ACTOR|ACTRESS|MUSICIAN|ARTIST|PAINTER|SCULPTOR|WRITER|POET|JOURNALIST|REPORTER|ANCHOR|CAMERAMAN|PHOTOGRAPHER)\b/i;
-
-  // Pattern 1: Multi-word ALL CAPS phrases that contain a person descriptor
-  // e.g. "YOUNG WOMAN", "OLD MAN", "TAXI DRIVER", "LITTLE GIRL"
-  const allCapsPattern = /\b([A-Z][A-Z.'-]+(?:\s+[A-Z][A-Z.'-]+){1,3})\b/g;
-  let match;
-
-  while ((match = allCapsPattern.exec(trimmed)) !== null) {
-    const potential = match[1].trim();
-
-    // Skip scene heading fragments
-    if (/^(INT|EXT)\s*[.\/]/.test(potential)) continue;
-
-    // Must contain a person-descriptor word
-    if (!personDescriptors.test(potential)) continue;
-
-    characters.push(potential);
-  }
-
-  // Pattern 2: Title Case names followed by action verbs
-  // e.g. "Gwen approaches", "Jon and Peter sit down"
-  const actionVerbs = 'enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates|pulls|pushes|picks|puts|takes|gives|throws|catches|drops|lifts|carries|follows|leads|chases|hugs|kisses|slaps|punches|kicks|shoots|stabs|struggles|fights|ducks|dodges|rolls|slides|stumbles|trips|collapses|faints|wakes|sleeps|eats|drinks|reads|writes|drives|flies|swims|dances|sings|plays|works|tries|helps|saves|kills|dies';
-
-  const titleCasePattern = new RegExp(
-    `(?:^|[,;]\\s*|\\.\\s+)([A-Z][a-z]{2,}(?:\\s+(?:and|&)\\s+[A-Z][a-z]{2,})*)\\s+(?:${actionVerbs})`,
-    'g'
-  );
-
-  while ((match = titleCasePattern.exec(trimmed)) !== null) {
-    const names = match[1].split(/\s+(?:and|&)\s+/i);
-    for (const name of names) {
-      const upperName = name.trim().toUpperCase();
-      if (upperName.length >= 3 && upperName.length <= 20) {
-        characters.push(upperName);
-      }
-    }
-  }
-
-  // Deduplicate
-  return [...new Set(characters)];
+export function variantKey(name: string): string {
+  const n = normalizeCharacterName(name);
+  return n.replace(/^(YOUNG|YOUNGER|OLD|OLDER|TEEN|LITTLE|LIL)\s+/, '');
 }
 
 /**
- * Check if a line is a character cue (character name before dialogue)
- * Improved to better filter out false positives from action lines
- *
- * Character cues are names that appear alone on a line before dialogue.
- * They are typically centered and in ALL CAPS.
+ * Shape check: could this trimmed line BE a cue, ignoring context?
+ * Permissive about names (any uppercase word combo, including numbered
+ * variants like "MAN #1"), strict about non-character markers.
  */
-export function isCharacterCue(line: string): boolean {
-  const trimmed = line.trim();
+function looksLikeCueShape(trimmed: string): boolean {
+  if (!trimmed) return false;
+  if (trimmed.length > 60) return false;
 
-  // Character cues are typically uppercase
-  if (trimmed !== trimmed.toUpperCase()) return false;
-
-  // Should be short (character names aren't long sentences)
-  if (trimmed.length > 50) return false;
-
-  // Should not start with common non-character patterns
-  const nonCharPatterns = [
-    /^\[?(INT\.|EXT\.|INT\/EXT|EXT\/INT|I\/E\.)/i,
-    /^\[?(CUT TO|FADE|DISSOLVE|SMASH|MATCH|WIPE)\]?(\s|$)/i,
-    /^\[?(THE END|CONTINUED|MORE|\(MORE\))\]?(\s|$)/i,
-    /^\d+\s*$/,
-    /^\s*$/,
-    /^\[?(TITLE:|SUPER:|CHYRON:|CARD:|INSERT:|INTERCUT)\]?(\s|$)/i,
-    /^\[?(FLASHBACK|END FLASHBACK|FLASH BACK|FLASH FORWARD|DREAM SEQUENCE|DREAM|MONTAGE|END MONTAGE|INTERCUT|END INTERCUT|PRESENT DAY|PRESENT|LATER|TIME CUT|TITLE CARD)\]?(\s|$)/i,
-    /^\[?(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)\]?(\s|$)/i,
-    /^\[?(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)\]?(\s|$)/i,
-    /^\[?(SUPERIMPOSE|SUBTITLE|CAPTION)\]?(\s|$)/i,
-    /^\[?(EPISODE|CHAPTER|PART|ACT|SCENE|PILOT)\]?\s*\d*\s*$/i,
-  ];
-
-  for (const pattern of nonCharPatterns) {
-    if (pattern.test(trimmed)) return false;
-  }
-
-  // Should contain at least one letter
+  // No lowercase letters allowed (entire line must be ALL CAPS where letters appear).
+  // Numbers, spaces, '.', "'", '-', '/', '#', parens are fine.
+  if (/[a-z]/.test(trimmed)) return false;
   if (!/[A-Z]/.test(trimmed)) return false;
+  // Disallow most punctuation that would indicate prose, brackets that
+  // mark transitions ([FLASHBACK]), and stray quote glyphs.
+  if (/[!?:;,*\[\]"“”]/.test(trimmed)) return false;
+  // Trailing period is a strong action-line signal — reject.
+  if (/\.$/.test(trimmed.replace(CUE_PARENS, '').trim())) return false;
 
-  // Filter out common action line patterns that are all caps
-  // These typically describe what's happening, not who's speaking
-  const actionPatterns = [
-    /^(A |AN |THE |HE |SHE |THEY |WE |IT |HIS |HER |THEIR )/,
-    /^(IN THE |AT THE |ON THE |FROM THE |TO THE |INTO THE )/,
-    /^(ARRIVING|ENTERING|LEAVING|WALKING|RUNNING|STANDING|SITTING)/,
-    / (ENTERS|EXITS|WALKS|RUNS|STANDS|SITS|LOOKS|TURNS|MOVES)$/,
-    / (IS |ARE |WAS |WERE |HAS |HAVE |THE |A |AN )/, // Action lines have articles/verbs mid-sentence
-    /^[A-Z]+ [A-Z]+ [A-Z]+ [A-Z]+ [A-Z]+/, // 5+ words is likely an action line
-    /\.$/, // Character cues don't end with periods
-    /^\d+[A-Z]?\s+/, // Starts with scene number
-  ];
+  // Strip cue extensions for the shape check.
+  let bare = trimmed.replace(CUE_PARENS, '').replace(/\s*\(.*?\)\s*/g, ' ').trim();
+  if (bare.length === 0) return false;
 
-  for (const pattern of actionPatterns) {
-    if (pattern.test(trimmed)) return false;
+  // Reject pure scene-number prefixes: "12  INT.", "4A EXT.", or just "12."
+  if (/^\d+[A-Z]?\s+(INT|EXT|I\/E)/.test(bare)) return false;
+  if (/^\d+[A-Z]?\.?$/.test(bare)) return false;
+
+  // Reject scene headings outright.
+  if (/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\b/.test(bare)) return false;
+
+  // Reject transition / direction lines.
+  if (/^(CUT|FADE|DISSOLVE|SMASH|MATCH|WIPE)\b/.test(bare)) return false;
+
+  // Word count: cues are 1–4 words after stripping extensions.
+  const words = bare.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0 || words.length > 4) return false;
+
+  // Reject lines whose every word is a reserved direction word.
+  if (words.every(w => RESERVED_LINE_WORDS.has(w))) return false;
+
+  // Multi-word phrase blacklist.
+  if (NON_CHARACTER_PHRASES.has(bare)) return false;
+
+  // Single-word non-character rejection.
+  if (words.length === 1 && NON_CHARACTER_SINGLE.has(words[0])) return false;
+  if (words.length === 1 && RESERVED_LINE_WORDS.has(words[0])) return false;
+
+  // Total length sanity.
+  return bare.length >= 2 && bare.length <= 50;
+}
+
+function leadingSpaces(line: string): number {
+  const m = line.match(/^( *)/);
+  return m ? m[1].length : 0;
+}
+
+/**
+ * After a candidate cue line, look ahead to confirm the next non-blank,
+ * non-parenthetical-only line is dialogue (not another cue, not a scene
+ * heading, not a transition). When the cue is indented we additionally
+ * require its dialogue to be indented too — title cards and sub-headers
+ * are centred but their action paragraphs sit at the left margin, which
+ * is the cleanest signal that distinguishes them from a real cue.
+ */
+function isFollowedByDialogue(lines: string[], cueIdx: number): boolean {
+  const cueIndent = leadingSpaces(lines[cueIdx]);
+  for (let i = cueIdx + 1; i < lines.length && i <= cueIdx + 5; i++) {
+    const raw = lines[i];
+    const t = raw.trim();
+    if (!t) continue;
+    // Skip parenthetical-only lines like "(faintly)" or "(MORE)".
+    if (/^\(.*\)$/.test(t)) continue;
+    // Skip page footers like "12." or "Page 4".
+    if (/^\d+\.?$/.test(t)) continue;
+    if (/^Page\s+\d+/i.test(t)) continue;
+    // If the next non-blank line is itself a cue or scene heading, the
+    // candidate was not a real cue.
+    if (looksLikeCueShape(t)) return false;
+    if (/^(INT\.?|EXT\.?|I\/E\.?)\s/.test(t.toUpperCase())) return false;
+    if (/^\d+\s*[A-Z]?\s+(INT|EXT)/.test(t.toUpperCase())) return false;
+    if (/^(CUT |FADE |DISSOLVE )/.test(t.toUpperCase())) return false;
+    // Indentation guard: in industry-format scripts dialogue is indented.
+    // If the cue itself is indented but the next line sits at the left
+    // margin, this is a centred title card or sub-header, not a cue.
+    // (Lenient: any non-zero indent on the next line is enough.)
+    if (cueIndent > 0 && leadingSpaces(raw) === 0) return false;
+    return true;
+  }
+  return false;
+}
+
+export interface CueHit {
+  /** The line index in the source `lines` array. */
+  lineIndex: number;
+  /** Normalised canonical name (parentheticals stripped). */
+  name: string;
+  /** Variant key (age prefixes collapsed) — used to group BRY / YOUNG BRY. */
+  variantKey: string;
+  /** The original raw cue text including any extension. */
+  raw: string;
+}
+
+/**
+ * Single-pass cue extraction across the whole script.
+ *
+ * Two filters apply: a per-line structural test (`isFollowedByDialogue`)
+ * and a per-script indentation-cluster test. Industry-format scripts
+ * indent dialogue cues to a consistent column; centred sub-headers
+ * inside scenes (like "LIBRARY", "THE TRAIN STATION") sit at the left
+ * margin alongside action paragraphs. We compute the dominant cue
+ * indent from the candidate set, then drop any candidate whose own
+ * indent is far below it. Scripts that are entirely flush-left (e.g.
+ * Fountain-style exports) skip the second filter automatically.
+ */
+export function extractCueLines(lines: string[]): CueHit[] {
+  // Pass 1 — collect every line that PASSES SHAPE only. We don't apply
+  // the structural follow-by-dialogue check here yet because it can
+  // false-reject real cues whose dialogue happens to be a short
+  // ALL-CAPS reaction (e.g. JOHN -> "RUN!" / "JESUS" / "HELP") that
+  // also passes shape.
+  type Cand = { i: number; t: string; indent: number; canonical: string };
+  const shapeCandidates: Cand[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t) continue;
+    if (!looksLikeCueShape(t)) continue;
+    const canonical = normalizeCharacterName(t);
+    if (canonical.length < 2 || canonical.length > 35) continue;
+    if (NON_CHARACTER_SINGLE.has(canonical)) continue;
+    if (NON_CHARACTER_PHRASES.has(canonical)) continue;
+    shapeCandidates.push({
+      i,
+      t,
+      indent: leadingSpaces(lines[i]),
+      canonical,
+    });
   }
 
-  // Allow parentheticals like (V.O.), (O.S.), (CONT'D)
-  const nameWithoutParen = trimmed.replace(/\s*\(.*?\)\s*/g, '').trim();
+  // Pass 2 — frequency table. A canonical name that appears ≥ 3 times
+  // in cue position is almost certainly a real character; one-off
+  // matches are usually centred title cards or shouted exclamations.
+  const FREQUENCY_FLOOR = 3;
+  const freqByCanonical = new Map<string, number>();
+  for (const c of shapeCandidates) {
+    freqByCanonical.set(c.canonical, (freqByCanonical.get(c.canonical) ?? 0) + 1);
+  }
 
-  // Character names should be reasonably short (1-4 words typically)
-  const wordCount = nameWithoutParen.split(/\s+/).length;
-  if (wordCount > 4) return false;
-
-  // Comprehensive blacklist of non-character words.
-  // Used for single-word rejection AND multi-word phrase filtering.
-  const nonCharacterWords = new Set([
-    // Pronouns (never character names)
-    'HE', 'SHE', 'IT', 'WE', 'ME', 'US', 'HIM', 'HER', 'HIS', 'ITS',
-    'THEY', 'THEM', 'THEIR', 'WHO', 'WHOM', 'WHOSE', 'WHAT', 'WHICH',
-    'THAT', 'THIS', 'THESE', 'THOSE', 'MYSELF', 'HIMSELF', 'HERSELF',
-    'ITSELF', 'OURSELVES', 'THEMSELVES', 'YOURSELF',
-    // Prepositions / conjunctions / function words
-    'BUT', 'FOR', 'NOT', 'ALL', 'WITH', 'FROM', 'INTO', 'UPON',
-    'THAN', 'YET', 'NOR', 'SINCE', 'UNTIL', 'WHILE', 'DURING',
-    'THROUGH', 'BETWEEN', 'AGAINST', 'WITHOUT', 'WITHIN', 'BEYOND',
-    'ALONG', 'ACROSS', 'TOWARD', 'TOWARDS', 'AROUND', 'OVER', 'UNDER',
-    'AFTER', 'BEFORE', 'NEAR', 'FAR',
-    'AS', 'AT', 'BY', 'IF', 'OF', 'ON', 'OR', 'TO', 'UP', 'SO',
-    'DO', 'GO', 'AM', 'AN', 'BE', 'MY', 'OUR', 'YOUR', 'TOO',
-    'HOW', 'WHY', 'OFF', 'OUT', 'BACK', 'DOWN', 'AWAY',
-    // Scene elements / locations
-    'INT', 'EXT', 'ROAD', 'STREET', 'HOUSE', 'ROOM', 'OFFICE', 'BUILDING',
-    'HALL', 'HALLWAY', 'CORRIDOR', 'LOBBY', 'FOYER', 'STAIRS', 'STAIRCASE',
-    'BASEMENT', 'ATTIC', 'GARAGE', 'PORCH', 'BALCONY', 'TERRACE', 'ROOFTOP',
-    'GARDEN', 'YARD', 'ALLEY', 'PARK', 'FIELD', 'PLAZA', 'SQUARE',
-    'BRIDGE', 'TUNNEL', 'CAVE', 'CLIFF', 'LEDGE', 'RIDGE', 'SUMMIT', 'PEAK',
-    'CHURCH', 'TEMPLE', 'HOSPITAL', 'SCHOOL', 'PRISON', 'JAIL', 'COURTHOUSE',
-    'AIRPORT', 'STATION', 'HARBOR', 'HARBOUR', 'DOCK', 'PIER', 'WAREHOUSE',
-    'FACTORY', 'LABORATORY', 'BUNKER', 'SHELTER', 'CABIN', 'COTTAGE', 'MANOR',
-    'CASTLE', 'PALACE', 'TOWER', 'FORT', 'FORTRESS', 'CAMP', 'TENT',
-    'KITCHEN', 'BATHROOM', 'BEDROOM', 'PARLOR', 'PARLOUR', 'STUDY', 'LIBRARY',
-    'CAFETERIA', 'RESTAURANT', 'BAR', 'PUB', 'CLUB', 'CASINO', 'THEATER', 'THEATRE',
-    'CEMETERY', 'GRAVEYARD', 'MORGUE', 'AUTOPSY', 'COURTROOM', 'PRECINCT',
-    'CLASSROOM', 'GYMNASIUM', 'STADIUM', 'ARENA', 'RINK',
-    // Time
-    'DAY', 'NIGHT', 'MORNING', 'EVENING', 'DAWN', 'DUSK', 'LATER', 'CONTINUOUS',
-    'MIDNIGHT', 'NOON', 'AFTERNOON', 'TWILIGHT', 'SUNSET', 'SUNRISE',
-    // Common adjectives / adverbs (often in caps for emphasis)
-    'EDENIC', 'VERDANT', 'TOWERING', 'LONELY', 'BEAUTIFUL', 'GORGEOUS', 'STUNNING',
-    'SERENE', 'PEACEFUL', 'WILD', 'FIERCE', 'ANCIENT', 'MODERN', 'RUSTIC',
-    'EXTREME', 'ALMOST', 'ABOUT', 'READY', 'SUDDENLY', 'FINALLY', 'SLOWLY',
-    'QUICKLY', 'QUIETLY', 'LOUDLY', 'SOFTLY', 'GENTLY', 'ROUGHLY', 'BARELY',
-    'EXACTLY', 'SIMPLY', 'MERELY', 'UTTERLY', 'COMPLETELY', 'ENTIRELY',
-    'ACTUALLY', 'BASICALLY', 'APPARENTLY', 'OBVIOUSLY', 'CLEARLY', 'CERTAINLY',
-    'PERHAPS', 'MAYBE', 'PROBABLY', 'POSSIBLY', 'LIKELY', 'UNLIKELY',
-    'TOGETHER', 'ALONE', 'APART', 'AHEAD', 'BEHIND', 'ABOVE', 'BELOW',
-    'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
-    'FOREVER', 'ALWAYS', 'NEVER', 'SOMETIMES', 'OFTEN', 'RARELY', 'SELDOM',
-    'ALREADY', 'ANYWAY', 'HOWEVER', 'MEANWHILE', 'OTHERWISE', 'THEREFORE',
-    'ABSOLUTELY', 'DEFINITELY', 'SERIOUSLY', 'LITERALLY', 'BASICALLY',
-    // Common nouns / abstract words (caps for emphasis)
-    'SILENCE', 'DARKNESS', 'NOTHING', 'EVERYTHING', 'SOMETHING', 'ANYTHING',
-    'NOBODY', 'EVERYBODY', 'SOMEONE', 'ANYONE', 'EVERYONE', 'NOWHERE', 'EVERYWHERE',
-    'TIME', 'SPACE', 'PLACE', 'HOME', 'WORLD', 'EARTH', 'HEAVEN', 'HELL',
-    'LOVE', 'HATE', 'FEAR', 'HOPE', 'DEATH', 'LIFE', 'TRUTH', 'LIES', 'POWER',
-    'MONEY', 'BLOOD', 'FIRE', 'SMOKE', 'DUST', 'SAND', 'MUD', 'ICE', 'FROST',
-    'THUNDER', 'LIGHTNING', 'STORM', 'EXPLOSION', 'CRASH', 'BANG', 'BOOM',
-    'SCREAM', 'SILENCE', 'WHISPER', 'ECHO', 'VOICE', 'SOUND', 'NOISE', 'MUSIC',
-    'CHAOS', 'PANIC', 'MAYHEM', 'CARNAGE', 'WRECKAGE', 'DEBRIS', 'RUBBLE',
-    'SHOCK', 'HORROR', 'TERROR', 'RAGE', 'FURY', 'AGONY', 'GRIEF', 'ANGER',
-    'RELIEF', 'DESPAIR', 'SURPRISE', 'WONDER', 'DISGUST', 'SORROW', 'DREAD',
-    'LIKE', 'JUST', 'ONLY', 'REAL', 'TRUE', 'SAME', 'DIFFERENT', 'SPECIAL',
-    'SECRET', 'PRIVATE', 'PUBLIC', 'FINAL', 'TOTAL', 'PERFECT', 'COMPLETE',
-    'TYPE', 'OPEN', 'SHUT', 'EMPTY', 'FULL', 'BUSY', 'FREE', 'SAFE',
-    'LUCKY', 'SORRY', 'GUILTY', 'WRONG', 'CRAZY', 'ANGRY', 'UPSET',
-    // Nature / scenery
-    'MOUNTAINS', 'MOUNTAIN', 'HILLS', 'VALLEY', 'RIVER', 'STREAM', 'LAKE', 'OCEAN',
-    'FOREST', 'WOODS', 'TREE', 'TREES', 'SKY', 'SUN', 'MOON', 'MELTWATER',
-    'DESERT', 'JUNGLE', 'SWAMP', 'MARSH', 'BOG', 'MEADOW', 'PRAIRIE', 'PLAIN',
-    'ISLAND', 'COAST', 'SHORE', 'WATERFALL', 'VOLCANO', 'GLACIER', 'CANYON',
-    // Colors
-    'RED', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'PURPLE', 'BLACK', 'WHITE', 'GOLDEN',
-    'CRIMSON', 'SCARLET', 'AZURE', 'IVORY', 'SILVER',
-    // Numbers / quantities
-    'VERY', 'MUCH', 'MORE', 'MOST', 'JUST', 'ONLY', 'ALSO', 'EVEN', 'STILL', 'WELL',
-    'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN',
-    'FIRST', 'SECOND', 'THIRD', 'LAST', 'NEXT', 'ANOTHER', 'HALF', 'DOUBLE', 'TRIPLE',
-    // Screenplay terms
-    'CONTINUED', 'FADE', 'CUT', 'DISSOLVE', 'ANGLE', 'SHOT', 'VIEW', 'CLOSE', 'WIDE',
-    'RESUME', 'BEGIN', 'END', 'STOP', 'START', 'PAUSE', 'BEAT',
-    'PRELAP', 'OVERLAP', 'INTERCUT', 'MONTAGE', 'SERIES', 'SEQUENCE',
-    // Objects / props
-    'PHONE', 'GUN', 'KNIFE', 'SWORD', 'WEAPON', 'BOMB', 'GRENADE', 'RIFLE',
-    'CAR', 'TRUCK', 'BUS', 'TRAIN', 'PLANE', 'HELICOPTER', 'BOAT', 'SHIP',
-    'TAXI', 'AMBULANCE', 'MOTORCYCLE', 'BICYCLE', 'WHEELCHAIR', 'VEHICLE',
-    'DOOR', 'WINDOW', 'WALL', 'FLOOR', 'CEILING', 'ROOF',
-    'TABLE', 'CHAIR', 'DESK', 'BED', 'COUCH', 'SOFA', 'BENCH',
-    'LAMP', 'MIRROR', 'CLOCK', 'SCREEN', 'MONITOR', 'COMPUTER', 'LAPTOP',
-    'RADIO', 'TELEVISION', 'CAMERA', 'MICROPHONE', 'SPEAKER',
-    'BAG', 'BOX', 'CASE', 'TRUNK', 'CHEST', 'DRAWER', 'CABINET', 'SHELF',
-    'BOTTLE', 'GLASS', 'CUP', 'PLATE', 'BOWL', 'TRAY', 'BASKET',
-    'KEY', 'LOCK', 'CHAIN', 'ROPE', 'WIRE', 'CABLE', 'PIPE', 'TUBE',
-    'SIGN', 'FLAG', 'BANNER', 'POSTER', 'PHOTO', 'PICTURE', 'PAINTING',
-    'BOOK', 'LETTER', 'NOTE', 'MAP', 'CARD', 'ENVELOPE', 'PACKAGE',
-    'RING', 'NECKLACE', 'BRACELET', 'WATCH', 'HELMET', 'MASK', 'BADGE',
-    // Misc common words that appear in caps in scripts
-    'TITLE', 'CREDIT', 'CREDITS', 'SUBTITLE', 'CAPTION', 'CARD',
-    'CHAPTER', 'PART', 'ACT', 'SCENE', 'EPISODE', 'PILOT',
-    'DREAM', 'NIGHTMARE', 'MEMORY', 'VISION', 'FLASHBACK', 'FANTASY',
-    'PRESENT', 'PAST', 'FUTURE', 'HISTORY', 'LEGEND', 'MYTH', 'PROPHECY',
-    'UNKNOWN', 'UNTITLED', 'UNNAMED', 'UNIDENTIFIED', 'ANONYMOUS',
-    'VARIOUS', 'SEVERAL', 'MULTIPLE', 'NUMEROUS', 'COUNTLESS',
-    'OTHER', 'ANOTHER', 'EITHER', 'NEITHER', 'BOTH', 'NONE', 'EACH', 'EVERY',
-    'HERE', 'THERE', 'WHERE', 'WHEN', 'THEN', 'NOW', 'SOON', 'AGO', 'HENCE',
-    'AGAIN', 'ONCE', 'TWICE', 'THRICE', 'OFTEN', 'SELDOM', 'NEVER', 'ALWAYS',
-    'OKAY', 'YEAH', 'SURE', 'RIGHT', 'WRONG', 'TRUE', 'FALSE', 'YES', 'NO',
-  ]);
-
-  // Single word checks - filter out words that are NOT character names
-  if (wordCount === 1) {
-    // Filter out words ending in common adjective/verb suffixes.
-    // Only apply to words with 6+ characters to avoid rejecting short names
-    // like TED, FRED, NED (ED), LILY, EMILY, SALLY (LY), ERIC (IC),
-    // KING (ING), GRANT (ANT), CLIVE (IVE), etc.
-    if (nameWithoutParen.length >= 6) {
-      const nonNameSuffixes = /^[A-Z]+(ING|ED|LY|TION|SION|NESS|MENT|ABLE|IBLE|ICAL|IOUS|EOUS|ULAR|TERN|ERN|WARD|WARDS|LIKE|LESS|FUL|IC|AL|ARY|ORY|IVE|OUS|ANT|ENT)$/;
-      if (nonNameSuffixes.test(nameWithoutParen)) return false;
+  // Pass 3 — accept each candidate iff EITHER:
+  //   (a) it passes the structural follow-by-dialogue test, OR
+  //   (b) its canonical name has at least FREQUENCY_FLOOR shape matches
+  //       across the whole script — frequency tells us this is a real
+  //       speaker and the structural test was rejecting on a noisy
+  //       dialogue line (e.g. a one-word ALL CAPS reaction).
+  const accepted: Cand[] = [];
+  for (const c of shapeCandidates) {
+    const isFrequent = (freqByCanonical.get(c.canonical) ?? 0) >= FREQUENCY_FLOOR;
+    if (isFrequent || isFollowedByDialogue(lines, c.i)) {
+      accepted.push(c);
     }
-
-    if (nonCharacterWords.has(nameWithoutParen)) return false;
   }
 
-  // Multi-word checks — filter out compound phrases that aren't character names
-  if (wordCount >= 2) {
-    const words = nameWithoutParen.split(/\s+/);
-
-    // If every word in the phrase is a known non-character word, reject
-    if (words.every(w => nonCharacterWords.has(w))) return false;
-
-    // Curated multi-word non-character phrases (screenplay terms, directions)
-    const nonCharacterPhrases = new Set([
-      'TYPE WRITER', 'VOICE OVER', 'VOICE MAIL',
-      'TIME LAPSE', 'TIME CUT', 'TIME JUMP',
-      'SLOW MOTION', 'FREEZE FRAME', 'SPLIT SCREEN',
-      'WIDE SHOT', 'CLOSE UP', 'MEDIUM SHOT', 'LONG SHOT', 'AERIAL SHOT',
-      'PUSH IN', 'PULL BACK', 'PAN LEFT', 'PAN RIGHT',
-      'SMASH CUT', 'JUMP CUT', 'MATCH CUT', 'HARD CUT',
-      'FADE IN', 'FADE OUT', 'FADE UP', 'BLACK OUT', 'WHITE OUT',
-      'TITLE CARD', 'END CREDITS', 'OPENING CREDITS',
-      'STOCK FOOTAGE', 'NEXT DAY', 'SAME DAY', 'THAT NIGHT',
-      'NEXT MORNING', 'SOME TIME', 'YEARS LATER', 'MONTHS LATER',
-      'DAYS LATER', 'HOURS LATER', 'WEEKS LATER',
-      'DREAM SEQUENCE', 'TITLE SEQUENCE', 'ACTION SEQUENCE',
-      'THE END', 'TO BE',
-    ]);
-    if (nonCharacterPhrases.has(nameWithoutParen)) return false;
+  // Pass 4 — indent cluster filter. Industry-format scripts indent
+  // dialogue cues to a consistent column; centred sub-headers sit at
+  // the left margin. Compute the dominant cue indent from the accepted
+  // set and drop anything far below it. Scripts that are entirely
+  // flush-left (e.g. Fountain exports) skip this filter automatically.
+  let minIndent = 0;
+  if (accepted.length >= 4) {
+    const indents = accepted.map((c) => c.indent).sort((a, b) => a - b);
+    const median = indents[Math.floor(indents.length / 2)];
+    if (median >= 6) {
+      minIndent = Math.floor(median / 2);
+    }
   }
 
-  // Character names should be reasonably short
-  return nameWithoutParen.length >= 2 && nameWithoutParen.length <= 35;
+  const hits: CueHit[] = [];
+  for (const c of accepted) {
+    if (c.indent < minIndent) continue;
+    hits.push({
+      lineIndex: c.i,
+      name: c.canonical,
+      variantKey: variantKey(c.canonical),
+      raw: c.t,
+    });
+  }
+  return hits;
+}
+
+/**
+ * Background detection from raw scene action text.
+ *
+ * Returns a small ordered list of background labels (e.g. "PASSER BY",
+ * "ELDERLY PATIENT") found in the action text. Speaker names supplied via
+ * `knownSpeakers` are excluded so they don't show up as background as well.
+ *
+ * Generic rules:
+ *   - Multi-word ALL CAPS phrases (2–4 words) where a person-descriptor
+ *     word is in the last two positions.
+ *   - Single-word ALL CAPS tokens that are themselves person-descriptors
+ *     (e.g. "NURSE", "REFEREE") and are introduced with an article
+ *     (a/an/the/another/two/three/HER/HIS) immediately before them.
+ *   - Skips anything matching a known speaker (canonical name or variant
+ *     key) so leads aren't double-listed as background.
+ */
+export function extractBackgroundFromAction(
+  actionText: string,
+  knownSpeakers: Set<string>,
+): string[] {
+  if (!actionText) return [];
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const speakerVariants = new Set<string>();
+  for (const s of knownSpeakers) {
+    speakerVariants.add(s);
+    speakerVariants.add(variantKey(s));
+  }
+
+  // Multi-word ALL CAPS phrases (2–4 words). Allow apostrophes/hyphens
+  // inside words. Reject if any word is a non-character single.
+  const multi = /\b([A-Z][A-Z'-]{1,}(?:\s+[A-Z][A-Z'-]{1,}){1,3})\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = multi.exec(actionText)) !== null) {
+    const phrase = m[1].trim();
+    if (NON_CHARACTER_PHRASES.has(phrase)) continue;
+    const words = phrase.split(/\s+/);
+    // Reject phrases whose every word is a reserved direction word.
+    if (words.every(w => RESERVED_LINE_WORDS.has(w))) continue;
+    // Reject if any word is INT/EXT (slugline fragments).
+    if (words.some(w => w === 'INT' || w === 'EXT')) continue;
+    // Require a person-descriptor in the last two positions.
+    const tail = words.slice(-2);
+    if (!tail.some(w => PERSON_DESCRIPTORS.has(w))) continue;
+    // Reject if every word is in NON_CHARACTER_SINGLE (e.g. "BACK BACK").
+    if (words.every(w => NON_CHARACTER_SINGLE.has(w))) continue;
+    if (speakerVariants.has(phrase) || speakerVariants.has(variantKey(phrase))) continue;
+    if (seen.has(phrase)) continue;
+    seen.add(phrase);
+    out.push(phrase);
+    if (out.length >= 12) break;
+  }
+
+  // Single-word descriptors introduced by an article — "the NURSE",
+  // "another COP", "a JANITOR".
+  const single = /\b(?:a|an|the|another|two|three|four|five|her|his|their|some|several)\s+([A-Z][A-Z'-]{2,})\b/gi;
+  while ((m = single.exec(actionText)) !== null) {
+    const word = m[1].toUpperCase();
+    if (!PERSON_DESCRIPTORS.has(word)) continue;
+    if (NON_CHARACTER_SINGLE.has(word)) continue;
+    if (speakerVariants.has(word)) continue;
+    if (seen.has(word)) continue;
+    seen.add(word);
+    out.push(word);
+    if (out.length >= 12) break;
+  }
+
+  return out;
 }

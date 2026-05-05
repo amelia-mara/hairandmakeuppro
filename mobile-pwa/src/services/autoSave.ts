@@ -14,14 +14,16 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { useSyncStore } from '@/stores/syncStore';
 import {
   sceneToDb,
   characterToDb,
   lookToDb,
   sceneCaptureToDb,
-} from '@/services/manualSync';
+} from '@/services/syncMappers';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { getPhotoBlob } from '@/db';
+import { outboxService } from '@/services/outboxService';
 import type { SceneCapture, Photo, Look } from '@/types';
 import type { Json } from '@/types/supabase';
 
@@ -64,6 +66,14 @@ function debounced(key: string, fn: () => Promise<void>): void {
       }
       await fn();
       _consecutiveFailures = 0; // reset on success
+      _lastFailureMessage = '';
+      // Mirror to syncStore so any UI subscribed to it clears the
+      // "trouble saving" indicator the moment a write succeeds, and
+      // stamp lastSuccessfulSave so SyncSheet can show "Last saved
+      // X ago" without depending on the retired manual sync.
+      useSyncStore.getState().setAutoSaveFailureCount(0);
+      useSyncStore.getState().setAutoSaveLastError(null);
+      useSyncStore.getState().setLastSuccessfulSave(Date.now());
     } catch (err) {
       _consecutiveFailures++;
       _lastFailureMessage = err instanceof Error
@@ -72,6 +82,8 @@ function debounced(key: string, fn: () => Promise<void>): void {
           ? (err as any).message
           : String(err);
       console.error(`[AutoSave] ${key} failed (failure #${_consecutiveFailures}):`, err);
+      useSyncStore.getState().setAutoSaveFailureCount(_consecutiveFailures);
+      useSyncStore.getState().setAutoSaveLastError(_lastFailureMessage);
     }
   }, DEBOUNCE_MS);
 }
@@ -263,7 +275,16 @@ export function autoSaveCaptures(): void {
         .from('continuity_events')
         .upsert(dbCapture, { onConflict: 'id' });
       if (error) {
-        console.warn('[AutoSave] Continuity event failed:', error);
+        console.warn('[AutoSave] Continuity event failed; queued in outbox:', error);
+        await outboxService.addToOutbox({
+          type: 'continuity_event',
+          projectId,
+          payload: JSON.stringify(dbCapture),
+          createdAt: Date.now(),
+        });
+        // Photos depend on the continuity_event row existing in Supabase
+        // (FK on photos.continuity_event_id). Skip this capture's photos
+        // for now — they'll be queued when we retry from foreground/online.
         continue;
       }
       // Upload any new photos
@@ -552,16 +573,22 @@ export async function saveEverythingToSupabase(): Promise<void> {
   if (captureEntries.length > 0) {
     for (const capture of captureEntries) {
       const sc = capture as SceneCapture;
+      const dbCapture = sceneCaptureToDb(sc, userId);
       try {
-        const dbCapture = sceneCaptureToDb(sc, userId);
         const { error } = await supabase
           .from('continuity_events')
           .upsert(dbCapture, { onConflict: 'id' });
         if (error) throw error;
         await autoUploadCapturePhotos(projectId, sc);
       } catch (err) {
-        console.error('[SaveAll] Capture failed:', err);
+        console.error('[SaveAll] Capture failed; queued in outbox:', err);
         errors.push(`capture-${sc.id}`);
+        await outboxService.addToOutbox({
+          type: 'continuity_event',
+          projectId,
+          payload: JSON.stringify(dbCapture),
+          createdAt: Date.now(),
+        });
       }
     }
     console.log('[SaveAll] Captures saved');
@@ -724,14 +751,24 @@ async function autoUploadCapturePhotos(projectId: string, capture: SceneCapture)
     }
 
     if (storagePath) {
-      await supabase.from('photos').insert({
+      const photoRow = {
         id: photo.id,
         continuity_event_id: capture.id,
         storage_path: storagePath,
-        photo_type: 'on_set',
+        photo_type: 'on_set' as const,
         angle: angle as 'front' | 'left' | 'right' | 'back' | 'detail' | 'additional',
         taken_at: photo.capturedAt ? new Date(photo.capturedAt).toISOString() : new Date().toISOString(),
-      });
+      };
+      const { error } = await supabase.from('photos').insert(photoRow);
+      if (error) {
+        console.warn('[AutoSave] Photo metadata insert failed; queued in outbox:', error);
+        await outboxService.addToOutbox({
+          type: 'photo_metadata',
+          projectId,
+          payload: JSON.stringify(photoRow),
+          createdAt: Date.now(),
+        });
+      }
     }
   }
 }

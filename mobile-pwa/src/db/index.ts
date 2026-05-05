@@ -48,7 +48,25 @@ export interface StoreBackup {
   updatedAt: Date;
 }
 
-// Define the database with version 2 schema for blob storage
+// Outbox entry: a Supabase write that failed and needs to be retried.
+// Sentinel value used in `nextRetry` for entries that have exhausted
+// their retry budget and should never be picked up by automatic flush.
+export const OUTBOX_DEAD_NEXT_RETRY = Number.MAX_SAFE_INTEGER;
+
+export type OutboxEntryType = 'continuity_event' | 'photo_metadata' | 'photo_storage';
+
+export interface OutboxEntry {
+  id?: number;          // auto-increment, set by Dexie on add
+  type: OutboxEntryType;
+  projectId: string;
+  payload: string;      // JSON-stringified write body
+  createdAt: number;    // Date.now() when first queued
+  attempts: number;     // how many times we've tried
+  lastError: string;    // most recent error message
+  nextRetry: number;    // Date.now() timestamp; OUTBOX_DEAD_NEXT_RETRY = dead
+}
+
+// Define the database with version 3 schema (outbox added)
 export class HairMakeupDB extends Dexie {
   projects!: Table<StoredProject>;
   scenes!: Table<Scene>;
@@ -57,6 +75,7 @@ export class HairMakeupDB extends Dexie {
   sceneCaptures!: Table<StoredSceneCapture>;
   photoBlobs!: Table<PhotoBlob>;
   storeBackups!: Table<StoreBackup>;
+  outbox!: Table<OutboxEntry, number>;
 
   constructor() {
     super('HairMakeupProDB');
@@ -85,6 +104,20 @@ export class HairMakeupDB extends Dexie {
     }).upgrade(async () => {
       // Migration: Clear old data since photos table format changed
       // Users will need to re-capture photos, but this is acceptable for the migration
+    });
+
+    // Version 3: Durable outbox for Supabase writes that failed
+    // (continuity events + photo metadata). Allows retry on reconnect
+    // and prevents silent data loss on poor signal during on-set capture.
+    this.version(3).stores({
+      projects: 'id, updatedAt',
+      scenes: 'id, sceneNumber, slugline, isComplete',
+      characters: 'id, name',
+      looks: 'id, characterId, name',
+      sceneCaptures: 'id, projectId, sceneId, characterId, updatedAt',
+      photoBlobs: 'id, capturedAt, angle',
+      storeBackups: 'id, updatedAt',
+      outbox: '++id, type, projectId, createdAt, attempts, nextRetry',
     });
   }
 }
