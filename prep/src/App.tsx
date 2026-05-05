@@ -21,6 +21,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectSync } from '@/hooks/useProjectSync';
 import { canAccessPrep } from '@/utils/tierUtils';
+import { purgeOrphanedProjectData } from '@/utils/localStorageCleanup';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { PrepUpgradeScreen } from '@/pages/PrepUpgradeScreen';
 import { ScriptieChat } from '@/components/scriptie/ScriptieChat';
@@ -41,6 +42,12 @@ function App() {
   // Restore session on mount
   useEffect(() => {
     useAuthStore.getState().getSession();
+    // One-time orphan sweep — drops per-project data in localStorage for
+    // any project that's no longer in the active project list. Heavy
+    // stores (parsed scripts, script uploads) used to leak on delete and
+    // would eventually exceed the origin quota, blocking new uploads.
+    const activeIds = useProjectStore.getState().projects.map((p) => p.id);
+    purgeOrphanedProjectData(activeIds);
   }, []);
 
   const handleNavigateToAuth = (mode: 'login' | 'signup' = 'signup') => {
