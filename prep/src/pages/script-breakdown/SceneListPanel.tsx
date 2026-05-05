@@ -3,6 +3,7 @@ import {
   useBreakdownStore,
   useSynopsisStore,
   useRevisedScenesStore,
+  useBookmarkStore,
   type Character,
   type Scene,
 } from '@/stores/breakdownStore';
@@ -92,6 +93,9 @@ export function SceneListPanel({
   const store = useBreakdownStore();
   const synopsisStore = useSynopsisStore();
   const revisedStore = useRevisedScenesStore();
+  const bookmarkedSceneId = useBookmarkStore((s) => s.bookmarks[projectId]);
+  const setBookmark = useBookmarkStore((s) => s.setBookmark);
+  const clearBookmark = useBookmarkStore((s) => s.clearBookmark);
 
   // Read scene query flags from localStorage
   const [sceneFlags, setSceneFlags] = useState<Record<string, boolean>>({});
@@ -144,6 +148,26 @@ export function SceneListPanel({
           </button>
         )}
       </div>
+      {bookmarkedSceneId && bookmarkedSceneId !== selectedSceneId && (() => {
+        const bs = filteredScenes.find((s) => s.id === bookmarkedSceneId);
+        if (!bs) return null;
+        return (
+          <button
+            type="button"
+            className="sl-bookmark-banner"
+            onClick={() => onSelectScene(bookmarkedSceneId)}
+            title="Jump to your bookmarked scene"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="sl-bookmark-banner-label">Resume — Sc {bs.number}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        );
+      })()}
       <div style={{ display: 'flex', gap: '4px', padding: '0 14px 8px', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
         <div className="sl-search" style={{ flex: 1, margin: 0, minWidth: 0 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
@@ -203,9 +227,24 @@ export function SceneListPanel({
           const bd = store.getBreakdown(s.id);
           const colorClass = sceneColorClass(s.intExt, s.dayNight);
           const isRevised = revisedStore.isSceneRevised(projectId, s.id);
+          const isBookmarked = bookmarkedSceneId === s.id;
           return (
-            <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass} ${isRevised ? 'sl-card--revised' : ''}`}
+            <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass} ${isRevised ? 'sl-card--revised' : ''}${isBookmarked ? ' sl-card--bookmarked' : ''}`}
               onClick={() => onSelectScene(s.id)}>
+              <button
+                type="button"
+                className={`sl-card-bookmark${isBookmarked ? ' sl-card-bookmark--on' : ''}`}
+                title={isBookmarked ? 'Remove bookmark' : 'Bookmark this scene to resume here later'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isBookmarked) clearBookmark(projectId);
+                  else setBookmark(projectId, s.id);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
               <div className="sl-card-top">
                 <span className="sl-card-num">{s.number}</span>
                 <span className="sl-card-location">{s.intExt}. {s.location}</span>
