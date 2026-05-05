@@ -622,20 +622,48 @@ export interface CueHit {
  * flush-left (e.g. Fountain exports) skip the second filter automatically.
  */
 export function extractCueLines(lines: string[]): CueHit[] {
-  type Cand = { i: number; t: string; indent: number };
-  const candidates: Cand[] = [];
-
+  // Pass 1 — collect every line that PASSES SHAPE only. The structural
+  // follow-by-dialogue test runs later; doing it here causes real cues
+  // to be false-rejected when their dialogue is a short ALL-CAPS
+  // reaction (e.g. JOHN -> "RUN!" / "JESUS") that itself passes shape.
+  type Cand = { i: number; t: string; indent: number; canonical: string };
+  const shapeCandidates: Cand[] = [];
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
     if (!t) continue;
     if (!isCharacterCue(t)) continue;
-    if (!isFollowedByDialoguePrep(lines, i)) continue;
-    candidates.push({ i, t, indent: leadingSpacesPrep(lines[i]) });
+    const canonical = normalizeCharacterName(t);
+    if (canonical.length < 2 || canonical.length > 35) continue;
+    if (NON_CHARACTER_SINGLE_WORDS.has(canonical)) continue;
+    shapeCandidates.push({
+      i,
+      t,
+      indent: leadingSpacesPrep(lines[i]),
+      canonical,
+    });
   }
 
+  // Pass 2 — frequency table. A canonical name appearing ≥ 3 times in
+  // cue position is almost certainly a real character.
+  const FREQUENCY_FLOOR = 3;
+  const freqByCanonical = new Map<string, number>();
+  for (const c of shapeCandidates) {
+    freqByCanonical.set(c.canonical, (freqByCanonical.get(c.canonical) ?? 0) + 1);
+  }
+
+  // Pass 3 — accept iff structural test passes OR frequency floor met.
+  const accepted: Cand[] = [];
+  for (const c of shapeCandidates) {
+    const isFrequent = (freqByCanonical.get(c.canonical) ?? 0) >= FREQUENCY_FLOOR;
+    if (isFrequent || isFollowedByDialoguePrep(lines, c.i)) {
+      accepted.push(c);
+    }
+  }
+
+  // Pass 4 — indent cluster filter for industry-format scripts.
   let minIndent = 0;
-  if (candidates.length >= 4) {
-    const indents = candidates.map((c) => c.indent).sort((a, b) => a - b);
+  if (accepted.length >= 4) {
+    const indents = accepted.map((c) => c.indent).sort((a, b) => a - b);
     const median = indents[Math.floor(indents.length / 2)];
     if (median >= 6) {
       minIndent = Math.floor(median / 2);
@@ -643,15 +671,12 @@ export function extractCueLines(lines: string[]): CueHit[] {
   }
 
   const hits: CueHit[] = [];
-  for (const c of candidates) {
+  for (const c of accepted) {
     if (c.indent < minIndent) continue;
-    const name = normalizeCharacterName(c.t);
-    if (name.length < 2 || name.length > 35) continue;
-    if (NON_CHARACTER_SINGLE_WORDS.has(name)) continue;
     hits.push({
       lineIndex: c.i,
-      name,
-      variantKey: variantKey(name),
+      name: c.canonical,
+      variantKey: variantKey(c.canonical),
       raw: c.t,
     });
   }
