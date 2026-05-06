@@ -98,6 +98,83 @@ export function LookbookTab({ projectId }: { projectId: string }) {
 
   const charLooks = activeChar ? looks.filter((l) => l.characterId === activeChar.id) : [];
 
+  /* Add a blank look for the active character. Uses the next available
+     "Look A / B / C…" letter so the user has something to rename. */
+  const handleAddLook = () => {
+    if (!activeChar) return;
+    const existingNames = new Set(charLooks.map((l) => l.name.toUpperCase()));
+    let letterIdx = 0;
+    let candidate = `Look ${String.fromCharCode(65 + letterIdx)}`;
+    while (existingNames.has(candidate.toUpperCase()) && letterIdx < 25) {
+      letterIdx++;
+      candidate = `Look ${String.fromCharCode(65 + letterIdx)}`;
+    }
+    const newLook: Look = {
+      id: crypto.randomUUID(),
+      characterId: activeChar.id,
+      name: candidate,
+      description: '',
+      hair: '',
+      makeup: '',
+      wardrobe: '',
+    };
+    parsedScriptStore.addLook(projectId, newLook);
+  };
+
+  /* Bulk-assign a look to every scene where the active character
+     currently has no look. Sets each scene's breakdown.characters[i].lookId
+     to the chosen look so the Scene Breakdown panel and Continuity
+     immediately reflect it. */
+  const [assignLookOpen, setAssignLookOpen] = useState(false);
+  const handleAssignLookToUnassigned = (lookId: string) => {
+    if (!activeChar) return;
+    for (const scene of unassignedScenes) {
+      const bd = breakdownStore.getBreakdown(scene.id);
+      if (bd) {
+        // Existing breakdown — update the character's lookId, adding the
+        // character row first if it isn't there yet.
+        const hasCharRow = bd.characters.some((c) => c.characterId === activeChar.id);
+        if (hasCharRow) {
+          breakdownStore.updateCharacterBreakdown(scene.id, activeChar.id, { lookId });
+        } else {
+          breakdownStore.setBreakdown(scene.id, {
+            ...bd,
+            characters: [
+              ...bd.characters,
+              {
+                characterId: activeChar.id,
+                lookId,
+                entersWith: { hair: '', makeup: '', wardrobe: '' },
+                sfx: '', environmental: '', action: '',
+                changeType: 'no-change' as const, changeNotes: '',
+                exitsWith: { hair: '', makeup: '', wardrobe: '' },
+                notes: '',
+              },
+            ],
+          });
+        }
+      } else {
+        // No breakdown yet — seed it with all current scene characters,
+        // setting the active one's lookId.
+        breakdownStore.setBreakdown(scene.id, {
+          sceneId: scene.id,
+          timeline: { day: scene.storyDay || '', time: '', type: '', note: '' },
+          characters: scene.characterIds.map((cid) => ({
+            characterId: cid,
+            lookId: cid === activeChar.id ? lookId : '',
+            entersWith: { hair: '', makeup: '', wardrobe: '' },
+            sfx: '', environmental: '', action: '',
+            changeType: 'no-change' as const, changeNotes: '',
+            exitsWith: { hair: '', makeup: '', wardrobe: '' },
+            notes: '',
+          })),
+          continuityEvents: [],
+        });
+      }
+    }
+    setAssignLookOpen(false);
+  };
+
   /* Helpers */
   const billingLabel = (n: number) => {
     if (n === 1) return '1st Billing';
@@ -201,7 +278,7 @@ export function LookbookTab({ projectId }: { projectId: string }) {
                   </div>
                 </div>
               </div>
-              <button className="lb-add-look-btn">
+              <button className="lb-add-look-btn" onClick={handleAddLook}>
                 <PlusIcon /> Add Look
               </button>
             </div>
@@ -269,7 +346,7 @@ export function LookbookTab({ projectId }: { projectId: string }) {
                 })}
 
                 {/* Add Look card */}
-                <button className="lb-add-look-card">
+                <button className="lb-add-look-card" onClick={handleAddLook}>
                   <PlusIcon size={20} />
                   <span>Add Look</span>
                 </button>
@@ -277,14 +354,52 @@ export function LookbookTab({ projectId }: { projectId: string }) {
 
               {/* Unassigned scenes notice */}
               {unassignedScenes.length > 0 && (
-                <div className="lb-unassigned-bar">
+                <div className="lb-unassigned-bar" style={{ position: 'relative' }}>
                   <div className="lb-unassigned-left">
                     <WarningIcon />
                     <span>
                       {unassignedScenes.map((s) => `Sc ${s.number}`).join(', ')} ha{unassignedScenes.length === 1 ? 's' : 've'} no look assigned for {activeChar.name}
                     </span>
                   </div>
-                  <button className="lb-unassigned-action">Assign look</button>
+                  <button
+                    className="lb-unassigned-action"
+                    onClick={() => setAssignLookOpen((v) => !v)}
+                  >
+                    Assign look
+                  </button>
+                  {assignLookOpen && (
+                    <div
+                      role="menu"
+                      style={{
+                        position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                        background: 'var(--surface, #fff)',
+                        border: '1px solid var(--border, #ccc)',
+                        borderRadius: 6, padding: 4, minWidth: 180,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {charLooks.length === 0 ? (
+                        <div style={{ padding: '8px 12px', fontSize: 13, opacity: 0.7 }}>
+                          No looks yet — add one first.
+                        </div>
+                      ) : (
+                        charLooks.map((lk) => (
+                          <button
+                            key={lk.id}
+                            onClick={() => handleAssignLookToUnassigned(lk.id)}
+                            style={{
+                              display: 'block', width: '100%', textAlign: 'left',
+                              padding: '6px 12px', background: 'transparent',
+                              border: 'none', cursor: 'pointer', fontSize: 13,
+                            }}
+                          >
+                            {lk.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
