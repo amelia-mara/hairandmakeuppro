@@ -10,6 +10,7 @@ import {
   type ParsedCharacterData,
 } from '@/stores/breakdownStore';
 import { type TagPopupState, ScriptTagPopup } from './ScriptTagPopup';
+import { SceneAudioButton } from '@/components/SceneAudioButton';
 import {
   buildCharNamePattern,
   highlightCharacterNames,
@@ -488,7 +489,16 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
-          <div className="sv-heading">{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</div>
+          <div className="sv-heading">
+            <span style={{ flex: 1 }}>{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</span>
+            {scene.id === selectedSceneId && scene.scriptContent && (
+              <SceneAudioButton
+                projectId={projectId}
+                sceneId={scene.id}
+                text={scene.scriptContent}
+              />
+            )}
+          </div>
           <div className="sv-content">
             {memoRenderSceneContent(scene)}
           </div>
