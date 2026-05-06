@@ -51,7 +51,7 @@ const EXPORT_SECTIONS: ReadonlyArray<{
   { key: 'breakdown', label: 'Breakdown', formats: ['pdf', 'xlsx'] },
   { key: 'lookbooks', label: 'Lookbooks', formats: ['pdf', 'pptx'] },
   { key: 'timeline', label: 'Timeline', formats: ['pdf', 'xlsx'] },
-  { key: 'bible', label: 'Bible', formats: ['pdf', 'docx'] },
+  { key: 'bible', label: 'Bible', formats: ['pdf'] },
   { key: 'queries', label: 'Director Queries', formats: ['pdf', 'xlsx'] },
 ];
 
