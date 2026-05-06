@@ -30,10 +30,11 @@ import { ordinal } from '@/utils/ordinal';
  * and the full look list as props; everything else is derived or
  * store-read inside the component.
  */
-export function CharacterView({ char, allScenes, allLooks }: {
+export function CharacterView({ char, allScenes, allLooks, onSelectScene }: {
   char: Character;
   allScenes: Scene[];
   allLooks: Look[];
+  onSelectScene?: (sceneId: string) => void;
 }) {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'lookbook' | 'timeline' | 'events' | 'notes'>('profile');
   const looks = allLooks.filter((l) => l.characterId === char.id);
@@ -143,7 +144,20 @@ export function CharacterView({ char, allScenes, allLooks }: {
               const bd = bdStore.getBreakdown(s.id);
               const storyDay = bd?.timeline?.day || s.storyDay || '';
               return (
-                <div key={s.id} className="cv-tl-item">
+                <div
+                  key={s.id}
+                  className="cv-tl-item"
+                  role={onSelectScene ? 'button' : undefined}
+                  tabIndex={onSelectScene ? 0 : undefined}
+                  onClick={onSelectScene ? () => onSelectScene(s.id) : undefined}
+                  onKeyDown={onSelectScene ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectScene(s.id);
+                    }
+                  } : undefined}
+                  style={onSelectScene ? { cursor: 'pointer' } : undefined}
+                >
                   <span className="cv-tl-num">Sc {s.number}</span>
                   {storyDay && <span className="cv-tl-day">{storyDay}</span>}
                   <span className="cv-tl-loc">{s.intExt}. {s.location} — {s.dayNight}</span>
