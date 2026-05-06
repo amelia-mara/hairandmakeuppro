@@ -619,21 +619,29 @@ export function saveBreakdown(
   sceneId: string,
   breakdown: Record<string, unknown>,
 ) {
-  if (receivingFromRealtime) return;
+  if (receivingFromRealtime) {
+    console.log('[PrepSync] saveBreakdown SUPPRESSED (receivingFromRealtime) for', sceneId);
+    return;
+  }
+  // Diagnostic: count non-empty character fields so we can spot empty-stub writes.
+  const chars = (breakdown as { characters?: Array<Record<string, unknown>> }).characters ?? [];
+  const filledFields = chars.reduce((n, c) => {
+    const ew = (c.entersWith as Record<string, string> | undefined) ?? {};
+    return n
+      + (ew.hair ? 1 : 0) + (ew.makeup ? 1 : 0) + (ew.wardrobe ? 1 : 0)
+      + (c.sfx ? 1 : 0) + (c.environmental ? 1 : 0) + (c.action ? 1 : 0) + (c.notes ? 1 : 0);
+  }, 0);
+  console.log(`[PrepSync] saveBreakdown queued: scene=${sceneId} chars=${chars.length} filled=${filledFields}`);
   debounced(`breakdown:${sceneId}`, async () => {
-    // Store breakdown data in a JSONB column or as part of existing scene data
-    // Since there's no dedicated breakdown table, we'll store in scene's metadata
-    // by updating the scene record with breakdown info in a way both apps understand
     const { error } = await supabase
       .from('scenes')
-      .update({
-        // Store breakdown data as part of the scene — mobile reads script_content + synopsis
-        // Prep-specific breakdown data goes alongside
-        filming_notes: JSON.stringify(breakdown),
-      })
+      .update({ filming_notes: JSON.stringify(breakdown) })
       .eq('id', sceneId);
-    if (error) throw error;
-    console.log('[PrepSync] Breakdown saved for scene', sceneId);
+    if (error) {
+      console.error(`[PrepSync] saveBreakdown FAILED scene=${sceneId}:`, error);
+      throw error;
+    }
+    console.log(`[PrepSync] saveBreakdown OK: scene=${sceneId} chars=${chars.length} filled=${filledFields}`);
   });
 }
 

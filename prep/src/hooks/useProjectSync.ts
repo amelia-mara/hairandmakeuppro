@@ -227,8 +227,22 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             // partial/stale filming_notes payload from clobbering
             // typed data on reload — the symptom we hit was tags
             // surviving but breakdown text fields disappearing.
+            let restoredScenes = 0;
+            let restoredFilledFields = 0;
             for (const row of data.scenes) {
               const filmingNotes = row.filming_notes as string | null;
+              if (filmingNotes) {
+                restoredScenes++;
+                try {
+                  const sample = JSON.parse(filmingNotes);
+                  const chars = sample?.characters ?? [];
+                  for (const c of chars) {
+                    restoredFilledFields += (c.entersWith?.hair ? 1 : 0) + (c.entersWith?.makeup ? 1 : 0)
+                      + (c.entersWith?.wardrobe ? 1 : 0) + (c.sfx ? 1 : 0) + (c.environmental ? 1 : 0)
+                      + (c.action ? 1 : 0) + (c.notes ? 1 : 0);
+                  }
+                } catch { /* ignore */ }
+              }
               if (filmingNotes) {
                 try {
                   const breakdown = JSON.parse(filmingNotes);
@@ -287,6 +301,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 // local has, don't replace with an empty.
               }
             }
+            console.log(`[useProjectSync] filming_notes restored: ${restoredScenes} scenes, ${restoredFilledFields} filled fields`);
 
             // ── Populate continuity tracker and photos from continuity_events ──
             for (const entry of data.continuityEntries) {
