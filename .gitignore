@@ -42,3 +42,5 @@ prep-dist/
 
 # local-only scratch dir for PDFs / debug fixtures
 .scratch/
+*.pdf
+*.PDF
