@@ -209,13 +209,19 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               parsedAt: new Date().toISOString(),
             });
 
-            // Update project record
+            // Update project record. Only set scriptFilename when we
+            // actually have one — explicitly writing `undefined` would
+            // wipe a good value set elsewhere (e.g. by an in-flight
+            // script upload, or restored from a previous session) just
+            // because the active script_uploads row hasn't been read
+            // yet on this load.
+            const scriptFilenameUpdate = data.scriptUpload?.file_name
+              ? { scriptFilename: data.scriptUpload.file_name as string }
+              : {};
             useProjectStore.getState().updateProject(projectId!, {
               scenes: scenes.length,
               characters: characters.length,
-              scriptFilename: data.scriptUpload
-                ? (data.scriptUpload.file_name as string) || undefined
-                : undefined,
+              ...scriptFilenameUpdate,
             });
 
             // ── Populate breakdown store from filming_notes ──
@@ -671,10 +677,13 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 parsedAt: sp.parsedAt || new Date().toISOString(),
               });
 
+              const restoreScriptFilenameUpdate = data.scriptUpload?.file_name
+                ? { scriptFilename: data.scriptUpload.file_name as string }
+                : {};
               useProjectStore.getState().updateProject(projectId!, {
                 scenes: remappedScenes.length,
                 characters: remappedChars.length,
-                scriptFilename: (data.scriptUpload.file_name as string) || undefined,
+                ...restoreScriptFilenameUpdate,
               });
 
               // Populate script upload store so hasScript is true
