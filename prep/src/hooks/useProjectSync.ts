@@ -617,20 +617,27 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 sceneCount: sp.scenes?.length ?? 0,
                 rawText: '',
               });
-
-              // Trigger a sync so the restored data persists in scenes/characters tables
-              if (sp.scenes && sp.scenes.length > 0) {
-                saveScenes(projectId!, sp.scenes as any);
-              }
-              if (sp.characters && sp.characters.length > 0) {
-                saveCharacters(projectId!, sp.characters as any);
-              }
-              if (mergedLooks.length > 0) {
-                const lookSceneMap = buildLookSceneMap(projectId!);
-                saveLooks(projectId!, mergedLooks as any, lookSceneMap);
-              }
             } finally {
               setReceivingFromRealtime(false);
+            }
+
+            // Persist the restored data into the scenes/characters/looks
+            // tables. These calls MUST run outside the receivingFromRealtime
+            // block above — saveScenes/saveCharacters/saveLooks early-return
+            // when the flag is true, so calling them inside silently drops
+            // the writes and the scenes table stays empty. That in turn
+            // makes saveBreakdown's UPDATE-by-id a no-op on every edit
+            // (no matching row), which is how breakdown fields appeared
+            // to save successfully but vanished on the next login.
+            if (sp.scenes && sp.scenes.length > 0) {
+              saveScenes(projectId!, sp.scenes as any);
+            }
+            if (sp.characters && sp.characters.length > 0) {
+              saveCharacters(projectId!, sp.characters as any);
+            }
+            if (mergedLooks.length > 0) {
+              const lookSceneMap = buildLookSceneMap(projectId!);
+              saveLooks(projectId!, mergedLooks as any, lookSceneMap);
             }
           }
         }
