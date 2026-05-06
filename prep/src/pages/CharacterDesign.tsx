@@ -4,6 +4,7 @@ import {
   MOCK_SCENES, MOCK_CHARACTERS,
   useParsedScriptStore,
   useCharacterOverridesStore,
+  useBreakdownStore,
   type Character, type Scene,
 } from '@/stores/breakdownStore';
 
@@ -178,8 +179,27 @@ export function CharacterDesign({ projectId }: Props) {
   // ─── Detail helpers ───
   const getOrCreateBoard = useCallback(
     (charId: string): CharacterDesignData => {
+      // Resolve the look name assigned to this character on a given scene
+      // via the breakdown store, falling back to '' so user-editable
+      // overrides on the design board can still take precedence.
+      const looksList = parsedScriptStore.getParsedData(projectId)?.looks ?? [];
+      const lookNameForScene = (sceneId: string): string => {
+        const bd = useBreakdownStore.getState().getBreakdown(sceneId);
+        const cb = bd?.characters?.find((c) => c.characterId === charId);
+        if (!cb?.lookId) return '';
+        const look = looksList.find((l) => l.id === cb.lookId);
+        return look?.name?.toUpperCase() ?? '';
+      };
+
       const existing = designStore.getBoard(projectId, charId);
-      if (existing) return { ...existing };
+      if (existing) {
+        // Reconcile: backfill any sceneLooks where look is empty with the
+        // breakdown's assigned look. Preserves user-typed overrides.
+        const sceneLooks = existing.sceneLooks.map((sl) =>
+          sl.look ? sl : { ...sl, look: lookNameForScene(sl.sceneId) }
+        );
+        return { ...existing, sceneLooks };
+      }
       const char = allCharacters.find((c) => c.id === charId);
       const scenesForChar = allScenes.filter((s) => s.characterIds.includes(charId));
       return {
@@ -189,11 +209,15 @@ export function CharacterDesign({ projectId }: Props) {
         paletteLabels: [...DEFAULT_PALETTE_LABELS],
         images: {},
         notes: { desc: char?.notes || '', refs: '', hair: '', mua: '' },
-        sceneLooks: scenesForChar.map((s) => ({ sceneId: s.id, look: '', notes: '' })),
+        sceneLooks: scenesForChar.map((s) => ({
+          sceneId: s.id,
+          look: lookNameForScene(s.id),
+          notes: '',
+        })),
         completion: 0,
       };
     },
-    [projectId, allCharacters, allScenes, designStore],
+    [projectId, allCharacters, allScenes, designStore, parsedScriptStore],
   );
 
   const openDetail = useCallback(
@@ -207,6 +231,26 @@ export function CharacterDesign({ projectId }: Props) {
     },
     [getOrCreateBoard],
   );
+
+  const handleAddCharacter = useCallback(() => {
+    const pd = parsedScriptStore.getParsedData(projectId);
+    if (!pd) return;
+    const newId = crypto.randomUUID();
+    const newChar: Character = {
+      id: newId,
+      name: 'NEW CHARACTER',
+      billing: pd.characters.length + 1,
+      category: 'principal',
+      age: '', gender: '', hairColour: '', hairType: '',
+      eyeColour: '', skinTone: '', build: '',
+      distinguishingFeatures: '', notes: '',
+    };
+    parsedScriptStore.setParsedData(projectId, {
+      ...pd,
+      characters: [...pd.characters, newChar],
+    });
+    openDetail(newId);
+  }, [parsedScriptStore, projectId, openDetail]);
 
   const showGallery = useCallback(() => {
     setView('gallery');
@@ -297,7 +341,7 @@ export function CharacterDesign({ projectId }: Props) {
             </div>
             <div className="cd-gh-actions">
               <button className="panel-btn">Export All</button>
-              <button className="panel-btn panel-btn--accent" onClick={() => allCharacters.length > 0 && openDetail(allCharacters[0].id)}>
+              <button className="panel-btn panel-btn--accent" onClick={handleAddCharacter}>
                 + Add Character
               </button>
             </div>
