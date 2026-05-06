@@ -113,20 +113,19 @@ export async function flushAutoSave(): Promise<void> {
 
 /**
  * Ensure every scene_number in the batch is unique.
- * Duplicates (same scene_number) get a suffix: "45" stays, second "45" → "45-2".
- * This prevents the UNIQUE(project_id, scene_number) constraint from rejecting
- * the upsert when the local store already contains duplicates from a prior parse.
+ *
+ * No-op now: the DB used to have UNIQUE(project_id, scene_number) which
+ * forced us to suffix duplicate scene numbers (e.g. "45-2") to keep the
+ * upsert from being rejected. Migration 023 dropped that constraint
+ * because screenplay split scenes (one number for INT/DAY + EXT/NIGHT
+ * etc.) legitimately produce multiple rows per scene_number. Each scene
+ * is now keyed solely by its id (PK). Returning the rows untouched is
+ * therefore correct — and the previous suffix mangled the persisted
+ * scene_number for any duplicate. Kept as an identity function so the
+ * call sites don't need to change.
  */
 function deduplicateSceneNumbers<T extends { scene_number: string }>(rows: T[]): T[] {
-  const seen = new Map<string, number>();
-  return rows.map(row => {
-    const count = (seen.get(row.scene_number) || 0) + 1;
-    seen.set(row.scene_number, count);
-    if (count > 1) {
-      return { ...row, scene_number: `${row.scene_number}-${count}` };
-    }
-    return row;
-  });
+  return rows;
 }
 
 // ============================================================================
@@ -173,7 +172,7 @@ export function autoSaveScenes(): void {
     );
     const { error } = await supabase
       .from('scenes')
-      .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
+      .upsert(dbScenes, { onConflict: 'id' });
     if (error) throw error;
 
     // Sync scene_characters junction
@@ -487,7 +486,7 @@ export async function saveEverythingToSupabase(): Promise<void> {
       );
       const { error } = await supabase
         .from('scenes')
-        .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
+        .upsert(dbScenes, { onConflict: 'id' });
       if (error) throw error;
 
       const sceneIds = project.scenes.map(s => s.id);

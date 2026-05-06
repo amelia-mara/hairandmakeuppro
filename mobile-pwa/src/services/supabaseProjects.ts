@@ -489,7 +489,7 @@ export async function saveScenes(
       .from('scenes')
       .upsert(
         scenes.map(s => ({ ...s, project_id: projectId })),
-        { onConflict: 'project_id,scene_number' }
+        { onConflict: 'id' }
       );
 
     if (error) throw error;
@@ -818,7 +818,7 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
       // same scene numbers) updates existing rows instead of failing.
       const { error: sceneError } = await supabase
         .from('scenes')
-        .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
+        .upsert(dbScenes, { onConflict: 'id' });
       if (sceneError) {
         console.error('[SAVE] scenes upsert failed:', sceneError.message, sceneError);
         throw sceneError;
