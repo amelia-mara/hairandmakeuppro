@@ -324,7 +324,7 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
                 <div className="cb-field" style={{ marginTop: '12px' }}>
                   <div className="cb-exits-head">
                     <label className="cb-label">Exits With</label>
-                    <button className="cb-same-btn" onClick={() => onUpdate({ exitsWith: { ...cb.entersWith } })}>Same as entry</button>
+                    <button type="button" className="cb-same-btn" onClick={() => onUpdate({ exitsWith: { ...cb.entersWith } })}>Same as entry</button>
                   </div>
                   <div className="cb-hmw">
                     <FInput label="Hair" value={cb.exitsWith.hair} onChange={(v) => ue('exitsWith', 'hair', v)} />
