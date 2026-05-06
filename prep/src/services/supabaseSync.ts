@@ -11,7 +11,14 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { useBreakdownStore, useTagStore, useParsedScriptStore } from '@/stores/breakdownStore';
+import {
+  useBreakdownStore,
+  useTagStore,
+  useParsedScriptStore,
+  useSynopsisStore,
+  useSceneMetaStore,
+  useBookmarkStore,
+} from '@/stores/breakdownStore';
 import { resolveBreakdownForSync } from '@/utils/resolveBreakdownForSync';
 import type { Json } from '@/types';
 
@@ -328,6 +335,87 @@ export async function fetchScriptUpload(projectId: string) {
 /**
  * Save scenes to Supabase. Accepts the Prep Scene format and maps to DB columns.
  */
+/**
+ * Rewrite scene-id references in every store that keys by sceneId. Called
+ * when saveScenes discovers the local store's IDs don't match the DB's
+ * (typically after a script_uploads.parsed_data restore that minted fresh
+ * UUIDs for scenes that already exist in the scenes table). Without this
+ * remap, the local breakdownStore / tagStore / etc. stay tied to the old
+ * IDs and saveBreakdown's UPDATE-by-id silently no-ops on every edit.
+ */
+function remapSceneIdsInStores(projectId: string, idMap: Map<string, string>): void {
+  if (idMap.size === 0) return;
+
+  // parsedScriptStore.projects[projectId].scenes
+  const parsed = useParsedScriptStore.getState().getParsedData(projectId);
+  if (parsed) {
+    const newScenes = parsed.scenes.map((s) =>
+      idMap.has(s.id) ? { ...s, id: idMap.get(s.id)! } : s,
+    );
+    useParsedScriptStore.getState().setParsedData(projectId, { ...parsed, scenes: newScenes });
+  }
+
+  // breakdownStore.breakdowns (keyed by sceneId)
+  const breakdowns = useBreakdownStore.getState().breakdowns;
+  const newBd = { ...breakdowns };
+  let bdChanged = false;
+  for (const [oldId, newId] of idMap) {
+    if (newBd[oldId]) {
+      newBd[newId] = { ...newBd[oldId], sceneId: newId };
+      delete newBd[oldId];
+      bdChanged = true;
+    }
+  }
+  if (bdChanged) useBreakdownStore.setState({ breakdowns: newBd });
+
+  // tagStore.tags (each tag has sceneId)
+  const tags = useTagStore.getState().tags;
+  let tagsChanged = false;
+  const newTags = tags.map((t) => {
+    if (idMap.has(t.sceneId)) {
+      tagsChanged = true;
+      return { ...t, sceneId: idMap.get(t.sceneId)! };
+    }
+    return t;
+  });
+  if (tagsChanged) useTagStore.setState({ tags: newTags });
+
+  // synopsisStore.synopses (keyed by sceneId)
+  const synopses = useSynopsisStore.getState().synopses;
+  let synChanged = false;
+  const newSyn: Record<string, string> = { ...synopses };
+  for (const [oldId, newId] of idMap) {
+    if (oldId in newSyn) {
+      newSyn[newId] = newSyn[oldId];
+      delete newSyn[oldId];
+      synChanged = true;
+    }
+  }
+  if (synChanged) useSynopsisStore.setState({ synopses: newSyn });
+
+  // sceneMetaStore.overrides (keyed by sceneId)
+  const overrides = useSceneMetaStore.getState().overrides;
+  let metaChanged = false;
+  const newMeta: typeof overrides = { ...overrides };
+  for (const [oldId, newId] of idMap) {
+    if (oldId in newMeta) {
+      newMeta[newId] = newMeta[oldId];
+      delete newMeta[oldId];
+      metaChanged = true;
+    }
+  }
+  if (metaChanged) useSceneMetaStore.setState({ overrides: newMeta });
+
+  // bookmarkStore.bookmarks (Record<projectId, sceneId> — remap the value)
+  const bookmarks = useBookmarkStore.getState().bookmarks;
+  const currentBookmark = bookmarks[projectId];
+  if (currentBookmark && idMap.has(currentBookmark)) {
+    useBookmarkStore.setState({
+      bookmarks: { ...bookmarks, [projectId]: idMap.get(currentBookmark)! },
+    });
+  }
+}
+
 export function saveScenes(
   projectId: string,
   scenes: Array<{
@@ -354,15 +442,17 @@ export function saveScenes(
 
     // Fetch existing filming_notes from DB so we don't overwrite breakdown
     // data that was saved by saveBreakdown() but isn't in the local store
-    // (e.g. after page reload or scene ID change).
+    // (e.g. after page reload or scene ID change). Key by scene_number so
+    // the lookup works even when local IDs don't match DB IDs (the case
+    // we're about to remap below).
     const existingFilmingNotes = new Map<string, string | null>();
     const { data: existingRows } = await supabase
       .from('scenes')
-      .select('id, filming_notes')
+      .select('scene_number, filming_notes')
       .eq('project_id', projectId);
     if (existingRows) {
       for (const row of existingRows) {
-        existingFilmingNotes.set(row.id as string, row.filming_notes as string | null);
+        existingFilmingNotes.set(String(row.scene_number), row.filming_notes as string | null);
       }
     }
 
@@ -398,7 +488,7 @@ export function saveScenes(
         filmingNotes = JSON.stringify(resolved);
       } else {
         // Nothing to write locally — preserve what's already in Supabase.
-        filmingNotes = existingFilmingNotes.get(s.id) ?? null;
+        filmingNotes = existingFilmingNotes.get(String(s.number)) ?? null;
       }
       return {
         id: s.id,
@@ -414,30 +504,98 @@ export function saveScenes(
       };
     });
 
-    // Upsert on `id`. The previous code had a delete-all fallback for
-    // UNIQUE(project_id, scene_number) conflicts, but that path is
-    // dangerous: deleting all scenes cascades to scene_characters,
-    // continuity_events and look_scenes via FK ON DELETE CASCADE, so a
-    // concurrent save could wipe on-set continuity captures during the
-    // brief delete window. Surface the error instead — the next debounced
-    // save will retry once the local IDs / scene_numbers stabilise.
+    // Defensive ID remap before upsert. Without this, freshly-minted local
+    // scene IDs (e.g. from a script_uploads.parsed_data restore) don't
+    // match the DB row IDs, and saveBreakdown's UPDATE WHERE id=X silently
+    // matches zero rows (Supabase returns 204 with no rows affected) — the
+    // misleading-success chain that kept losing breakdown data on logout.
+    //
+    // Pre-fetch existing (id, scene_number) for this project, remap the
+    // upsert payload AND the local stores so future saveBreakdown calls
+    // hit real rows. The DB-level UNIQUE(project_id, scene_number)
+    // constraint is dropped in migration 023 because the screenplay
+    // domain legitimately produces multiple rows with the same scene
+    // number (split scenes: INT/DAY + EXT/NIGHT, [FLASHBACK]
+    // continuations, etc.). Each scene is now identified solely by its
+    // id, so onConflict='id' is the correct strategy.
+    const { data: existingScenes } = await supabase
+      .from('scenes')
+      .select('id, scene_number')
+      .eq('project_id', projectId);
+    // Group existing IDs by scene_number. Split scenes legitimately have
+    // multiple DB rows under the same scene_number (one screenplay scene
+    // number that maps to INT/DAY + EXT/NIGHT, [FLASHBACK] continuations,
+    // etc), so we can't collapse this into a single id-per-number map —
+    // doing that would remap every local row for that number onto the
+    // SAME existing id and produce duplicate ids in the upsert payload,
+    // tripping Postgres 21000 "ON CONFLICT DO UPDATE command cannot
+    // affect row a second time".
+    const idsByNumber = new Map<string, string[]>();
+    for (const r of (existingScenes ?? [])) {
+      const num = String(r.scene_number);
+      const list = idsByNumber.get(num) ?? [];
+      list.push(r.id as string);
+      idsByNumber.set(num, list);
+    }
+    const idRemap = new Map<string, string>();
+    const remappedDbScenes = dbScenes.map((s) => {
+      const existingIds = idsByNumber.get(s.scene_number) ?? [];
+      // Only remap when there's exactly one DB row for this scene_number
+      // and it doesn't match the local id. With split scenes (multiple DB
+      // rows per scene_number) the local ids should already match because
+      // they came from fetchScenes; trying to remap would arbitrarily
+      // collapse one onto another.
+      if (existingIds.length === 1 && existingIds[0] !== s.id) {
+        idRemap.set(s.id as string, existingIds[0]);
+        return { ...s, id: existingIds[0] };
+      }
+      return s;
+    });
+    if (idRemap.size > 0) {
+      console.warn(`[PrepSync] saveScenes: remapping ${idRemap.size} scene IDs to match existing DB rows`);
+      // Suppress save watchers while we mutate stores — otherwise every
+      // store update inside remapSceneIdsInStores fires its watcher and
+      // queues a redundant save with the same data we're about to write.
+      receivingFromRealtime = true;
+      try {
+        remapSceneIdsInStores(projectId, idRemap);
+      } finally {
+        receivingFromRealtime = false;
+      }
+    }
+
+    // Defensive dedupe by id — last write wins. Even with the
+    // single-row-only remap above, an upstream caller could in theory
+    // pass a payload that already has duplicate ids (e.g. a store reset
+    // racing with a save). Postgres ON CONFLICT DO UPDATE refuses to
+    // affect the same row twice in one command, so keep this guard so
+    // the upsert never trips that even if something upstream regresses.
+    const uniqueDbScenes = Array.from(
+      new Map(remappedDbScenes.map((s) => [s.id, s])).values(),
+    );
+    if (uniqueDbScenes.length !== remappedDbScenes.length) {
+      console.warn(
+        `[PrepSync] saveScenes: deduped ${remappedDbScenes.length - uniqueDbScenes.length} duplicate scene id(s) from upsert payload`,
+      );
+    }
+
     const { error } = await supabase
       .from('scenes')
-      .upsert(dbScenes, { onConflict: 'id' });
+      .upsert(uniqueDbScenes, { onConflict: 'id' });
 
     if (error) {
-      // Re-throw so the debounced wrapper logs and runs its single retry.
-      // The previous fallback (delete-all + insert) is gone — see comment
-      // above for why.
       throw error;
     }
 
-    // Sync scene_characters junction (non-fatal — data still saved above)
-    const sceneIds = scenes.map(s => s.id);
+    // Sync scene_characters junction (non-fatal — data still saved above).
+    // Use idRemap to translate the input scenes' (possibly stale) ids to
+    // whatever was actually persisted, so the junction references real rows.
+    const resolveSceneId = (oldId: string) => idRemap.get(oldId) ?? oldId;
+    const sceneIds = scenes.map(s => resolveSceneId(s.id));
     const entries: { scene_id: string; character_id: string }[] = [];
     for (const scene of scenes) {
       for (const charId of scene.characterIds) {
-        entries.push({ scene_id: scene.id, character_id: charId });
+        entries.push({ scene_id: resolveSceneId(scene.id), character_id: charId });
       }
     }
     if (sceneIds.length > 0) {
@@ -619,21 +777,29 @@ export function saveBreakdown(
   sceneId: string,
   breakdown: Record<string, unknown>,
 ) {
-  if (receivingFromRealtime) return;
+  if (receivingFromRealtime) {
+    console.log('[PrepSync] saveBreakdown SUPPRESSED (receivingFromRealtime) for', sceneId);
+    return;
+  }
+  // Diagnostic: count non-empty character fields so we can spot empty-stub writes.
+  const chars = (breakdown as { characters?: Array<Record<string, unknown>> }).characters ?? [];
+  const filledFields = chars.reduce((n, c) => {
+    const ew = (c.entersWith as Record<string, string> | undefined) ?? {};
+    return n
+      + (ew.hair ? 1 : 0) + (ew.makeup ? 1 : 0) + (ew.wardrobe ? 1 : 0)
+      + (c.sfx ? 1 : 0) + (c.environmental ? 1 : 0) + (c.action ? 1 : 0) + (c.notes ? 1 : 0);
+  }, 0);
+  console.log(`[PrepSync] saveBreakdown queued: scene=${sceneId} chars=${chars.length} filled=${filledFields}`);
   debounced(`breakdown:${sceneId}`, async () => {
-    // Store breakdown data in a JSONB column or as part of existing scene data
-    // Since there's no dedicated breakdown table, we'll store in scene's metadata
-    // by updating the scene record with breakdown info in a way both apps understand
     const { error } = await supabase
       .from('scenes')
-      .update({
-        // Store breakdown data as part of the scene — mobile reads script_content + synopsis
-        // Prep-specific breakdown data goes alongside
-        filming_notes: JSON.stringify(breakdown),
-      })
+      .update({ filming_notes: JSON.stringify(breakdown) })
       .eq('id', sceneId);
-    if (error) throw error;
-    console.log('[PrepSync] Breakdown saved for scene', sceneId);
+    if (error) {
+      console.error(`[PrepSync] saveBreakdown FAILED scene=${sceneId}:`, error);
+      throw error;
+    }
+    console.log(`[PrepSync] saveBreakdown OK: scene=${sceneId} chars=${chars.length} filled=${filledFields}`);
   });
 }
 

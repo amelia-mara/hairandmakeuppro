@@ -546,6 +546,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                 char={ALL_CHARACTERS.find((c) => c.id === activeTab)!}
                 allScenes={ALL_SCENES}
                 allLooks={ALL_LOOKS}
+                onSelectScene={selectScene}
               />
             ) : (
               <div className="cv-empty" style={{ padding: 24 }}>Character not found. Select a character tab above.</div>

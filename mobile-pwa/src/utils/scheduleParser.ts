@@ -434,9 +434,20 @@ interface PendingScene {
  * "<X> pgs Scenes:" markers) if no days are detected.
  */
 export function extractDays(rawText: string): ScheduleDay[] {
+  console.log(`[scheduleParser] extractDays called: rawText length=${rawText.length}, lines=${rawText.split('\n').length}`);
   const movieMagic = extractDaysMovieMagic(rawText);
-  if (movieMagic.length > 0) return movieMagic;
-  return extractDaysProductionSchedule(rawText);
+  const movieMagicScenes = movieMagic.reduce((n, d) => n + d.scenes.length, 0);
+  console.log(`[scheduleParser] Movie Magic extractor: ${movieMagic.length} days, ${movieMagicScenes} scenes total`);
+  // Fall back to the production-format parser when Movie Magic finds
+  // days but couldn't extract any scenes. Without this guard a schedule
+  // whose day headers happen to match Movie Magic's regex but whose
+  // scene rows use the production layout returns N days × 0 scenes —
+  // the user's "0 scenes" symptom.
+  if (movieMagic.length > 0 && movieMagicScenes > 0) return movieMagic;
+  const production = extractDaysProductionSchedule(rawText);
+  const productionScenes = production.reduce((n, d) => n + d.scenes.length, 0);
+  console.log(`[scheduleParser] Production extractor: ${production.length} days, ${productionScenes} scenes total`);
+  return production.length > 0 ? production : movieMagic;
 }
 
 function extractDaysMovieMagic(rawText: string): ScheduleDay[] {

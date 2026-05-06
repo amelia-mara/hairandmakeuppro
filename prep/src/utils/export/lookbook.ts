@@ -320,7 +320,6 @@ function drawScenePills(doc: jsPDF, x: number, y: number, w: number, labels: str
     const textW = doc.getTextWidth(label);
     const pillW = textW + padX * 2;
     if (cursorX + pillW > x + w) break; // overflow — drop rest rather than wrap
-    doc.setFillColor('rgba(74, 191, 176, 0.12)' as unknown as string);
     doc.setFillColor(BRAND.cream);
     doc.setDrawColor(BRAND.teal);
     doc.setLineWidth(0.1);

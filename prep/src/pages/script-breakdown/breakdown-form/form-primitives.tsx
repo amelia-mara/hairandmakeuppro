@@ -9,7 +9,16 @@ export function FInput({ label, value, onChange, placeholder }: { label: string;
   return (
     <div className="fi-wrap">
       <label className="fi-label">{label}</label>
-      <input className="fi-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <input
+        className="fi-input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+      />
     </div>
   );
 }
