@@ -326,6 +326,9 @@
 }
 
 .sv-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-weight: 600;
   font-size: 0.95em;
   color: var(--text-primary);
@@ -335,6 +338,31 @@
   font-family: 'Courier New', 'Courier', monospace;
   text-transform: uppercase;
 }
+
+/* Owner-tier "read this scene aloud" pill in the script-view heading. */
+.scene-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(196, 82, 42, 0.12);
+  border: 1px solid rgba(196, 82, 42, 0.30);
+  color: #C4522A;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.scene-audio-btn:hover:not(:disabled) {
+  background: rgba(196, 82, 42, 0.22);
+}
+.scene-audio-btn:active:not(:disabled) { transform: scale(0.97); }
+.scene-audio-btn:disabled { opacity: 0.6; cursor: default; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .sv-line {
   white-space: pre-wrap;
