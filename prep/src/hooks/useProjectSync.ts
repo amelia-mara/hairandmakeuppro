@@ -584,6 +584,58 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
           if (sp && ((sp.scenes && sp.scenes.length > 0) || (sp.characters && sp.characters.length > 0))) {
             console.log('[useProjectSync] Restoring from script_uploads.parsed_data —',
               `scenes: ${sp.scenes?.length ?? 0}, characters: ${sp.characters?.length ?? 0}`);
+
+            // ── Defensive: remap parsed-data IDs to existing DB IDs ──
+            // fetchScenes above can come back empty in transient states
+            // (RLS not yet propagated, recently-deleted rows visible to
+            // a stale snapshot, etc.) while the scenes table actually
+            // has rows. If we restore using sp.scenes' freshly-minted
+            // UUIDs and rows already exist under different IDs but the
+            // same scene_number, the upsert in saveScenes hits the
+            // (project_id, scene_number) unique constraint and the
+            // whole restore fails. Same risk applies to characters
+            // under any (project_id, name) constraint.
+            //
+            // Fix: re-query existing scenes/characters before restore,
+            // and rewrite sp.scenes ids + sp.characters ids + every
+            // characterIds[] reference inside scenes to use existing
+            // DB ids where they exist. After this, saveScenes upserts
+            // by id and matches existing rows cleanly.
+            const [existingSceneRows, existingCharRows] = await Promise.all([
+              supabase.from('scenes').select('id, scene_number').eq('project_id', projectId!),
+              supabase.from('characters').select('id, name').eq('project_id', projectId!),
+            ]);
+            const numToExistingSceneId = new Map<string, string>();
+            for (const r of (existingSceneRows.data ?? [])) {
+              numToExistingSceneId.set(String(r.scene_number), r.id as string);
+            }
+            const nameToExistingCharId = new Map<string, string>();
+            for (const r of (existingCharRows.data ?? [])) {
+              nameToExistingCharId.set(String(r.name).toUpperCase(), r.id as string);
+            }
+
+            const charIdRemap = new Map<string, string>();
+            const remappedChars = (sp.characters ?? []).map((c: any) => {
+              const existingId = nameToExistingCharId.get(String(c.name).toUpperCase());
+              if (existingId && existingId !== c.id) {
+                charIdRemap.set(c.id, existingId);
+                return { ...c, id: existingId };
+              }
+              return c;
+            });
+            const remappedScenes = (sp.scenes ?? []).map((s: any) => {
+              const existingId = numToExistingSceneId.get(String(s.number));
+              const remappedCharIds = (s.characterIds ?? []).map((cid: string) =>
+                charIdRemap.get(cid) ?? cid
+              );
+              const out = { ...s, characterIds: remappedCharIds };
+              return existingId ? { ...out, id: existingId } : out;
+            });
+            if (numToExistingSceneId.size > 0 || charIdRemap.size > 0) {
+              console.log('[useProjectSync] Remapped restore IDs —',
+                `scenes: ${numToExistingSceneId.size}, chars: ${charIdRemap.size}`);
+            }
+
             // Preserve any locally-cached looks that aren't in the
             // snapshot — looks created via "+ New Look" after the
             // upload aren't part of script_uploads.parsed_data, so
@@ -591,21 +643,26 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             const localCachedLooks = useParsedScriptStore.getState().getParsedData(projectId!)?.looks ?? [];
             const snapshotLookIds = new Set((sp.looks ?? []).map((l) => l.id));
             const preservedLocalLooks = localCachedLooks.filter((l) => !snapshotLookIds.has(l.id));
-            const mergedLooks = [...(sp.looks ?? []), ...preservedLocalLooks];
+            // Looks reference characterId — remap those too.
+            const remappedLooks = [...(sp.looks ?? []), ...preservedLocalLooks].map((l: any) =>
+              l.characterId && charIdRemap.has(l.characterId)
+                ? { ...l, characterId: charIdRemap.get(l.characterId) }
+                : l
+            );
 
             setReceivingFromRealtime(true);
             try {
               useParsedScriptStore.getState().setParsedData(projectId!, {
-                scenes: sp.scenes || [],
-                characters: sp.characters || [],
-                looks: mergedLooks,
+                scenes: remappedScenes,
+                characters: remappedChars,
+                looks: remappedLooks,
                 filename: sp.filename || (data.scriptUpload.file_name as string) || 'script.pdf',
                 parsedAt: sp.parsedAt || new Date().toISOString(),
               });
 
               useProjectStore.getState().updateProject(projectId!, {
-                scenes: sp.scenes?.length ?? 0,
-                characters: sp.characters?.length ?? 0,
+                scenes: remappedScenes.length,
+                characters: remappedChars.length,
                 scriptFilename: (data.scriptUpload.file_name as string) || undefined,
               });
 
@@ -614,7 +671,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                 projectId: projectId!,
                 filename: (data.scriptUpload.file_name as string) || 'script.pdf',
                 uploadedAt: (data.scriptUpload.created_at as string) || new Date().toISOString(),
-                sceneCount: sp.scenes?.length ?? 0,
+                sceneCount: remappedScenes.length,
                 rawText: '',
               });
             } finally {
@@ -629,15 +686,15 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
             // makes saveBreakdown's UPDATE-by-id a no-op on every edit
             // (no matching row), which is how breakdown fields appeared
             // to save successfully but vanished on the next login.
-            if (sp.scenes && sp.scenes.length > 0) {
-              saveScenes(projectId!, sp.scenes as any);
+            if (remappedScenes.length > 0) {
+              saveScenes(projectId!, remappedScenes as any);
             }
-            if (sp.characters && sp.characters.length > 0) {
-              saveCharacters(projectId!, sp.characters as any);
+            if (remappedChars.length > 0) {
+              saveCharacters(projectId!, remappedChars as any);
             }
-            if (mergedLooks.length > 0) {
+            if (remappedLooks.length > 0) {
               const lookSceneMap = buildLookSceneMap(projectId!);
-              saveLooks(projectId!, mergedLooks as any, lookSceneMap);
+              saveLooks(projectId!, remappedLooks as any, lookSceneMap);
             }
           }
         }
