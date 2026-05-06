@@ -1,0 +1,16 @@
+# Supabase project config — only the bits that affect Edge Functions
+# right now. Add other sections (db, auth, …) as the project grows.
+#
+# scene-tts handles authentication manually inside the function (it
+# pulls the JWT, calls supabase.auth.getUser, then runs the owner-tier
+# and project-membership checks). The platform-level JWT verification
+# is therefore redundant and actively breaks CORS preflight, because
+# Supabase intercepts OPTIONS requests before the function code can
+# respond — browsers send preflights without an Authorization header,
+# so the gateway returns 401 and the browser blocks the real request.
+#
+# Disable verify_jwt for this function so preflights succeed; the
+# real auth gates inside the function still apply.
+
+[functions.scene-tts]
+verify_jwt = false
