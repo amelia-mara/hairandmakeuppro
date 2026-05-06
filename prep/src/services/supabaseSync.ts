@@ -522,16 +522,32 @@ export function saveScenes(
       .from('scenes')
       .select('id, scene_number')
       .eq('project_id', projectId);
-    const numToExistingId = new Map<string, string>();
+    // Group existing IDs by scene_number. Split scenes legitimately have
+    // multiple DB rows under the same scene_number (one screenplay scene
+    // number that maps to INT/DAY + EXT/NIGHT, [FLASHBACK] continuations,
+    // etc), so we can't collapse this into a single id-per-number map —
+    // doing that would remap every local row for that number onto the
+    // SAME existing id and produce duplicate ids in the upsert payload,
+    // tripping Postgres 21000 "ON CONFLICT DO UPDATE command cannot
+    // affect row a second time".
+    const idsByNumber = new Map<string, string[]>();
     for (const r of (existingScenes ?? [])) {
-      numToExistingId.set(String(r.scene_number), r.id as string);
+      const num = String(r.scene_number);
+      const list = idsByNumber.get(num) ?? [];
+      list.push(r.id as string);
+      idsByNumber.set(num, list);
     }
     const idRemap = new Map<string, string>();
     const remappedDbScenes = dbScenes.map((s) => {
-      const existingId = numToExistingId.get(s.scene_number);
-      if (existingId && existingId !== s.id) {
-        idRemap.set(s.id as string, existingId);
-        return { ...s, id: existingId };
+      const existingIds = idsByNumber.get(s.scene_number) ?? [];
+      // Only remap when there's exactly one DB row for this scene_number
+      // and it doesn't match the local id. With split scenes (multiple DB
+      // rows per scene_number) the local ids should already match because
+      // they came from fetchScenes; trying to remap would arbitrarily
+      // collapse one onto another.
+      if (existingIds.length === 1 && existingIds[0] !== s.id) {
+        idRemap.set(s.id as string, existingIds[0]);
+        return { ...s, id: existingIds[0] };
       }
       return s;
     });
@@ -548,9 +564,24 @@ export function saveScenes(
       }
     }
 
+    // Defensive dedupe by id — last write wins. Even with the
+    // single-row-only remap above, an upstream caller could in theory
+    // pass a payload that already has duplicate ids (e.g. a store reset
+    // racing with a save). Postgres ON CONFLICT DO UPDATE refuses to
+    // affect the same row twice in one command, so keep this guard so
+    // the upsert never trips that even if something upstream regresses.
+    const uniqueDbScenes = Array.from(
+      new Map(remappedDbScenes.map((s) => [s.id, s])).values(),
+    );
+    if (uniqueDbScenes.length !== remappedDbScenes.length) {
+      console.warn(
+        `[PrepSync] saveScenes: deduped ${remappedDbScenes.length - uniqueDbScenes.length} duplicate scene id(s) from upsert payload`,
+      );
+    }
+
     const { error } = await supabase
       .from('scenes')
-      .upsert(remappedDbScenes, { onConflict: 'id' });
+      .upsert(uniqueDbScenes, { onConflict: 'id' });
 
     if (error) {
       throw error;

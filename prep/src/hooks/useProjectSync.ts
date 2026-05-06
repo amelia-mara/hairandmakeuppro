@@ -605,9 +605,17 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               supabase.from('scenes').select('id, scene_number').eq('project_id', projectId!),
               supabase.from('characters').select('id, name').eq('project_id', projectId!),
             ]);
-            const numToExistingSceneId = new Map<string, string>();
+            // Group DB scene ids by scene_number — split scenes have
+            // multiple rows under one number and must NOT be collapsed
+            // (otherwise every local row for that number gets remapped
+            // to the same DB id, producing duplicates that break the
+            // ON CONFLICT upsert with Postgres 21000).
+            const sceneIdsByNumber = new Map<string, string[]>();
             for (const r of (existingSceneRows.data ?? [])) {
-              numToExistingSceneId.set(String(r.scene_number), r.id as string);
+              const num = String(r.scene_number);
+              const list = sceneIdsByNumber.get(num) ?? [];
+              list.push(r.id as string);
+              sceneIdsByNumber.set(num, list);
             }
             const nameToExistingCharId = new Map<string, string>();
             for (const r of (existingCharRows.data ?? [])) {
@@ -624,16 +632,19 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
               return c;
             });
             const remappedScenes = (sp.scenes ?? []).map((s: any) => {
-              const existingId = numToExistingSceneId.get(String(s.number));
+              const existingIds = sceneIdsByNumber.get(String(s.number)) ?? [];
               const remappedCharIds = (s.characterIds ?? []).map((cid: string) =>
                 charIdRemap.get(cid) ?? cid
               );
               const out = { ...s, characterIds: remappedCharIds };
-              return existingId ? { ...out, id: existingId } : out;
+              // Only remap when there's exactly one existing DB row for
+              // this scene_number; for split scenes leave the local id
+              // alone so each local scene maps 1:1 to its own DB row.
+              return existingIds.length === 1 ? { ...out, id: existingIds[0] } : out;
             });
-            if (numToExistingSceneId.size > 0 || charIdRemap.size > 0) {
+            if (sceneIdsByNumber.size > 0 || charIdRemap.size > 0) {
               console.log('[useProjectSync] Remapped restore IDs —',
-                `scenes: ${numToExistingSceneId.size}, chars: ${charIdRemap.size}`);
+                `scenes: ${sceneIdsByNumber.size}, chars: ${charIdRemap.size}`);
             }
 
             // Preserve any locally-cached looks that aren't in the
