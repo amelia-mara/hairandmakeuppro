@@ -20,7 +20,9 @@ interface Props {
 }
 
 export function SceneAudioButton({ projectId, sceneId, text }: Props) {
-  const tier = useAuthStore((s) => s.user?.tier);
+  // Effective tier respects the owner-only "preview as another tier"
+  // swap, so previewing as Designer correctly hides the button.
+  const tier = useAuthStore((s) => s.getEffectiveTier());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
