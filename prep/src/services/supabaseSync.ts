@@ -505,20 +505,19 @@ export function saveScenes(
     });
 
     // Defensive ID remap before upsert. Without this, freshly-minted local
-    // scene IDs (e.g. from a script_uploads.parsed_data restore) clash with
-    // existing rows on the (project_id, scene_number) unique constraint and
-    // the upsert by id does an INSERT that hits the conflict. Worse, even
-    // when the upsert "succeeds", saveBreakdown's UPDATE WHERE id=X then
-    // matches zero rows because the local store's id never matched the DB,
-    // and Supabase silently returns 204 — that's the misleading-success
-    // chain we kept hitting.
+    // scene IDs (e.g. from a script_uploads.parsed_data restore) don't
+    // match the DB row IDs, and saveBreakdown's UPDATE WHERE id=X silently
+    // matches zero rows (Supabase returns 204 with no rows affected) — the
+    // misleading-success chain that kept losing breakdown data on logout.
     //
     // Pre-fetch existing (id, scene_number) for this project, remap the
     // upsert payload AND the local stores so future saveBreakdown calls
-    // hit real rows. Use onConflict on (project_id, scene_number) so the
-    // operation also resolves cleanly in the (rare) case where the SELECT
-    // returned 0 due to a transient RLS window but the constraint sees
-    // existing rows.
+    // hit real rows. The DB-level UNIQUE(project_id, scene_number)
+    // constraint is dropped in migration 023 because the screenplay
+    // domain legitimately produces multiple rows with the same scene
+    // number (split scenes: INT/DAY + EXT/NIGHT, [FLASHBACK]
+    // continuations, etc.). Each scene is now identified solely by its
+    // id, so onConflict='id' is the correct strategy.
     const { data: existingScenes } = await supabase
       .from('scenes')
       .select('id, scene_number')
@@ -551,7 +550,7 @@ export function saveScenes(
 
     const { error } = await supabase
       .from('scenes')
-      .upsert(remappedDbScenes, { onConflict: 'project_id,scene_number' });
+      .upsert(remappedDbScenes, { onConflict: 'id' });
 
     if (error) {
       throw error;
