@@ -68,6 +68,12 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
   const projectRevisions = useRevisedScenesStore((state) => state.revisions[projectId]);
   const [popup, setPopup] = useState<TagPopupState | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  // Tracks when handleMouseUp just opened the character-pick popup, so a
+  // subsequent click on an underlying tag span (which fires after mouseup)
+  // doesn't overwrite that popup with the edit-tag popup. Without this,
+  // selecting text inside an existing synopsis tag opens the picker for
+  // a flash, then the tag-span click swaps it to the edit popup.
+  const lastSelectionPopupAt = useRef(0);
 
   /* Close popup on outside click */
   useEffect(() => {
@@ -175,6 +181,7 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
       step: 'character',
       popBelow,
     });
+    lastSelectionPopupAt.current = Date.now();
 
     sel.removeAllRanges();
   }, [scenes]);
@@ -309,6 +316,9 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
 
   const handleTagClick = useCallback((e: React.MouseEvent, sceneId: string, tagIds: string[]) => {
     e.stopPropagation();
+    // If mouseup just opened the character picker for a fresh selection
+    // inside this tag, skip the edit-tag flow so the picker stays put.
+    if (Date.now() - lastSelectionPopupAt.current < 250) return;
     const foundTags = tagIds.map(id => tagStore.tags.find(t => t.id === id)).filter(Boolean) as ScriptTag[];
     if (foundTags.length === 0) return;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
