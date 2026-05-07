@@ -1446,6 +1446,26 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
     {
       name: 'prep-happy-parsed-scripts',
       storage: createJSONStorage(() => localStorage),
+      // Strip per-scene scriptContent before persisting. Full screenplay
+      // text for 100+ scenes blows past localStorage's ~5MB origin quota
+      // and aborts setItem with QuotaExceededError, which surfaces in
+      // the upload dialog as "Failed to process file: setItem ...
+      // exceeded the quota". The scene text lives in Supabase
+      // (scenes.script_content) and is restored by useProjectSync on
+      // load — caching it locally just duplicates an already-paginated
+      // dataset.
+      partialize: (state) => ({
+        ...state,
+        projects: Object.fromEntries(
+          Object.entries(state.projects).map(([projectId, project]) => [
+            projectId,
+            {
+              ...project,
+              scenes: project.scenes.map((s) => ({ ...s, scriptContent: '' })),
+            },
+          ]),
+        ),
+      }),
     }
   )
 );
