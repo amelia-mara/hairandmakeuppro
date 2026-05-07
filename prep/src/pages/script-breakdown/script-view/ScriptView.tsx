@@ -468,6 +468,12 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
       )}
 
       {scenes.map((scene) => {
+        // The preamble is already rendered above as the title page —
+        // skip it here so it doesn't get a duplicate scene-card render.
+        // The sidebar scene list still includes the preamble entry
+        // because `scenes` is the same array; only the script viewer's
+        // paper-stack needs to dedupe.
+        if (preambleScene && scene.id === preambleScene.id) return null;
         // Omitted scenes get a thin placeholder strip in the script
         // viewer — no slugline, no content, just "SC N OMITTED" so
         // the reader knows the gap is intentional.
