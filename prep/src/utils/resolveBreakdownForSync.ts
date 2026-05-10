@@ -56,6 +56,16 @@ export function resolveBreakdownForSync(
           hair: resolveField(cb.entersWith.hair, charLook?.hair),
           makeup: resolveField(cb.entersWith.makeup, charLook?.makeup),
           wardrobe: resolveField(cb.entersWith.wardrobe, charLook?.wardrobe),
+          // facialHair has no look-default to fall back to (Look type
+          // doesn't carry it yet) — pass through whatever the user
+          // typed, defaulting to '' so the field round-trips cleanly.
+          facialHair: cb.entersWith.facialHair || '',
+        },
+        exitsWith: {
+          hair: cb.exitsWith.hair,
+          makeup: cb.exitsWith.makeup,
+          wardrobe: cb.exitsWith.wardrobe,
+          facialHair: cb.exitsWith.facialHair || '',
         },
         sfx: cb.sfx || '',
         environmental: cb.environmental || '',

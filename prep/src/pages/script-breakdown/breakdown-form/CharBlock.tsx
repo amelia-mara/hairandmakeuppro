@@ -282,13 +282,10 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
             <div className="cb-hmw">
               <div><FInput label="Hair" value={cb.entersWith.hair} onChange={(v) => ue('entersWith', 'hair', v)} /><TagPills tags={hairTags} color={catColor('hair')} /></div>
               <div><FInput label="Makeup" value={cb.entersWith.makeup} onChange={(v) => ue('entersWith', 'makeup', v)} /><TagPills tags={makeupTags} color={catColor('makeup')} /></div>
+              <div><FInput label="Facial Hair" value={cb.entersWith.facialHair ?? ''} onChange={(v) => ue('entersWith', 'facialHair', v)} /></div>
+              <div><FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} /><TagPills tags={sfxTags} color={catColor('sfx')} /></div>
               <div><FInput label="Wardrobe" value={cb.entersWith.wardrobe} onChange={(v) => ue('entersWith', 'wardrobe', v)} /><TagPills tags={wardrobeTags} color={catColor('wardrobe')} /></div>
             </div>
-          </div>
-
-          <div className="cb-field">
-            <FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} />
-            <TagPills tags={sfxTags} color={catColor('sfx')} />
           </div>
 
           <ShoppingListSection
@@ -329,6 +326,7 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
                   <div className="cb-hmw">
                     <FInput label="Hair" value={cb.exitsWith.hair} onChange={(v) => ue('exitsWith', 'hair', v)} />
                     <FInput label="Makeup" value={cb.exitsWith.makeup} onChange={(v) => ue('exitsWith', 'makeup', v)} />
+                    <FInput label="Facial Hair" value={cb.exitsWith.facialHair ?? ''} onChange={(v) => ue('exitsWith', 'facialHair', v)} />
                     <FInput label="Wardrobe" value={cb.exitsWith.wardrobe} onChange={(v) => ue('exitsWith', 'wardrobe', v)} />
                   </div>
                 </div>

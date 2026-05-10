@@ -65,6 +65,10 @@ export interface HMWEntry {
   hair: string;
   makeup: string;
   wardrobe: string;
+  /** Beard / moustache / sideburns notes — sits with HMU on the form
+   *  and is treated as part of the same enters/exits group, but kept
+   *  optional so existing data doesn't need migration. */
+  facialHair?: string;
 }
 
 export interface CharacterBreakdown {
