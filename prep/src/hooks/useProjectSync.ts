@@ -271,6 +271,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                             hair: pick(cb.entersWith?.hair, localCb.entersWith?.hair) ?? '',
                             makeup: pick(cb.entersWith?.makeup, localCb.entersWith?.makeup) ?? '',
                             wardrobe: pick(cb.entersWith?.wardrobe, localCb.entersWith?.wardrobe) ?? '',
+                            facialHair: pick(cb.entersWith?.facialHair, localCb.entersWith?.facialHair) ?? '',
                           },
                           sfx: pick(cb.sfx, localCb.sfx) ?? '',
                           environmental: pick(cb.environmental, localCb.environmental) ?? '',
@@ -282,6 +283,7 @@ export function useProjectSync(projectId: string | null): ProjectSyncState {
                             hair: pick(cb.exitsWith?.hair, localCb.exitsWith?.hair) ?? '',
                             makeup: pick(cb.exitsWith?.makeup, localCb.exitsWith?.makeup) ?? '',
                             wardrobe: pick(cb.exitsWith?.wardrobe, localCb.exitsWith?.wardrobe) ?? '',
+                            facialHair: pick(cb.exitsWith?.facialHair, localCb.exitsWith?.facialHair) ?? '',
                           },
                         };
                       });
