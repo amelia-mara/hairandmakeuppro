@@ -429,6 +429,9 @@ export function saveScenes(
     characterIds: string[];
     synopsis: string;
     scriptContent: string;
+    manuallyInserted?: boolean;
+    needsReview?: boolean;
+    numberSuffix?: string;
   }>,
 ) {
   if (receivingFromRealtime) return;
@@ -501,6 +504,9 @@ export function saveScenes(
         script_content: s.scriptContent,
         story_day: s.storyDay ? parseInt(s.storyDay.replace(/\D/g, ''), 10) || null : null,
         filming_notes: filmingNotes,
+        manually_inserted: s.manuallyInserted ?? false,
+        needs_review: s.needsReview ?? false,
+        number_suffix: s.numberSuffix ?? null,
       };
     });
 
@@ -1432,6 +1438,9 @@ export function dbToScene(
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  manuallyInserted?: boolean;
+  needsReview?: boolean;
+  numberSuffix?: string;
 } {
   return {
     id: row.id as string,
@@ -1444,6 +1453,9 @@ export function dbToScene(
     characterIds: sceneCharacterIds,
     synopsis: (row.synopsis as string) || '',
     scriptContent: (row.script_content as string) || '',
+    manuallyInserted: (row.manually_inserted as boolean) || undefined,
+    needsReview: (row.needs_review as boolean) || undefined,
+    numberSuffix: (row.number_suffix as string) || undefined,
   };
 }
 

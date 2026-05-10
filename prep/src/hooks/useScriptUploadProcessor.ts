@@ -257,13 +257,63 @@ export function useScriptUploadProcessor({
         mergedLooks = [...generatedLooks, ...remappedExistingLooks];
       }
 
+      // ━━━ Manual-scene round-trip ━━━
+      // If the user inserted any scenes by hand because the parser
+      // missed a heading (right-click → Insert scene break here), we
+      // need to either:
+      //   1. Transfer their breakdown data onto the parsed scene if
+      //      this re-parse picked up the heading, OR
+      //   2. Re-inject the manual scene into the new list with a
+      //      needsReview flag so the user can confirm placement.
+      // Match by INT/EXT + time-of-day + location (case-insensitive)
+      // since those are exactly the fields the user typed when
+      // inserting the scene. Manual scenes are claimed at most once,
+      // so a sequence of split inserts under the same parent number
+      // doesn't all map to the same parsed scene.
+      let mergedScenes: Scene[] = scenesWithStoryDays;
+      if (isRevision && existingParsed) {
+        const manualScenes = existingParsed.scenes.filter((s) => s.manuallyInserted);
+        if (manualScenes.length > 0) {
+          const matchKey = (s: { intExt: string; dayNight: string; location: string }) =>
+            `${s.intExt}|${s.dayNight}|${(s.location || '').trim().toUpperCase()}`;
+          const claimed = new Set<string>();
+          mergedScenes = [...scenesWithStoryDays];
+          for (const manual of manualScenes) {
+            const k = matchKey(manual);
+            const match = mergedScenes.find((s) => matchKey(s) === k && !claimed.has(s.id));
+            if (match) {
+              claimed.add(match.id);
+              const bd = breakdownStore.getBreakdown(manual.id);
+              if (bd) {
+                breakdownStore.setBreakdown(match.id, { ...bd, sceneId: match.id });
+              }
+              const syn = synopsisStore.getSynopsis(manual.id, '');
+              if (syn) synopsisStore.setSynopsis(match.id, syn);
+            } else {
+              // Best-effort placement: insert after whichever parsed
+              // scene now sits where the manual scene's predecessor
+              // used to live. Falls back to appending if neither
+              // anchor can be located.
+              const manualIdx = existingParsed.scenes.findIndex((s) => s.id === manual.id);
+              const prev = manualIdx > 0 ? existingParsed.scenes[manualIdx - 1] : null;
+              let insertAt = mergedScenes.length;
+              if (prev) {
+                const anchorIdx = mergedScenes.findIndex((s) => matchKey(s) === matchKey(prev));
+                if (anchorIdx >= 0) insertAt = anchorIdx + 1;
+              }
+              mergedScenes.splice(insertAt, 0, { ...manual, needsReview: true } as Scene);
+            }
+          }
+        }
+      }
+
       setProgress(95);
       setStatusText('Saving...');
       await new Promise(r => setTimeout(r, 200));
 
       // Store parsed data
       setParsedData(projectId, {
-        scenes: scenesWithStoryDays,
+        scenes: mergedScenes,
         characters,
         looks: mergedLooks,
         filename: selectedFile.name,
@@ -281,7 +331,7 @@ export function useScriptUploadProcessor({
 
       // Refresh the ProjectHub card counts so they update without a reload
       useProjectStore.getState().updateProject(projectId, {
-        scenes: scenesWithStoryDays.length,
+        scenes: mergedScenes.length,
         characters: characters.length,
         scriptFilename: selectedFile.name,
         lastActive: new Date().toISOString(),
@@ -320,10 +370,10 @@ export function useScriptUploadProcessor({
             file_name: selectedFile.name,
             file_size: selectedFile.size,
             raw_text: parsed.rawText,
-            scene_count: scenesWithStoryDays.length,
+            scene_count: mergedScenes.length,
             character_count: characters.length,
             parsed_data: {
-              scenes: scenesWithStoryDays,
+              scenes: mergedScenes,
               characters,
               looks: mergedLooks,
               filename: selectedFile.name,

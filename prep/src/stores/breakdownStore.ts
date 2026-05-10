@@ -31,6 +31,22 @@ export interface Scene {
   backgroundCharacters?: string[];
   /** Free-text notes shown alongside the background list. */
   backgroundNotes?: string;
+  /** True when the user inserted this scene by hand via the script
+   *  viewer's right-click "Insert scene break here" action — the parser
+   *  missed the heading and the user filled it in. Persisted so the
+   *  re-parse merge can identify candidates for transferring breakdown
+   *  data, or re-injecting the manual scene if the parser still misses
+   *  the heading. Existing scenes default to false/undefined. */
+  manuallyInserted?: boolean;
+  /** Flipped to true when a re-parse runs and a manually-inserted scene
+   *  couldn't be matched to a parsed scene heading. Surfaced as a
+   *  badge on the heading so the user knows to confirm placement. */
+  needsReview?: boolean;
+  /** Optional alphabetic suffix shown after the scene number (e.g.
+   *  "A" → renders as "5A"). Used by manual inserts so existing scene
+   *  numbers stay untouched. Persisted separately from `number`
+   *  because `scene_number` in Supabase is a bigint. */
+  numberSuffix?: string;
 }
 
 export type CharacterCategory = 'principal' | 'supporting_artist';
@@ -1322,6 +1338,12 @@ export interface ParsedSceneData {
   characterIds: string[];
   synopsis: string;
   scriptContent: string;
+  isOmitted?: boolean;
+  backgroundCharacters?: string[];
+  backgroundNotes?: string;
+  manuallyInserted?: boolean;
+  needsReview?: boolean;
+  numberSuffix?: string;
 }
 
 export interface ParsedCharacterData {
@@ -1359,6 +1381,26 @@ interface ParsedScriptState {
   mergeCharacters: (projectId: string, sourceCharacterId: string, targetCharacterId: string) => void;
   addLook: (projectId: string, look: Look) => void;
   updateLook: (projectId: string, lookId: string, data: Partial<Look>) => void;
+  /** Split a scene's scriptContent at the given character range and
+   *  insert a user-authored scene heading at that boundary. The parent
+   *  keeps content[0..parentEndsAt]; the new scene takes
+   *  content[newSceneStartsAt..end]. When the user has selected the
+   *  missed slugline text, the caller passes the selection range
+   *  (parentEndsAt = selection start, newSceneStartsAt = selection end)
+   *  so the heading text gets dropped from the body — it lives in the
+   *  scene metadata instead. For a plain paragraph break the caller
+   *  passes the same value for both. Returns the new scene's id, or
+   *  null if the parent wasn't found. */
+  insertManualScene: (
+    projectId: string,
+    parentSceneId: string,
+    parentEndsAt: number,
+    newSceneStartsAt: number,
+    heading: { intExt: 'INT' | 'EXT'; dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK'; location: string },
+  ) => string | null;
+  /** Mark a manual scene as no-longer-needing review (after the user
+   *  confirms the placement is correct following a re-parse). */
+  clearSceneReview: (projectId: string, sceneId: string) => void;
 }
 
 export const useParsedScriptStore = create<ParsedScriptState>()(
@@ -1441,6 +1483,83 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
             l.id === lookId ? { ...l, ...data } : l
           );
           return { projects: { ...s.projects, [projectId]: { ...project, looks } } };
+        }),
+
+      insertManualScene: (projectId, parentSceneId, parentEndsAt, newSceneStartsAt, heading) => {
+        const project = get().projects[projectId];
+        if (!project) return null;
+        const parentIdx = project.scenes.findIndex((sc) => sc.id === parentSceneId);
+        if (parentIdx < 0) return null;
+        const parent = project.scenes[parentIdx];
+
+        // Defensive clamp — callers pass offsets sourced from text
+        // selections or paragraph snaps, so we collapse out-of-range
+        // values rather than minting a scene with garbage content.
+        const content = parent.scriptContent || '';
+        const safeFrom = Math.max(0, Math.min(parentEndsAt, content.length));
+        const safeTo = Math.max(safeFrom, Math.min(newSceneStartsAt, content.length));
+        const beforeText = content.slice(0, safeFrom).replace(/\s+$/, '');
+        const afterText = content.slice(safeTo).replace(/^\s+/, '');
+
+        // Sibling-aware suffix: pick the next available letter among
+        // any scenes already keyed to this parent's number with a
+        // suffix. Skips letters already in use (e.g. if 5A and 5B
+        // exist, the new one becomes 5C).
+        const usedSuffixes = new Set(
+          project.scenes
+            .filter((sc) => sc.number === parent.number && sc.numberSuffix)
+            .map((sc) => sc.numberSuffix as string),
+        );
+        let suffix = 'A';
+        for (let code = 65; code <= 90; code++) {
+          const candidate = String.fromCharCode(code);
+          if (!usedSuffixes.has(candidate)) {
+            suffix = candidate;
+            break;
+          }
+        }
+
+        const newScene: ParsedSceneData = {
+          id: crypto.randomUUID(),
+          number: parent.number,
+          numberSuffix: suffix,
+          intExt: heading.intExt,
+          dayNight: heading.dayNight,
+          location: heading.location,
+          storyDay: parent.storyDay,
+          timeInfo: '',
+          characterIds: [],
+          synopsis: '',
+          scriptContent: afterText,
+          manuallyInserted: true,
+        };
+
+        const updatedParent: ParsedSceneData = { ...parent, scriptContent: beforeText };
+        const newScenes = [
+          ...project.scenes.slice(0, parentIdx),
+          updatedParent,
+          newScene,
+          ...project.scenes.slice(parentIdx + 1),
+        ];
+
+        set((s) => ({
+          projects: {
+            ...s.projects,
+            [projectId]: { ...project, scenes: newScenes },
+          },
+        }));
+
+        return newScene.id;
+      },
+
+      clearSceneReview: (projectId, sceneId) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const scenes = project.scenes.map((sc) =>
+            sc.id === sceneId ? { ...sc, needsReview: false } : sc,
+          );
+          return { projects: { ...s.projects, [projectId]: { ...project, scenes } } };
         }),
     }),
     {

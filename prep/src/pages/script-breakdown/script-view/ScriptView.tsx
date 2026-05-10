@@ -10,6 +10,7 @@ import {
   type ParsedCharacterData,
 } from '@/stores/breakdownStore';
 import { type TagPopupState, ScriptTagPopup } from './ScriptTagPopup';
+import { SceneInsertPopup, type SceneInsertPopupState } from './SceneInsertPopup';
 import { SceneAudioButton } from '@/components/SceneAudioButton';
 import {
   buildCharNamePattern,
@@ -67,6 +68,7 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
   const tagStore = useTagStore();
   const projectRevisions = useRevisedScenesStore((state) => state.revisions[projectId]);
   const [popup, setPopup] = useState<TagPopupState | null>(null);
+  const [insertPopup, setInsertPopup] = useState<SceneInsertPopupState | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   // Tracks when handleMouseUp just opened the character-pick popup, so a
   // subsequent click on an underlying tag span (which fires after mouseup)
@@ -314,6 +316,50 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
     }
   }, [tagStore, popup]);
 
+  /* User clicked "Add scene break" on the tag popup's character step.
+     Close the tag popup and reopen at the same position as the
+     scene-insert form, seeded with the highlighted text + offsets so
+     the form can parse the selection and pre-fill the heading. */
+  const handleSceneBreakPick = useCallback(() => {
+    if (!popup) return;
+    const insertState = {
+      x: popup.x,
+      y: popup.y,
+      parentSceneId: popup.sceneId,
+      startOffset: popup.startOffset,
+      endOffset: popup.endOffset,
+      selectedText: popup.text,
+    };
+    setPopup(null);
+    setInsertPopup(insertState);
+  }, [popup]);
+
+  /* Submit handler for the insert-scene popup. When the selection
+     parsed cleanly as a slugline the caller signals dropSelection so
+     the heading text doesn't appear twice (once as metadata, once as
+     the first paragraph of the new scene body). Otherwise we only
+     truncate the parent at startOffset and leave the selection in
+     the new scene's body. */
+  const handleInsertSceneSubmit = useCallback(
+    (
+      heading: { intExt: 'INT' | 'EXT'; dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK'; location: string },
+      dropSelection: boolean,
+    ) => {
+      if (!insertPopup) return;
+      const parentEndsAt = insertPopup.startOffset;
+      const newSceneStartsAt = dropSelection ? insertPopup.endOffset : insertPopup.startOffset;
+      parsedScriptStore.insertManualScene(
+        projectId,
+        insertPopup.parentSceneId,
+        parentEndsAt,
+        newSceneStartsAt,
+        heading,
+      );
+      setInsertPopup(null);
+    },
+    [insertPopup, parsedScriptStore, projectId],
+  );
+
   const handleTagClick = useCallback((e: React.MouseEvent, sceneId: string, tagIds: string[]) => {
     e.stopPropagation();
     // If mouseup just opened the character picker for a fresh selection
@@ -495,12 +541,30 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
           key={scene.id}
           ref={(el) => setPageRef(scene.id, el)}
           data-scene-id={scene.id}
-          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''} ${projectRevisions && projectRevisions.changes.some((c) => c.sceneId === scene.id) && !projectRevisions.reviewedSceneIds.includes(scene.id) ? 'sv-paper--revised' : ''}`}
+          className={`sv-paper ${scene.id === selectedSceneId ? 'sv-paper--active' : ''} ${projectRevisions && projectRevisions.changes.some((c) => c.sceneId === scene.id) && !projectRevisions.reviewedSceneIds.includes(scene.id) ? 'sv-paper--revised' : ''} ${scene.needsReview ? 'sv-paper--needs-review' : ''}`}
           style={{ fontSize: `${fontSize}px` }}
           onMouseUp={() => handleMouseUp(scene.id)}
         >
           <div className="sv-heading">
-            <span style={{ flex: 1 }}>{scene.number} {scene.intExt}. {scene.location} — {scene.dayNight}</span>
+            <span style={{ flex: 1 }}>
+              {scene.number}{scene.numberSuffix ?? ''} {scene.intExt}. {scene.location} — {scene.dayNight}
+              {scene.needsReview && (
+                <span
+                  className="sv-badge sv-badge--review"
+                  title="Re-parse couldn't match this manual scene to a parsed heading. Confirm the placement is still correct."
+                >
+                  ⚠ Review
+                </span>
+              )}
+              {scene.manuallyInserted && !scene.needsReview && (
+                <span
+                  className="sv-badge sv-badge--manual"
+                  title="Manually inserted scene break"
+                >
+                  Manual
+                </span>
+              )}
+            </span>
             {scene.id === selectedSceneId && scene.scriptContent && (
               <SceneAudioButton
                 projectId={projectId}
@@ -516,6 +580,12 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
         );
       })}
 
+      <SceneInsertPopup
+        popup={insertPopup}
+        onClose={() => setInsertPopup(null)}
+        onSubmit={handleInsertSceneSubmit}
+      />
+
       <ScriptTagPopup
         popup={popup}
         popupRef={popupRef}
@@ -527,6 +597,7 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
         onAddCharacterToScene={handleAddCharacterToScene}
         onFieldPick={handleFieldPick}
         onSynopsisPick={handleSynopsisPick}
+        onSceneBreakPick={handleSceneBreakPick}
         onEditChangeCategory={handleEditChangeCategory}
         onEditDeleteTag={handleEditDeleteTag}
         onBack={() => popup && setPopup({ ...popup, step: 'character' })}
