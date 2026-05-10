@@ -67,13 +67,24 @@ export function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   const intExtPattern = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.|EXT\.|INT(?=\s|[-–—/]|$)|EXT(?=\s|[-–—/]|$))\s*/i;
   const intExtMatch = workingLine.match(intExtPattern);
 
-  if (!intExtMatch) return invalidResult;
+  if (!intExtMatch) {
+    // Fallback: accept location-only headings that have a scene number and a
+    // valid time-of-day marker (e.g. "70 HOSPITAL, NURSE'S STATION - NIGHT").
+    // Some scripts omit INT./EXT. for certain locations.
+    const hasSceneNumber = sceneNumber !== null;
+    const timeFallbackPattern = /(?:\s*[-–—\.]+\s*|\s+)(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SAME TIME|MOMENTS LATER|SIMULTANEOUS|MAGIC HOUR|GOLDEN HOUR|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING)(?:\s*[-–—]?\s*(?:FLASHBACK|PRESENT|CONT(?:'D)?)?)?$/i;
+    const hasTod = timeFallbackPattern.test(workingLine);
+    if (!hasSceneNumber || !hasTod) return invalidResult;
+    // Valid location-only heading — fall through with default intExt of 'INT'
+  }
 
-  const intExtRaw = intExtMatch[1].toUpperCase().replace(/\.$/, '');
-  const intExt: 'INT' | 'EXT' = intExtRaw.startsWith('EXT') ? 'EXT' : 'INT';
-
-  workingLine = workingLine.slice(intExtMatch[0].length).trim();
-  workingLine = workingLine.replace(/^[\.\-–—]\s*/, '').trim();
+  let intExt: 'INT' | 'EXT' = 'INT';
+  if (intExtMatch) {
+    const intExtRaw = intExtMatch[1].toUpperCase().replace(/\.$/, '');
+    intExt = intExtRaw.startsWith('EXT') ? 'EXT' : 'INT';
+    workingLine = workingLine.slice(intExtMatch[0].length).trim();
+    workingLine = workingLine.replace(/^[\.\-–—]\s*/, '').trim();
+  }
 
   const timeSeparatorPattern = /(?:\s*[-–—\.]+\s*|\s+)(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SAME TIME|MOMENTS LATER|SIMULTANEOUS|MAGIC HOUR|GOLDEN HOUR|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING)(?:\s*[-–—]?\s*(?:FLASHBACK|PRESENT|CONT(?:'D)?)?)?$/i;
 
