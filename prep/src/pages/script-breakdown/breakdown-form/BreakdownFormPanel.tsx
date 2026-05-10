@@ -66,7 +66,7 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
   onRemoveEvent: (id: string) => void;
   onRemoveCharacter: (charId: string, action: 'not-in-scene' | 'not-a-character' | 'duplicate', mergeTargetId?: string) => void;
   onAddLook: (characterId: string, name: string) => string;
-  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => void;
+  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe' | 'sfx' | 'facialHair', value: string) => void;
   department?: 'hmu' | 'costume';
 }) {
   const charOverrides = useCharacterOverridesStore();

@@ -701,6 +701,8 @@ export function saveLooks(
     hair: string;
     makeup: string;
     wardrobe: string;
+    sfx?: string;
+    facialHair?: string;
   }>,
   lookSceneMap?: Record<string, string[]>,
 ) {
@@ -713,7 +715,15 @@ export function saveLooks(
       name: l.name,
       description: l.description,
       hair_details: { style: l.hair } as unknown as Json,
-      makeup_details: { notes: l.makeup, _wardrobe: l.wardrobe } as unknown as Json,
+      // Pack wardrobe / sfx / facialHair into makeup_details so we
+      // don't need new columns. The underscore-prefix keys mark them
+      // as Prep-private extensions; dbToLook reads them back.
+      makeup_details: {
+        notes: l.makeup,
+        _wardrobe: l.wardrobe,
+        _sfx: l.sfx ?? '',
+        _facialHair: l.facialHair ?? '',
+      } as unknown as Json,
     }));
 
     await upsertWithOrphanCleanup('looks', projectId, dbLooks);
@@ -1494,6 +1504,8 @@ export function dbToLook(row: Record<string, unknown>): {
   hair: string;
   makeup: string;
   wardrobe: string;
+  sfx: string;
+  facialHair: string;
 } {
   const hairDetails = (row.hair_details as Record<string, unknown>) || {};
   const makeupDetails = (row.makeup_details as Record<string, unknown>) || {};
@@ -1505,5 +1517,7 @@ export function dbToLook(row: Record<string, unknown>): {
     hair: (hairDetails.style as string) || '',
     makeup: (makeupDetails.notes as string) || '',
     wardrobe: (makeupDetails._wardrobe as string) || '',
+    sfx: (makeupDetails._sfx as string) || '',
+    facialHair: (makeupDetails._facialHair as string) || '',
   };
 }

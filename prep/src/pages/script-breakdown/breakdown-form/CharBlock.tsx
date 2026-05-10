@@ -54,7 +54,7 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
    * in sync continuously with whatever was last typed in any scene
    * where it was active.
    */
-  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => void;
+  onUpdateLookField: (lookId: string, field: 'hair' | 'makeup' | 'wardrobe' | 'sfx' | 'facialHair', value: string) => void;
   department?: 'hmu' | 'costume';
   costumeData?: CostumeSceneBreakdown;
   onCostumeUpdate?: (data: CostumeSceneBreakdown) => void;
@@ -64,8 +64,18 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
     // Mirror entersWith edits onto the active look — the next scene
     // that selects this look will auto-fill from the saved value.
     // exitsWith reflects post-change state, so it doesn't write back.
-    if (f === 'entersWith' && cb.lookId && (k === 'hair' || k === 'makeup' || k === 'wardrobe')) {
+    if (f === 'entersWith' && cb.lookId && (k === 'hair' || k === 'makeup' || k === 'wardrobe' || k === 'facialHair')) {
       onUpdateLookField(cb.lookId, k, v);
+    }
+  };
+
+  // SFX is a single field on the character row (not in HMWEntry). Same
+  // mirror semantics as the HMU fields above: when a look is selected,
+  // saving SFX writes back to the look so the next scene picks it up.
+  const updateSfx = (v: string) => {
+    onUpdate({ sfx: v });
+    if (cb.lookId) {
+      onUpdateLookField(cb.lookId, 'sfx', v);
     }
   };
 
@@ -166,9 +176,14 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
         hair: pickField(cb.entersWith.hair, look.hair),
         makeup: pickField(cb.entersWith.makeup, look.makeup),
         wardrobe: pickField(cb.entersWith.wardrobe, look.wardrobe),
+        facialHair: pickField(cb.entersWith.facialHair ?? '', look.facialHair ?? ''),
       },
+      // SFX lives on the character row, not in entersWith — fill it
+      // the same way so the look's SFX/Prosthetics default carries
+      // across scenes alongside hair/makeup/wardrobe/facialHair.
+      sfx: pickField(cb.sfx ?? '', look.sfx ?? ''),
     });
-  }, [cb.lookId, cb.entersWith, looks, onUpdate]);
+  }, [cb.lookId, cb.entersWith, cb.sfx, looks, onUpdate]);
 
   return (
     <div className={`cb-block ${highlighted ? 'cb-block--hl' : ''}`}>
@@ -283,7 +298,7 @@ export function CharBlock({ projectId, char, cb, looks, highlighted, onUpdate, c
               <div><FInput label="Hair" value={cb.entersWith.hair} onChange={(v) => ue('entersWith', 'hair', v)} /><TagPills tags={hairTags} color={catColor('hair')} /></div>
               <div><FInput label="Makeup" value={cb.entersWith.makeup} onChange={(v) => ue('entersWith', 'makeup', v)} /><TagPills tags={makeupTags} color={catColor('makeup')} /></div>
               <div><FInput label="Facial Hair" value={cb.entersWith.facialHair ?? ''} onChange={(v) => ue('entersWith', 'facialHair', v)} /></div>
-              <div><FInput label="SFX / Prosthetics" value={cb.sfx} onChange={(v) => onUpdate({ sfx: v })} /><TagPills tags={sfxTags} color={catColor('sfx')} /></div>
+              <div><FInput label="SFX / Prosthetics" value={cb.sfx} onChange={updateSfx} /><TagPills tags={sfxTags} color={catColor('sfx')} /></div>
               <div><FInput label="Wardrobe" value={cb.entersWith.wardrobe} onChange={(v) => ue('entersWith', 'wardrobe', v)} /><TagPills tags={wardrobeTags} color={catColor('wardrobe')} /></div>
             </div>
           </div>

@@ -59,6 +59,12 @@ export interface Look {
   hair: string;
   makeup: string;
   wardrobe: string;
+  /** Optional SFX / Prosthetics + Facial Hair defaults that
+   *  carry across scenes the same way Hair/Makeup/Wardrobe do.
+   *  Stored alongside the other details in makeup_details JSONB
+   *  so no schema change is needed. */
+  sfx?: string;
+  facialHair?: string;
 }
 
 export interface HMWEntry {
