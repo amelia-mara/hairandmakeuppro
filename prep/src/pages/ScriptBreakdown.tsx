@@ -15,6 +15,8 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { ScriptUploadModal } from './script-breakdown/modals/ScriptUploadModal';
+import { StoryDayUploadModal } from './script-breakdown/modals/StoryDayUploadModal';
+import { SceneEditModal } from './script-breakdown/modals/SceneEditModal';
 import { DraftPdfViewer } from './script-breakdown/DraftPdfViewer';
 import { ToolsMenu } from './script-breakdown/ToolsMenu';
 import { SceneListPanel } from './script-breakdown/SceneListPanel';
@@ -80,6 +82,11 @@ export function ScriptBreakdown({ projectId }: Props) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showStoryDayModal, setShowStoryDayModal] = useState(false);
+  const [storyDaySummary, setStoryDaySummary] = useState<{ updated: number; unmatched: number } | null>(null);
+  /** ID of the scene whose heading is being edited via the
+   *  double-click-on-card flow; null when the editor is closed. */
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
   const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
@@ -383,6 +390,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               characterIdMap: new Map<string, string>(),
             });
           }}
+          onEditScene={(id) => setEditingSceneId(id)}
         />}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
@@ -613,6 +621,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               onToggle={() => setToolsOpen(!toolsOpen)}
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
+              onUploadStoryDays={() => setShowStoryDayModal(true)}
               onOpenBreakdownView={() => {
                 // Force Script tab on so the center panel actually
                 // shows the script — entering split-view from a
@@ -687,6 +696,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                     onToggle={() => setToolsOpen(!toolsOpen)}
                     onClose={() => setToolsOpen(false)}
                     onImportScript={() => setShowUploadModal(true)}
+                    onUploadStoryDays={() => setShowStoryDayModal(true)}
                     onOpenBreakdownView={() => {
                       // Force Script tab on so the center panel actually
                       // shows the script — entering split-view from a
@@ -888,6 +898,67 @@ export function ScriptBreakdown({ projectId }: Props) {
           }}
         />
       )}
+
+      {/* Story Day Breakdown Modal */}
+      {showStoryDayModal && (
+        <StoryDayUploadModal
+          projectId={projectId}
+          onClose={() => setShowStoryDayModal(false)}
+          onApplied={(summary) => {
+            setShowStoryDayModal(false);
+            setStoryDaySummary(summary);
+            // Auto-dismiss the result toast after a few seconds.
+            setTimeout(() => setStoryDaySummary(null), 4000);
+          }}
+        />
+      )}
+
+      {/* Story Day apply result — small toast pinned to the corner.
+          Surfaces { N scenes updated, M not matched } so the user sees
+          confirmation that the apply ran without needing to inspect
+          individual scenes. */}
+      {storyDaySummary && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 100,
+            padding: '12px 16px',
+            borderRadius: 8,
+            background: 'rgba(11, 10, 9, 0.96)',
+            border: '1px solid rgba(212, 148, 58, 0.40)',
+            color: 'var(--text-heading)',
+            fontSize: '0.8125rem',
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          Story Day Breakdown applied — <strong>{storyDaySummary.updated}</strong> scene
+          {storyDaySummary.updated === 1 ? '' : 's'} updated
+          {storyDaySummary.unmatched > 0 && (
+            <span style={{ color: '#E8621A' }}>
+              {' · '}{storyDaySummary.unmatched} not matched
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Scene Edit Modal — opened by double-clicking a scene card.
+          Lets the user fix any scene's number / suffix / INT-EXT /
+          location / day-night when the parser misread, or rename a
+          manually inserted scene. */}
+      {editingSceneId && (() => {
+        const scene = ALL_SCENES.find((s) => s.id === editingSceneId);
+        if (!scene) return null;
+        return (
+          <SceneEditModal
+            projectId={projectId}
+            scene={scene}
+            onClose={() => setEditingSceneId(null)}
+          />
+        );
+      })()}
 
       {/* Draft PDF Viewer */}
       <DraftPdfViewer draft={viewingDraftPdf} onClose={() => setViewingDraftPdf(null)} />

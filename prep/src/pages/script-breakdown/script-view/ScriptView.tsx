@@ -342,7 +342,13 @@ export function ScriptView({ scenes, preambleScene, characters, selectedSceneId,
      the new scene's body. */
   const handleInsertSceneSubmit = useCallback(
     (
-      heading: { intExt: 'INT' | 'EXT'; dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK'; location: string },
+      heading: {
+        intExt: 'INT' | 'EXT';
+        dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
+        location: string;
+        number?: number;
+        numberSuffix?: string;
+      },
       dropSelection: boolean,
     ) => {
       if (!insertPopup) return;
