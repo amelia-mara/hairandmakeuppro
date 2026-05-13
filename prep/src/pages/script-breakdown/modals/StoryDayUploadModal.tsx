@@ -140,15 +140,21 @@ export function StoryDayUploadModal({ projectId, onClose, onApplied }: Props) {
         // sync). Overwrite per user request — PDF is canonical.
         synopsisStore.setSynopsis(sid, pr.parsed.description);
 
-        // Timeline note lives on the per-scene breakdown. If the
+        // Timeline note + day live on the per-scene breakdown. If the
         // scene has no breakdown row yet, mint a minimal one so the
         // note has somewhere to land — saveBreakdown will sync it.
+        // `dayConfirmed: true` flips the Day field from the muted
+        // "suggested" style into the bold accent "confirmed" style so
+        // the user can see at a glance which scenes have had their
+        // story-day data applied from the canonical PDF.
         const bd = breakdownStore.getBreakdown(sid);
         const next: SceneBreakdown = bd
           ? {
               ...bd,
               timeline: {
                 ...bd.timeline,
+                day: pr.parsed.storyDay,
+                dayConfirmed: true,
                 note: pr.parsed.timeline,
                 type: pr.parsed.timelineType ?? bd.timeline.type,
               },
@@ -157,6 +163,7 @@ export function StoryDayUploadModal({ projectId, onClose, onApplied }: Props) {
               sceneId: sid,
               timeline: {
                 day: pr.parsed.storyDay,
+                dayConfirmed: true,
                 time: '',
                 type: pr.parsed.timelineType ?? '',
                 note: pr.parsed.timeline,
