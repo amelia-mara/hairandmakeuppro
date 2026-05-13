@@ -228,38 +228,52 @@ export function BreakdownFormPanel({ projectId: _projectId, scene, characters, b
           allCharacters={allCharacters}
         />
 
-        {/* Scene-level Continuity Events */}
-        <div className="fp-section">
-          <div className="fp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Scene Continuity Events</span>
-            <button className="fp-add-btn" onClick={() => onAddEvent({
-              id: crypto.randomUUID(), type: 'Wound', characterId: '',
-              description: '', sceneRange: `${scene.number}-`,
-            })}>+ Add</button>
-          </div>
-          {breakdown.continuityEvents.length === 0 ? (
-            <p className="fp-empty">No events flagged.</p>
-          ) : breakdown.continuityEvents.map((evt) => (
-            <div key={evt.id} className="fp-event">
-              <div className="fp-event-top">
-                <select className="fp-event-type-select" value={evt.type}
-                  onChange={(e) => onUpdateEvent(evt.id, { type: e.target.value })}>
-                  {CONTINUITY_EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <button className="fp-remove-btn" onClick={() => onRemoveEvent(evt.id)}>Remove</button>
+        {/* Scene-wide Continuity Events — events with no character (or
+            assigned to a character not in this scene) render here. Per-
+            character events are rendered inside each CharBlock via the
+            `characterEvents` filter above, so they no longer
+            double-render at the bottom. The dropdown still lets the
+            user re-assign a scene-wide event to a character, which
+            moves it into that character's box on next render. */}
+        {(() => {
+          const sceneCharIds = new Set(characters.map((c) => c.id));
+          const sceneWideEvents = breakdown.continuityEvents.filter(
+            (e) => !e.characterId || !sceneCharIds.has(e.characterId),
+          );
+          return (
+            <div className="fp-section">
+              <div className="fp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Scene-wide Continuity Events</span>
+                <button className="fp-add-btn" onClick={() => onAddEvent({
+                  id: crypto.randomUUID(), type: 'Wound', characterId: '',
+                  description: '', sceneRange: `${scene.number}-`,
+                })}>+ Add</button>
               </div>
-              <select className="fp-event-char-select" value={evt.characterId}
-                onChange={(e) => onUpdateEvent(evt.id, { characterId: e.target.value })}>
-                <option value="">Scene-wide (no character)</option>
-                {characters.map((ch) => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
-              </select>
-              <input className="fp-event-desc-input" placeholder="Description..." value={evt.description}
-                onChange={(e) => onUpdateEvent(evt.id, { description: e.target.value })} />
-              <SceneRangeSelect sceneRange={evt.sceneRange} allScenes={allScenes}
-                onChange={(range) => onUpdateEvent(evt.id, { sceneRange: range })} />
+              {sceneWideEvents.length === 0 ? (
+                <p className="fp-empty">No scene-wide events flagged.</p>
+              ) : sceneWideEvents.map((evt) => (
+                <div key={evt.id} className="fp-event">
+                  <div className="fp-event-top">
+                    <select className="fp-event-type-select" value={evt.type}
+                      onChange={(e) => onUpdateEvent(evt.id, { type: e.target.value })}>
+                      {CONTINUITY_EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <button className="fp-remove-btn" onClick={() => onRemoveEvent(evt.id)}>Remove</button>
+                  </div>
+                  <select className="fp-event-char-select" value={evt.characterId}
+                    onChange={(e) => onUpdateEvent(evt.id, { characterId: e.target.value })}>
+                    <option value="">Scene-wide (no character)</option>
+                    {characters.map((ch) => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
+                  </select>
+                  <input className="fp-event-desc-input" placeholder="Description..." value={evt.description}
+                    onChange={(e) => onUpdateEvent(evt.id, { description: e.target.value })} />
+                  <SceneRangeSelect sceneRange={evt.sceneRange} allScenes={allScenes}
+                    onChange={(range) => onUpdateEvent(evt.id, { sceneRange: range })} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
         {/* ── Director Queries — rendered separately to avoid crash ── */}
 
         <div ref={sentinelRef} className="fp-scroll-sentinel" />
