@@ -461,15 +461,33 @@ export function saveScenes(
       }
     }
 
+    /** Returns true when a SceneBreakdown carries data worth persisting
+     *  via filming_notes. Used to widen the previous
+     *  "only save when characters.length > 0" check, which silently
+     *  dropped breakdowns that had timeline or continuity-event data
+     *  but no character breakdowns yet — the exact shape produced by
+     *  the Story Day Breakdown PDF apply on scenes the user hasn't
+     *  broken down per-character. */
+    const breakdownHasContent = (bd: ReturnType<typeof breakdownState.getBreakdown>): boolean => {
+      if (!bd) return false;
+      if (bd.characters && bd.characters.length > 0) return true;
+      if (bd.continuityEvents && bd.continuityEvents.length > 0) return true;
+      const t = bd.timeline;
+      if (!t) return false;
+      return !!(t.day || t.time || t.type || t.note || t.dayConfirmed);
+    };
+
     const dbScenes = scenes.map(s => {
       const bd = breakdownState.getBreakdown(s.id);
       const sceneTags = allTags.filter(t => t.sceneId === s.id);
       let filmingNotes: string | null = null;
 
-      if (bd && bd.characters && bd.characters.length > 0) {
+      if (breakdownHasContent(bd)) {
         // Real breakdown — resolve form values with look defaults and attach
-        // tags as a sideband pill list.
-        const resolved = resolveBreakdownForSync(bd, sceneTags, allLooks);
+        // tags as a sideband pill list. Also catches "timeline-only"
+        // breakdowns (Story Day apply on scenes with no character
+        // breakdowns yet) so the day/type/note round-trip cleanly.
+        const resolved = resolveBreakdownForSync(bd!, sceneTags, allLooks);
         filmingNotes = JSON.stringify(resolved);
       } else if (sceneTags.some(t => !t.dismissed) && s.characterIds && s.characterIds.length > 0) {
         // No local breakdown but there are live tags — build a minimal stub
