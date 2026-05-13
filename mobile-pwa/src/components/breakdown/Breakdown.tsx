@@ -808,8 +808,24 @@ function buildContinuityNotes(
 ): string {
   const parts: string[] = [];
   if (bd?.continuityEvents && bd.continuityEvents.length > 0) {
-    const events = bd.continuityEvents.filter((e) => e.characterId === charId);
-    if (events.length > 0) parts.push(events.map((e) => e.description || e.type).join(', '));
+    // Per-character events scope to this character only.
+    const charEvents = bd.continuityEvents.filter((e) => e.characterId === charId);
+    // Scene-wide events (no characterId) affect everyone in the scene,
+    // so they appear in every character's notes on the simplified mobile
+    // breakdown view. Tagged with "(scene-wide)" so the source is clear
+    // alongside per-character events. Prep is the authoring surface for
+    // these; mobile is display-only.
+    const sceneWideEvents = bd.continuityEvents.filter((e) => !e.characterId);
+    const eventStrings: string[] = [];
+    if (charEvents.length > 0) {
+      eventStrings.push(...charEvents.map((e) => e.description || e.type));
+    }
+    if (sceneWideEvents.length > 0) {
+      eventStrings.push(
+        ...sceneWideEvents.map((e) => `${e.description || e.type} (scene-wide)`),
+      );
+    }
+    if (eventStrings.length > 0) parts.push(eventStrings.join(', '));
   }
   if (cb?.notes) parts.push(cb.notes);
   const hasManualEntry = cb && (cb.entersWith?.hair || cb.entersWith?.makeup || cb.entersWith?.wardrobe || cb.sfx || cb.environmental || cb.action);
