@@ -152,12 +152,14 @@ function rowAsText(items: Token[]): string {
 /**
  * Decide which column an x-coordinate belongs to.
  *
- * The column boundaries are picked from the header row so we don't
- * hard-code page widths — different page sizes / templates still work
- * as long as the header is readable. Each boundary is the midpoint
- * between the start of one column header and the start of the next;
- * tokens whose x falls below the first midpoint land in column 0,
- * and so on.
+ * Boundary = the LEFT edge of the next column, not the midpoint.
+ * Numeric values in the Story Day and Scene columns of real-world
+ * breakdowns are right-aligned, so a single-digit Story Day like "1"
+ * lands at an x close to the Scene column's left edge. Using the
+ * midpoint would mis-attribute those numbers to the Scene cell;
+ * using the next column's left edge keeps right-aligned tokens in
+ * their owning column as long as they don't visually cross the
+ * boundary line.
  */
 function columnFor(x: number, bounds: number[]): number {
   for (let i = 0; i < bounds.length; i++) {
@@ -226,14 +228,15 @@ function rowToCells(
   items: Token[],
   header: { storyDayX: number; sceneX: number; descX: number; timelineX: number },
 ): [string, string, string, string] {
-  // Column boundary = midpoint between this column's start and the
-  // next column's start. The first column has no left bound — it
-  // catches anything whose x is below storyDayX (rare but possible
-  // for centred headers).
+  // Column boundary = LEFT edge of the next column. Right-aligned
+  // numeric Story Day / Scene cells render with their text anchor
+  // close to (but never past) the next column's left edge, so this
+  // keeps them in their owning column. A midpoint boundary would
+  // mis-attribute a single-digit "1" in Story Day to the Scene cell.
   const bounds = [
-    (header.storyDayX + header.sceneX) / 2,
-    (header.sceneX + header.descX) / 2,
-    (header.descX + header.timelineX) / 2,
+    header.sceneX,
+    header.descX,
+    header.timelineX,
   ];
   const buckets: string[][] = [[], [], [], []];
   for (const t of items) {
@@ -295,9 +298,11 @@ function parseSceneCell(raw: string): { numbers: number[]; suffixes: Array<strin
     const s = seg.trim();
     if (!s) continue;
 
-    // Range: "11-15" or "31p2 - 39". Strip page fragments first then
-    // re-test for the hyphen.
-    const rangeMatch = s.match(/^(\d+)[^-\d]*\s*-\s*(\d+)/);
+    // Range: "11-15", "31p2 - 39", "145-147". `\S*` between the
+    // start number and the hyphen swallows any page-fragment marker
+    // ("p2", "pt") so the range still expands when the source uses
+    // multi-character labels.
+    const rangeMatch = s.match(/^(\d+)\S*\s*-\s*(\d+)/);
     if (rangeMatch) {
       const start = parseInt(rangeMatch[1], 10);
       const end = parseInt(rangeMatch[2], 10);
@@ -310,11 +315,12 @@ function parseSceneCell(raw: string): { numbers: number[]; suffixes: Array<strin
       }
     }
 
-    // Single value with optional alphabetic suffix: "132A", "31p1" →
-    // we accept a single letter suffix (A-Z) but drop multi-char
-    // page-fragment markers ("p1", "pt") since they don't map onto
-    // our `numberSuffix` field cleanly.
-    const singleMatch = s.match(/^(\d+)([A-Z])?\b/);
+    // Single value with optional alphabetic suffix: "132A" → suffix
+    // "A"; "31p1" / "156pt" → suffix undefined (the lowercase tail
+    // is a page-fragment marker that doesn't map onto our
+    // numberSuffix field cleanly, so we just match the leading
+    // integer and let the caller resolve to the unsuffixed scene).
+    const singleMatch = s.match(/^(\d+)([A-Z])?/);
     if (singleMatch) {
       numbers.push(parseInt(singleMatch[1], 10));
       suffixes.push(singleMatch[2] || undefined);
