@@ -15,6 +15,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPanel';
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { ScriptUploadModal } from './script-breakdown/modals/ScriptUploadModal';
+import { StoryDayUploadModal } from './script-breakdown/modals/StoryDayUploadModal';
 import { DraftPdfViewer } from './script-breakdown/DraftPdfViewer';
 import { ToolsMenu } from './script-breakdown/ToolsMenu';
 import { SceneListPanel } from './script-breakdown/SceneListPanel';
@@ -80,6 +81,8 @@ export function ScriptBreakdown({ projectId }: Props) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const hasScript = !!scriptUpload.getScript(projectId);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showStoryDayModal, setShowStoryDayModal] = useState(false);
+  const [storyDaySummary, setStoryDaySummary] = useState<{ updated: number; unmatched: number } | null>(null);
   const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
   const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
@@ -613,6 +616,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               onToggle={() => setToolsOpen(!toolsOpen)}
               onClose={() => setToolsOpen(false)}
               onImportScript={() => setShowUploadModal(true)}
+              onUploadStoryDays={() => setShowStoryDayModal(true)}
               onOpenBreakdownView={() => {
                 // Force Script tab on so the center panel actually
                 // shows the script — entering split-view from a
@@ -687,6 +691,7 @@ export function ScriptBreakdown({ projectId }: Props) {
                     onToggle={() => setToolsOpen(!toolsOpen)}
                     onClose={() => setToolsOpen(false)}
                     onImportScript={() => setShowUploadModal(true)}
+                    onUploadStoryDays={() => setShowStoryDayModal(true)}
                     onOpenBreakdownView={() => {
                       // Force Script tab on so the center panel actually
                       // shows the script — entering split-view from a
@@ -887,6 +892,51 @@ export function ScriptBreakdown({ projectId }: Props) {
             }
           }}
         />
+      )}
+
+      {/* Story Day Breakdown Modal */}
+      {showStoryDayModal && (
+        <StoryDayUploadModal
+          projectId={projectId}
+          onClose={() => setShowStoryDayModal(false)}
+          onApplied={(summary) => {
+            setShowStoryDayModal(false);
+            setStoryDaySummary(summary);
+            // Auto-dismiss the result toast after a few seconds.
+            setTimeout(() => setStoryDaySummary(null), 4000);
+          }}
+        />
+      )}
+
+      {/* Story Day apply result — small toast pinned to the corner.
+          Surfaces { N scenes updated, M not matched } so the user sees
+          confirmation that the apply ran without needing to inspect
+          individual scenes. */}
+      {storyDaySummary && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 100,
+            padding: '12px 16px',
+            borderRadius: 8,
+            background: 'rgba(11, 10, 9, 0.96)',
+            border: '1px solid rgba(212, 148, 58, 0.40)',
+            color: 'var(--text-heading)',
+            fontSize: '0.8125rem',
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          Story Day Breakdown applied — <strong>{storyDaySummary.updated}</strong> scene
+          {storyDaySummary.updated === 1 ? '' : 's'} updated
+          {storyDaySummary.unmatched > 0 && (
+            <span style={{ color: '#E8621A' }}>
+              {' · '}{storyDaySummary.unmatched} not matched
+            </span>
+          )}
+        </div>
       )}
 
       {/* Draft PDF Viewer */}

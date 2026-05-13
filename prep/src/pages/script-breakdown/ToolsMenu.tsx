@@ -20,6 +20,7 @@ interface ToolsMenuProps {
 
   // Top section actions
   onImportScript: () => void;
+  onUploadStoryDays: () => void;
   onOpenBreakdownView: () => void;
 
   // Export callbacks. Each takes the chosen format chip the user
@@ -76,6 +77,7 @@ export function ToolsMenu({
   onToggle,
   onClose,
   onImportScript,
+  onUploadStoryDays,
   onOpenBreakdownView,
   onExportBreakdown,
   onExportLookbooks,
@@ -127,6 +129,9 @@ export function ToolsMenu({
           <div className="tools-dropdown-section">
             <button className="tools-dropdown-item" onClick={() => { onImportScript(); onClose(); }}>
               <ImportIcon /> <span>Import New Script</span>
+            </button>
+            <button className="tools-dropdown-item" onClick={() => { onUploadStoryDays(); onClose(); }}>
+              <ImportIcon /> <span>Upload Story Day Breakdown</span>
             </button>
             <button
               className={`tools-dropdown-item ${draftsExpanded ? 'tools-dropdown-item--expanded' : ''}`}
