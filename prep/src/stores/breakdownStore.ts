@@ -75,12 +75,22 @@ export interface Look {
   hair: string;
   makeup: string;
   wardrobe: string;
+  /** Optional SFX / Prosthetics + Facial Hair defaults that
+   *  carry across scenes the same way Hair/Makeup/Wardrobe do.
+   *  Stored alongside the other details in makeup_details JSONB
+   *  so no schema change is needed. */
+  sfx?: string;
+  facialHair?: string;
 }
 
 export interface HMWEntry {
   hair: string;
   makeup: string;
   wardrobe: string;
+  /** Beard / moustache / sideburns notes — sits with HMU on the form
+   *  and is treated as part of the same enters/exits group, but kept
+   *  optional so existing data doesn't need migration. */
+  facialHair?: string;
 }
 
 export interface CharacterBreakdown {
