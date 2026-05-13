@@ -6,7 +6,6 @@ import {
 import {
   useParsedScriptStore,
   useBreakdownStore,
-  useSynopsisStore,
   type Scene,
   type ParsedSceneData,
   type SceneBreakdown,
@@ -37,9 +36,11 @@ interface PreviewRow {
  * Flow: drop a PDF → parse → preview table → apply.
  *
  * The PDF is the canonical departmental source: applying overwrites
- * `scene.storyDay`, `scene.timelineType`, `scene.synopsis`, and
- * `breakdown.timeline.note` for every matched scene. Scenes not
- * mentioned in the PDF are untouched.
+ * `scene.storyDay`, `scene.timelineType`, and
+ * `breakdown.timeline.note` for every matched scene. Synopsis is
+ * intentionally NOT touched — the PDF's short department-level
+ * description shouldn't clobber the user's scene-level notes.
+ * Scenes not mentioned in the PDF are untouched.
  *
  * Triggered from ToolsMenu → "Upload Story Day Breakdown".
  */
@@ -120,11 +121,10 @@ export function StoryDayUploadModal({ projectId, onClose, onApplied }: Props) {
     }
 
     // Build a sceneId → patch map so we mutate the scenes array in
-    // one pass. Subsequent stores (breakdown, synopsis) are keyed by
-    // sceneId so order doesn't matter once we know the matched IDs.
+    // one pass. The breakdown store is keyed by sceneId so order
+    // doesn't matter once we know the matched IDs.
     const scenePatches = new Map<string, Partial<ParsedSceneData>>();
     const breakdownStore = useBreakdownStore.getState();
-    const synopsisStore = useSynopsisStore.getState();
 
     let updated = 0;
     let unmatchedScenes = 0;
@@ -135,10 +135,13 @@ export function StoryDayUploadModal({ projectId, onClose, onApplied }: Props) {
           storyDay: pr.parsed.storyDay,
           timelineType: pr.parsed.timelineType,
         });
-        // Synopsis store is the source of truth for synopsis (the
-        // scene.synopsis field exists but the store handles edits +
-        // sync). Overwrite per user request — PDF is canonical.
-        synopsisStore.setSynopsis(sid, pr.parsed.description);
+        // Synopsis is DELIBERATELY NOT touched. The PDF's Description
+        // column is a per-day summary written by the script supervisor;
+        // it's much shorter than the user's scene-level synopsis and
+        // overwriting would clobber department-specific notes. The
+        // PDF's description still surfaces in the preview table so the
+        // user can sanity-check the match, but it stays out of the
+        // scene record.
 
         // Timeline note + day live on the per-scene breakdown. If the
         // scene has no breakdown row yet, mint a minimal one so the
@@ -238,7 +241,7 @@ export function StoryDayUploadModal({ projectId, onClose, onApplied }: Props) {
           {(stage === 'pick' || stage === 'parsing') && (
             <>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0 0 20px' }}>
-                Upload the departmental Story Day Breakdown PDF. Story day, timeline, and synopsis will be applied to every matched scene.
+                Upload the departmental Story Day Breakdown PDF. Story day and timeline will be applied to every matched scene. Synopsis is left untouched.
               </p>
 
               {stage === 'parsing' ? (
