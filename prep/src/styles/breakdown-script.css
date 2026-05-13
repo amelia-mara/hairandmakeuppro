@@ -278,6 +278,36 @@
   font-size: 0.875em;
 }
 
+/* Inline badges shown next to a manually-inserted scene's heading.
+   The "Manual" pill is a quiet marker; "Review" is louder because it
+   means the user needs to confirm the placement after a re-parse. */
+.sv-badge {
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.7em;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  padding: 1px 6px;
+  margin-left: 8px;
+  border-radius: 10px;
+  vertical-align: middle;
+}
+.sv-badge--manual {
+  background: rgba(255, 255, 255, 0.06);
+  color: #B8A98C;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+.sv-badge--review {
+  background: rgba(232, 98, 26, 0.15);
+  color: #E8621A;
+  border: 1px solid rgba(232, 98, 26, 0.40);
+  font-weight: 600;
+}
+.sv-paper--needs-review {
+  border-left: 3px solid #E8621A;
+  background: rgba(232, 98, 26, 0.04);
+}
+
 /* In-script change highlight — applied per word/phrase only when the
    scene has unreviewed revisions. Disappears once the user clicks
    "✓ Reviewed" (the parent stops passing revisedDiff). Tone matches

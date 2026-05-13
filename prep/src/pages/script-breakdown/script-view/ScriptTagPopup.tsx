@@ -33,6 +33,7 @@ interface ScriptTagPopupProps {
   onAddCharacterToScene: () => void;
   onFieldPick: (catId: string) => void;
   onSynopsisPick: () => void;
+  onSceneBreakPick: () => void;
   onEditChangeCategory: (tagId: string, newCatId: string) => void;
   onEditDeleteTag: (tagId: string) => void;
   onBack: () => void;
@@ -64,6 +65,7 @@ export function ScriptTagPopup({
   onAddCharacterToScene,
   onFieldPick,
   onSynopsisPick,
+  onSceneBreakPick,
   onEditChangeCategory,
   onEditDeleteTag,
   onBack,
@@ -88,6 +90,22 @@ export function ScriptTagPopup({
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               </span>
               <span>Synopsis</span>
+            </button>
+            <button
+              className="sv-tag-popup-char-item sv-tag-popup-char-item--scene-break"
+              onClick={onSceneBreakPick}
+              title="Insert a new scene break starting at the highlighted text"
+            >
+              <span
+                className="sv-tag-popup-char-avatar"
+                style={{ background: 'rgba(232, 98, 26, 0.18)', color: '#E8621A' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </span>
+              <span>Add scene break</span>
             </button>
             {characters.map((ch) => (
               <button key={ch.id} className="sv-tag-popup-char-item" onClick={() => onCharacterPick(ch.id)}>
