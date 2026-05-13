@@ -445,17 +445,19 @@ export function saveScenes(
 
     // Fetch existing filming_notes from DB so we don't overwrite breakdown
     // data that was saved by saveBreakdown() but isn't in the local store
-    // (e.g. after page reload or scene ID change). Key by scene_number so
-    // the lookup works even when local IDs don't match DB IDs (the case
-    // we're about to remap below).
+    // (e.g. after page reload or scene ID change). Key by
+    // (scene_number, number_suffix) so a manually-inserted 5A doesn't
+    // inherit the parent scene 5's filming_notes when there's no local
+    // breakdown to write.
     const existingFilmingNotes = new Map<string, string | null>();
     const { data: existingRows } = await supabase
       .from('scenes')
-      .select('scene_number, filming_notes')
+      .select('scene_number, number_suffix, filming_notes')
       .eq('project_id', projectId);
     if (existingRows) {
       for (const row of existingRows) {
-        existingFilmingNotes.set(String(row.scene_number), row.filming_notes as string | null);
+        const key = `${String(row.scene_number)}|${(row.number_suffix as string | null) ?? ''}`;
+        existingFilmingNotes.set(key, row.filming_notes as string | null);
       }
     }
 
@@ -491,7 +493,7 @@ export function saveScenes(
         filmingNotes = JSON.stringify(resolved);
       } else {
         // Nothing to write locally — preserve what's already in Supabase.
-        filmingNotes = existingFilmingNotes.get(String(s.number)) ?? null;
+        filmingNotes = existingFilmingNotes.get(`${String(s.number)}|${s.numberSuffix ?? ''}`) ?? null;
       }
       return {
         id: s.id,
@@ -526,31 +528,33 @@ export function saveScenes(
     // id, so onConflict='id' is the correct strategy.
     const { data: existingScenes } = await supabase
       .from('scenes')
-      .select('id, scene_number')
+      .select('id, scene_number, number_suffix')
       .eq('project_id', projectId);
-    // Group existing IDs by scene_number. Split scenes legitimately have
-    // multiple DB rows under the same scene_number (one screenplay scene
-    // number that maps to INT/DAY + EXT/NIGHT, [FLASHBACK] continuations,
-    // etc), so we can't collapse this into a single id-per-number map —
-    // doing that would remap every local row for that number onto the
-    // SAME existing id and produce duplicate ids in the upsert payload,
-    // tripping Postgres 21000 "ON CONFLICT DO UPDATE command cannot
-    // affect row a second time".
-    const idsByNumber = new Map<string, string[]>();
+    // Group existing IDs by (scene_number, number_suffix). Split scenes
+    // legitimately have multiple DB rows under the same scene_number
+    // (one screenplay scene number that maps to INT/DAY + EXT/NIGHT,
+    // [FLASHBACK] continuations, etc), AND manually-inserted scenes
+    // share their parent's scene_number while carrying a letter suffix
+    // (5A, 5B). Keying only by scene_number would collapse 5A onto the
+    // unsuffixed 5 during the remap below, corrupting both DB rows.
+    // Including number_suffix in the key keeps each variant distinct.
+    const idsByKey = new Map<string, string[]>();
     for (const r of (existingScenes ?? [])) {
-      const num = String(r.scene_number);
-      const list = idsByNumber.get(num) ?? [];
+      const key = `${String(r.scene_number)}|${(r.number_suffix as string | null) ?? ''}`;
+      const list = idsByKey.get(key) ?? [];
       list.push(r.id as string);
-      idsByNumber.set(num, list);
+      idsByKey.set(key, list);
     }
     const idRemap = new Map<string, string>();
     const remappedDbScenes = dbScenes.map((s) => {
-      const existingIds = idsByNumber.get(s.scene_number) ?? [];
-      // Only remap when there's exactly one DB row for this scene_number
-      // and it doesn't match the local id. With split scenes (multiple DB
-      // rows per scene_number) the local ids should already match because
-      // they came from fetchScenes; trying to remap would arbitrarily
-      // collapse one onto another.
+      const key = `${s.scene_number}|${s.number_suffix ?? ''}`;
+      const existingIds = idsByKey.get(key) ?? [];
+      // Only remap when there's exactly one DB row for this
+      // (scene_number, suffix) and it doesn't match the local id.
+      // Multiple-row cases (true split scenes — same number AND suffix)
+      // mean the local ids should already match because they came from
+      // fetchScenes; trying to remap would arbitrarily collapse one
+      // onto another.
       if (existingIds.length === 1 && existingIds[0] !== s.id) {
         idRemap.set(s.id as string, existingIds[0]);
         return { ...s, id: existingIds[0] };
