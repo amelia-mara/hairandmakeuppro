@@ -16,6 +16,7 @@ import { SupportingArtistsPanel } from './script-breakdown/SupportingArtistsPane
 import { ChangesSummaryModal } from './script-breakdown/modals/ChangesSummaryModal';
 import { ScriptUploadModal } from './script-breakdown/modals/ScriptUploadModal';
 import { StoryDayUploadModal } from './script-breakdown/modals/StoryDayUploadModal';
+import { SceneEditModal } from './script-breakdown/modals/SceneEditModal';
 import { DraftPdfViewer } from './script-breakdown/DraftPdfViewer';
 import { ToolsMenu } from './script-breakdown/ToolsMenu';
 import { SceneListPanel } from './script-breakdown/SceneListPanel';
@@ -83,6 +84,9 @@ export function ScriptBreakdown({ projectId }: Props) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showStoryDayModal, setShowStoryDayModal] = useState(false);
   const [storyDaySummary, setStoryDaySummary] = useState<{ updated: number; unmatched: number } | null>(null);
+  /** ID of the scene whose heading is being edited via the
+   *  double-click-on-card flow; null when the editor is closed. */
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [showChangesModal, setShowChangesModal] = useState<DiffResult | null>(null);
   const [splitView, setSplitView] = useState(false);
   const revisedStore = useRevisedScenesStore();
@@ -386,6 +390,7 @@ export function ScriptBreakdown({ projectId }: Props) {
               characterIdMap: new Map<string, string>(),
             });
           }}
+          onEditScene={(id) => setEditingSceneId(id)}
         />}
 
         {/* ━━━ CENTER — Script / Characters ━━━ */}
@@ -938,6 +943,22 @@ export function ScriptBreakdown({ projectId }: Props) {
           )}
         </div>
       )}
+
+      {/* Scene Edit Modal — opened by double-clicking a scene card.
+          Lets the user fix any scene's number / suffix / INT-EXT /
+          location / day-night when the parser misread, or rename a
+          manually inserted scene. */}
+      {editingSceneId && (() => {
+        const scene = ALL_SCENES.find((s) => s.id === editingSceneId);
+        if (!scene) return null;
+        return (
+          <SceneEditModal
+            projectId={projectId}
+            scene={scene}
+            onClose={() => setEditingSceneId(null)}
+          />
+        );
+      })()}
 
       {/* Draft PDF Viewer */}
       <DraftPdfViewer draft={viewingDraftPdf} onClose={() => setViewingDraftPdf(null)} />

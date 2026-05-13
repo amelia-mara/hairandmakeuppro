@@ -1406,11 +1406,32 @@ interface ParsedScriptState {
     parentSceneId: string,
     parentEndsAt: number,
     newSceneStartsAt: number,
-    heading: { intExt: 'INT' | 'EXT'; dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK'; location: string },
+    heading: {
+      intExt: 'INT' | 'EXT';
+      dayNight: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK';
+      location: string;
+      /** Optional scene number override. When set, the new scene
+       *  takes this number directly (with the supplied suffix or no
+       *  suffix). When omitted the store falls back to the parent's
+       *  number + the next available letter suffix. Lets the user
+       *  recreate a real numbered scene the parser missed instead of
+       *  always producing a sub-scene of the parent (5A, 5B). */
+      number?: number;
+      numberSuffix?: string;
+    },
   ) => string | null;
   /** Mark a manual scene as no-longer-needing review (after the user
    *  confirms the placement is correct following a re-parse). */
   clearSceneReview: (projectId: string, sceneId: string) => void;
+  /** In-place edit of a scene's heading fields (number, suffix,
+   *  intExt, location, dayNight) from the scene-edit modal. Doesn't
+   *  touch scriptContent or breakdown data — those have their own
+   *  edit paths. */
+  updateSceneHeading: (
+    projectId: string,
+    sceneId: string,
+    patch: Partial<Pick<ParsedSceneData, 'number' | 'numberSuffix' | 'intExt' | 'dayNight' | 'location'>>,
+  ) => void;
 }
 
 export const useParsedScriptStore = create<ParsedScriptState>()(
@@ -1511,28 +1532,40 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
         const beforeText = content.slice(0, safeFrom).replace(/\s+$/, '');
         const afterText = content.slice(safeTo).replace(/^\s+/, '');
 
-        // Sibling-aware suffix: pick the next available letter among
-        // any scenes already keyed to this parent's number with a
-        // suffix. Skips letters already in use (e.g. if 5A and 5B
-        // exist, the new one becomes 5C).
-        const usedSuffixes = new Set(
-          project.scenes
-            .filter((sc) => sc.number === parent.number && sc.numberSuffix)
-            .map((sc) => sc.numberSuffix as string),
-        );
-        let suffix = 'A';
-        for (let code = 65; code <= 90; code++) {
-          const candidate = String.fromCharCode(code);
-          if (!usedSuffixes.has(candidate)) {
-            suffix = candidate;
-            break;
+        // When the caller supplies an explicit number, use it as-is —
+        // the user pulled it off the highlighted slugline (or typed it
+        // in the form). Otherwise fall back to the parent's number
+        // with the next available letter suffix.
+        let newNumber: number;
+        let newSuffix: string | undefined;
+        if (heading.number != null) {
+          newNumber = heading.number;
+          newSuffix = heading.numberSuffix || undefined;
+        } else {
+          newNumber = parent.number;
+          // Sibling-aware suffix: pick the next available letter among
+          // any scenes already keyed to this parent's number with a
+          // suffix. Skips letters already in use (5A, 5B → next is 5C).
+          const usedSuffixes = new Set(
+            project.scenes
+              .filter((sc) => sc.number === parent.number && sc.numberSuffix)
+              .map((sc) => sc.numberSuffix as string),
+          );
+          let suffix = 'A';
+          for (let code = 65; code <= 90; code++) {
+            const candidate = String.fromCharCode(code);
+            if (!usedSuffixes.has(candidate)) {
+              suffix = candidate;
+              break;
+            }
           }
+          newSuffix = suffix;
         }
 
         const newScene: ParsedSceneData = {
           id: crypto.randomUUID(),
-          number: parent.number,
-          numberSuffix: suffix,
+          number: newNumber,
+          numberSuffix: newSuffix,
           intExt: heading.intExt,
           dayNight: heading.dayNight,
           location: heading.location,
@@ -1569,6 +1602,25 @@ export const useParsedScriptStore = create<ParsedScriptState>()(
           const scenes = project.scenes.map((sc) =>
             sc.id === sceneId ? { ...sc, needsReview: false } : sc,
           );
+          return { projects: { ...s.projects, [projectId]: { ...project, scenes } } };
+        }),
+
+      updateSceneHeading: (projectId, sceneId, patch) =>
+        set((s) => {
+          const project = s.projects[projectId];
+          if (!project) return s;
+          const scenes = project.scenes.map((sc) => {
+            if (sc.id !== sceneId) return sc;
+            // numberSuffix is intentionally nullable — passing an
+            // empty string clears it (the scene becomes "70" instead
+            // of "70A"). Treat empty/falsy as undefined to keep the
+            // type clean.
+            const next = { ...sc, ...patch };
+            if ('numberSuffix' in patch && !patch.numberSuffix) {
+              next.numberSuffix = undefined;
+            }
+            return next;
+          });
           return { projects: { ...s.projects, [projectId]: { ...project, scenes } } };
         }),
     }),

@@ -55,6 +55,13 @@ interface SceneListPanelProps {
    *  just on first upload. The button only renders when there are
    *  unreviewed changes left for this project. */
   onShowRevisions?: () => void;
+
+  /** Double-click on a scene card opens the parent's scene-edit
+   *  modal. Lets the user fix the heading fields (number, suffix,
+   *  INT/EXT, location, time-of-day) when the parser got them wrong
+   *  or when a manually-inserted scene needs a different number than
+   *  the auto-suffix it received. Single-click still selects. */
+  onEditScene?: (sceneId: string) => void;
 }
 
 /**
@@ -89,6 +96,7 @@ export function SceneListPanel({
   searchQuery,
   onSearchQueryChange,
   onShowRevisions,
+  onEditScene,
 }: SceneListPanelProps) {
   const store = useBreakdownStore();
   const synopsisStore = useSynopsisStore();
@@ -161,7 +169,7 @@ export function SceneListPanel({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
-            <span className="sl-bookmark-banner-label">Resume — Sc {bs.number}</span>
+            <span className="sl-bookmark-banner-label">Resume — Sc {bs.number}{bs.numberSuffix ?? ''}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
@@ -198,7 +206,7 @@ export function SceneListPanel({
         >
           <option value="">Jump to</option>
           {filteredScenes.map(s => (
-            <option key={s.id} value={s.id}>SC {s.number}</option>
+            <option key={s.id} value={s.id}>SC {s.number}{s.numberSuffix ?? ''}</option>
           ))}
         </select>
       </div>
@@ -216,7 +224,7 @@ export function SceneListPanel({
                 onClick={() => onSelectScene(s.id)}
               >
                 <div className="sl-card-top">
-                  <span className="sl-card-num">{s.number}</span>
+                  <span className="sl-card-num">{s.number}{s.numberSuffix ?? ''}</span>
                   <span className="sl-card-location">OMITTED</span>
                 </div>
               </button>
@@ -230,7 +238,16 @@ export function SceneListPanel({
           const isBookmarked = bookmarkedSceneId === s.id;
           return (
             <button key={s.id} className={`sl-card ${isActive ? 'sl-card--active' : ''} ${colorClass} ${isRevised ? 'sl-card--revised' : ''}${isBookmarked ? ' sl-card--bookmarked' : ''}`}
-              onClick={() => onSelectScene(s.id)}>
+              onClick={() => onSelectScene(s.id)}
+              onDoubleClick={(e) => {
+                // Edit-on-double-click lives at the card root so a
+                // dbl-click anywhere on the card opens the heading
+                // editor — except on the nested bookmark button (it
+                // stops propagation on its own click handler).
+                if (!onEditScene) return;
+                e.preventDefault();
+                onEditScene(s.id);
+              }}>
               <button
                 type="button"
                 className={`sl-card-bookmark${isBookmarked ? ' sl-card-bookmark--on' : ''}`}
@@ -246,7 +263,7 @@ export function SceneListPanel({
                 </svg>
               </button>
               <div className="sl-card-top">
-                <span className="sl-card-num">{s.number}</span>
+                <span className="sl-card-num">{s.number}{s.numberSuffix ?? ''}</span>
                 <span className="sl-card-location">{s.intExt}. {s.location}</span>
               </div>
               <div className="sl-card-meta">
