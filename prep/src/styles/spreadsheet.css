@@ -554,6 +554,22 @@
   border-bottom: 1px solid rgba(245, 158, 11, 0.2);
 }
 
+/* Quieter teal banner for ordinary Day N → Day N+1 transitions.
+   The TIME JUMP banner is reserved for real multi-day or
+   flashback jumps; adjacent-day transitions get this softer note
+   so the eye doesn't read every breakdown row break as a major
+   shift in the story. */
+.bs-new-day-banner {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 28px;
+  font-size: 0.6875rem; font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1F7066;
+  background: linear-gradient(90deg, rgba(74, 191, 176, 0.18) 0%, rgba(74, 191, 176, 0.04) 100%);
+  border-bottom: 1px solid rgba(74, 191, 176, 0.20);
+}
+
 .bs-time-jump-icon {
   font-size: 0.75rem;
 }

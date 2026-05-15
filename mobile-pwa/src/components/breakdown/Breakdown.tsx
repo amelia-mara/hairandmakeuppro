@@ -27,6 +27,36 @@ import type {
 } from '@/types';
 import { clsx } from 'clsx';
 
+/**
+ * Extract a numeric day index from a story-day label. "Day 5" → 5,
+ * "Day  17 " → 17. Returns null for flashback labels ("Flashback #2"),
+ * free-form labels ("Day 1 (later)"), and anything that can't be
+ * confidently parsed as a single integer. Used by classifyDayChange
+ * to decide whether two consecutive day labels are adjacent (Day 1
+ * → Day 2 = NEW STORY DAY) or a real jump (Day 3 → Day 8 = TIME JUMP).
+ */
+function extractDayNumber(label: string): number | null {
+  const m = label.trim().match(/^Day\s+(\d+)\s*$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Classify a story-day transition between two consecutive scenes.
+ * Returns 'new-day' for the next consecutive numeric day (Day 1 →
+ * Day 2). Everything else — multi-day gaps, flashback transitions,
+ * non-numeric labels — is 'time-jump'.
+ */
+function classifyDayChange(prev: string, curr: string): 'time-jump' | 'new-day' {
+  const prevNum = extractDayNumber(prev);
+  const currNum = extractDayNumber(curr);
+  if (prevNum != null && currNum != null && currNum - prevNum === 1) {
+    return 'new-day';
+  }
+  return 'time-jump';
+}
+
 interface BreakdownProps {
   /** Navigate to SceneView for continuity tracking. The optional
    *  characterId comes from the per-scene character-tab "Track →"
@@ -141,15 +171,31 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 
   /* ─── Detect time jumps ─── */
 
-  const timeJumpSceneIds = useMemo(() => {
-    const jumps = new Set<string>();
+  /**
+   * Per-scene day-change classification. Whenever the story-day
+   * label changes between consecutive scenes we tag the new scene
+   * as either:
+   *   * 'time-jump' — the gap is more than one numeric day (Day 3
+   *     → Day 8), or one side is non-numeric (flashbacks, dream
+   *     sequences, etc.). Render the loud TIME JUMP banner with
+   *     the timeline note.
+   *   * 'new-day' — the next consecutive day (Day 1 → Day 2 or
+   *     Day 17 → Day 18). Render the quieter NEW STORY DAY banner.
+   *
+   * Scenes that share their day with the previous scene get no
+   * banner at all.
+   */
+  const dayChangeBySceneId = useMemo(() => {
+    const map = new Map<string, 'time-jump' | 'new-day'>();
     let prevDay = '';
     for (const s of sortedScenes) {
       const day = s.prepBreakdown?.timeline?.day || '';
-      if (prevDay && day && day !== prevDay) jumps.add(s.id);
+      if (prevDay && day && day !== prevDay) {
+        map.set(s.id, classifyDayChange(prevDay, day));
+      }
       if (day) prevDay = day;
     }
-    return jumps;
+    return map;
   }, [sortedScenes]);
 
   /* ─── Export ─── */
@@ -380,7 +426,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               ? scene.characters.filter((c) => c === filterChar)
               : scene.characters;
             const storyDay = bd?.timeline?.day || '';
-            const isTimeJump = timeJumpSceneIds.has(scene.id);
+            const dayChange = dayChangeBySceneId.get(scene.id);
             const isUnconfirmed = scene.characterConfirmationStatus !== 'confirmed';
 
             return (
@@ -400,12 +446,29 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                         : 'var(--bg-card, #fff)',
                 }}
               >
-                {/* Time jump banner */}
-                {isTimeJump && (
-                  <div className="px-4 py-1.5 text-[11px] font-semibold flex items-center gap-1.5" style={{ background: 'rgba(232,98,26,0.1)', color: '#C4522A' }}>
-                    <span>&#9203;</span>
+                {/* Day-change banner.
+                    Time jump: multi-day gaps and flashback/dream
+                    transitions — loud orange band carrying the
+                    timeline note ("12 years prior", "May-19" etc.).
+                    New story day: the next consecutive numeric day
+                    — quieter teal band, no note. */}
+                {dayChange === 'time-jump' && (
+                  <div
+                    className="px-4 py-1.5 text-[11px] font-semibold flex items-center gap-1.5"
+                    style={{ background: 'rgba(232,98,26,0.1)', color: '#C4522A' }}
+                  >
                     TIME JUMP — {storyDay}
-                    {bd?.timeline?.note && <span className="font-normal opacity-80"> &middot; {bd.timeline.note}</span>}
+                    {bd?.timeline?.note && (
+                      <span className="font-normal opacity-80"> &middot; {bd.timeline.note}</span>
+                    )}
+                  </div>
+                )}
+                {dayChange === 'new-day' && (
+                  <div
+                    className="px-4 py-1.5 text-[11px] font-semibold flex items-center gap-1.5"
+                    style={{ background: 'rgba(74, 191, 176, 0.12)', color: '#1F7066' }}
+                  >
+                    NEW STORY DAY — {storyDay}
                   </div>
                 )}
 
@@ -633,7 +696,7 @@ function SceneCharacterCards({
                     ? 'text-white'
                     : 'bg-white/60 text-text-muted hover:bg-white',
                 )}
-                style={isActive ? { backgroundColor: '#A0522D' } : undefined}
+                style={isActive ? { backgroundColor: '#F5A623' } : undefined}
               >
                 {ch.name}
               </button>

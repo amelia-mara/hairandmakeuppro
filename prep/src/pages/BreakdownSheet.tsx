@@ -16,6 +16,36 @@ import { SceneBackgroundRow } from './script-breakdown/SceneBackgroundRow';
 /* ━━━ Helpers ━━━ */
 
 /** Find the previous scene a character appeared in (script order) */
+/**
+ * Extract a numeric day index from a story-day label. "Day 5" → 5;
+ * everything else (flashback labels, free-form text, blanks) returns
+ * null. Used by classifyDayChange to tell adjacent-day transitions
+ * apart from real multi-day jumps so the banner can switch between
+ * NEW STORY DAY and TIME JUMP rather than always shouting TIME JUMP.
+ */
+function extractDayNumber(label: string): number | null {
+  const m = label.trim().match(/^Day\s+(\d+)\s*$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Classify a story-day transition between consecutive scenes:
+ *   'new-day'   → consecutive numeric Day N → Day N+1 transition.
+ *                 Shown as a quieter NEW STORY DAY banner.
+ *   'time-jump' → multi-day gap, flashback boundary, or non-numeric
+ *                 label on either side. Shown as the existing loud
+ *                 TIME JUMP banner with the timeline note attached.
+ * Same logic mirrored on mobile-pwa/Breakdown.tsx so both surfaces
+ * label transitions identically.
+ */
+function classifyDayChange(prev: string, curr: string): 'time-jump' | 'new-day' {
+  const p = extractDayNumber(prev);
+  const c = extractDayNumber(curr);
+  return p != null && c != null && c - p === 1 ? 'new-day' : 'time-jump';
+}
+
 function findPrevScene(charId: string, currentIdx: number, scenes: Scene[]): number | null {
   for (let i = currentIdx - 1; i >= 0; i--) {
     if (scenes[i].characterIds.includes(charId)) return scenes[i].number;
@@ -272,17 +302,20 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     [sequence],
   );
   /* Detect time jumps: scenes where the story day differs from the previous scene */
-  const timeJumpSceneIds = useMemo(() => {
-    const jumpIds = new Set<string>();
+  // Per-scene day-change classification. Time-jump (loud banner) vs
+  // new-day (quieter banner) — see classifyDayChange above. Replaces
+  // the old single-Set of "any change is a jump" behaviour.
+  const dayChangeBySceneId = useMemo(() => {
+    const map = new Map<string, 'time-jump' | 'new-day'>();
     let prevDay = '';
     for (const s of scenes) {
       const day = s.storyDay || '';
       if (prevDay && day && day !== prevDay) {
-        jumpIds.add(s.id);
+        map.set(s.id, classifyDayChange(prevDay, day));
       }
       if (day) prevDay = day;
     }
-    return jumpIds;
+    return map;
   }, [scenes]);
 
   /* Ensure every scene has a breakdown — initialise any that are missing
@@ -588,7 +621,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
           /* Resolve story day: breakdown timeline → scene-level storyDay */
           const storyDay = bd?.timeline.day || scene.storyDay || '';
-          const isTimeJump = timeJumpSceneIds.has(scene.id);
+          const dayChange = dayChangeBySceneId.get(scene.id);
+          const isTimeJump = dayChange === 'time-jump';
 
           /* Scene-type class for colour coding */
           const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== 'Present' && timelineType !== ''
@@ -603,12 +637,19 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               onClick={splitView ? () => handleBreakdownSceneClick(scene.id) : undefined}
               style={splitView ? { cursor: 'pointer' } as CSSProperties : undefined}
             >
-              {/* Time jump banner */}
-              {isTimeJump && (
+              {/* Day-change banner. Time jump: multi-day gaps and
+                  flashback boundaries — loud orange band with the
+                  timeline note. New story day: next consecutive Day N
+                  → Day N+1 — quieter teal band, no note. */}
+              {dayChange === 'time-jump' && (
                 <div className="bs-time-jump-banner">
-                  <span className="bs-time-jump-icon">&#9203;</span>
                   TIME JUMP — {storyDay}
                   {bd?.timeline.note && <span className="bs-time-jump-detail"> · {bd.timeline.note}</span>}
+                </div>
+              )}
+              {dayChange === 'new-day' && (
+                <div className="bs-new-day-banner">
+                  NEW STORY DAY — {storyDay}
                 </div>
               )}
               {/* Scene header */}
@@ -895,15 +936,19 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
     [ensureRow, store, parsedScriptStore, projectId],
   );
 
-  const timeJumpSceneIds = useMemo(() => {
-    const jumpIds = new Set<string>();
+  // Same day-change classifier as the standalone view above — keeps
+  // the embedded breakdown's banners in sync with the full table.
+  const dayChangeBySceneId = useMemo(() => {
+    const map = new Map<string, 'time-jump' | 'new-day'>();
     let prevDay = '';
     for (const s of scenes) {
       const day = s.storyDay || '';
-      if (prevDay && day && day !== prevDay) jumpIds.add(s.id);
+      if (prevDay && day && day !== prevDay) {
+        map.set(s.id, classifyDayChange(prevDay, day));
+      }
       if (day) prevDay = day;
     }
-    return jumpIds;
+    return map;
   }, [scenes]);
 
   const scenesWithCast = scenes.filter((s) => s.characterIds.length > 0);
@@ -924,7 +969,8 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
         const timelineType = bd?.timeline.type;
         const showBadge = timelineType && timelineType !== 'Normal' && timelineType !== '';
         const storyDay = bd?.timeline.day || scene.storyDay || '';
-        const isTimeJump = timeJumpSceneIds.has(scene.id);
+        const dayChange = dayChangeBySceneId.get(scene.id);
+        const isTimeJump = dayChange === 'time-jump';
         const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== ''
           ? `bs-scene-block--${timelineType.toLowerCase().replace(/\s+/g, '-')}` : '';
         const isActive = scene.id === activeSceneId;
@@ -935,11 +981,15 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
             ref={(el) => { sceneRefs.current[scene.id] = el; }}
             className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass} ${isActive ? 'bs-scene-block--highlighted' : ''}`}
           >
-            {isTimeJump && (
+            {dayChange === 'time-jump' && (
               <div className="bs-time-jump-banner">
-                <span className="bs-time-jump-icon">&#9203;</span>
                 TIME JUMP — {storyDay}
                 {bd?.timeline.note && <span className="bs-time-jump-detail"> · {bd.timeline.note}</span>}
+              </div>
+            )}
+            {dayChange === 'new-day' && (
+              <div className="bs-new-day-banner">
+                NEW STORY DAY — {storyDay}
               </div>
             )}
             <div className="bs-scene-header">
