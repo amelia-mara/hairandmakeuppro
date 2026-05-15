@@ -28,7 +28,11 @@ import type {
 import { clsx } from 'clsx';
 
 interface BreakdownProps {
-  onSceneSelect?: (sceneId: string) => void;
+  /** Navigate to SceneView for continuity tracking. The optional
+   *  characterId comes from the per-scene character-tab "Track →"
+   *  button so SceneView opens on the chosen character instead of
+   *  defaulting to the first cast member. */
+  onSceneSelect?: (sceneId: string, characterId?: string) => void;
 }
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
@@ -37,6 +41,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const access = useProjectAccess();
   const [filterChar, setFilterChar] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  /** Per-scene active character — keyed by sceneId so each scene
+   *  block remembers which character's card the user last tapped to.
+   *  Falls back to first-in-billing-order when not yet set. */
+  const [activeCharByScene, setActiveCharByScene] = useState<Record<string, string>>({});
   const [confirmSceneId, setConfirmSceneId] = useState<string | null>(null);
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [notesModalState, setNotesModalState] = useState<{
@@ -64,47 +72,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     if (looks.length > 0) return true;
     return scenes.some((s) => s.prepBreakdown?.characters && s.prepBreakdown.characters.length > 0);
   }, [scenes, looks]);
-
-  /* ─── Columns — adapt to available data ─── */
-
-  const COLUMNS = useMemo(() => {
-    if (!hasPrepData) {
-      // Mobile-only project — only show character and look (look will be empty but column exists for when data arrives)
-      return [
-        { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
-        { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
-      ] as const;
-    }
-    if (department === 'costume') {
-      return [
-        { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
-        { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
-        { key: 'clothing', label: 'CLOTHING', width: 'min-w-[90px]' },
-        { key: 'accessories', label: 'ACCESSORIES', width: 'min-w-[90px]' },
-        { key: 'sfx', label: 'SFX / PROSTHETICS', width: 'min-w-[90px]' },
-        { key: 'env', label: 'ENVIRONMENTAL', width: 'min-w-[80px]' },
-        { key: 'action', label: 'ACTION', width: 'min-w-[80px]' },
-        { key: 'notes', label: 'CONTINUITY NOTES', width: 'min-w-[100px]' },
-      ] as const;
-    }
-    // HMU column order mirrors the prep app's breakdown form panel
-    // HMU box (Hair → Makeup → Facial Hair → SFX/Prosthetics →
-    // Wardrobe). Keep this in lockstep with
-    // prep/src/pages/BreakdownSheet.tsx so the two surfaces don't
-    // drift between drafts.
-    return [
-      { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
-      { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
-      { key: 'hair', label: 'HAIR', width: 'min-w-[90px]' },
-      { key: 'makeup', label: 'MAKEUP', width: 'min-w-[90px]' },
-      { key: 'facialHair', label: 'FACIAL HAIR', width: 'min-w-[90px]' },
-      { key: 'sfx', label: 'SFX / PROSTHETICS', width: 'min-w-[90px]' },
-      { key: 'wardrobe', label: 'WARDROBE', width: 'min-w-[90px]' },
-      { key: 'env', label: 'ENVIRONMENTAL', width: 'min-w-[80px]' },
-      { key: 'action', label: 'ACTION', width: 'min-w-[80px]' },
-      { key: 'notes', label: 'CONTINUITY NOTES', width: 'min-w-[100px]' },
-    ] as const;
-  }, [department, hasPrepData]);
 
   /* ─── Lookups ─── */
 
@@ -487,168 +454,77 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                   </div>
                 </div>
 
-                {/* Character table — Prep-style */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr style={{
-                        borderTop: '1px solid rgba(180, 160, 120, 0.25)',
-                        borderBottom: '1px solid rgba(180, 160, 120, 0.25)',
-                        backgroundColor: 'rgba(210, 195, 165, 0.22)',
-                      }}>
-                        {COLUMNS.map((col) => (
-                          <th
-                            key={col.key}
-                            className={clsx(
-                              'px-4 py-2.5 text-left text-[0.6875rem] font-bold tracking-[0.08em] text-text-muted uppercase whitespace-nowrap',
-                              col.width,
-                            )}
+                {/* Character tabs + active card — replaces the
+                    horizontal table that crammed 9 columns into a
+                    phone-width viewport. Mobile rendering now stacks
+                    one character at a time vertically; the tab strip
+                    above lets the user flip between cast members in
+                    the scene, and the "Track →" button on the active
+                    card opens SceneView for continuity tracking on
+                    that character. */}
+                {charIds.length === 0 ? (
+                  scene.suggestedCharacters && scene.suggestedCharacters.length > 0 ? (
+                    <div
+                      className="px-4 py-3 space-y-2"
+                      style={{ borderTop: '1px solid rgba(180, 160, 120, 0.25)' }}
+                    >
+                      <div className="text-[10px] font-bold tracking-[0.08em] text-text-muted uppercase">
+                        Suggested — tap + above to confirm
+                      </div>
+                      {scene.suggestedCharacters.map((name) => {
+                        const matched = characters.find(
+                          (c) => c.name.toUpperCase() === name.toUpperCase(),
+                        );
+                        return (
+                          <div
+                            key={`suggested-${name}`}
+                            className="text-[0.8125rem] italic opacity-60"
                           >
-                            {col.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {charIds.length === 0 ? (
-                        (scene.suggestedCharacters && scene.suggestedCharacters.length > 0) ? (
-                          // Auto-detected but not yet confirmed. Render greyed
-                          // rows so the user gets an at-a-glance preview of
-                          // what the parser found; rows are non-interactive
-                          // here — confirmation happens via the "+" button
-                          // which opens the SceneCharacterConfirmation modal.
-                          scene.suggestedCharacters.map((name) => {
-                            const matched = characters.find(
-                              (c) => c.name.toUpperCase() === name.toUpperCase(),
-                            );
-                            return (
-                              <tr
-                                key={`suggested-${name}`}
-                                className="align-top opacity-50 italic"
-                                style={{ borderBottom: '1px solid rgba(180, 160, 120, 0.18)' }}
-                                title="Detected from script — tap + to confirm"
-                              >
-                                <td className="px-4 py-3 text-[0.8125rem]">
-                                  {matched?.name || name}
-                                  <span className="ml-2 text-[10px] uppercase tracking-wide text-text-muted">
-                                    suggested
-                                  </span>
-                                </td>
-                                {COLUMNS.slice(1).map((col) => (
-                                  <td key={col.key} className="px-4 py-3 text-[0.8125rem]">
-                                    <span className="text-text-light">—</span>
-                                  </td>
-                                ))}
-                              </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td colSpan={COLUMNS.length} className="px-4 py-4 text-text-muted text-center text-[0.8125rem]">
-                              No characters confirmed
-                            </td>
-                          </tr>
-                        )
-                      ) : (
-                        charIds.map((cid) => {
-                          const ch = characterMap.get(cid);
-                          if (!ch) return null;
-                          const cb = bd?.characters?.find((c) => c.characterId === cid);
-                          const look = resolveLook(cb, cid, scene.sceneNumber);
-                          const resolved = resolveCharacterFields(cb, look);
-                          const charUnconfirmed = isUnconfirmed;
+                            {matched?.name || name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div
+                      className="px-4 py-4 text-text-muted text-center text-[0.8125rem]"
+                      style={{ borderTop: '1px solid rgba(180, 160, 120, 0.25)' }}
+                    >
+                      No characters confirmed
+                    </div>
+                  )
+                ) : (
+                  <SceneCharacterCards
+                    sceneNumber={scene.sceneNumber}
+                    sceneGlobalIdx={globalIdx}
+                    charIds={charIds}
+                    characterMap={characterMap}
+                    breakdown={bd}
+                    department={department}
+                    hasPrepData={hasPrepData}
+                    resolveLook={resolveLook}
+                    findPrevScene={findPrevScene}
+                    activeCid={
+                      (activeCharByScene[scene.id] && charIds.includes(activeCharByScene[scene.id]))
+                        ? activeCharByScene[scene.id]
+                        : charIds[0]
+                    }
+                    onSetActive={(cid) =>
+                      setActiveCharByScene((prev) => ({ ...prev, [scene.id]: cid }))
+                    }
+                    isUnconfirmed={isUnconfirmed}
+                    onConfirmRequested={() => setConfirmSceneId(scene.id)}
+                    onTrack={(cid) => onSceneSelect?.(scene.id, cid)}
+                  />
+                )}
 
-                          return (
-                            <tr
-                              key={cid}
-                              className={clsx(
-                                'align-top cursor-pointer transition-colors',
-                                charUnconfirmed && 'opacity-50',
-                              )}
-                              style={{
-                                borderBottom: '1px solid rgba(180, 160, 120, 0.18)',
-                              }}
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(210, 195, 165, 0.18)'; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = ''; }}
-                              onClick={() => {
-                                if (charUnconfirmed) {
-                                  setConfirmSceneId(scene.id);
-                                } else {
-                                  onSceneSelect?.(scene.id);
-                                }
-                              }}
-                            >
-                              <td className="px-4 py-3">
-                                <div
-                                  className="uppercase leading-tight"
-                                  style={{ color: '#A0522D', fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.02em' }}
-                                >
-                                  {ch.name}
-                                </div>
-                                {ch.actorNumber && !charUnconfirmed && (
-                                  <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: 'rgba(80, 60, 30, 0.5)' }}>
-                                    {ch.actorNumber}{ch.actorNumber === 1 ? 'st' : ch.actorNumber === 2 ? 'nd' : ch.actorNumber === 3 ? 'rd' : 'th'}
-                                  </span>
-                                )}
-                                {charUnconfirmed && (
-                                  <span className="text-[9px] text-amber-500 font-medium">unconfirmed</span>
-                                )}
-                              </td>
-                              {/* Look */}
-                              <td className="px-4 py-3 text-[0.8125rem]">
-                                {look ? <span className="text-text-primary">{look.name}</span> : <Empty />}
-                              </td>
-                              {/* Department-specific columns + shared columns */}
-                              {hasPrepData && (() => {
-                                const tags = bd?.tags ?? [];
-                                const tagFor = (cat: string) => tags.filter(t => t.characterId === cid && t.categoryId === cat);
-                                const hasChange = cb?.changeType === 'change';
-                                const continuity = buildContinuityNotes(cb, cid, globalIdx, findPrevScene, resolved, bd);
-                                return department === 'costume' ? (
-                                  <>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.wardrobe} tags={tagFor('clothing')} tagColor="#ec4899" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value="" tags={tagFor('accessories')} tagColor="#D4943A" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]">
-                                      {hasChange && cb?.changeNotes && <div className="text-text-muted mb-0.5">{cb.changeNotes}</div>}
-                                      {continuity ? (
-                                        continuity.startsWith('Same as') ? <span className="text-text-muted italic">{continuity}</span> : <span className="text-text-primary">{continuity}</span>
-                                      ) : <Empty />}
-                                    </td>
-                                  </>
-                                ) : (
-                                  <>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.hair} tags={tagFor('hair')} tagColor="#D4943A" exit={hasChange ? cb?.exitsWith?.hair : undefined} /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.makeup} tags={tagFor('makeup')} tagColor="#C2785C" exit={hasChange ? cb?.exitsWith?.makeup : undefined} /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.facialHair} tags={[]} tagColor="#B8860B" exit={hasChange ? cb?.exitsWith?.facialHair : undefined} /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.wardrobe} tags={tagFor('wardrobe')} tagColor="#ec4899" exit={hasChange ? cb?.exitsWith?.wardrobe : undefined} /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]">
-                                      {hasChange && cb?.changeNotes && <div className="text-text-muted mb-0.5">{cb.changeNotes}</div>}
-                                      {continuity ? (
-                                        continuity.startsWith('Same as') ? <span className="text-text-muted italic">{continuity}</span> : <span className="text-text-primary">{continuity}</span>
-                                      ) : <Empty />}
-                                    </td>
-                                  </>
-                                );
-                              })()}
-                            </tr>
-                          );
-                        })
-                      )}
-                      <BackgroundRow
-                        sceneId={scene.id}
-                        names={scene.backgroundCharacters || []}
-                        notes={scene.backgroundNotes || ''}
-                        colSpan={COLUMNS.length}
-                      />
-                    </tbody>
-                  </table>
-                </div>
+                {/* Background presence — now a freestanding section
+                    instead of a tr/colSpan inside the table. */}
+                <BackgroundSection
+                  sceneId={scene.id}
+                  names={scene.backgroundCharacters || []}
+                  notes={scene.backgroundNotes || ''}
+                />
               </div>
             );
           })
@@ -679,123 +555,307 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 
 /* ─── Background row — one row per scene listing non-speaking presence ─── */
 
-function BackgroundRow({
-  sceneId,
-  names,
-  notes,
-  colSpan,
+/* ─── Per-scene character tabs + active breakdown card ─────────────
+ *
+ * Replaces the horizontal table that crammed 9 columns into a
+ * phone-width viewport. The tabs strip lets the user flip between
+ * cast members in this scene; the card below shows the active
+ * character's full breakdown vertically, hiding empty fields. The
+ * "Track →" button on the card header is the entry point to
+ * SceneView for continuity tracking on the chosen character.
+ */
+function SceneCharacterCards({
+  sceneNumber,
+  sceneGlobalIdx,
+  charIds,
+  characterMap,
+  breakdown,
+  department,
+  hasPrepData,
+  resolveLook,
+  findPrevScene,
+  activeCid,
+  onSetActive,
+  isUnconfirmed,
+  onConfirmRequested,
+  onTrack,
 }: {
-  sceneId: string;
-  names: string[];
-  notes: string;
-  colSpan: number;
+  // sceneId not needed in here — the parent already captures it in
+  // the onConfirmRequested and onTrack callbacks.
+  sceneNumber: string;
+  sceneGlobalIdx: number;
+  charIds: string[];
+  characterMap: Map<string, Character>;
+  breakdown: PrepSceneBreakdown | undefined;
+  department: 'hmu' | 'costume';
+  hasPrepData: boolean;
+  resolveLook: (cb: PrepCharacterBreakdown | undefined, characterId: string, sceneNumber: string) => Look | undefined;
+  findPrevScene: (charId: string, currentIdx: number) => string | null;
+  activeCid: string;
+  onSetActive: (cid: string) => void;
+  isUnconfirmed: boolean;
+  onConfirmRequested: () => void;
+  onTrack: (characterId: string) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(notes);
-  const updateSceneBackground = useProjectStore((s) => s.updateSceneBackground);
+  const activeChar = characterMap.get(activeCid);
+  const cb = breakdown?.characters?.find((c) => c.characterId === activeCid);
+  const look = resolveLook(cb, activeCid, sceneNumber);
+  const resolved = resolveCharacterFields(cb, look);
+  const tags = breakdown?.tags ?? [];
+  const tagFor = (cat: string) => tags.filter((t) => t.characterId === activeCid && t.categoryId === cat);
+  const hasChange = cb?.changeType === 'change';
+  const continuity = buildContinuityNotes(cb, activeCid, sceneGlobalIdx, findPrevScene, resolved, breakdown);
 
-  // Hide the row entirely when there's no background presence yet.
-  // Background is added via the "+" character confirmation modal.
-  if (names.length === 0 && !notes && !editing) {
-    return null;
-  }
+  if (!activeChar) return null;
 
   return (
-    <tr
-      className="border-t border-black/5"
-      style={{ backgroundColor: 'rgba(210, 195, 165, 0.10)' }}
+    <div
+      className={clsx(isUnconfirmed && 'opacity-60')}
+      style={{ borderTop: '1px solid rgba(180, 160, 120, 0.25)' }}
     >
-      <td colSpan={colSpan} className="px-4 py-3 text-[0.8125rem]">
-        <div className="flex items-start gap-3">
-          <span className="flex-shrink-0 text-[10px] font-bold tracking-[0.08em] text-text-muted uppercase pt-0.5">
-            Background
-          </span>
-          <div className="flex-1 min-w-0 space-y-1">
-            {names.length > 0 ? (
-              <div className="text-text-primary">{names.join(', ')}</div>
-            ) : (
-              <div className="text-text-light italic text-[11px]">No background listed</div>
+      {/* Character tabs — horizontally scrollable. Tap to swap the
+          visible card; the "Track →" button on the card is what
+          opens SceneView for continuity. Two interactions, two
+          buttons — no second-tap-to-open trap. */}
+      <div className="overflow-x-auto hide-scrollbar">
+        <div className="flex gap-2 px-4 py-2.5" style={{ backgroundColor: 'rgba(210, 195, 165, 0.18)' }}>
+          {charIds.map((cid) => {
+            const ch = characterMap.get(cid);
+            if (!ch) return null;
+            const isActive = cid === activeCid;
+            return (
+              <button
+                key={cid}
+                onClick={() => onSetActive(cid)}
+                className={clsx(
+                  'flex-shrink-0 px-3 py-1.5 rounded-full text-[0.75rem] font-bold uppercase tracking-[0.04em] transition-colors touch-manipulation',
+                  isActive
+                    ? 'text-white'
+                    : 'bg-white/60 text-text-muted hover:bg-white',
+                )}
+                style={isActive ? { backgroundColor: '#A0522D' } : undefined}
+              >
+                {ch.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Active character card */}
+      <div className="px-4 py-3">
+        {/* Card header — name + billing + Track button */}
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span
+              className="uppercase truncate"
+              style={{ color: '#A0522D', fontSize: '0.9375rem', fontWeight: 700, letterSpacing: '0.02em' }}
+            >
+              {activeChar.name}
+            </span>
+            {activeChar.actorNumber && !isUnconfirmed && (
+              <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'rgba(80, 60, 30, 0.55)' }}>
+                {activeChar.actorNumber}
+                {activeChar.actorNumber === 1 ? 'st' : activeChar.actorNumber === 2 ? 'nd' : activeChar.actorNumber === 3 ? 'rd' : 'th'}
+              </span>
             )}
-            {editing ? (
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={() => {
-                  updateSceneBackground(sceneId, { backgroundNotes: draft });
-                  setEditing(false);
-                }}
-                placeholder="Notes (e.g. 6 background, hospital scrubs, no SA prep needed)"
-                className="w-full text-[12px] text-text-primary bg-transparent border border-black/10 rounded px-2 py-1 resize-y min-h-[2.25rem] focus:outline-none focus:border-black/25"
-                autoFocus
-                rows={2}
-              />
-            ) : notes ? (
-              <button
-                onClick={() => {
-                  setDraft(notes);
-                  setEditing(true);
-                }}
-                className="text-left text-[12px] text-text-secondary hover:text-text-primary transition-colors w-full"
-              >
-                {notes}
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setDraft('');
-                  setEditing(true);
-                }}
-                className="text-[11px] text-text-muted hover:text-text-secondary transition-colors"
-              >
-                + Add notes
-              </button>
+            {isUnconfirmed && (
+              <span className="text-[10px] text-amber-600 font-semibold">unconfirmed</span>
             )}
           </div>
+          <button
+            onClick={() => (isUnconfirmed ? onConfirmRequested() : onTrack(activeCid))}
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[0.75rem] font-semibold text-white transition-colors active:scale-95"
+            style={{ backgroundColor: '#E8621A' }}
+          >
+            <span>{isUnconfirmed ? 'Confirm' : 'Track'}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
         </div>
-      </td>
-    </tr>
+
+        {/* Field rows — only rendered when there's content or a tag
+            to show. Keeps the card compact on scenes where the user
+            hasn't filled in everything yet. */}
+        <div className="space-y-0">
+          <CardField label="Look" value={look?.name ?? ''} />
+          {hasPrepData && department === 'costume' && (
+            <>
+              <CardField label="Clothing" value={resolved.wardrobe} tags={tagFor('clothing')} tagColor="#ec4899" />
+              <CardField label="Accessories" value="" tags={tagFor('accessories')} tagColor="#D4943A" />
+              <CardField label="SFX" value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" />
+              <CardField label="Env" value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" />
+              <CardField label="Action" value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" />
+            </>
+          )}
+          {hasPrepData && department !== 'costume' && (
+            <>
+              <CardField label="Hair" value={resolved.hair} tags={tagFor('hair')} tagColor="#D4943A" exit={hasChange ? cb?.exitsWith?.hair : undefined} />
+              <CardField label="Makeup" value={resolved.makeup} tags={tagFor('makeup')} tagColor="#C2785C" exit={hasChange ? cb?.exitsWith?.makeup : undefined} />
+              <CardField label="Facial Hair" value={resolved.facialHair} tagColor="#B8860B" exit={hasChange ? cb?.exitsWith?.facialHair : undefined} />
+              <CardField label="SFX / Pros." value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" />
+              <CardField label="Wardrobe" value={resolved.wardrobe} tags={tagFor('wardrobe')} tagColor="#ec4899" exit={hasChange ? cb?.exitsWith?.wardrobe : undefined} />
+              <CardField label="Env" value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" />
+              <CardField label="Action" value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" />
+            </>
+          )}
+        </div>
+
+        {/* Change-on-exit summary + continuity notes — appended at
+            the bottom of the card so "Same as Sc N" sits clearly
+            below the breakdown fields rather than inline. */}
+        {(hasChange && cb?.changeNotes) || continuity ? (
+          <div className="mt-2 pt-2 border-t border-black/5 space-y-1">
+            {hasChange && cb?.changeNotes && (
+              <div className="text-[0.75rem]">
+                <span className="text-[10px] font-bold tracking-wider text-text-muted uppercase mr-2">Change</span>
+                <span className="text-text-primary">{cb.changeNotes}</span>
+              </div>
+            )}
+            {continuity && (
+              <div className="text-[0.75rem]">
+                <span className="text-[10px] font-bold tracking-wider text-text-muted uppercase mr-2">Continuity</span>
+                {continuity.startsWith('Same as') ? (
+                  <span className="text-text-muted italic">{continuity}</span>
+                ) : (
+                  <span className="text-text-primary">{continuity}</span>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
-/* ─── Table cell content with optional tags ─── */
-
-function CellContent({
+/* ─── Single breakdown field row inside a character card ───────────
+ *
+ * Renders a label + value + optional tag pills + optional exit note.
+ * Returns null when the field is fully empty so the card stays
+ * compact (the user can still see what they've filled in vs what's
+ * blank because the missing label simply doesn't appear).
+ */
+function CardField({
+  label,
   value,
   tags,
   tagColor,
   exit,
 }: {
+  label: string;
   value: string;
   tags?: PrepBreakdownTag[];
   tagColor?: string;
   exit?: string;
 }) {
   const hasTags = !!tags && tags.length > 0;
-  if (!value && !hasTags && !exit) return <Empty />;
-
+  if (!value && !hasTags && !exit) return null;
   return (
-    <div>
-      {value && <span className="text-text-primary">{value}</span>}
-      {hasTags && (
-        <div className={clsx('flex flex-wrap gap-1', value && 'mt-1')}>
-          {tags!.map((t) => (
-            <span
-              key={t.id}
-              className="inline text-[10px] font-medium pl-1.5 pr-1 py-0 border-l-2 rounded-sm leading-snug"
-              style={{ borderColor: tagColor, color: tagColor }}
-            >
-              {t.text}
-            </span>
-          ))}
-        </div>
-      )}
-      {exit && <div className="text-[10px] text-text-muted italic mt-0.5">Exit: {exit}</div>}
+    <div className="flex gap-3 py-1.5 border-b border-black/5 last:border-0">
+      <div className="flex-shrink-0 w-[88px] text-[0.625rem] font-bold tracking-[0.08em] text-text-muted uppercase pt-1">
+        {label}
+      </div>
+      <div className="flex-1 min-w-0 text-[0.8125rem]">
+        {value && <div className="text-text-primary leading-snug">{value}</div>}
+        {hasTags && (
+          <div className={clsx('flex flex-wrap gap-1', value && 'mt-1')}>
+            {tags!.map((t) => (
+              <span
+                key={t.id}
+                className="inline-block text-[10px] font-medium pl-1.5 pr-1.5 py-0.5 border-l-2 rounded-sm leading-snug"
+                style={{ borderColor: tagColor, color: tagColor }}
+              >
+                {t.text}
+              </span>
+            ))}
+          </div>
+        )}
+        {exit && <div className="text-[10px] text-text-muted italic mt-0.5">Exit: {exit}</div>}
+      </div>
     </div>
   );
 }
 
-function Empty() {
-  return <span className="text-text-light">—</span>;
+/* ─── Background presence section ──────────────────────────────────
+ *
+ * Replaces the old BackgroundRow that lived inside the table via a
+ * <td colSpan>. Same edit semantics — tap notes to edit, autosave on
+ * blur — but it's now a freestanding block underneath each scene's
+ * character card so it composes cleanly with the new layout.
+ */
+function BackgroundSection({
+  sceneId,
+  names,
+  notes,
+}: {
+  sceneId: string;
+  names: string[];
+  notes: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(notes);
+  const updateSceneBackground = useProjectStore((s) => s.updateSceneBackground);
+
+  if (names.length === 0 && !notes && !editing) return null;
+
+  return (
+    <div
+      className="px-4 py-3 text-[0.8125rem]"
+      style={{
+        borderTop: '1px solid rgba(0,0,0,0.05)',
+        backgroundColor: 'rgba(210, 195, 165, 0.10)',
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex-shrink-0 text-[10px] font-bold tracking-[0.08em] text-text-muted uppercase pt-0.5">
+          Background
+        </span>
+        <div className="flex-1 min-w-0 space-y-1">
+          {names.length > 0 ? (
+            <div className="text-text-primary">{names.join(', ')}</div>
+          ) : (
+            <div className="text-text-light italic text-[11px]">No background listed</div>
+          )}
+          {editing ? (
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={() => {
+                updateSceneBackground(sceneId, { backgroundNotes: draft });
+                setEditing(false);
+              }}
+              placeholder="Notes (e.g. 6 background, hospital scrubs, no SA prep needed)"
+              className="w-full text-[12px] text-text-primary bg-transparent border border-black/10 rounded px-2 py-1 resize-y min-h-[2.25rem] focus:outline-none focus:border-black/25"
+              autoFocus
+              rows={2}
+            />
+          ) : notes ? (
+            <button
+              onClick={() => {
+                setDraft(notes);
+                setEditing(true);
+              }}
+              className="text-left text-[12px] text-text-secondary hover:text-text-primary transition-colors w-full"
+            >
+              {notes}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setDraft('');
+                setEditing(true);
+              }}
+              className="text-[11px] text-text-muted hover:text-text-secondary transition-colors"
+            >
+              + Add notes
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ─── Field resolution: prep manual entry → look defaults ─── */
