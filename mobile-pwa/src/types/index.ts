@@ -34,17 +34,21 @@ export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'c
 // Scene amendment status for tracking script revisions
 export type SceneAmendmentStatus = 'unchanged' | 'modified' | 'new' | 'deleted';
 
-// Prep breakdown data — populated from the prep app's breakdown editor
+// Prep breakdown data — populated from the prep app's breakdown editor.
+// `facialHair` was added to the prep HMU box in PR #230. It's optional
+// here so older saved breakdowns (synced before the prep change shipped)
+// still parse cleanly — older entries simply render as empty in the
+// Facial Hair column.
 export interface PrepCharacterBreakdown {
   characterId: string;
   lookId: string;
-  entersWith: { hair: string; makeup: string; wardrobe: string };
+  entersWith: { hair: string; makeup: string; wardrobe: string; facialHair?: string };
   sfx: string;
   environmental: string;
   action: string;
   changeType: 'no-change' | 'change';
   changeNotes: string;
-  exitsWith: { hair: string; makeup: string; wardrobe: string };
+  exitsWith: { hair: string; makeup: string; wardrobe: string; facialHair?: string };
   notes: string;
 }
 

@@ -87,13 +87,19 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         { key: 'notes', label: 'CONTINUITY NOTES', width: 'min-w-[100px]' },
       ] as const;
     }
+    // HMU column order mirrors the prep app's breakdown form panel
+    // HMU box (Hair → Makeup → Facial Hair → SFX/Prosthetics →
+    // Wardrobe). Keep this in lockstep with
+    // prep/src/pages/BreakdownSheet.tsx so the two surfaces don't
+    // drift between drafts.
     return [
       { key: 'character', label: 'CHARACTER', width: 'min-w-[100px]' },
       { key: 'look', label: 'LOOK', width: 'min-w-[70px]' },
       { key: 'hair', label: 'HAIR', width: 'min-w-[90px]' },
       { key: 'makeup', label: 'MAKEUP', width: 'min-w-[90px]' },
-      { key: 'wardrobe', label: 'WARDROBE', width: 'min-w-[90px]' },
+      { key: 'facialHair', label: 'FACIAL HAIR', width: 'min-w-[90px]' },
       { key: 'sfx', label: 'SFX / PROSTHETICS', width: 'min-w-[90px]' },
+      { key: 'wardrobe', label: 'WARDROBE', width: 'min-w-[90px]' },
       { key: 'env', label: 'ENVIRONMENTAL', width: 'min-w-[80px]' },
       { key: 'action', label: 'ACTION', width: 'min-w-[80px]' },
       { key: 'notes', label: 'CONTINUITY NOTES', width: 'min-w-[100px]' },
@@ -182,7 +188,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   /* ─── Export ─── */
 
   const buildExportRows = useCallback((): string[][] => {
-    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Environmental', 'Action', 'Notes'];
+    // Header order mirrors the on-screen columns + the prep
+    // BreakdownSheet export, so the two CSV outputs round-trip
+    // cleanly into the same spreadsheet template.
+    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Facial Hair', 'SFX / Prosthetics', 'Wardrobe', 'Environmental', 'Action', 'Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < sortedScenes.length; idx++) {
       const scene = sortedScenes[idx];
@@ -196,7 +205,20 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         const look = resolveLook(cb, cid, scene.sceneNumber);
         const resolved = resolveCharacterFields(cb, look);
         const continuity = buildContinuityNotes(cb, cid, idx, findPrevScene, resolved, bd);
-        rows.push([scene.sceneNumber, storyDay, ch.name, look?.name || '', resolved.hair, resolved.makeup, resolved.wardrobe, resolved.sfx, resolved.environmental, resolved.action, continuity]);
+        rows.push([
+          scene.sceneNumber,
+          storyDay,
+          ch.name,
+          look?.name || '',
+          resolved.hair,
+          resolved.makeup,
+          resolved.facialHair,
+          resolved.sfx,
+          resolved.wardrobe,
+          resolved.environmental,
+          resolved.action,
+          continuity,
+        ]);
       }
     }
     return rows;
@@ -600,8 +622,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                                   <>
                                     <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.hair} tags={tagFor('hair')} tagColor="#D4943A" exit={hasChange ? cb?.exitsWith?.hair : undefined} /></td>
                                     <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.makeup} tags={tagFor('makeup')} tagColor="#C2785C" exit={hasChange ? cb?.exitsWith?.makeup : undefined} /></td>
-                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.wardrobe} tags={tagFor('wardrobe')} tagColor="#ec4899" exit={hasChange ? cb?.exitsWith?.wardrobe : undefined} /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.facialHair} tags={[]} tagColor="#B8860B" exit={hasChange ? cb?.exitsWith?.facialHair : undefined} /></td>
                                     <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.sfx} tags={tagFor('sfx')} tagColor="#ef4444" /></td>
+                                    <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.wardrobe} tags={tagFor('wardrobe')} tagColor="#ec4899" exit={hasChange ? cb?.exitsWith?.wardrobe : undefined} /></td>
                                     <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.environmental} tags={tagFor('environmental')} tagColor="#38bdf8" /></td>
                                     <td className="px-4 py-3 text-[0.8125rem]"><CellContent value={resolved.action} tags={tagFor('action')} tagColor="#a855f7" /></td>
                                     <td className="px-4 py-3 text-[0.8125rem]">
@@ -784,6 +807,9 @@ function resolveCharacterFields(
   return {
     hair: cb?.entersWith?.hair || (look ? buildHairSummary(look.hair) : ''),
     makeup: cb?.entersWith?.makeup || (look ? buildMakeupSummary(look.makeup) : ''),
+    // Facial Hair has no Look-default fallback yet — the Look schema
+    // doesn't carry it. Manual prep entry only.
+    facialHair: cb?.entersWith?.facialHair || '',
     wardrobe: cb?.entersWith?.wardrobe || '',
     sfx: cb?.sfx || (look?.sfxDetails?.sfxRequired && look.sfxDetails.sfxTypes.length > 0 ? look.sfxDetails.sfxTypes.join(', ') : ''),
     environmental: cb?.environmental || '',
@@ -792,7 +818,7 @@ function resolveCharacterFields(
 }
 
 interface ResolvedFields {
-  hair: string; makeup: string; wardrobe: string;
+  hair: string; makeup: string; facialHair: string; wardrobe: string;
   sfx: string; environmental: string; action: string;
 }
 
@@ -828,8 +854,8 @@ function buildContinuityNotes(
     if (eventStrings.length > 0) parts.push(eventStrings.join(', '));
   }
   if (cb?.notes) parts.push(cb.notes);
-  const hasManualEntry = cb && (cb.entersWith?.hair || cb.entersWith?.makeup || cb.entersWith?.wardrobe || cb.sfx || cb.environmental || cb.action);
-  const hasResolvedAny = resolved.hair || resolved.makeup || resolved.wardrobe || resolved.sfx || resolved.environmental || resolved.action;
+  const hasManualEntry = cb && (cb.entersWith?.hair || cb.entersWith?.makeup || cb.entersWith?.facialHair || cb.entersWith?.wardrobe || cb.sfx || cb.environmental || cb.action);
+  const hasResolvedAny = resolved.hair || resolved.makeup || resolved.facialHair || resolved.wardrobe || resolved.sfx || resolved.environmental || resolved.action;
   if (parts.length === 0 && !hasManualEntry && !hasResolvedAny) {
     const prev = findPrevScene(charId, sceneIdx);
     if (prev !== null) parts.push(`Same as Sc ${prev}`);
