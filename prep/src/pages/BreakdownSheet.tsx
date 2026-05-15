@@ -325,7 +325,12 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /** Build an export row for a character in a scene (shared between copy & CSV) */
   const buildExportRows = useCallback(() => {
-    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Environmental', 'Action', 'Continuity Notes'];
+    // Facial Hair sits between Makeup and Wardrobe to mirror the
+    // breakdown form panel's HMU box ordering (Hair → Makeup → Facial
+    // Hair → SFX/Prosthetics → Wardrobe) — and the SFX/Prosthetics
+    // header is now spelt out fully to match the column the table
+    // already renders.
+    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Facial Hair', 'SFX / Prosthetics', 'Wardrobe', 'Environmental', 'Action', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < scenes.length; idx++) {
       const s = scenes[idx];
@@ -351,14 +356,17 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
 
         rows.push([
-          String(s.number),
+          String(s.number) + (s.numberSuffix ?? ''),
           storyDay,
           ch.name,
           charLook?.name || '',
           resolve(cb?.entersWith.hair, hairTags, charLook?.hair),
           resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup),
-          resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
+          // Facial Hair has no Look-default fallback yet (Look schema
+          // doesn't carry it), so we only pull the manual entry.
+          cb?.entersWith.facialHair || '',
           cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '',
+          resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
           cb?.environmental || envTags.map((t) => t.text).join(', ') || '',
           cb?.action || actionTags.map((t) => t.text).join(', ') || '',
           notes,
@@ -621,7 +629,11 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                 {synopsis && <div className="bs-scene-synopsis">{synopsis}</div>}
               </div>
 
-              {/* Table */}
+              {/* Table — column order mirrors the breakdown form's HMU
+                  box (Hair → Makeup → Facial Hair → SFX/Prosthetics →
+                  Wardrobe). Keep them in lock-step so what the user
+                  types in the form lands where they expect on the
+                  breakdown sheet and exports. */}
               <table className="bs-table">
                 <thead>
                   <tr>
@@ -629,8 +641,9 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     <th className="bs-col-look">Look</th>
                     <th className="bs-col-hair">Hair</th>
                     <th className="bs-col-makeup">Makeup</th>
-                    <th className="bs-col-wardrobe">Wardrobe</th>
+                    <th className="bs-col-facial-hair">Facial Hair</th>
                     <th className="bs-col-sfx">SFX / Prosthetics</th>
+                    <th className="bs-col-wardrobe">Wardrobe</th>
                     <th className="bs-col-env">Environmental</th>
                     <th className="bs-col-action">Action</th>
                     <th className="bs-col-notes">Continuity Notes</th>
@@ -665,6 +678,9 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
                     const hair = resolveField(cb?.entersWith.hair, charLook?.hair);
                     const makeup = resolveField(cb?.entersWith.makeup, charLook?.makeup);
+                    // Facial Hair has no Look-default to fall back to —
+                    // Look schema doesn't carry it yet.
+                    const facialHair = cb?.entersWith.facialHair || '';
                     const wardrobe = resolveField(cb?.entersWith.wardrobe, charLook?.wardrobe);
                     const sfx = cb?.sfx || '';
                     const environmental = cb?.environmental || '';
@@ -719,6 +735,18 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                             <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>
                           )}
                         </td>
+                        <td className="bs-col-facial-hair">
+                          {facialHair}
+                          {showPlaceholder(facialHair, 0)}
+                          {hasChange && cb?.exitsWith.facialHair && (
+                            <div className="bs-exit-note">Exit: {cb.exitsWith.facialHair}</div>
+                          )}
+                        </td>
+                        <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
+                          {sfx}
+                          {showPlaceholder(sfx, sfxTags.length)}
+                          {pills(sfxTags, '#ef4444')}
+                        </td>
                         <td className="bs-col-wardrobe">
                           {wardrobe}
                           {showPlaceholder(wardrobe, wardrobeTags.length)}
@@ -726,11 +754,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                           {hasChange && cb?.exitsWith.wardrobe && (
                             <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>
                           )}
-                        </td>
-                        <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
-                          {sfx}
-                          {showPlaceholder(sfx, sfxTags.length)}
-                          {pills(sfxTags, '#ef4444')}
                         </td>
                         <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
                           {environmental}
@@ -855,13 +878,17 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
   /** entersWith edits mirror to the character's currently-selected
    *  look so the next scene that picks the same look auto-fills. */
   const updateEntersWith = useCallback(
-    (sceneId: string, characterId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => {
+    (sceneId: string, characterId: string, field: 'hair' | 'makeup' | 'wardrobe' | 'facialHair', value: string) => {
       const bd = ensureRow(sceneId, characterId);
       const cb = bd.characters.find((c) => c.characterId === characterId)!;
       store.updateCharacterBreakdown(sceneId, characterId, {
         entersWith: { ...cb.entersWith, [field]: value },
       });
-      if (cb.lookId) {
+      // Only mirror hair / makeup / wardrobe back onto the look —
+      // the Look schema doesn't carry facialHair yet, so we skip the
+      // updateLook call for it. Facial hair stays scene-scoped until
+      // we extend the Look type.
+      if (cb.lookId && field !== 'facialHair') {
         parsedScriptStore.updateLook(projectId, cb.lookId, { [field]: value });
       }
     },
@@ -936,8 +963,9 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                   <th className="bs-col-look">Look</th>
                   <th className="bs-col-hair">Hair</th>
                   <th className="bs-col-makeup">Makeup</th>
-                  <th className="bs-col-wardrobe">Wardrobe</th>
+                  <th className="bs-col-facial-hair">Facial Hair</th>
                   <th className="bs-col-sfx">SFX</th>
+                  <th className="bs-col-wardrobe">Wardrobe</th>
                   <th className="bs-col-env">Env.</th>
                   <th className="bs-col-action">Action</th>
                   <th className="bs-col-notes">Notes</th>
@@ -964,6 +992,9 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                     manual || lookField || '';
                   const hair = resolve(cb?.entersWith.hair, charLook?.hair);
                   const makeup = resolve(cb?.entersWith.makeup, charLook?.makeup);
+                  // Facial Hair has no Look-default fallback yet —
+                  // Look schema doesn't carry it.
+                  const facialHair = cb?.entersWith.facialHair || '';
                   const wardrobe = resolve(cb?.entersWith.wardrobe, charLook?.wardrobe);
                   const sfx = cb?.sfx || '';
                   const environmental = cb?.environmental || '';
@@ -1023,13 +1054,12 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                         {pills(makeupTags, '#C2785C')}
                         {hasChange && cb?.exitsWith.makeup && <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>}
                       </td>
-                      <td className="bs-col-wardrobe">
+                      <td className="bs-col-facial-hair">
                         <EditableCell
-                          value={wardrobe}
-                          onSave={(v) => updateEntersWith(scene.id, cid, 'wardrobe', v)}
+                          value={facialHair}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'facialHair', v)}
                         />
-                        {pills(wardrobeTags, '#ec4899')}
-                        {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
+                        {hasChange && cb?.exitsWith.facialHair && <div className="bs-exit-note">Exit: {cb.exitsWith.facialHair}</div>}
                       </td>
                       <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
                         <EditableCell
@@ -1037,6 +1067,14 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                           onSave={(v) => updateChar(scene.id, cid, { sfx: v })}
                         />
                         {pills(sfxTags, '#ef4444')}
+                      </td>
+                      <td className="bs-col-wardrobe">
+                        <EditableCell
+                          value={wardrobe}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'wardrobe', v)}
+                        />
+                        {pills(wardrobeTags, '#ec4899')}
+                        {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
                       </td>
                       <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
                         <EditableCell

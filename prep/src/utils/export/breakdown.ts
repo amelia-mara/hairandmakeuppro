@@ -142,10 +142,13 @@ export function exportBreakdownXLSX(projectId: string): ExportPreview {
 
   const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
 
-  // Column widths roughly proportional to expected content.
+  // Column widths roughly proportional to expected content. HMU now
+  // has 12 columns: Scene, Day, Char, Look, Hair, Makeup,
+  // Facial Hair, SFX/Prosthetics, Wardrobe, Env, Action, Notes —
+  // mirroring the breakdown form panel ordering.
   const widths = meta.department === 'costume'
     ? [8, 10, 22, 22, 26, 20, 18, 20, 18, 34] // Scene, Day, Char, Look, Clothing, Accessories, SFX, Env, Action, Notes
-    : [8, 10, 22, 22, 22, 22, 22, 18, 20, 18, 34];
+    : [8, 10, 22, 22, 22, 22, 18, 22, 22, 18, 20, 34];
   worksheet['!cols'] = widths.map((w) => ({ wch: w }));
 
   // Freeze the header row so it stays visible while scrolling.
