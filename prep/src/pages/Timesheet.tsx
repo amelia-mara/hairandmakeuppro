@@ -498,13 +498,61 @@ export function Timesheet({ projectId }: TimesheetProps) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!projectId || teamMembers.length === 0) return;
+    if (!projectId || teamMembers.length === 0) {
+      // Mobile users have reported their hours appearing as "needs
+      // approval" locally but never surfacing in Prep. The flow is
+      // long enough (project_members → ensureTeamCrew → timesheets
+      // fetch → merge by user_id) that without per-stage telemetry
+      // we can't tell at which step the data is being dropped. This
+      // early-return is one of the dead ends: if teamMembers is
+      // empty here, the fetch never fires.
+      if (projectId && teamMembers.length === 0) {
+        console.log(
+          '[Timesheet] Skipping team-timesheet fetch — no team members ' +
+          'loaded yet (loadFromSupabase may still be in flight, or this ' +
+          "project_members query returned no rows for the designer's user). " +
+          'If team members never appear, RLS on project_members may be ' +
+          'blocking the read.',
+        );
+      }
+      return;
+    }
     fetchMemberTimesheets(projectId)
       .then((rows) => {
         if (cancelled) return;
         const applied = mergeMemberEntries(rows);
-        if (applied > 0) {
-          console.log(`[Timesheet] pulled ${applied} entries from team`);
+        // Concrete telemetry for the "mobile hours don't appear in Prep"
+        // bug. Logs: rows returned, distinct user_ids on those rows,
+        // crew rows on the prep side that have a userId stamped (i.e.
+        // synced team members), and how many entries the merge
+        // actually applied. From this we can tell which stage drops:
+        //
+        //   * 0 rows returned → no timesheets in Supabase for any user
+        //     in this project (mobile push not landing, or RLS).
+        //   * Rows returned, 0 crew with userId → ensureTeamCrew never
+        //     finished (or members.userId mismatch with auth.uid).
+        //   * Rows returned, crew matches but applied=0 → user_id on
+        //     the row doesn't match any crew.userId (designer + mobile
+        //     team member auth ids drift).
+        const rowUserIds = Array.from(new Set(rows.map((r) => r.user_id)));
+        const crewWithUserIds = store.getState().crew
+          .filter((c) => c.userId)
+          .map((c) => ({ crewId: c.id, userId: c.userId, name: c.name }));
+        console.log(
+          `[Timesheet] team-timesheet fetch returned ${rows.length} row(s) ` +
+            `across ${rowUserIds.length} user(s); ${crewWithUserIds.length} ` +
+            `synced crew row(s) on the Prep side; merge applied ${applied} ` +
+            'entry/entries.',
+          { rowUserIds, crewWithUserIds, teamMemberIds: teamMembers.map((m) => m.id) },
+        );
+        if (rows.length > 0 && applied === 0) {
+          console.warn(
+            '[Timesheet] mobile timesheet rows exist in Supabase but none ' +
+              'merged into the Prep view. Cause is almost certainly a ' +
+              "user_id mismatch — the timesheet row's user_id doesn't " +
+              'match any team member listed above. Compare rowUserIds vs ' +
+              'teamMemberIds and crewWithUserIds.userId.',
+          );
         }
       })
       .catch((err) =>
