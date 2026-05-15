@@ -188,6 +188,26 @@ export interface Look {
   continuityEvents?: ContinuityEvent[];
   sfxDetails?: SFXDetails;
   notes?: string;
+  /**
+   * Prep-app free-text summaries — surfaced from the looks table's
+   * makeup_details JSONB when the look was authored in Prep. The Prep
+   * Look type carries simple strings (hair, makeup, wardrobe, sfx,
+   * facialHair) rather than the rich structured MakeupDetails /
+   * HairDetails objects the mobile app uses for its native looks.
+   * Without this field those strings have nowhere to land and the
+   * lookbook view shows blank cards for designer-authored looks.
+   *
+   * Only set when the loader detects prep-shape JSONB on read. For
+   * mobile-authored looks the rich structured details are the source
+   * of truth and this stays undefined.
+   */
+  prepSummary?: {
+    hair: string;
+    makeup: string;
+    wardrobe: string;
+    sfx: string;
+    facialHair: string;
+  };
 }
 
 export interface MakeupDetails {
