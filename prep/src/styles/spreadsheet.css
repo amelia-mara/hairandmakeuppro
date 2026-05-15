@@ -513,14 +513,23 @@
   display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;
 }
 .bs-tag-pill {
-  display: inline;
+  /* inline-block keeps the pill as a discrete chip that flows with
+     the cell content but doesn't let cell content break mid-pill
+     (which is how the chars-going-vertically rendering bug
+     happened in the split-view breakdown). */
+  display: inline-block;
   font-size: 0.6875rem; font-weight: 500;
   padding: 1px 5px; border-left: 2px solid;
   border-radius: 2px;
   background: rgba(255,255,255,0.05);
   line-height: 1.4;
   max-width: 100%;
-  word-break: break-word;
+  /* Wrap only between words; only fall back to char-level breaking
+     for genuinely long unbreakable runs. The previous
+     `word-break: break-word` let pills shrink to 1-char wide when
+     the surrounding cell was narrow. */
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 /* Time jump scene highlight — solid row tint instead of border glow */
@@ -680,6 +689,10 @@
 
 /* ━━━ Embedded Breakdown Table (inside Script page right panel) ━━━ */
 
+/* The wrapper allows horizontal scroll so the table can keep its
+   columns at a readable width even when the right panel is narrow
+   (split-view starts at 700px which is well below the table's
+   natural width). Vertical scroll handles the long scene list. */
 .bs-embedded {
   flex: 1; overflow-y: auto; overflow-x: auto;
   padding: 8px 12px 40px;
@@ -693,6 +706,15 @@
 .bs-embedded .bs-scene-header {
   padding: 14px 16px 10px;
 }
+/* Fixed table-layout + explicit min-width so the browser doesn't
+   crush cells below their requested column widths when the panel is
+   narrow. Without these, `word-break: break-word` on the tag pills
+   let cells shrink to ~1 character wide and pill text wrapped
+   character-by-character vertically. */
+.bs-embedded .bs-table {
+  table-layout: fixed;
+  min-width: 1180px;
+}
 .bs-embedded .bs-table th {
   padding: 8px 12px;
   font-size: 0.625rem;
@@ -700,7 +722,27 @@
 .bs-embedded .bs-table td {
   padding: 10px 12px;
   font-size: 0.75rem;
+  /* Soften wrapping inside cells: break only at whitespace where
+     possible, fall back to character-level only for genuinely long
+     unbreakable runs (URLs, slugs). Replaces the aggressive default
+     that broke ordinary multi-word pill text mid-word. */
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
+/* Tighter per-column widths for the embedded view — the breakdown
+   table sits next to the script and benefits from a more compact
+   layout than the standalone Breakdown page. Order mirrors the
+   breakdown form panel (Hair → Makeup → Facial Hair → SFX → Wardrobe). */
+.bs-embedded .bs-col-char     { width: 110px; }
+.bs-embedded .bs-col-look     { width: 110px; }
+.bs-embedded .bs-col-hair     { width: 130px; }
+.bs-embedded .bs-col-makeup   { width: 130px; }
+.bs-embedded .bs-col-facial-hair { width: 110px; }
+.bs-embedded .bs-col-sfx      { width: 130px; }
+.bs-embedded .bs-col-wardrobe { width: 130px; }
+.bs-embedded .bs-col-env      { width: 110px; }
+.bs-embedded .bs-col-action   { width: 110px; }
+.bs-embedded .bs-col-notes    { width: 220px; min-width: 220px; }
 
 /* Wider right panel when showing full breakdown.
    Width comes from inline style (driven by usePanelResize via the
