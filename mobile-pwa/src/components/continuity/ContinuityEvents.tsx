@@ -13,6 +13,7 @@ export function ContinuityEvents({
   onAddEvent,
   onRemoveEvent,
 }: ContinuityEventsProps) {
+  const safeEvents = Array.isArray(events) ? events : [];
   return (
     <div>
       <div className="flex items-center justify-between mb-3.5">
@@ -28,11 +29,11 @@ export function ContinuityEvents({
         </button>
       </div>
 
-      {events.length === 0 ? (
+      {safeEvents.length === 0 ? (
         <EmptyState onAdd={onAddEvent} />
       ) : (
         <div className="space-y-2.5">
-          {events.map((event) => (
+          {safeEvents.map((event) => (
             <EventCard
               key={event.id}
               event={event}
