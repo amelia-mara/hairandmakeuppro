@@ -850,7 +850,8 @@ export function ProjectHubScreen() {
                   sweat: false, dishevelled: false, blood: false,
                   dirt: false, wetHair: false, tears: false,
                 },
-                continuityEvents: (ce.continuity_events_data as unknown as ContinuityEvent[]) || [],
+                continuityEvents:
+                  (ce.continuity_events_data as { events?: ContinuityEvent[] } | null)?.events ?? [],
                 sfxDetails: (ce.sfx_details as unknown as SFXDetails) || {
                   sfxRequired: false, sfxTypes: [], prostheticPieces: '',
                   prostheticAdhesive: '', bloodTypes: [], bloodProducts: '',
