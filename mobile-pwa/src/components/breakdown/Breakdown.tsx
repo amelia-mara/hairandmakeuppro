@@ -57,6 +57,31 @@ function classifyDayChange(prev: string, curr: string): 'time-jump' | 'new-day' 
   return 'time-jump';
 }
 
+/**
+ * Comparator used to order character tabs in the breakdown.
+ *
+ * Mirrors the Prep app's script-page character ordering: lead cast
+ * first, then supporting, then background; within each role,
+ * ascending by `actorNumber` (cast list billing — 1st billed shows
+ * up before 2nd, etc); ties broken alphabetically by name. Without
+ * this the tab order matched whatever sequence the parser happened
+ * to write into `scene.characters`, which mixed leads and minor
+ * roles unpredictably.
+ *
+ * Characters missing role/actorNumber sink to the end so the
+ * known-billing cast members stay grouped at the front.
+ */
+function compareCharsByBilling(a: Character, b: Character): number {
+  const roleRank: Record<string, number> = { lead: 0, supporting: 1, background: 2 };
+  const aRank = a.role ? (roleRank[a.role] ?? 3) : 3;
+  const bRank = b.role ? (roleRank[b.role] ?? 3) : 3;
+  if (aRank !== bRank) return aRank - bRank;
+  const aNum = a.actorNumber ?? Number.POSITIVE_INFINITY;
+  const bNum = b.actorNumber ?? Number.POSITIVE_INFINITY;
+  if (aNum !== bNum) return aNum - bNum;
+  return (a.name || '').localeCompare(b.name || '');
+}
+
 interface BreakdownProps {
   /** Navigate to SceneView for continuity tracking. The optional
    *  characterId comes from the per-scene character-tab "Track →"
@@ -556,30 +581,44 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                       No characters confirmed
                     </div>
                   )
-                ) : (
-                  <SceneCharacterCards
-                    sceneNumber={scene.sceneNumber}
-                    sceneGlobalIdx={globalIdx}
-                    charIds={charIds}
-                    characterMap={characterMap}
-                    breakdown={bd}
-                    department={department}
-                    hasPrepData={hasPrepData}
-                    resolveLook={resolveLook}
-                    findPrevScene={findPrevScene}
-                    activeCid={
-                      (activeCharByScene[scene.id] && charIds.includes(activeCharByScene[scene.id]))
-                        ? activeCharByScene[scene.id]
-                        : charIds[0]
-                    }
-                    onSetActive={(cid) =>
-                      setActiveCharByScene((prev) => ({ ...prev, [scene.id]: cid }))
-                    }
-                    isUnconfirmed={isUnconfirmed}
-                    onConfirmRequested={() => setConfirmSceneId(scene.id)}
-                    onTrack={(cid) => onSceneSelect?.(scene.id, cid)}
-                  />
-                )}
+                ) : (() => {
+                  // Sort the scene's cast by billing before handing
+                  // it to the tab strip so leads always appear first.
+                  // Unknown characters (cast member missing from the
+                  // characterMap) slot to the end alphabetically.
+                  const orderedCharIds = [...charIds].sort((a, b) => {
+                    const ca = characterMap.get(a);
+                    const cb = characterMap.get(b);
+                    if (!ca && !cb) return 0;
+                    if (!ca) return 1;
+                    if (!cb) return -1;
+                    return compareCharsByBilling(ca, cb);
+                  });
+                  return (
+                    <SceneCharacterCards
+                      sceneNumber={scene.sceneNumber}
+                      sceneGlobalIdx={globalIdx}
+                      charIds={orderedCharIds}
+                      characterMap={characterMap}
+                      breakdown={bd}
+                      department={department}
+                      hasPrepData={hasPrepData}
+                      resolveLook={resolveLook}
+                      findPrevScene={findPrevScene}
+                      activeCid={
+                        (activeCharByScene[scene.id] && orderedCharIds.includes(activeCharByScene[scene.id]))
+                          ? activeCharByScene[scene.id]
+                          : orderedCharIds[0]
+                      }
+                      onSetActive={(cid) =>
+                        setActiveCharByScene((prev) => ({ ...prev, [scene.id]: cid }))
+                      }
+                      isUnconfirmed={isUnconfirmed}
+                      onConfirmRequested={() => setConfirmSceneId(scene.id)}
+                      onTrack={(cid) => onSceneSelect?.(scene.id, cid)}
+                    />
+                  );
+                })()}
 
                 {/* Background presence — now a freestanding section
                     instead of a tr/colSpan inside the table. */}
