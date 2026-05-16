@@ -198,6 +198,44 @@ function AppContent() {
     }
   }, [isAuthenticated, projectMembershipsForBoot]);
 
+  // F-04 strict localStorage prune. Remove only keys whose suffix is
+  // a UUID that doesn't match any accessible project. Keys without a
+  // UUID suffix (global stores like hair-makeup-pro-storage, auth /
+  // theme / tutorial) are left untouched even if their value is
+  // stale — those live inside Zustand dicts and need dict-level
+  // surgery that's out of scope here. Logs every removal so we can
+  // spot over-zealous deletions in production.
+  //
+  // This catches prep-* keys (prep-scene-notes-${id}, prep-team-${id},
+  // prep-happy-budget-${id}, etc.) which the desktop app writes on
+  // the same origin and leaves behind on project delete.
+  const prunedOnce = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      prunedOnce.current = false;
+      return;
+    }
+    if (prunedOnce.current) return;
+    if (projectMembershipsForBoot.length === 0) return;
+    prunedOnce.current = true;
+
+    const accessibleIds = new Set(projectMembershipsForBoot.map((m) => m.projectId));
+    const uuidSuffix = /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+    let pruned = 0;
+    for (const key of Object.keys(localStorage)) {
+      const m = key.match(uuidSuffix);
+      if (!m) continue;
+      const uuid = m[1].toLowerCase();
+      if (accessibleIds.has(uuid)) continue;
+      console.log(`[Boot] Pruning stale localStorage key for inaccessible project: ${key}`);
+      localStorage.removeItem(key);
+      pruned++;
+    }
+    if (pruned > 0) {
+      console.log(`[Boot] Pruned ${pruned} stale localStorage key(s)`);
+    }
+  }, [isAuthenticated, projectMembershipsForBoot]);
+
   // Refresh project memberships when app returns from background (common on mobile)
   const { refreshUserProjects } = useAuthStore();
   useEffect(() => {
