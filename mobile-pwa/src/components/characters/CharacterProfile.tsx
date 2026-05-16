@@ -440,6 +440,13 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
               className="resize-none"
               disabled={!canEditFloor}
             />
+            {!canEditFloor && (
+              <p className="mt-1.5 text-[11px] text-text-light italic">
+                {isShooting
+                  ? 'View only — floor notes are added by the on-set team.'
+                  : 'Available once the project moves to Shooting status.'}
+              </p>
+            )}
           </div>
 
           {/* Deviation section */}
