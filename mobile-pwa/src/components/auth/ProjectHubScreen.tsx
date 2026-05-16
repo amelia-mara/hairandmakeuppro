@@ -10,7 +10,7 @@ import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { flushAutoSave } from '@/services/autoSave';
 import { useSyncStore } from '@/stores/syncStore';
-import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
+import type { ProjectMembership, Project, ProjectRole, ProductionType, SceneFilmingStatus, MakeupDetails, HairDetails, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
 import { savePhotoBlob } from '@/db';
 import { detectCharactersForScene } from '@/utils/scriptParser';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
