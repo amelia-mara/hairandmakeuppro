@@ -212,6 +212,52 @@ export function useScriptUploadProcessor({
         );
       }
 
+      // Synthesize number_suffix for multi-room same-number scenes (F-17).
+      // When a screenplay writes scene 176 across three rooms without
+      // explicit A/B/C suffixes, the parser keeps all three rows (deduped
+      // only by location/time-of-day) but each carries `suffix=undefined`.
+      // Schedules reference these as 176A/176B/176C, leaving the schedule
+      // write-through orphaned. Assign sequential letters to unsuffixed
+      // members of any same-number group, skipping letters already held
+      // by explicit members of the same group. Order is script order
+      // (forEach above iterates parsed.scenes in script order, so the
+      // indexes recorded here preserve that ordering for determinism).
+      const indexesByNum = new Map<number, number[]>();
+      scenes.forEach((s, idx) => {
+        const list = indexesByNum.get(s.number) ?? [];
+        list.push(idx);
+        indexesByNum.set(s.number, list);
+      });
+      let synthesizedSuffixCount = 0;
+      for (const [, indexes] of indexesByNum) {
+        if (indexes.length < 2) continue;
+        const taken = new Set<string>();
+        for (const idx of indexes) {
+          const s = scenes[idx];
+          if (s.numberSuffix) taken.add(s.numberSuffix.toUpperCase());
+        }
+        let nextCharCode = 'A'.charCodeAt(0);
+        const nextSuffix = (): string => {
+          while (taken.has(String.fromCharCode(nextCharCode))) nextCharCode++;
+          const letter = String.fromCharCode(nextCharCode);
+          taken.add(letter);
+          nextCharCode++;
+          return letter;
+        };
+        for (const idx of indexes) {
+          const s = scenes[idx];
+          if (s.numberSuffix) continue;
+          s.numberSuffix = nextSuffix();
+          synthesizedSuffixCount++;
+        }
+      }
+      if (synthesizedSuffixCount > 0) {
+        console.log(
+          `[scriptUpload] Synthesized number_suffix for ${synthesizedSuffixCount} ` +
+          `multi-room same-number scene(s).`,
+        );
+      }
+
       setProgress(85);
       setStatusText('Generating looks...');
       await new Promise(r => setTimeout(r, 200));
