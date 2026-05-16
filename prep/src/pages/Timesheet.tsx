@@ -581,12 +581,31 @@ export function Timesheet({ projectId }: TimesheetProps) {
       if (!a.isMe && b.isMe) return 1;
       return 0;
     });
-    return sorted.map((member, idx) => ({
+    const result = sorted.map((member, idx) => ({
       member,
       summary: getCrewWeekSummary(member.id, selectedWeekStart),
       colorIdx: idx,
     }));
-  }, [crew, selectedWeekStart, getCrewWeekSummary]);
+    // Diagnostic for "mobile hours don't appear in Prep" — by this
+    // point the merge has already happened (the fetchMemberTimesheets
+    // .then logs that separately). What we want to see HERE is which
+    // week the panel is summarising vs which dates the merged entries
+    // are stamped to. If state.entries has Lee's May 15 entry but the
+    // panel is summarising the week starting May 18, the entry is
+    // invisible (correctly) — fix is to navigate weeks, not code.
+    const allEntries = store.getState().entries;
+    const entryKeys = Object.keys(allEntries);
+    console.log(
+      `[Timesheet] crewSummaries built for week ${selectedWeekStart}; ` +
+        `state.entries holds ${entryKeys.length} key(s); ` +
+        `per-crew worked-day counts: ` +
+        result
+          .map((r) => `${r.member.name}=${r.summary.entries.filter((e) => e.unitCall).length}`)
+          .join(', '),
+      { selectedWeekStart, entryKeys: entryKeys.slice(0, 20), perCrew: result.map(r => ({ name: r.member.name, id: r.member.id, entries: r.summary.entries.length, withUnitCall: r.summary.entries.filter(e => e.unitCall).length })) },
+    );
+    return result;
+  }, [crew, selectedWeekStart, getCrewWeekSummary, store]);
 
   const totalLabour = getTotalLabourCost(selectedWeekStart);
   const totalHours = crewSummaries.reduce((s, c) => s + c.summary.totalHours, 0);
