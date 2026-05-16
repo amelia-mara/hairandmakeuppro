@@ -15,10 +15,13 @@
 --   [{ "n": "176", "s": "A",  "d": 13 },
 --    { "n": "4",   "s": null, "d": 1  }]
 --
--- where n = scene_number (string, cast to bigint), s = number_suffix
--- (nullable), d = shooting_day. The match is project-scoped and
--- NULL-safe via `IS NOT DISTINCT FROM` so the same SQL handles both
--- suffixed and unsuffixed rows.
+-- where n = scene_number (text — `scenes.scene_number` is a TEXT
+-- column, so we keep the value as text and compare text-to-text;
+-- this also lets legitimate non-numeric scene numbers like "P1" or
+-- "TBC" round-trip cleanly), s = number_suffix (nullable),
+-- d = shooting_day. The match is project-scoped and NULL-safe via
+-- `IS NOT DISTINCT FROM` so the same SQL handles both suffixed and
+-- unsuffixed rows.
 --
 -- Returns the number of rows actually updated so the caller can
 -- compare it against the input length and log unmatched references.
@@ -39,7 +42,7 @@ DECLARE
 BEGIN
   WITH a AS (
     SELECT
-      (elem->>'n')::bigint    AS scene_num,
+      (elem->>'n')            AS scene_num,
       NULLIF(elem->>'s', '')  AS suffix,
       (elem->>'d')::integer   AS shooting_day
     FROM jsonb_array_elements(p_assignments) AS elem

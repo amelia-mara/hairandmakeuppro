@@ -25,7 +25,11 @@ import type { Json } from '@/types';
 
 /**
  * Shared assignment shape posted to the `sync_shooting_days` RPC.
- * `n` = scene_number (string; cast to bigint server-side).
+ * `n` = scene_number — MUST be a string. `scenes.scene_number` is a
+ *       TEXT column, so the RPC compares text-to-text. Passing a JS
+ *       number would still round-trip via `->>` as text, but typing
+ *       this as string lets the compiler enforce the contract at
+ *       every call site. parseSceneRef already returns strings.
  * `s` = number_suffix (nullable; matched NULL-safely via IS NOT DISTINCT FROM).
  * `d` = shooting_day (integer).
  */
