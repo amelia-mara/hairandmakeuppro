@@ -34,17 +34,21 @@ export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'c
 // Scene amendment status for tracking script revisions
 export type SceneAmendmentStatus = 'unchanged' | 'modified' | 'new' | 'deleted';
 
-// Prep breakdown data — populated from the prep app's breakdown editor
+// Prep breakdown data — populated from the prep app's breakdown editor.
+// `facialHair` was added to the prep HMU box in PR #230. It's optional
+// here so older saved breakdowns (synced before the prep change shipped)
+// still parse cleanly — older entries simply render as empty in the
+// Facial Hair column.
 export interface PrepCharacterBreakdown {
   characterId: string;
   lookId: string;
-  entersWith: { hair: string; makeup: string; wardrobe: string };
+  entersWith: { hair: string; makeup: string; wardrobe: string; facialHair?: string };
   sfx: string;
   environmental: string;
   action: string;
   changeType: 'no-change' | 'change';
   changeNotes: string;
-  exitsWith: { hair: string; makeup: string; wardrobe: string };
+  exitsWith: { hair: string; makeup: string; wardrobe: string; facialHair?: string };
   notes: string;
 }
 
@@ -184,6 +188,26 @@ export interface Look {
   continuityEvents?: ContinuityEvent[];
   sfxDetails?: SFXDetails;
   notes?: string;
+  /**
+   * Prep-app free-text summaries — surfaced from the looks table's
+   * makeup_details JSONB when the look was authored in Prep. The Prep
+   * Look type carries simple strings (hair, makeup, wardrobe, sfx,
+   * facialHair) rather than the rich structured MakeupDetails /
+   * HairDetails objects the mobile app uses for its native looks.
+   * Without this field those strings have nowhere to land and the
+   * lookbook view shows blank cards for designer-authored looks.
+   *
+   * Only set when the loader detects prep-shape JSONB on read. For
+   * mobile-authored looks the rich structured details are the source
+   * of truth and this stays undefined.
+   */
+  prepSummary?: {
+    hair: string;
+    makeup: string;
+    wardrobe: string;
+    sfx: string;
+    facialHair: string;
+  };
 }
 
 export interface MakeupDetails {

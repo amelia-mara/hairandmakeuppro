@@ -220,6 +220,41 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
         `${mappedLooks.length} looks`,
       );
 
+      // Diagnostics for lookbook-not-syncing reports. Logs how many
+      // looks came back from `looks`, how many look_scenes rows we
+      // joined, and how many of the resulting Look objects have
+      // orphan characterIds (point at a character that didn't load).
+      // Orphans appear as "missing looks" on the lookbook page
+      // because the grouping pass filters by allCharacters.
+      if (mappedLooks.length === 0 && mappedCharacters.length > 0) {
+        console.warn(
+          `[ProjectLoader] looks table returned 0 rows for project ${projectId} ` +
+            `even though ${mappedCharacters.length} characters loaded. ` +
+            `If Prep authored looks for this project they should be in Supabase — ` +
+            `check whether saveLooks ever fired on the Prep side, or whether RLS ` +
+            `is filtering them out for this user's project_members row.`,
+        );
+      } else if (mappedLooks.length > 0) {
+        const charIds = new Set(mappedCharacters.map((c) => c.id));
+        const orphanLooks = mappedLooks.filter((l) => !charIds.has(l.characterId));
+        const looksWithoutScenes = mappedLooks.filter((l) => l.scenes.length === 0);
+        if (orphanLooks.length > 0) {
+          console.warn(
+            `[ProjectLoader] ${orphanLooks.length}/${mappedLooks.length} loaded look(s) ` +
+              `reference a characterId that didn't load — they'll be invisible on the ` +
+              `lookbook page. Look IDs: ${orphanLooks.map((l) => l.id).join(', ')}`,
+          );
+        }
+        if (looksWithoutScenes.length > 0) {
+          console.log(
+            `[ProjectLoader] ${looksWithoutScenes.length}/${mappedLooks.length} look(s) ` +
+              `have no scene assignments in look_scenes — these show "0/0 scenes" on ` +
+              `mobile cards. Likely cause: the Prep user assigned the look to a ` +
+              `character via the breakdown form but never opened/saved the breakdown.`,
+          );
+        }
+      }
+
       return { success: true, fromCache: false };
     } finally {
       setReceivingFromServer(false);
@@ -338,23 +373,112 @@ function mapLooks(
     lsMap.get(lookId)!.push(sceneNum);
   }
 
-  return dbLooks.map(row => {
-    const hairDetails = (row.hair_details as Record<string, unknown>) || {};
-    const makeupDetails = (row.makeup_details as Record<string, unknown>) || {};
+  return dbLooks.map((row) => {
+    const hairDetailsRaw = (row.hair_details as Record<string, unknown>) || {};
+    const makeupDetailsRaw = (row.makeup_details as Record<string, unknown>) || {};
+
+    // Detect Prep-shape vs mobile-native shape.
+    //
+    // Prep's saveLooks writes:
+    //   hair_details = { style: <hair string> }
+    //   makeup_details = { notes: <makeup string>,
+    //                      _wardrobe, _sfx, _facialHair }
+    //
+    // Mobile's lookToDb writes the full MakeupDetails / HairDetails
+    // objects directly into the JSONB. Detection: prep-shape always
+    // has the `notes` key WITHOUT the rich-shape `foundation` key,
+    // or carries one of the underscore-prefix extension keys.
+    const isPrepShape =
+      ('notes' in makeupDetailsRaw && !('foundation' in makeupDetailsRaw)) ||
+      '_wardrobe' in makeupDetailsRaw ||
+      '_sfx' in makeupDetailsRaw ||
+      '_facialHair' in makeupDetailsRaw;
+
+    const prepHair = (hairDetailsRaw.style as string) || '';
+    const prepMakeup = (makeupDetailsRaw.notes as string) || '';
+    const prepWardrobe = (makeupDetailsRaw._wardrobe as string) || '';
+    const prepSfx = (makeupDetailsRaw._sfx as string) || '';
+    const prepFacialHair = (makeupDetailsRaw._facialHair as string) || '';
+
+    let makeup: any;
+    let hair: any;
+    let sfxDetails: any;
+    let masterReference: any;
+    let continuityFlags: any;
+    let continuityEvents: any;
+    let prepSummary: Look['prepSummary'];
+
+    if (isPrepShape) {
+      // Prep-style: surface the strings into the mobile structured
+      // objects' primary fields (foundation / style) AND carry the
+      // full free-text bundle on prepSummary so the lookbook view can
+      // render the original prep entry as a read-only block.
+      makeup = { foundation: prepMakeup };
+      hair = { style: prepHair };
+      // Promote the SFX string to a minimal SFXDetails so screens
+      // that read `sfxDetails` (lookbook SFX accordion, etc) get a
+      // non-empty value to display.
+      if (prepSfx) {
+        sfxDetails = {
+          sfxRequired: true,
+          sfxTypes: ['Prosthetics'],
+          prostheticPieces: prepSfx,
+          prostheticAdhesive: '',
+          bloodTypes: [],
+          bloodProducts: '',
+          bloodPlacement: '',
+          tattooCoverage: '',
+          temporaryTattoos: '',
+          contactLenses: '',
+          teeth: '',
+          agingCharacterNotes: '',
+          sfxApplicationTime: null,
+          sfxReferencePhotos: [],
+        };
+      }
+      prepSummary = {
+        hair: prepHair,
+        makeup: prepMakeup,
+        wardrobe: prepWardrobe,
+        sfx: prepSfx,
+        facialHair: prepFacialHair,
+      };
+    } else {
+      // Mobile-native shape: the JSONB IS the full MakeupDetails /
+      // HairDetails object. Spread it through. Pull embedded extras
+      // (master ref, look-level continuity, sfxDetails) out of the
+      // underscore-prefix keys the writer stuffs alongside.
+      makeup = { ...(makeupDetailsRaw as any) };
+      hair = { ...(hairDetailsRaw as any) };
+      const masterRef = (makeupDetailsRaw as any)._masterRef;
+      if (masterRef && typeof masterRef === 'object') {
+        masterReference = {
+          id: masterRef.id || '',
+          uri: '',
+          thumbnail: masterRef.thumbnail || '',
+          capturedAt: masterRef.capturedAt ? new Date(masterRef.capturedAt) : new Date(),
+          angle: masterRef.angle || undefined,
+        };
+      }
+      continuityFlags = (makeupDetailsRaw as any)._continuityFlags;
+      continuityEvents = (makeupDetailsRaw as any)._continuityEvents;
+      sfxDetails = (makeupDetailsRaw as any)._sfxDetails;
+    }
+
     return {
       id: row.id as string,
       characterId: (row.character_id as string) || '',
       name: (row.name as string) || '',
       scenes: lsMap.get(row.id as string) || [],
       estimatedTime: (row.estimated_time as number) || 30,
-      masterReference: undefined,
-      makeup: {
-        foundation: (makeupDetails.notes as string) || '',
-      } as any,
-      hair: {
-        style: (hairDetails.style as string) || '',
-      } as any,
+      masterReference,
+      makeup,
+      hair,
+      sfxDetails,
+      continuityFlags,
+      continuityEvents,
       notes: (row.description as string) || '',
+      prepSummary,
     };
   });
 }

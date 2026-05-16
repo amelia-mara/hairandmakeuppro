@@ -100,6 +100,11 @@ export function buildBreakdownExport(projectId: string): BreakdownExportPayload 
   const department: 'hmu' | 'costume' =
     (project?.department as 'hmu' | 'costume' | undefined) ?? 'hmu';
 
+  // HMU columns mirror the breakdown form panel's HMU box ordering
+  // (Hair → Makeup → Facial Hair → SFX/Prosthetics → Wardrobe). Keep
+  // the on-screen BreakdownSheet, this exporter, and the form panel
+  // in lock-step — they read from the same fields and any drift
+  // makes exported docs disagree with what's on the screen.
   const headers =
     department === 'costume'
       ? [
@@ -121,8 +126,9 @@ export function buildBreakdownExport(projectId: string): BreakdownExportPayload 
           'Look',
           'Hair',
           'Makeup',
+          'Facial Hair',
+          'SFX / Prosthetics',
           'Wardrobe',
-          'SFX',
           'Environmental',
           'Action',
           'Continuity Notes',
@@ -157,16 +163,20 @@ export function buildBreakdownExport(projectId: string): BreakdownExportPayload 
 
       const hair = resolve(cb?.entersWith.hair, hairTags, charLook?.hair);
       const makeup = resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup);
+      // Facial Hair has no Look-default fallback yet — Look schema
+      // doesn't carry it. Manual entry only.
+      const facialHair = cb?.entersWith.facialHair || '';
       const wardrobe = resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe);
       const sfx = cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '';
       const environmental = cb?.environmental || envTags.map((t) => t.text).join(', ') || '';
       const action = cb?.action || actionTags.map((t) => t.text).join(', ') || '';
 
-      const base = [String(s.number), storyDay, ch.name, charLook?.name || ''];
+      const sceneLabel = String(s.number) + (s.numberSuffix ?? '');
+      const base = [sceneLabel, storyDay, ch.name, charLook?.name || ''];
       if (department === 'costume') {
         rows.push([...base, wardrobe, '', sfx, environmental, action, notes]);
       } else {
-        rows.push([...base, hair, makeup, wardrobe, sfx, environmental, action, notes]);
+        rows.push([...base, hair, makeup, facialHair, sfx, wardrobe, environmental, action, notes]);
       }
     }
   }

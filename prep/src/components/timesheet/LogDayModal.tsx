@@ -48,7 +48,14 @@ export function LogDayModal({
     [draft, calculate, previousWrapOut],
   );
 
-  const canSave = draft.unitCall && draft.wrapOut;
+  // Soft save gate — only a call time is required to log a day.
+  // Wrap-out / lunch / pre-call can all be filled in later from the
+  // edit flow, which matches how people actually log on set: call is
+  // known at the start of the day, the rest gets stamped through
+  // the shoot. Earnings + hour calculations stay zero until both
+  // unitCall AND wrapOut are present (handled by the `calc`
+  // useMemo above) so partial entries don't pollute the totals.
+  const canSave = !!draft.unitCall;
   const isExisting = !!initialEntry;
   const sym = CURRENCY_SYMBOLS[currency] || '£';
 
@@ -178,7 +185,10 @@ export function LogDayModal({
                 onChange={(e) => set('outOfChair', e.target.value)}
               />
             </Field>
-            <Field label="Wrap out" required>
+            {/* Wrap out is no longer marked required — partial
+                entries (call only) save fine, and earnings stay
+                zero until wrap is filled in. */}
+            <Field label="Wrap out">
               <input
                 className="tm-form-input"
                 type="time"
@@ -274,7 +284,7 @@ export function LogDayModal({
             className="tm-modal-confirm"
             onClick={() => onSave(draft)}
             disabled={!canSave}
-            title={canSave ? undefined : 'Unit call + wrap out are required'}
+            title={canSave ? undefined : 'Unit call is required to log a day'}
           >
             {isExisting ? 'Save changes' : 'Save day'}
           </button>

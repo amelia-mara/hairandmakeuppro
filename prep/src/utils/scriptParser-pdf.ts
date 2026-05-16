@@ -172,6 +172,80 @@ export function normalizeScriptText(text: string): string {
   // so that "4 SCENE THREE: EXT. STREET - DAY" becomes "3 EXT. STREET - DAY"
   normalized = normalized.split('\n').map(l => normalizeSceneWordPrefix(l)).join('\n');
 
+  // Merge revision-page "scene-number prefix" lines into the heading
+  // that follows them. On Final Draft revision pages the left + right
+  // margin scene numbers extract as a standalone "N N" line, and the
+  // actual scene heading appears on the very next line with no inline
+  // number. e.g.
+  //
+  //     150 150
+  //     OMITTED
+  //
+  //     151 151
+  //     EXT. CLIFTON SUSPENSION BRIDGE - DAY [FLASHBACK]
+  //
+  //     132A 132A *
+  //     INT. BRY'S CAR - DAY
+  //
+  // Without this merge, the parser sees "150 150" as a standalone
+  // doubled-number-OMITTED stub, and the genuine slugline on the next
+  // line has no leading number so it gets a wrong fallback counter
+  // value (e.g. 167 instead of 151) — producing both phantom OMITTED
+  // entries AND wildly wrong scene numbers on every revision-page
+  // scene. Merging them produces "151 EXT. CLIFTON SUSPENSION BRIDGE
+  // - DAY [FLASHBACK] 151" which the main parser handles as the
+  // normal numbered-heading format.
+  //
+  // We only merge when the next NON-BLANK line is either an INT/EXT
+  // heading or the literal "OMITTED" — a standalone "N N" line with
+  // nothing recognisable after it stays as-is so the
+  // doubled-number-OMITTED stub path still works for orphaned
+  // revision-page numbers.
+  {
+    const ls = normalized.split('\n');
+    const isHeading = (s: string): boolean =>
+      /^(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/i.test(s.trim());
+    const isOmitted = (s: string): boolean =>
+      /^OMITTED\.?\s*\*{0,4}\s*$/i.test(s.trim());
+    const out: string[] = [];
+    for (let i = 0; i < ls.length; i++) {
+      const trimmed = ls[i].trim();
+      // Match "N N" / "132A 132A" / "150 150 *" — number echoed
+      // identically on both sides, optional revision asterisks.
+      const m = trimmed.match(/^(\d+[A-Z]{0,4})\s+\1\s*\*{0,4}\s*$/i);
+      if (m) {
+        // Look ahead past at most 2 blank lines for the next non-blank.
+        let j = i + 1;
+        let blankSkipped = 0;
+        while (j < ls.length && ls[j].trim() === '' && blankSkipped < 2) {
+          j++;
+          blankSkipped++;
+        }
+        const next = j < ls.length ? ls[j].trim() : '';
+        if (isHeading(next)) {
+          // Prefix the heading with this scene number and skip the
+          // prefix line. Append the number again at the end so the
+          // existing heading regex (which also catches a trailing
+          // number) still cleans up correctly.
+          out.push(''); // preserve line index roughly
+          for (let k = i + 1; k < j; k++) out.push(ls[k]);
+          out.push(`${m[1]} ${next} ${m[1]}`);
+          i = j;
+          continue;
+        }
+        if (isOmitted(next)) {
+          out.push('');
+          for (let k = i + 1; k < j; k++) out.push(ls[k]);
+          out.push(`${m[1]} OMITTED ${m[1]}`);
+          i = j;
+          continue;
+        }
+      }
+      out.push(ls[i]);
+    }
+    normalized = out.join('\n');
+  }
+
   // Split lines where a scene heading (INT./EXT. + LOCATION – TIME) is followed
   // by additional action text on the same line. PDF extraction sometimes merges
   // the heading and the first action line when they're vertically close.

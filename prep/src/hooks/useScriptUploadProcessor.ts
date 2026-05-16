@@ -110,35 +110,77 @@ export function useScriptUploadProcessor({
       setProgress(70);
       setStatusText('Building scenes...');
 
-      // Deduplicate scene numbers
-      const seenSceneNumbers = new Map<string, number>();
-      const scenes: Scene[] = parsed.scenes.map((ps, idx) => {
-        let sceneNum = ps.sceneNumber;
-        const count = (seenSceneNumbers.get(sceneNum) || 0) + 1;
-        seenSceneNumbers.set(sceneNum, count);
-        if (count > 1) sceneNum = `${sceneNum}-${count}`;
+      /**
+       * Split the parser's `sceneNumber` string into a numeric anchor
+       * + alphabetic suffix. The slugline parser emits strings like
+       * "132A", "7A", "23B" — these are screenplay sub-scenes that
+       * slot under the parent scene number. They must NOT be turned
+       * into independent scenes with new integer numbers, otherwise:
+       *
+       *   - 132A appears at the wrong position in the scene list
+       *   - The diff key (number, suffix) doesn't match across drafts
+       *   - The Story Day Breakdown's scene-cell lookup fails for the
+       *     unsuffixed parent
+       *
+       * Returns { num, suffix } so the Scene record can carry both.
+       * Falls back to { num: idx+1, suffix: undefined } when the
+       * slugline had no number at all (intercut sluglines like
+       * "INT. ALEXANDRA PALACE" without a leading number).
+       */
+      const parseSceneNumberString = (
+        raw: string | null,
+        idx: number,
+      ): { num: number; suffix: string | undefined } => {
+        if (!raw) return { num: idx + 1, suffix: undefined };
+        const m = raw.trim().toUpperCase().match(/^(\d+)([A-Z]+)?$/);
+        if (!m) {
+          const parsed = parseInt(raw, 10);
+          return { num: isNaN(parsed) ? idx + 1 : parsed, suffix: undefined };
+        }
+        return { num: parseInt(m[1], 10), suffix: m[2] || undefined };
+      };
+
+      // Track (number, suffix) pairs we've already minted so we can
+      // detect TRUE duplicates (same parent + same suffix appearing
+      // twice in the script — usually a parser misfire on revision
+      // pages or a multi-page slugline echo). Replaces the old
+      // unconditional "-2 / -3" rename, which silently split one
+      // canonical scene into multiple Scene records numbered
+      // identically and inflated the scene count.
+      const seenKeys = new Set<string>();
+      const scenes: Scene[] = [];
+      let droppedDuplicates = 0;
+      parsed.scenes.forEach((ps, idx) => {
+        const { num, suffix } = parseSceneNumberString(ps.sceneNumber, idx);
+        const isPreamble = ps.location === 'PREAMBLE' || ps.location === 'PRELUDE';
+        // PRELUDE / unsuffixed-no-number scenes can't collide
+        // meaningfully — let them through as separate entries.
+        const dedupeKey = isPreamble
+          ? `__preamble__${idx}`
+          : `${num}|${suffix ?? ''}|${ps.intExt}|${ps.timeOfDay}|${ps.location}`;
+        if (seenKeys.has(dedupeKey)) {
+          droppedDuplicates++;
+          return;
+        }
+        seenKeys.add(dedupeKey);
 
         const charIds = ps.characters
-          .map(name => charIdMap.get(name))
+          .map((name) => charIdMap.get(name))
           .filter((id): id is string => !!id);
 
-        const dayNight = ps.timeOfDay === 'MORNING' ? 'DAWN' as const
-          : ps.timeOfDay === 'EVENING' ? 'DUSK' as const
-          : ps.timeOfDay === 'CONTINUOUS' ? 'DAY' as const
-          : ps.timeOfDay as 'DAY' | 'NIGHT';
+        const dayNight = ps.timeOfDay === 'MORNING' ? ('DAWN' as const)
+          : ps.timeOfDay === 'EVENING' ? ('DUSK' as const)
+          : ps.timeOfDay === 'CONTINUOUS' ? ('DAY' as const)
+          : (ps.timeOfDay as 'DAY' | 'NIGHT');
 
-        const parsedNum = parseInt(sceneNum, 10);
-        // Accept both legacy 'PREAMBLE' (existing data) and the new
-        // 'PRELUDE' string emitted by the current parser.
-        const isPreamble = ps.location === 'PREAMBLE' || ps.location === 'PRELUDE';
         // Infer the breakdown form's Timeline → Type from the script's
         // own markers — `[FLASHBACK]`, `[MONTAGE]`, `[PRESENT]`, etc.
-        // appear in the slugline or on the title card line above the
-        // heading. Saves the user tagging every flagged scene by hand.
         const timelineType = inferTimelineType(ps.slugline, ps.titleCardBefore);
-        return {
+
+        scenes.push({
           id: crypto.randomUUID(),
-          number: isNaN(parsedNum) ? idx + 1 : parsedNum,
+          number: num,
+          numberSuffix: suffix,
           intExt: ps.intExt,
           dayNight,
           location: isPreamble ? 'PRELUDE' : ps.location,
@@ -160,8 +202,15 @@ export function useScriptUploadProcessor({
           isOmitted: ps.isOmitted || undefined,
           backgroundCharacters: ps.backgroundCharacters,
           backgroundNotes: ps.backgroundNotes,
-        };
+        });
       });
+      if (droppedDuplicates > 0) {
+        console.warn(
+          `[scriptUpload] Dropped ${droppedDuplicates} duplicate scene(s) ` +
+          `(same number+suffix+location+time appeared twice — likely a ` +
+          `revision-page echo or parser misfire).`,
+        );
+      }
 
       setProgress(85);
       setStatusText('Generating looks...');

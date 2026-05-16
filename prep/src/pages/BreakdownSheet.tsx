@@ -16,6 +16,36 @@ import { SceneBackgroundRow } from './script-breakdown/SceneBackgroundRow';
 /* ━━━ Helpers ━━━ */
 
 /** Find the previous scene a character appeared in (script order) */
+/**
+ * Extract a numeric day index from a story-day label. "Day 5" → 5;
+ * everything else (flashback labels, free-form text, blanks) returns
+ * null. Used by classifyDayChange to tell adjacent-day transitions
+ * apart from real multi-day jumps so the banner can switch between
+ * NEW STORY DAY and TIME JUMP rather than always shouting TIME JUMP.
+ */
+function extractDayNumber(label: string): number | null {
+  const m = label.trim().match(/^Day\s+(\d+)\s*$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Classify a story-day transition between consecutive scenes:
+ *   'new-day'   → consecutive numeric Day N → Day N+1 transition.
+ *                 Shown as a quieter NEW STORY DAY banner.
+ *   'time-jump' → multi-day gap, flashback boundary, or non-numeric
+ *                 label on either side. Shown as the existing loud
+ *                 TIME JUMP banner with the timeline note attached.
+ * Same logic mirrored on mobile-pwa/Breakdown.tsx so both surfaces
+ * label transitions identically.
+ */
+function classifyDayChange(prev: string, curr: string): 'time-jump' | 'new-day' {
+  const p = extractDayNumber(prev);
+  const c = extractDayNumber(curr);
+  return p != null && c != null && c - p === 1 ? 'new-day' : 'time-jump';
+}
+
 function findPrevScene(charId: string, currentIdx: number, scenes: Scene[]): number | null {
   for (let i = currentIdx - 1; i >= 0; i--) {
     if (scenes[i].characterIds.includes(charId)) return scenes[i].number;
@@ -272,17 +302,20 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
     [sequence],
   );
   /* Detect time jumps: scenes where the story day differs from the previous scene */
-  const timeJumpSceneIds = useMemo(() => {
-    const jumpIds = new Set<string>();
+  // Per-scene day-change classification. Time-jump (loud banner) vs
+  // new-day (quieter banner) — see classifyDayChange above. Replaces
+  // the old single-Set of "any change is a jump" behaviour.
+  const dayChangeBySceneId = useMemo(() => {
+    const map = new Map<string, 'time-jump' | 'new-day'>();
     let prevDay = '';
     for (const s of scenes) {
       const day = s.storyDay || '';
       if (prevDay && day && day !== prevDay) {
-        jumpIds.add(s.id);
+        map.set(s.id, classifyDayChange(prevDay, day));
       }
       if (day) prevDay = day;
     }
-    return jumpIds;
+    return map;
   }, [scenes]);
 
   /* Ensure every scene has a breakdown — initialise any that are missing
@@ -325,7 +358,12 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
   /** Build an export row for a character in a scene (shared between copy & CSV) */
   const buildExportRows = useCallback(() => {
-    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Wardrobe', 'SFX', 'Environmental', 'Action', 'Continuity Notes'];
+    // Facial Hair sits between Makeup and Wardrobe to mirror the
+    // breakdown form panel's HMU box ordering (Hair → Makeup → Facial
+    // Hair → SFX/Prosthetics → Wardrobe) — and the SFX/Prosthetics
+    // header is now spelt out fully to match the column the table
+    // already renders.
+    const headers = ['Scene', 'Day', 'Character', 'Look', 'Hair', 'Makeup', 'Facial Hair', 'SFX / Prosthetics', 'Wardrobe', 'Environmental', 'Action', 'Continuity Notes'];
     const rows: string[][] = [headers];
     for (let idx = 0; idx < scenes.length; idx++) {
       const s = scenes[idx];
@@ -351,14 +389,17 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
           manual || (tagList.length > 0 ? tagList.map((t) => t.text).join(', ') : '') || lookField || '';
 
         rows.push([
-          String(s.number),
+          String(s.number) + (s.numberSuffix ?? ''),
           storyDay,
           ch.name,
           charLook?.name || '',
           resolve(cb?.entersWith.hair, hairTags, charLook?.hair),
           resolve(cb?.entersWith.makeup, makeupTags, charLook?.makeup),
-          resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
+          // Facial Hair has no Look-default fallback yet (Look schema
+          // doesn't carry it), so we only pull the manual entry.
+          cb?.entersWith.facialHair || '',
           cb?.sfx || sfxTags.map((t) => t.text).join(', ') || '',
+          resolve(cb?.entersWith.wardrobe, wardrobeTags, charLook?.wardrobe),
           cb?.environmental || envTags.map((t) => t.text).join(', ') || '',
           cb?.action || actionTags.map((t) => t.text).join(', ') || '',
           notes,
@@ -580,7 +621,8 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
           /* Resolve story day: breakdown timeline → scene-level storyDay */
           const storyDay = bd?.timeline.day || scene.storyDay || '';
-          const isTimeJump = timeJumpSceneIds.has(scene.id);
+          const dayChange = dayChangeBySceneId.get(scene.id);
+          const isTimeJump = dayChange === 'time-jump';
 
           /* Scene-type class for colour coding */
           const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== 'Present' && timelineType !== ''
@@ -595,12 +637,19 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
               onClick={splitView ? () => handleBreakdownSceneClick(scene.id) : undefined}
               style={splitView ? { cursor: 'pointer' } as CSSProperties : undefined}
             >
-              {/* Time jump banner */}
-              {isTimeJump && (
+              {/* Day-change banner. Time jump: multi-day gaps and
+                  flashback boundaries — loud orange band with the
+                  timeline note. New story day: next consecutive Day N
+                  → Day N+1 — quieter teal band, no note. */}
+              {dayChange === 'time-jump' && (
                 <div className="bs-time-jump-banner">
-                  <span className="bs-time-jump-icon">&#9203;</span>
                   TIME JUMP — {storyDay}
                   {bd?.timeline.note && <span className="bs-time-jump-detail"> · {bd.timeline.note}</span>}
+                </div>
+              )}
+              {dayChange === 'new-day' && (
+                <div className="bs-new-day-banner">
+                  NEW STORY DAY — {storyDay}
                 </div>
               )}
               {/* Scene header */}
@@ -621,7 +670,11 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                 {synopsis && <div className="bs-scene-synopsis">{synopsis}</div>}
               </div>
 
-              {/* Table */}
+              {/* Table — column order mirrors the breakdown form's HMU
+                  box (Hair → Makeup → Facial Hair → SFX/Prosthetics →
+                  Wardrobe). Keep them in lock-step so what the user
+                  types in the form lands where they expect on the
+                  breakdown sheet and exports. */}
               <table className="bs-table">
                 <thead>
                   <tr>
@@ -629,8 +682,9 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                     <th className="bs-col-look">Look</th>
                     <th className="bs-col-hair">Hair</th>
                     <th className="bs-col-makeup">Makeup</th>
-                    <th className="bs-col-wardrobe">Wardrobe</th>
+                    <th className="bs-col-facial-hair">Facial Hair</th>
                     <th className="bs-col-sfx">SFX / Prosthetics</th>
+                    <th className="bs-col-wardrobe">Wardrobe</th>
                     <th className="bs-col-env">Environmental</th>
                     <th className="bs-col-action">Action</th>
                     <th className="bs-col-notes">Continuity Notes</th>
@@ -665,6 +719,9 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
 
                     const hair = resolveField(cb?.entersWith.hair, charLook?.hair);
                     const makeup = resolveField(cb?.entersWith.makeup, charLook?.makeup);
+                    // Facial Hair has no Look-default to fall back to —
+                    // Look schema doesn't carry it yet.
+                    const facialHair = cb?.entersWith.facialHair || '';
                     const wardrobe = resolveField(cb?.entersWith.wardrobe, charLook?.wardrobe);
                     const sfx = cb?.sfx || '';
                     const environmental = cb?.environmental || '';
@@ -719,6 +776,18 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                             <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>
                           )}
                         </td>
+                        <td className="bs-col-facial-hair">
+                          {facialHair}
+                          {showPlaceholder(facialHair, 0)}
+                          {hasChange && cb?.exitsWith.facialHair && (
+                            <div className="bs-exit-note">Exit: {cb.exitsWith.facialHair}</div>
+                          )}
+                        </td>
+                        <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
+                          {sfx}
+                          {showPlaceholder(sfx, sfxTags.length)}
+                          {pills(sfxTags, '#ef4444')}
+                        </td>
                         <td className="bs-col-wardrobe">
                           {wardrobe}
                           {showPlaceholder(wardrobe, wardrobeTags.length)}
@@ -726,11 +795,6 @@ export function BreakdownSheet({ projectId }: { projectId: string }) {
                           {hasChange && cb?.exitsWith.wardrobe && (
                             <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>
                           )}
-                        </td>
-                        <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
-                          {sfx}
-                          {showPlaceholder(sfx, sfxTags.length)}
-                          {pills(sfxTags, '#ef4444')}
                         </td>
                         <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
                           {environmental}
@@ -855,28 +919,36 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
   /** entersWith edits mirror to the character's currently-selected
    *  look so the next scene that picks the same look auto-fills. */
   const updateEntersWith = useCallback(
-    (sceneId: string, characterId: string, field: 'hair' | 'makeup' | 'wardrobe', value: string) => {
+    (sceneId: string, characterId: string, field: 'hair' | 'makeup' | 'wardrobe' | 'facialHair', value: string) => {
       const bd = ensureRow(sceneId, characterId);
       const cb = bd.characters.find((c) => c.characterId === characterId)!;
       store.updateCharacterBreakdown(sceneId, characterId, {
         entersWith: { ...cb.entersWith, [field]: value },
       });
-      if (cb.lookId) {
+      // Only mirror hair / makeup / wardrobe back onto the look —
+      // the Look schema doesn't carry facialHair yet, so we skip the
+      // updateLook call for it. Facial hair stays scene-scoped until
+      // we extend the Look type.
+      if (cb.lookId && field !== 'facialHair') {
         parsedScriptStore.updateLook(projectId, cb.lookId, { [field]: value });
       }
     },
     [ensureRow, store, parsedScriptStore, projectId],
   );
 
-  const timeJumpSceneIds = useMemo(() => {
-    const jumpIds = new Set<string>();
+  // Same day-change classifier as the standalone view above — keeps
+  // the embedded breakdown's banners in sync with the full table.
+  const dayChangeBySceneId = useMemo(() => {
+    const map = new Map<string, 'time-jump' | 'new-day'>();
     let prevDay = '';
     for (const s of scenes) {
       const day = s.storyDay || '';
-      if (prevDay && day && day !== prevDay) jumpIds.add(s.id);
+      if (prevDay && day && day !== prevDay) {
+        map.set(s.id, classifyDayChange(prevDay, day));
+      }
       if (day) prevDay = day;
     }
-    return jumpIds;
+    return map;
   }, [scenes]);
 
   const scenesWithCast = scenes.filter((s) => s.characterIds.length > 0);
@@ -897,7 +969,8 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
         const timelineType = bd?.timeline.type;
         const showBadge = timelineType && timelineType !== 'Normal' && timelineType !== '';
         const storyDay = bd?.timeline.day || scene.storyDay || '';
-        const isTimeJump = timeJumpSceneIds.has(scene.id);
+        const dayChange = dayChangeBySceneId.get(scene.id);
+        const isTimeJump = dayChange === 'time-jump';
         const sceneTypeClass = timelineType && timelineType !== 'Normal' && timelineType !== ''
           ? `bs-scene-block--${timelineType.toLowerCase().replace(/\s+/g, '-')}` : '';
         const isActive = scene.id === activeSceneId;
@@ -908,11 +981,15 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
             ref={(el) => { sceneRefs.current[scene.id] = el; }}
             className={`bs-scene-block ${isTimeJump ? 'bs-scene-block--time-jump' : ''} ${sceneTypeClass} ${isActive ? 'bs-scene-block--highlighted' : ''}`}
           >
-            {isTimeJump && (
+            {dayChange === 'time-jump' && (
               <div className="bs-time-jump-banner">
-                <span className="bs-time-jump-icon">&#9203;</span>
                 TIME JUMP — {storyDay}
                 {bd?.timeline.note && <span className="bs-time-jump-detail"> · {bd.timeline.note}</span>}
+              </div>
+            )}
+            {dayChange === 'new-day' && (
+              <div className="bs-new-day-banner">
+                NEW STORY DAY — {storyDay}
               </div>
             )}
             <div className="bs-scene-header">
@@ -936,8 +1013,9 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                   <th className="bs-col-look">Look</th>
                   <th className="bs-col-hair">Hair</th>
                   <th className="bs-col-makeup">Makeup</th>
-                  <th className="bs-col-wardrobe">Wardrobe</th>
+                  <th className="bs-col-facial-hair">Facial Hair</th>
                   <th className="bs-col-sfx">SFX</th>
+                  <th className="bs-col-wardrobe">Wardrobe</th>
                   <th className="bs-col-env">Env.</th>
                   <th className="bs-col-action">Action</th>
                   <th className="bs-col-notes">Notes</th>
@@ -964,6 +1042,9 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                     manual || lookField || '';
                   const hair = resolve(cb?.entersWith.hair, charLook?.hair);
                   const makeup = resolve(cb?.entersWith.makeup, charLook?.makeup);
+                  // Facial Hair has no Look-default fallback yet —
+                  // Look schema doesn't carry it.
+                  const facialHair = cb?.entersWith.facialHair || '';
                   const wardrobe = resolve(cb?.entersWith.wardrobe, charLook?.wardrobe);
                   const sfx = cb?.sfx || '';
                   const environmental = cb?.environmental || '';
@@ -1023,13 +1104,12 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                         {pills(makeupTags, '#C2785C')}
                         {hasChange && cb?.exitsWith.makeup && <div className="bs-exit-note">Exit: {cb.exitsWith.makeup}</div>}
                       </td>
-                      <td className="bs-col-wardrobe">
+                      <td className="bs-col-facial-hair">
                         <EditableCell
-                          value={wardrobe}
-                          onSave={(v) => updateEntersWith(scene.id, cid, 'wardrobe', v)}
+                          value={facialHair}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'facialHair', v)}
                         />
-                        {pills(wardrobeTags, '#ec4899')}
-                        {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
+                        {hasChange && cb?.exitsWith.facialHair && <div className="bs-exit-note">Exit: {cb.exitsWith.facialHair}</div>}
                       </td>
                       <td className={`bs-col-sfx${sfx || sfxTags.length > 0 ? ' bs-cell--flag' : ''}`}>
                         <EditableCell
@@ -1037,6 +1117,14 @@ export function EmbeddedBreakdownTable({ projectId, activeSceneId }: { projectId
                           onSave={(v) => updateChar(scene.id, cid, { sfx: v })}
                         />
                         {pills(sfxTags, '#ef4444')}
+                      </td>
+                      <td className="bs-col-wardrobe">
+                        <EditableCell
+                          value={wardrobe}
+                          onSave={(v) => updateEntersWith(scene.id, cid, 'wardrobe', v)}
+                        />
+                        {pills(wardrobeTags, '#ec4899')}
+                        {hasChange && cb?.exitsWith.wardrobe && <div className="bs-exit-note">Exit: {cb.exitsWith.wardrobe}</div>}
                       </td>
                       <td className={`bs-col-env${environmental || envTags.length > 0 ? ' bs-cell--flag' : ''}`}>
                         <EditableCell

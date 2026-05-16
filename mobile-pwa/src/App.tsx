@@ -368,10 +368,14 @@ function AppContent() {
     setShowHome(true);
   };
 
-  // Handle scene selection (from Today or Breakdown)
-  const handleSceneSelect = (sceneId: string) => {
+  // Handle scene selection (from Today or Breakdown). The optional
+  // characterId lets callers deep-link to a specific character's
+  // continuity view (Breakdown's per-character "Track →" button uses
+  // this so SceneView opens on the character whose card was active
+  // rather than always defaulting to the first cast member).
+  const handleSceneSelect = (sceneId: string, characterId?: string) => {
     setCurrentScene(sceneId);
-    setCurrentCharacter(null); // Will auto-select first character
+    setCurrentCharacter(characterId ?? null);
   };
 
   // Handle back from scene view

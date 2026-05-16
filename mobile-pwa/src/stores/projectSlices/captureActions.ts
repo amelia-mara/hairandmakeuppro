@@ -6,14 +6,60 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import type { ProjectSet, ProjectGet } from './types';
 
+/**
+ * Backfill required structural fields on a SceneCapture that was
+ * persisted under an older schema (or arrived from cross-device sync
+ * with fields the local schema marks required but the remote one
+ * didn't yet have).
+ *
+ * Without this, CharacterProfile crashes on the first paint with
+ * "Cannot read properties of undefined (reading 'sfxRequired')" /
+ * "...reading 'length'" / similar — the ErrorBoundary catches and
+ * surfaces the generic "something went wrong" page. The user reported
+ * exactly that crash on the earliest scenes of a long-lived project
+ * where the original captures predate the current schema.
+ *
+ * Returning a NEW object only when something was missing keeps the
+ * Zustand referential-equality optimisation working for the common
+ * case where the data is already well-formed.
+ */
+function normaliseCapture(c: SceneCapture | undefined): SceneCapture | undefined {
+  if (!c) return c;
+  const needsFix =
+    !c.photos ||
+    !c.additionalPhotos ||
+    !c.continuityFlags ||
+    !c.continuityEvents ||
+    !c.sfxDetails;
+  if (!needsFix) return c;
+  return {
+    ...c,
+    photos: c.photos ?? {},
+    additionalPhotos: c.additionalPhotos ?? [],
+    continuityFlags: c.continuityFlags ?? createEmptyContinuityFlags(),
+    continuityEvents: c.continuityEvents ?? [],
+    sfxDetails: c.sfxDetails ?? createEmptySFXDetails(),
+    notes: c.notes ?? '',
+  };
+}
+
 export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
   // Scene Capture actions
   getOrCreateSceneCapture: (sceneId: string, characterId: string): SceneCapture => {
     const state = get();
     const key = `${sceneId}-${characterId}`;
-    const existing = state.sceneCaptures[key];
+    const existing = normaliseCapture(state.sceneCaptures[key]);
 
-    if (existing) return existing;
+    if (existing) {
+      // If the normaliser had to backfill anything, persist the
+      // repaired object back into the store so subsequent reads (and
+      // saves) see a consistent shape and the structural-field guards
+      // downstream don't have to handle undefined either.
+      if (existing !== state.sceneCaptures[key]) {
+        set((s) => ({ sceneCaptures: { ...s.sceneCaptures, [key]: existing } }));
+      }
+      return existing;
+    }
 
     const sceneNumber = state.currentProject?.scenes.find(s => s.id === sceneId)?.sceneNumber;
     const look = state.currentProject?.looks.find(
@@ -255,7 +301,12 @@ export const createCaptureSlice = (set: ProjectSet, get: ProjectGet) => ({
   },
 
   getSceneCapture: (sceneId: string, characterId: string) => {
-    return get().sceneCaptures[`${sceneId}-${characterId}`];
+    // Same defensive backfill as getOrCreateSceneCapture — callers
+    // that branch on a missing capture (`getSceneCapture(...) ||
+    // getOrCreateSceneCapture(...)`) still see "missing" as undefined,
+    // but if a capture exists with an older shape they get a
+    // structurally-complete object back.
+    return normaliseCapture(get().sceneCaptures[`${sceneId}-${characterId}`]);
   },
 
   // ── Floor-team deviation record ────────────────────────────────────
