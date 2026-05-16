@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
+import { supabase } from '@/lib/supabase';
+import * as supabaseStorage from '@/services/supabaseStorage';
+import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import type { CallSheet, CallSheetScene, ShootingSceneStatus, SceneFilmingStatus } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 import { parseCallSheetPDF } from '@/utils/callSheetParser';
@@ -56,6 +59,10 @@ interface CallSheetState {
   restoreCallSheetsForProject: (projectId: string) => boolean;
   hasSavedCallSheets: (projectId: string) => boolean;
   clearCallSheetsForProject: () => void;
+
+  // Server fetch on project switch. setProject in projectStore fans
+  // out to this so per-project stores own their own data loading.
+  fetchForProject: (projectId: string) => Promise<void>;
 }
 
 // Validate that a call sheet has proper structure (scenes belong to this call sheet only)
@@ -502,6 +509,86 @@ export const useCallSheetStore = create<CallSheetState>()(
           isUploading: false,
           uploadError: null,
         });
+      },
+
+      // Server fetch for a project. Called from projectStore.setProject
+      // so this store owns its data ingress. Replaces the previous
+      // pattern where ProjectHubScreen.loadDocumentsIntoStores pushed
+      // mapped call_sheet_data rows in directly — the duplicate paths
+      // were a race-condition risk on rapid A→B→A project switching.
+      fetchForProject: async (projectId: string) => {
+        set({
+          callSheets: [],
+          activeCallSheetId: null,
+          isUploading: false,
+          uploadError: null,
+        });
+        const { data, error } = await supabase
+          .from('call_sheet_data')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('production_day');
+        if (error) {
+          console.warn('[callSheetStore.fetchForProject] query failed', error);
+          return;
+        }
+        if (!data || data.length === 0) return;
+
+        const callSheets: CallSheet[] = data.map((db) => {
+          const parsed = (db.parsed_data || {}) as Record<string, unknown>;
+          return {
+            ...parsed,
+            id: db.id as string,
+            date: (db.shoot_date as string) || '',
+            productionDay: (db.production_day as number) || 0,
+            rawText: (db.raw_text as string) || (parsed.rawText as string | undefined),
+            pdfUri: undefined,
+            uploadedAt: db.created_at ? new Date(db.created_at as string) : new Date(),
+            scenes: (parsed.scenes as CallSheet['scenes']) || [],
+          } as CallSheet;
+        });
+
+        const sorted = [...callSheets].sort((a, b) => a.productionDay - b.productionDay);
+        setReceivingFromServer(true);
+        try {
+          set({
+            callSheets: sorted,
+            activeCallSheetId: sorted[sorted.length - 1]?.id ?? null,
+          });
+        } finally {
+          setReceivingFromServer(false);
+        }
+
+        // PDF dataUri downloads run detached so the project-switch
+        // path isn't blocked on storage I/O. Each merge re-reads the
+        // current callSheets list and bails if the sheet has been
+        // removed (user switched projects before the download
+        // resolved).
+        for (const db of data) {
+          const storagePath = db.storage_path as string | null;
+          const sheetId = db.id as string;
+          if (!storagePath) continue;
+          supabaseStorage.downloadDocumentAsDataUri(storagePath)
+            .then(({ dataUri, error: dlError }) => {
+              if (dlError || !dataUri) {
+                console.warn('[callSheetStore.fetchForProject] PDF download failed:', dlError?.message || 'no data', storagePath);
+                return;
+              }
+              const current = get().callSheets;
+              if (!current.some((c) => c.id === sheetId)) return;
+              setReceivingFromServer(true);
+              try {
+                set((state) => ({
+                  callSheets: state.callSheets.map((cs) =>
+                    cs.id === sheetId ? { ...cs, pdfUri: dataUri } : cs,
+                  ),
+                }));
+              } finally {
+                setReceivingFromServer(false);
+              }
+            })
+            .catch((err) => console.warn('[callSheetStore.fetchForProject] PDF download error:', err));
+        }
       },
     }),
     {

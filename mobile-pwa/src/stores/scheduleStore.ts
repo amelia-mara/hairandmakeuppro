@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
+import { supabase } from '@/lib/supabase';
+import * as supabaseStorage from '@/services/supabaseStorage';
+import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import type {
   ProductionSchedule,
   ScheduleCastMember,
@@ -72,6 +75,10 @@ interface ScheduleState {
   restoreScheduleForProject: (projectId: string) => boolean;
   hasSavedSchedule: (projectId: string) => boolean;
   clearScheduleForProject: () => void;
+
+  // Server fetch on project switch. setProject in projectStore fans
+  // out to this so per-project stores own their own data loading.
+  fetchForProject: (projectId: string) => Promise<void>;
 }
 
 export const useScheduleStore = create<ScheduleState>()(
@@ -415,6 +422,74 @@ export const useScheduleStore = create<ScheduleState>()(
           stage2Progress: { current: 0, total: 0 },
           stage2Error: null,
         });
+      },
+
+      // Server fetch for a project. Called from projectStore.setProject
+      // so this store owns its data ingress. Clears any in-flight state
+      // first to keep render output deterministic during the switch.
+      fetchForProject: async (projectId: string) => {
+        set({
+          schedule: null,
+          isUploading: false,
+          uploadError: null,
+          isProcessingStage2: false,
+          stage2Progress: { current: 0, total: 0 },
+          stage2Error: null,
+        });
+        const { data, error } = await supabase
+          .from('schedule_data')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (error) {
+          console.warn('[scheduleStore.fetchForProject] query failed', error);
+          return;
+        }
+        if (!data || data.length === 0) return;
+        const db = data[0];
+        if (!db.days && !db.cast_list) return;
+
+        const schedule: ProductionSchedule = {
+          id: db.id as string,
+          status: (db.status as ProductionSchedule['status']) === 'complete' ? 'complete' : 'pending',
+          castList: (db.cast_list as unknown as ScheduleCastMember[]) || [],
+          days: (db.days as unknown as ScheduleDay[]) || [],
+          totalDays: ((db.days as unknown as ScheduleDay[]) || []).length,
+          uploadedAt: db.created_at ? new Date(db.created_at as string) : new Date(),
+          rawText: (db.raw_pdf_text as string) || undefined,
+        };
+        setReceivingFromServer(true);
+        try {
+          get().setSchedule(schedule);
+        } finally {
+          setReceivingFromServer(false);
+        }
+
+        // PDF dataUri download runs detached so the rest of the
+        // project-switch path isn't blocked on storage I/O. Guard the
+        // setSchedule merge against the user having switched away
+        // before the download resolved — we look up the schedule
+        // again and bail if its id no longer matches.
+        const storagePath = db.storage_path as string | null;
+        if (storagePath) {
+          supabaseStorage.downloadDocumentAsDataUri(storagePath)
+            .then(({ dataUri, error: dlError }) => {
+              if (dlError || !dataUri) {
+                console.warn('[scheduleStore.fetchForProject] PDF download failed:', dlError?.message || 'no data', storagePath);
+                return;
+              }
+              const current = get().schedule;
+              if (!current || current.id !== db.id) return;
+              setReceivingFromServer(true);
+              try {
+                get().setSchedule({ ...current, pdfUri: dataUri });
+              } finally {
+                setReceivingFromServer(false);
+              }
+            })
+            .catch((err) => console.warn('[scheduleStore.fetchForProject] PDF download error:', err));
+        }
       },
     }),
     {

@@ -101,104 +101,12 @@ function deduplicateLocalSceneNumbers(): void {
   }
 }
 
-// Load document data (schedule, call sheets, script) into the appropriate stores.
-// Called immediately on project open so synced users see data right away.
-function loadDocumentsIntoStores(
-  scheduleData: any[],
-  callSheetData: any[],
-  scriptData: any[],
-): void {
-  // Schedule
-  if (scheduleData.length > 0) {
-    const db = scheduleData[0];
-    if (db.days || db.cast_list) {
-      const schedule: ProductionSchedule = {
-        id: db.id,
-        status: db.status === 'complete' ? 'complete' : 'pending',
-        castList: (db.cast_list as unknown as ScheduleCastMember[]) || [],
-        days: (db.days as unknown as ScheduleDay[]) || [],
-        totalDays: ((db.days as unknown as ScheduleDay[]) || []).length,
-        uploadedAt: new Date(db.created_at),
-        rawText: db.raw_pdf_text || undefined,
-      };
-      useScheduleStore.getState().setSchedule(schedule);
-
-      // Download the schedule PDF from storage in background
-      if (db.storage_path) {
-        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri, error }) => {
-          if (error || !dataUri) {
-            console.warn('[ProjectOpen] Schedule PDF download failed:', error?.message || 'no data', db.storage_path);
-            return;
-          }
-          setReceivingFromServer(true);
-          try {
-            const current = useScheduleStore.getState().schedule;
-            if (current && current.id === db.id) {
-              useScheduleStore.getState().setSchedule({ ...current, pdfUri: dataUri });
-            }
-          } finally {
-            setReceivingFromServer(false);
-          }
-        }).catch(err => console.warn('[ProjectOpen] Schedule PDF download error:', err));
-      }
-    }
-  }
-
-  // Call sheets
-  if (callSheetData.length > 0) {
-    const callSheetStore = useCallSheetStore.getState();
-    callSheetStore.clearAll();
-
-    const callSheets: CallSheet[] = callSheetData.map((db: Record<string, unknown>) => {
-      const parsed = (db.parsed_data || {}) as Record<string, unknown>;
-      return {
-        ...parsed,
-        id: db.id,
-        date: db.shoot_date,
-        productionDay: db.production_day,
-        rawText: db.raw_text || (parsed.rawText as string | undefined),
-        pdfUri: undefined,
-        uploadedAt: new Date(db.created_at as string),
-        scenes: (parsed.scenes as CallSheet['scenes']) || [],
-      } as CallSheet;
-    });
-
-    for (const cs of callSheets) {
-      useCallSheetStore.setState((state) => ({
-        callSheets: [...state.callSheets, cs].sort(
-          (a, b) => a.productionDay - b.productionDay
-        ),
-      }));
-    }
-
-    const latest = callSheets[callSheets.length - 1];
-    if (latest) {
-      callSheetStore.setActiveCallSheet(latest.id);
-    }
-
-    // Download call sheet PDFs in background
-    for (const db of callSheetData) {
-      if (db.storage_path) {
-        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri, error }) => {
-          if (error || !dataUri) {
-            console.warn('[ProjectOpen] Call sheet PDF download failed:', error?.message || 'no data', db.storage_path);
-            return;
-          }
-          setReceivingFromServer(true);
-          try {
-            useCallSheetStore.setState((state) => ({
-              callSheets: state.callSheets.map((cs) =>
-                cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
-              ),
-            }));
-          } finally {
-            setReceivingFromServer(false);
-          }
-        }).catch(err => console.warn('[ProjectOpen] Call sheet PDF download error:', err));
-      }
-    }
-  }
-
+// Load script document into the appropriate store. Schedule + call
+// sheets are owned by their respective stores' fetchForProject,
+// fanned out from projectStore.setProject — they're no longer pushed
+// from here. Script remains here because it routes through
+// useProjectStore.setScriptPdf rather than its own store.
+function loadDocumentsIntoStores(scriptData: any[]): void {
   // Script — download in background, but suppress auto-save so we don't
   // re-upload the PDF we just downloaded (which would create duplicate
   // script_uploads rows and risk deactivating the original).
@@ -551,15 +459,18 @@ export function ProjectHubScreen() {
       const {
         scenes, characters, looks, sceneCharacters, lookScenes,
         continuityEvents, photos: dbPhotos,
-        scheduleData, callSheetData, scriptData, error,
+        scriptData, error,
       } = await supabaseProjects.getProjectData(membership.projectId);
 
       let hasSceneData = !error && scenes.length > 0;
       const hasContinuity = continuityEvents.length > 0;
-      const hasDocuments = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
+      // hasDocuments now reflects only the script — schedule + call
+      // sheets are loaded asynchronously by their stores via
+      // setProject's fan-out and don't need to gate this path.
+      const hasDocuments = scriptData.length > 0;
 
       console.log(`[ProjectOpen] Server data — scenes: ${scenes.length}, characters: ${characters.length}, looks: ${looks.length}, ` +
-        `scripts: ${scriptData.length}, schedules: ${scheduleData.length}, callSheets: ${callSheetData.length}, ` +
+        `scripts: ${scriptData.length}, ` +
         `captures: ${continuityEvents.length}${error ? `, error: ${error.message}` : ''}`);
 
       // Fallback: if scenes table is empty but script_uploads has parsed_data,
@@ -769,7 +680,7 @@ export function ProjectHubScreen() {
             // auto-save doesn't keep failing the unique constraint.
             deduplicateLocalSceneNumbers();
             // Also load server-side documents (call sheets etc.) that DO exist
-            loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+            loadDocumentsIntoStores(scriptData);
           } finally {
             setReceivingFromServer(false);
           }
@@ -798,7 +709,7 @@ export function ProjectHubScreen() {
         setReceivingFromServer(true);
         try {
           store.setProject(project);
-          loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+          loadDocumentsIntoStores(scriptData);
 
           // Load continuity events (scene captures) + photos
           if (continuityEvents.length > 0) {
