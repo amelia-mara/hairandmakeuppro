@@ -10,7 +10,7 @@ import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { flushAutoSave } from '@/services/autoSave';
 import { useSyncStore } from '@/stores/syncStore';
-import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
+import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails, FloorTracking, CostumeLookbook } from '@/types';
 import { savePhotoBlob } from '@/db';
 import { detectCharactersForScene } from '@/utils/scriptParser';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
@@ -838,6 +838,12 @@ export function ProjectHubScreen() {
                 }
               }
 
+              const eventsData = ce.continuity_events_data as {
+                events?: ContinuityEvent[];
+                floor_tracking?: FloorTracking;
+                costume_lookbook?: CostumeLookbook;
+              } | null;
+
               const capture: SceneCapture = {
                 id: ce.id,
                 sceneId: ce.scene_id,
@@ -850,8 +856,9 @@ export function ProjectHubScreen() {
                   sweat: false, dishevelled: false, blood: false,
                   dirt: false, wetHair: false, tears: false,
                 },
-                continuityEvents:
-                  (ce.continuity_events_data as { events?: ContinuityEvent[] } | null)?.events ?? [],
+                continuityEvents: eventsData?.events ?? [],
+                floorTracking: eventsData?.floor_tracking,
+                costumeLookbook: eventsData?.costume_lookbook,
                 sfxDetails: (ce.sfx_details as unknown as SFXDetails) || {
                   sfxRequired: false, sfxTypes: [], prostheticPieces: '',
                   prostheticAdhesive: '', bloodTypes: [], bloodProducts: '',
