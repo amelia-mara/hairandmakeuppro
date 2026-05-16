@@ -471,8 +471,6 @@ export function ProjectHubScreen() {
     deleteProject,
     leaveProject,
     isLoading,
-    pinnedProjectId,
-    setPinnedProject,
     setSettingsProjectId,
     refreshUserProjects,
     autoOpenProjectId,
@@ -509,19 +507,16 @@ export function ProjectHubScreen() {
     }
   }, [autoOpenProjectId, projectMemberships]);
 
-  // Determine "current" (pinned) project and sort the rest by date created
-  const pinnedProject = pinnedProjectId
-    ? projectMemberships.find((p) => p.projectId === pinnedProjectId) || null
+  // Determine "current" project from the canonical projectStore state.
+  // Previously the Hub computed its own "current" via pinnedProjectId →
+  // most-recently-accessed fallback, which could disagree with what the
+  // header dropdown showed (which always reads useProjectStore). The
+  // disagreement was the silent-failure F-14 — three views showing
+  // three different "currents". Single source of truth now.
+  const openProjectId = useProjectStore((s) => s.currentProject?.id);
+  const currentProject = openProjectId
+    ? projectMemberships.find((p) => p.projectId === openProjectId) ?? null
     : null;
-
-  // If no pinned project, fall back to most recently accessed
-  const currentProject =
-    pinnedProject ||
-    (projectMemberships.length > 0
-      ? [...projectMemberships].sort(
-          (a, b) => new Date(b.lastAccessedAt).getTime() - new Date(a.lastAccessedAt).getTime()
-        )[0]
-      : null);
 
   // Other projects sorted by date created (joinedAt) descending — newest first
   const otherProjects = projectMemberships
@@ -1099,7 +1094,6 @@ export function ProjectHubScreen() {
                       <ProjectMenu
                         isOpen={menuOpenId === currentProject.projectId}
                         onClose={() => setMenuOpenId(null)}
-                        onSetCurrent={() => setPinnedProject(currentProject.projectId)}
                         isCurrent
                         onSettings={
                           canManage(currentProject.role)
@@ -1194,7 +1188,7 @@ export function ProjectHubScreen() {
                               <ProjectMenu
                                 isOpen={menuOpenId === project.projectId}
                                 onClose={() => setMenuOpenId(null)}
-                                onSetCurrent={() => setPinnedProject(project.projectId)}
+                                onSetCurrent={() => handleProjectOpen(project)}
                                 onSettings={
                                   canManage(project.role)
                                     ? () => { setSettingsProjectId(project.projectId); setScreen('project-settings'); }
