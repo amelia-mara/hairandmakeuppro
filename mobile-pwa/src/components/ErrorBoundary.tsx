@@ -25,7 +25,24 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // React doesn't expose the failing component's props inside
+    // componentDidCatch — only the rendered tree. Extract the closest
+    // component name from componentStack so production triage can
+    // attribute crashes without needing source maps.
+    const failingComponent = errorInfo.componentStack
+      ?.split('\n')
+      .map((line) => line.trim())
+      .find((line) => line.startsWith('at '))
+      ?.replace(/^at\s+/, '')
+      .split(/[\s(]/)[0];
+
+    console.error('[ErrorBoundary] caught', {
+      component: failingComponent ?? 'unknown',
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
     this.setState({ errorInfo });
   }
 
