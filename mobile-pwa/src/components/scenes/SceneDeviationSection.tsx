@@ -5,6 +5,12 @@ import { Textarea } from '../ui';
 import { AdditionalPhotosGrid, PhotoCapture, PhotoViewer } from '../photos';
 import type { Photo, SceneCapture } from '@/types';
 
+// The projectStore keys sceneCaptures by `${sceneId}-${characterId}`, not by
+// capture.id (the UUID). Mutations dispatched with capture.id silently no-op.
+function getCaptureKey(capture: SceneCapture): string {
+  return `${capture.sceneId}-${capture.characterId}`;
+}
+
 /**
  * Floor-team deviation card for a single SceneCapture.
  *
@@ -35,7 +41,8 @@ export function SceneDeviationSection({
   const { setDeviationNote, addDeviationPhoto, removeDeviationPhoto, clearDeviation } =
     useProjectStore();
 
-  const [noteDraft, setNoteDraft] = useState(capture.deviation?.note ?? '');
+  const captureKey = getCaptureKey(capture);
+
   const [captureOpen, setCaptureOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -44,15 +51,9 @@ export function SceneDeviationSection({
   const note = capture.deviation?.note ?? '';
   const hasDeviation = note.trim().length > 0 || photos.length > 0;
 
-  const handleNoteBlur = () => {
-    if (noteDraft !== note) {
-      setDeviationNote(capture.id, noteDraft);
-    }
-  };
-
   const handleCapture = async (blob: Blob) => {
     const photo = await createPhotoFromBlob(blob);
-    addDeviationPhoto(capture.id, photo);
+    addDeviationPhoto(captureKey, photo);
   };
 
   const handleView = (_p: Photo, index: number) => {
@@ -61,12 +62,11 @@ export function SceneDeviationSection({
   };
 
   const handleDeleteFromViewer = (photoId: string) => {
-    removeDeviationPhoto(capture.id, photoId);
+    removeDeviationPhoto(captureKey, photoId);
   };
 
   const handleClear = () => {
-    setNoteDraft('');
-    clearDeviation(capture.id);
+    clearDeviation(captureKey);
   };
 
   return (
@@ -86,9 +86,8 @@ export function SceneDeviationSection({
       </p>
 
       <Textarea
-        value={noteDraft}
-        onChange={(e) => setNoteDraft(e.target.value)}
-        onBlur={handleNoteBlur}
+        value={note}
+        onChange={(e) => setDeviationNote(captureKey, e.target.value)}
         placeholder="Describe what changed (e.g. 'wig swapped to lace front', 'lipstick darker than reference')…"
         rows={3}
         className="resize-none"
