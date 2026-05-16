@@ -38,7 +38,7 @@ export function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'creat
     synopsis: scene.synopsis || null,
     page_count: null,
     story_day: null,
-    shooting_day: scene.shootingDay || null,
+    shooting_day: scene.shootingDay ?? null,
     filming_status: scene.filmingStatus || null,
     filming_notes: scene.prepBreakdown
       ? JSON.stringify(scene.prepBreakdown)
