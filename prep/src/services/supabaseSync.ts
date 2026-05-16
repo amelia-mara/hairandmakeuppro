@@ -1140,6 +1140,27 @@ export async function uploadCallSheetToStorage(
       }, { onConflict: 'id' });
     if (error) throw error;
 
+    // Call-sheet write-through: stamp scenes.shooting_day for every
+    // scene referenced in parsed_data.scenes[]. The call sheet is the
+    // day-of source of truth and wins over the schedule when they
+    // disagree — a scene moved at the last minute appears on the call
+    // sheet but the long-range schedule still shows the old day.
+    const productionDay = (sheet.parsed as { productionDay?: number } | undefined)?.productionDay;
+    const parsedScenes = (sheet.parsed as { scenes?: Array<{ sceneNumber?: string }> } | undefined)?.scenes;
+    if (typeof productionDay === 'number' && parsedScenes && parsedScenes.length > 0) {
+      const assignments: ShootingDayAssignment[] = [];
+      for (const sceneRef of parsedScenes) {
+        if (!sceneRef?.sceneNumber) continue;
+        const { number, suffix } = parseSceneRef(sceneRef.sceneNumber);
+        assignments.push({ n: number, s: suffix, d: productionDay });
+      }
+      await callSyncShootingDays(
+        projectId,
+        assignments,
+        `Call sheet write-through (day ${productionDay})`,
+      );
+    }
+
     console.log('[PrepSync] Call sheet uploaded:', sheet.id);
     return {
       pdfUrl: pdfSigned?.signedUrl ?? '',
