@@ -55,15 +55,48 @@ export function normalizeTimeRange(raw: string | null | undefined): string | und
 // "MONDAY 14TH JULY 2025" / "1ST DECEMBER 2025" / "15TH OF NOVEMBER 2025"
 // → ISO YYYY-MM-DD. Returns undefined on no match.
 export function parseDateFromText(text: string): string | undefined {
-  const re = /(\d{1,2})(?:ST|ND|RD|TH)?\s*(?:OF\s*)?(JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|SEP(?:T(?:EMBER)?)?|OCT(?:OBER)?|NOV(?:EMBER)?|DEC(?:EMBER)?)\s*,?\s*(\d{4})?/i;
-  const m = text.match(re);
-  if (!m) return undefined;
-  const day = m[1].padStart(2, '0');
-  const month = MONTHS[m[2].toUpperCase()];
-  const yearStr = m[3];
-  if (!month) return undefined;
-  const year = yearStr ?? String(new Date().getFullYear());
-  return `${year}-${month}-${day}`;
+  // Layer 1: "11 December 2025", "11th of Dec 2025", "Thursday 11 December".
+  // Weekday prefixes are handled implicitly — the regex doesn't anchor at
+  // the start of the line, so any preceding "Thursday," / "THURS" / etc.
+  // is just ignored as it falls outside the capture group.
+  const monthName =
+    /(\d{1,2})(?:ST|ND|RD|TH)?\s*(?:OF\s*)?(JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|SEP(?:T(?:EMBER)?)?|OCT(?:OBER)?|NOV(?:EMBER)?|DEC(?:EMBER)?)\s*,?\s*(\d{4})?/i;
+  const m = text.match(monthName);
+  if (m) {
+    const day = m[1].padStart(2, '0');
+    const month = MONTHS[m[2].toUpperCase()];
+    if (month) {
+      const year = m[3] ?? String(new Date().getFullYear());
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  // Layer 2: ISO "2025-12-11" (canonical). Year-month-day, dashes only —
+  // safest numeric form to recognise first because there's no ambiguity.
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  // Layer 3: numeric slash/dash forms. Two real-world flavours:
+  //   - UK: "11/12/2025" or "11-12-2025"  → day/month/year
+  //   - US: "12/11/2025"                  → month/day/year
+  // Call sheets used in this app are UK industry standard, so we read
+  // day/month/year. If the first number is unambiguously >12 it's
+  // definitely the day (UK).
+  const slashLabel = text.match(/(?:DATE|SHOOT[\s-]*DATE|FILM(?:ING)?[\s-]*DATE)[\s:]+(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/i);
+  const slashAny = slashLabel ?? text.match(/\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b/);
+  if (slashAny) {
+    const first = parseInt(slashAny[1], 10);
+    const second = parseInt(slashAny[2], 10);
+    const yearRaw = slashAny[3];
+    if (first >= 1 && first <= 31 && second >= 1 && second <= 12) {
+      const day = String(first).padStart(2, '0');
+      const month = String(second).padStart(2, '0');
+      const year = yearRaw.length === 2 ? `20${yearRaw}` : yearRaw;
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return undefined;
 }
 
 // Tokenise tab-separated row, dropping empty cells.

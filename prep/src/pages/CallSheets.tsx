@@ -71,8 +71,18 @@ export function CallSheets({ projectId }: CallSheetsProps) {
         // even if the parser can't make sense of the layout.
         // Pass the schedule's cast roster (when present) as parser
         // context so misclassified time tokens don't end up as cast.
+        // Pass the schedule's day list too, so the parser can recover
+        // shoot_date from the schedule when the call sheet header is
+        // missing or laid out unusually (F-20).
         const context: ParseContext | undefined = schedule
-          ? { validCastNumbers: new Set(schedule.castList.map((m) => m.number)) }
+          ? {
+              validCastNumbers: new Set(schedule.castList.map((m) => m.number)),
+              scheduleDaysByDay: new Map(
+                schedule.days
+                  .filter((d) => typeof d.dayNumber === 'number')
+                  .map((d) => [d.dayNumber, { date: d.date }]),
+              ),
+            }
           : undefined;
         let parsed;
         try {

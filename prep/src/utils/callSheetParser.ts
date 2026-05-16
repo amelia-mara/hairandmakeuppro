@@ -26,9 +26,30 @@ export function parseCallSheetText(
   const castCalls = parseCastCalls(text);
   const supportingArtists = parseSupportingArtists(text);
 
+  // F-20 fallback chain for shoot date:
+  //   1. PDF parser (header.date) — preferred
+  //   2. Schedule lookup by production day (context.scheduleDaysByDay)
+  //   3. Today's date — last resort, with a console warning so the
+  //      user can spot the silently-wrong date in the call-sheet card.
+  let date = header.date;
+  if (!date && header.productionDay !== undefined) {
+    date = context?.scheduleDaysByDay?.get(header.productionDay)?.date;
+    if (date) {
+      console.log(
+        `[callSheetParser] Date not found in PDF; using schedule day ${header.productionDay} -> ${date}`,
+      );
+    }
+  }
+  if (!date) {
+    date = new Date().toISOString().slice(0, 10);
+    console.warn(
+      '[callSheetParser] Falling back to upload date for shoot_date — PDF and schedule both missed.',
+    );
+  }
+
   return {
     id: crypto.randomUUID(),
-    date: header.date ?? new Date().toISOString().slice(0, 10),
+    date,
     productionDay: header.productionDay ?? 1,
     totalProductionDays: header.totalProductionDays,
     dayType: header.dayType,

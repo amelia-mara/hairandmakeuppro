@@ -50,6 +50,14 @@ export interface ParseContext {
   validCastNumbers?: Set<number>;
   /** Scene numbers known from the script/schedule (string form). */
   validSceneNumbers?: Set<string>;
+  /**
+   * Schedule days indexed by production day number. Used as the
+   * final fallback for shoot_date when the PDF parser can't extract
+   * it from the call sheet header (F-20). When provided, the call-
+   * sheet parser looks up `scheduleDaysByDay.get(productionDay)?.date`
+   * before defaulting to upload date.
+   */
+  scheduleDaysByDay?: Map<number, { date?: string }>;
 }
 
 export function parseScenes(text: string, context?: ParseContext): CallSheetScene[] {

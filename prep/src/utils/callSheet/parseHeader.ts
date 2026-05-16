@@ -23,8 +23,13 @@ export function parseHeader(text: string): HeaderFields {
   const out: HeaderFields = {};
 
   // ── Date ───────────────────────────────────────────────────────
-  // Try the first 30 lines to avoid grabbing dates from the advance schedule.
-  const head = text.split('\n').slice(0, 40).join('\n');
+  // Scan the first ~200 lines: enough to catch dates that sit below
+  // a long header section (production company block, distribution list,
+  // weather etc.) without dragging in dates from the advance schedule
+  // (which the findAdvanceCutoff helper covers separately for scenes).
+  // Stop short of the full text so multi-day call-sheet packets don't
+  // accidentally surface tomorrow's date first.
+  const head = text.split('\n').slice(0, 200).join('\n');
   out.date = parseDateFromText(head);
 
   // ── Production day ─────────────────────────────────────────────
