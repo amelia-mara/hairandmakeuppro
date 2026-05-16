@@ -20,7 +20,47 @@ import {
   useBookmarkStore,
 } from '@/stores/breakdownStore';
 import { resolveBreakdownForSync } from '@/utils/resolveBreakdownForSync';
+import { parseSceneRef } from '@/utils/sceneNumber';
 import type { Json } from '@/types';
+
+/**
+ * Shared assignment shape posted to the `sync_shooting_days` RPC.
+ * `n` = scene_number (string; cast to bigint server-side).
+ * `s` = number_suffix (nullable; matched NULL-safely via IS NOT DISTINCT FROM).
+ * `d` = shooting_day (integer).
+ */
+interface ShootingDayAssignment {
+  n: string;
+  s: string | null;
+  d: number;
+}
+
+/**
+ * Calls the sync_shooting_days RPC and logs the updated/unmatched
+ * counts. Centralised so schedule and call-sheet write-through share
+ * the same error / logging behaviour.
+ */
+async function callSyncShootingDays(
+  projectId: string,
+  assignments: ShootingDayAssignment[],
+  label: string,
+): Promise<void> {
+  if (assignments.length === 0) return;
+  const { data, error } = await supabase.rpc('sync_shooting_days', {
+    p_project_id: projectId,
+    p_assignments: assignments as unknown as Json,
+  });
+  if (error) {
+    console.error(`[PrepSync] ${label}: sync_shooting_days failed`, error);
+    return;
+  }
+  const updated = typeof data === 'number' ? data : 0;
+  const unmatched = assignments.length - updated;
+  console.log(
+    `[PrepSync] ${label}: ${updated}/${assignments.length} scene refs updated` +
+    (unmatched > 0 ? ` (${unmatched} unmatched)` : ''),
+  );
+}
 
 // ============================================================================
 // Debounce infrastructure (800ms for text fields per spec)
@@ -899,6 +939,12 @@ export function saveContinuityEntry(
 
 /**
  * Save schedule data to Supabase.
+ *
+ * After the schedule_data upsert, walks days[].scenes[] and stamps
+ * scenes.shooting_day via the sync_shooting_days RPC. The schedule is
+ * the canonical plan; call sheets (which run the same RPC) can later
+ * override day-of values on a per-scene basis when a scene moves at
+ * the last minute.
  */
 export function saveSchedule(
   projectId: string,
@@ -906,7 +952,7 @@ export function saveSchedule(
     id: string;
     rawText?: string;
     castList?: unknown[];
-    days?: unknown[];
+    days?: ScheduleDayShape[];
     status: string;
   },
 ) {
@@ -924,7 +970,28 @@ export function saveSchedule(
       }, { onConflict: 'id' });
     if (error) throw error;
     console.log('[PrepSync] Schedule saved');
+
+    const assignments = buildScheduleAssignments(schedule.days ?? []);
+    await callSyncShootingDays(projectId, assignments, 'Schedule write-through');
   });
+}
+
+interface ScheduleDayShape {
+  dayNumber?: number;
+  scenes?: Array<{ sceneNumber?: string }>;
+}
+
+function buildScheduleAssignments(days: ScheduleDayShape[]): ShootingDayAssignment[] {
+  const out: ShootingDayAssignment[] = [];
+  for (const day of days) {
+    if (typeof day.dayNumber !== 'number') continue;
+    for (const sceneRef of day.scenes ?? []) {
+      if (!sceneRef?.sceneNumber) continue;
+      const { number, suffix } = parseSceneRef(sceneRef.sceneNumber);
+      out.push({ n: number, s: suffix, d: day.dayNumber });
+    }
+  }
+  return out;
 }
 
 /**
