@@ -16,11 +16,8 @@ import type {
   SceneFilmingStatus,
   MakeupDetails,
   HairDetails,
-  ScheduleCastMember,
-  ScheduleDay,
 } from '@/types';
 import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier, BETA_MODE, createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
-import type { CallSheet, ProductionSchedule } from '@/types';
 import type { Database } from '@/types/supabase';
 
 type DbMemberRole = Database['public']['Tables']['project_members']['Row']['role'];
@@ -598,10 +595,13 @@ export const useAuthStore = create<AuthState>()(
             pendingDeletionAt: null,
           };
 
-          // Fetch project data and load into project store
+          // Fetch project data and load into project store.
+          // schedule + call sheets are loaded by their stores'
+          // fetchForProject, fanned out from projectStore.setProject
+          // below — they're no longer destructured here.
           const {
             scenes, characters, looks, sceneCharacters, lookScenes,
-            scheduleData, callSheetData, scriptData,
+            scriptData,
           } = await supabaseProjects.getProjectData(joinedProject.id);
 
           const pStore = useProjectStore.getState();
@@ -681,62 +681,9 @@ export const useAuthStore = create<AuthState>()(
             pStore.setProject(emptyProject);
           }
 
-          // Load documents (schedule, call sheets, script) into their stores
-          if (scheduleData.length > 0) {
-            const db = scheduleData[0];
-            if (db.days || db.cast_list) {
-              const schedule: ProductionSchedule = {
-                id: db.id,
-                status: db.status === 'complete' ? 'complete' : 'pending',
-                castList: (db.cast_list as unknown as ScheduleCastMember[]) || [],
-                days: (db.days as unknown as ScheduleDay[]) || [],
-                totalDays: ((db.days as unknown as ScheduleDay[]) || []).length,
-                uploadedAt: new Date(db.created_at),
-                rawText: db.raw_pdf_text || undefined,
-              };
-              useScheduleStore.getState().setSchedule(schedule);
-            }
-          }
-
-          if (callSheetData.length > 0) {
-            const csStore = useCallSheetStore.getState();
-            csStore.clearAll();
-            const callSheets: CallSheet[] = callSheetData.map((db: Record<string, unknown>) => {
-              const parsed = (db.parsed_data || {}) as Record<string, unknown>;
-              return {
-                ...parsed,
-                id: db.id,
-                date: db.shoot_date,
-                productionDay: db.production_day,
-                rawText: db.raw_text || (parsed.rawText as string | undefined),
-                pdfUri: undefined,
-                uploadedAt: new Date(db.created_at as string),
-                scenes: (parsed.scenes as CallSheet['scenes']) || [],
-              } as CallSheet;
-            });
-            for (const cs of callSheets) {
-              useCallSheetStore.setState((state) => ({
-                callSheets: [...state.callSheets, cs].sort(
-                  (a, b) => a.productionDay - b.productionDay
-                ),
-              }));
-            }
-            const latest = callSheets[callSheets.length - 1];
-            if (latest) csStore.setActiveCallSheet(latest.id);
-
-            for (const db of callSheetData) {
-              if (db.storage_path) {
-                supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
-                  if (!dataUri) return;
-                  useCallSheetStore.setState((state) => ({
-                    callSheets: state.callSheets.map((cs) =>
-                      cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
-                    ),
-                  }));
-                });
-              }
-            }
-          }
+          // Schedule + call sheets: setProject above has already
+          // dispatched fetchForProject on both stores, which fetches
+          // and populates them. No inline handling needed here.
 
           if (scriptData.length > 0 && scriptData[0].storage_path) {
             supabaseStorage.downloadDocumentAsDataUri(scriptData[0].storage_path).then(({ dataUri }) => {

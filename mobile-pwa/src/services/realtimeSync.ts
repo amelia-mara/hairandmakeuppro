@@ -219,6 +219,23 @@ export function subscribeToProject(projectId: string): () => void {
       });
     })
 
+    // Project itself was deleted (by another client/owner) or had
+    // its pending_deletion_at flipped. Without this handler the
+    // mobile client would keep rendering the dead project header and
+    // routing writes to a dead ID until next reload — exactly the
+    // F-06 silent-failure mode. DELETE clears local state and pushes
+    // the user back to the Hub.
+    .on('postgres_changes', {
+      event: 'DELETE',
+      schema: 'public',
+      table: 'projects',
+      filter: `id=eq.${projectId}`,
+    }, (payload: ChangePayload) => {
+      handleWithFlag(() => {
+        handleProjectDeleted(payload);
+      });
+    })
+
     .subscribe((status) => {
       console.log(`[AppRealtime] Channel app:project:${projectId} status:`, status);
       switch (status) {
@@ -719,6 +736,40 @@ function handleCallSheetChange(payload: ChangePayload) {
       console.log('[AppRealtime] Call sheet deleted from Prep:', id);
     }
   }
+}
+
+/**
+ * Project itself was deleted by another client. The local app must
+ * stop rendering the dead project, drop any saved-but-unsynced state
+ * for it, and route the user back to the Hub so they can pick
+ * another project.
+ *
+ * The payload's `old` row carries the deleted project's id; we
+ * already pre-filtered the subscription to the current project, but
+ * a guard here protects against race conditions where the
+ * subscription was set up against a different projectId than the
+ * one now live in projectStore.
+ */
+function handleProjectDeleted(payload: ChangePayload) {
+  if (payload.eventType !== 'DELETE') return;
+  const deletedId = (payload.old as Record<string, unknown> | undefined)?.id as string | undefined;
+  const currentId = useProjectStore.getState().currentProject?.id;
+  if (!deletedId || !currentId || deletedId !== currentId) return;
+
+  console.warn(
+    `[Realtime] Project ${deletedId} was deleted upstream. Clearing local state and ` +
+    `returning to Hub.`,
+  );
+  // Also drop the membership row so the Hub doesn't list it.
+  const memberships = useAuthStore.getState().projectMemberships || [];
+  useAuthStore.setState({
+    projectMemberships: memberships.filter((m) => m.projectId !== deletedId),
+  });
+  useProjectStore.getState().clearProject();
+  useAuthStore.getState().setScreen('hub');
+  // TODO: surface a one-time banner via the global toast system once
+  // it lands. For now, the Hub renders without a "Current" card and
+  // the user has no in-app explanation — only the console warning.
 }
 
 function handleMemberAccessChange(payload: ChangePayload) {

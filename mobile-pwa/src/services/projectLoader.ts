@@ -18,8 +18,6 @@ import type {
   Scene,
   Character,
   Look,
-  ProductionSchedule,
-  CallSheet,
   PrepSceneBreakdown,
 } from '@/types';
 
@@ -79,20 +77,21 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
         return { success: false, fromCache: false, error: 'project-deleted' };
       }
 
-      // 2. Independent data in parallel
+      // 2. Independent data in parallel.
+      // schedule_data + call_sheet_data are owned by their respective
+      // stores' fetchForProject actions (called from projectStore.
+      // setProject). Don't fetch them here — keeps a single ingress
+      // per table and avoids the A→B→A race where late-arriving
+      // pushes from this loader could overwrite a more recent switch.
       const [
         { data: dbScenes },
         { data: dbCharacters },
         { data: dbLooks },
-        { data: dbSchedule },
-        { data: dbCallSheets },
         { data: dbScriptUpload },
       ] = await Promise.all([
         supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
         supabase.from('characters').select('*').eq('project_id', projectId),
         supabase.from('looks').select('*').eq('project_id', projectId),
-        supabase.from('schedule_data').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(1),
-        supabase.from('call_sheet_data').select('*').eq('project_id', projectId).order('production_day'),
         supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
       ]);
 
@@ -201,28 +200,12 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
         });
       }
 
-      // Apply schedule if available
-      if (dbSchedule && dbSchedule.length > 0) {
-        const schedule = mapSchedule(dbSchedule[0]);
-        if (schedule) {
-          useScheduleStore.getState().setSchedule(schedule);
-        }
-      }
-
-      // Apply call sheets if available
-      if (dbCallSheets && dbCallSheets.length > 0) {
-        const mappedCallSheets = dbCallSheets.map(mapCallSheet).filter(Boolean) as CallSheet[];
-        if (mappedCallSheets.length > 0) {
-          const csStore = useCallSheetStore.getState();
-          // Replace call sheets with server data
-          for (const cs of mappedCallSheets) {
-            const existing = csStore.callSheets.find(c => c.id === cs.id);
-            if (!existing) {
-              csStore.callSheets.push(cs);
-            }
-          }
-        }
-      }
+      // Refresh schedule + call sheets via their owning stores. This
+      // is the path used by resubscribeToProject after a foreground
+      // resume — projectStore.setProject already fans out on the
+      // initial open, so a normal switch doesn't re-trigger here.
+      void useScheduleStore.getState().fetchForProject(projectId);
+      void useCallSheetStore.getState().fetchForProject(projectId);
 
       // Store script URL from project record for the script viewer
       if (project.script_url || (dbScriptUpload && dbScriptUpload.length > 0)) {
@@ -500,28 +483,3 @@ function mapLooks(
   });
 }
 
-function mapSchedule(row: Record<string, unknown>): ProductionSchedule | null {
-  if (!row) return null;
-  return {
-    id: row.id as string,
-    status: (row.status as 'pending' | 'processing' | 'complete' | 'partial') || 'pending',
-    castList: (row.cast_list as any[]) || [],
-    days: (row.days as any[]) || [],
-    totalDays: Array.isArray(row.days) ? (row.days as any[]).length : 0,
-    uploadedAt: row.created_at ? new Date(row.created_at as string) : new Date(),
-    rawText: (row.raw_pdf_text as string) || '',
-  };
-}
-
-function mapCallSheet(row: Record<string, unknown>): CallSheet | null {
-  if (!row) return null;
-  const parsed = (row.parsed_data as Record<string, unknown>) || {};
-  return {
-    id: row.id as string,
-    date: (row.shoot_date as string) || '',
-    productionDay: (row.production_day as number) || 0,
-    rawText: (row.raw_text as string) || '',
-    uploadedAt: row.created_at ? new Date(row.created_at as string) : new Date(),
-    ...parsed,
-  } as CallSheet;
-}
