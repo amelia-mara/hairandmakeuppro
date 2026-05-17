@@ -50,16 +50,33 @@ export async function loadProjectFromSupabase(projectId: string): Promise<Projec
     setReceivingFromServer(true);
 
     try {
-      // 1. Project record first
+      // 1. Project record first. Use maybeSingle so a missing row
+      // returns data=null without throwing — that's the F-34 path
+      // we need to handle distinctly from a real query error.
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .select('*')
         .eq('id', projectId)
-        .single();
+        .maybeSingle();
 
       if (projectError) {
         console.warn('[ProjectLoader] Failed to fetch project:', projectError);
         return { success: true, fromCache: true };
+      }
+      if (!project) {
+        // F-34: the project row is gone (deleted by another client,
+        // or the grace period expired and finalizeProjectDeletion
+        // hard-deleted it). Previously this path returned
+        // { success: true, fromCache: true } and silently fell
+        // through, leaving the user on a phantom project. Fail loud:
+        // clear the local project and signal the caller via
+        // success: false so resubscribeToProject can route the user
+        // back to the Hub on its next pass.
+        console.warn(
+          `[ProjectLoader] Project ${projectId} no longer exists — clearing currentProject`,
+        );
+        useProjectStore.getState().clearProject();
+        return { success: false, fromCache: false, error: 'project-deleted' };
       }
 
       // 2. Independent data in parallel

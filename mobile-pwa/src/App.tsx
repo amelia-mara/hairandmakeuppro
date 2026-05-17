@@ -163,6 +163,63 @@ function AppContent() {
 
   // Refresh project memberships when app returns from background (common on mobile)
   const { refreshUserProjects } = useAuthStore();
+
+  // F-34 boot validation: the persisted currentProject (from Zustand
+  // persist → localStorage) can outlive the project itself when
+  // another client or a finalize-deletion job removed the row
+  // between sessions. Without this check, mobile-pwa renders the
+  // phantom project's setup screen indefinitely. The cowork audit
+  // confirmed: deleted-during-session project id was still in
+  // localStorage post-reload while the user's projectMemberships
+  // (also persisted) had already updated.
+  //
+  // Two key timing rules below:
+  //
+  // 1. AWAIT refreshUserProjects() inside the effect — don't read
+  //    projectMemberships from state directly. authStore persists
+  //    projectMemberships to localStorage, so a fresh page load
+  //    rehydrates the previous session's snapshot (which may still
+  //    contain the deleted project). On a non-Hub reload path,
+  //    nothing else triggers a refetch until visibilitychange
+  //    fires. Awaiting the fetch here guarantees we compare against
+  //    the live server view.
+  //
+  // 2. Log the comparison so smoke tests can verify it ran and
+  //    against which set. The cowork smoke test went hours without
+  //    a single boot-validation log line — observability matters.
+  //
+  // `user` is already destructured from useAuthStore at the top of
+  // the component; reused directly as the dependency.
+  const bootValidationDone = useRef(false);
+  useEffect(() => {
+    if (!user) {
+      bootValidationDone.current = false;
+      return;
+    }
+    if (bootValidationDone.current) return;
+    void (async () => {
+      await useAuthStore.getState().refreshUserProjects();
+      const accessibleIds = new Set(
+        (useAuthStore.getState().projectMemberships ?? []).map((m) => m.projectId),
+      );
+      const persistedId = useProjectStore.getState().currentProject?.id;
+      console.log(
+        `[Boot] Validating currentProjectId=${persistedId ?? 'none'} against ` +
+        `${accessibleIds.size} accessible project(s)`,
+      );
+      if (persistedId && !accessibleIds.has(persistedId)) {
+        console.warn(
+          `[Boot] Project ${persistedId} no longer accessible — clearing`,
+        );
+        useProjectStore.getState().clearProject();
+        // TODO: surface a one-time "your previous project is no
+        // longer available" banner once the global toast/snackbar
+        // system lands.
+      }
+      bootValidationDone.current = true;
+    })();
+  }, [user]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isAuthenticated) {

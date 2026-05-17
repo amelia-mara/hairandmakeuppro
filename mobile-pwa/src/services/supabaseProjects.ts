@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/supabase';
+import { useProjectStore } from '@/stores/projectStore';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 type ProjectMember = Database['public']['Tables']['project_members']['Row'];
@@ -236,8 +237,53 @@ export async function getProjectData(projectId: string): Promise<{
   try {
     console.log(`[LoadProject] Fetching data for project ${projectId}…`);
 
-    // Pre-flight: verify the current user is a member of this project.
-    // If RLS blocks even this query, something is fundamentally wrong.
+    // F-34 pre-flight: confirm the `projects` row itself still
+    // exists before fetching anything else. Previously this check
+    // queried `project_members` filtered only by project_id, which
+    // returned positive even when the project row had been deleted
+    // (cascade hadn't fired, or membership row was orphaned by a
+    // soft-delete pattern). Logging "Membership confirmed (1)" for
+    // a dead project was the silent-failure that left mobile-pwa
+    // rendering the phantom project after a deletion.
+    //
+    // Fail loud: if the projects row is gone, clear the local
+    // currentProject and surface an error to the caller. The caller
+    // (ProjectHubScreen.openProject) is responsible for routing to
+    // Hub on this signal.
+    const { data: projectRow, error: projectErr } = await supabase
+      .from('projects')
+      .select('id, name, status, has_prep_access')
+      .eq('id', projectId)
+      .maybeSingle();
+
+    if (projectErr) {
+      console.error('[LoadProject] project pre-flight failed:', projectErr.message);
+      throw projectErr;
+    }
+    if (!projectRow) {
+      console.warn(
+        `[LoadProject] Project ${projectId} no longer exists — clearing currentProject`,
+      );
+      useProjectStore.getState().clearProject();
+      return {
+        scenes: [],
+        characters: [],
+        looks: [],
+        sceneCharacters: [],
+        lookScenes: [],
+        continuityEvents: [],
+        photos: [],
+        scheduleData: [],
+        callSheetData: [],
+        scriptData: [],
+        error: new Error('project-deleted'),
+      };
+    }
+
+    // Belt-and-braces membership check. If the projects row exists
+    // but project_members returns zero rows for the current
+    // user-scoped RLS view, RLS is likely filtering us out — useful
+    // diagnostic, but no longer the load-blocking signal.
     const { data: memberCheck, error: memberError } = await supabase
       .from('project_members')
       .select('user_id, role, is_owner')
