@@ -22,6 +22,7 @@ import type {
   CallSheet,
   PrepSceneBreakdown,
 } from '@/types';
+import { normaliseHairDetails, normaliseSFXDetails } from '@/types';
 
 export interface ProjectLoadResult {
   success: boolean;
@@ -473,8 +474,8 @@ function mapLooks(
       estimatedTime: (row.estimated_time as number) || 30,
       masterReference,
       makeup,
-      hair,
-      sfxDetails,
+      hair: normaliseHairDetails(hair),
+      sfxDetails: sfxDetails ? normaliseSFXDetails(sfxDetails) : undefined,
       continuityFlags,
       continuityEvents,
       notes: (row.description as string) || '',

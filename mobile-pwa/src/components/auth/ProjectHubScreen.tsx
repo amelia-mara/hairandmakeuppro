@@ -13,7 +13,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails, FloorTracking, CostumeLookbook } from '@/types';
 import { savePhotoBlob } from '@/db';
 import { detectCharactersForScene } from '@/utils/scriptParser';
-import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
+import { createEmptyMakeupDetails, normaliseHairDetails, normaliseSFXDetails } from '@/types';
 
 // Format an absolute calendar date for project metadata lines.
 const formatCardDate = (date?: Date): string => {
@@ -754,12 +754,12 @@ export function ProjectHubScreen() {
             scenes: lookSceneMap.get(l.id) || [],
             estimatedTime: l.estimated_time,
             makeup: (cleanMakeup as unknown as MakeupDetails) || createEmptyMakeupDetails(),
-            hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
+            hair: normaliseHairDetails(l.hair_details as Record<string, unknown> | null),
             notes: l.description || undefined,
             masterReference,
             continuityFlags: continuityFlagsMeta || undefined,
             continuityEvents,
-            sfxDetails,
+            sfxDetails: sfxDetails ? normaliseSFXDetails(sfxDetails) : undefined,
           };
         });
 

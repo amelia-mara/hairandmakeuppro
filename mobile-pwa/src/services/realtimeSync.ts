@@ -17,6 +17,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { loadProjectFromSupabase } from '@/services/projectLoader';
 import type { Look, ProductionSchedule, ScheduleCastMember, ScheduleDay, CallSheet } from '@/types';
+import { normaliseHairDetails, normaliseSFXDetails } from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -544,13 +545,16 @@ function parseLookFromRow(row: Record<string, unknown>, existing?: Look): Look {
     scenes: existing?.scenes || [],
     estimatedTime: (row.estimated_time as number) ?? existing?.estimatedTime ?? 30,
     makeup: cleanMakeup ? (cleanMakeup as any) : (existing?.makeup || {} as any),
-    hair: rawHair ? (rawHair as any) : (existing?.hair || {} as any),
+    hair: normaliseHairDetails(rawHair ?? existing?.hair),
     notes: (row.description as string) ?? existing?.notes,
     masterReference,
     continuityFlags: existing?.continuityFlags || continuityFlagsMeta || undefined,
     continuityEvents: existing?.continuityEvents || (continuityEventsMeta && continuityEventsMeta.length > 0
       ? continuityEventsMeta : undefined),
-    sfxDetails: existing?.sfxDetails || (sfxDetailsMeta || undefined),
+    sfxDetails: (() => {
+      const raw = existing?.sfxDetails || sfxDetailsMeta;
+      return raw ? normaliseSFXDetails(raw) : undefined;
+    })(),
   };
 }
 
