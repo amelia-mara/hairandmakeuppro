@@ -176,14 +176,14 @@ export function HairForm({ hair, onChange, readOnly = false }: HairFormProps) {
             <label className="field-label block mb-2">Attachment Method</label>
             {readOnly ? (
               <div className="text-sm text-text-primary">
-                {currentHair.wigAttachment.length > 0
-                  ? currentHair.wigAttachment.join(', ')
+                {(currentHair.wigAttachment ?? []).length > 0
+                  ? (currentHair.wigAttachment ?? []).join(', ')
                   : <span className="text-text-placeholder">—</span>}
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {WIG_ATTACHMENTS.map((attachment) => {
-                  const isSelected = currentHair.wigAttachment.includes(attachment);
+                  const isSelected = (currentHair.wigAttachment ?? []).includes(attachment);
                   return (
                     <button
                       key={attachment}

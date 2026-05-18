@@ -65,14 +65,14 @@ export function SFXForm({
             <label className="field-label block mb-2">SFX Type</label>
             {readOnly ? (
               <div className="text-sm text-text-primary">
-                {currentSFX.sfxTypes.length > 0
-                  ? currentSFX.sfxTypes.join(', ')
+                {(currentSFX.sfxTypes ?? []).length > 0
+                  ? (currentSFX.sfxTypes ?? []).join(', ')
                   : <span className="text-text-placeholder">—</span>}
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {SFX_TYPES.map((type) => {
-                  const isSelected = currentSFX.sfxTypes.includes(type);
+                  const isSelected = (currentSFX.sfxTypes ?? []).includes(type);
                   return (
                     <button
                       key={type}
@@ -122,14 +122,14 @@ export function SFXForm({
                 <label className="field-label block mb-2">Blood Type</label>
                 {readOnly ? (
                   <div className="text-sm text-text-primary">
-                    {currentSFX.bloodTypes.length > 0
-                      ? currentSFX.bloodTypes.join(', ')
+                    {(currentSFX.bloodTypes ?? []).length > 0
+                      ? (currentSFX.bloodTypes ?? []).join(', ')
                       : <span className="text-text-placeholder">—</span>}
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {BLOOD_TYPES.map((type) => {
-                      const isSelected = currentSFX.bloodTypes.includes(type);
+                      const isSelected = (currentSFX.bloodTypes ?? []).includes(type);
                       return (
                         <button
                           key={type}
@@ -254,11 +254,11 @@ export function SFXForm({
             <div className="flex items-center justify-between mb-3">
               <h4 className="field-label text-gold">SFX REFERENCE PHOTOS</h4>
               <span className="text-[11px] text-text-light">
-                {currentSFX.sfxReferencePhotos.length} photos
+                {(currentSFX.sfxReferencePhotos ?? []).length} photos
               </span>
             </div>
             <SFXPhotoGrid
-              photos={currentSFX.sfxReferencePhotos}
+              photos={currentSFX.sfxReferencePhotos ?? []}
               onCapture={onCapturePhoto}
               onRemove={onRemovePhoto}
               readOnly={readOnly}
@@ -288,9 +288,10 @@ interface SFXPhotoGridProps {
 }
 
 function SFXPhotoGrid({ photos, onCapture, onRemove, readOnly }: SFXPhotoGridProps) {
+  const safePhotos = photos ?? [];
   return (
     <div className="grid grid-cols-4 gap-2">
-      {photos.map((photo) => (
+      {safePhotos.map((photo) => (
         <div key={photo.id} className="relative aspect-square">
           <PhotoImg
             photo={photo}
@@ -327,7 +328,7 @@ function SFXPhotoGrid({ photos, onCapture, onRemove, readOnly }: SFXPhotoGridPro
       )}
 
       {/* Empty state */}
-      {photos.length === 0 && readOnly && (
+      {safePhotos.length === 0 && readOnly && (
         <div className="col-span-4 text-center py-4">
           <p className="text-sm text-text-muted">No SFX reference photos.</p>
         </div>
