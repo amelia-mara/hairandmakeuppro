@@ -784,6 +784,24 @@ export const createEmptySFXDetails = (): SFXDetails => ({
   sfxReferencePhotos: [],
 });
 
+// Tolerate legacy JSONB shapes (e.g. Prep-shape `{ style: '<text>' }`)
+// by overlaying the raw input on top of a fully-populated default. Every
+// array/string field is guaranteed defined, so downstream `.length` /
+// `.map` / `.includes` callsites never see undefined.
+export const normaliseHairDetails = (
+  raw: Partial<HairDetails> | Record<string, unknown> | null | undefined,
+): HairDetails => ({
+  ...createEmptyHairDetails(),
+  ...((raw as Partial<HairDetails>) ?? {}),
+});
+
+export const normaliseSFXDetails = (
+  raw: Partial<SFXDetails> | Record<string, unknown> | null | undefined,
+): SFXDetails => ({
+  ...createEmptySFXDetails(),
+  ...((raw as Partial<SFXDetails>) ?? {}),
+});
+
 export const createEmptyContinuityFlags = (): ContinuityFlags => ({
   sweat: false,
   dishevelled: false,
