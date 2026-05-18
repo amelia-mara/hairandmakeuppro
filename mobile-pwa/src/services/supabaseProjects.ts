@@ -219,7 +219,11 @@ export async function getUserProjects(
   }
 }
 
-// Get full project data (scenes, characters, looks, documents)
+// Get full project data (scenes, characters, looks, script).
+// schedule_data + call_sheet_data are NOT fetched here — those are
+// owned by their respective stores' fetchForProject actions, called
+// from projectStore.setProject. Keeping a single ingress per table
+// prevents the A→B→A race condition this used to enable.
 export async function getProjectData(projectId: string): Promise<{
   scenes: Scene[];
   characters: Character[];
@@ -228,8 +232,6 @@ export async function getProjectData(projectId: string): Promise<{
   lookScenes: { look_id: string; scene_number: string }[];
   continuityEvents: any[];
   photos: any[];
-  scheduleData: any[];
-  callSheetData: any[];
   scriptData: any[];
   error: Error | null;
 }> {
@@ -252,13 +254,13 @@ export async function getProjectData(projectId: string): Promise<{
       console.log(`[LoadProject] Membership confirmed (${memberCheck.length} visible members)`);
     }
 
-    // Phase 1: Fetch project-level tables in parallel (including documents)
-    const [scenesRes, charactersRes, looksRes, scheduleRes, callSheetsRes, scriptRes] = await Promise.all([
+    // Phase 1: Fetch project-level tables in parallel (script only —
+    // schedule_data + call_sheet_data are loaded by their stores'
+    // fetchForProject, fanned out from projectStore.setProject).
+    const [scenesRes, charactersRes, looksRes, scriptRes] = await Promise.all([
       supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
       supabase.from('characters').select('*').eq('project_id', projectId).order('name'),
       supabase.from('looks').select('*').eq('project_id', projectId),
-      supabase.from('schedule_data').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(1),
-      supabase.from('call_sheet_data').select('*').eq('project_id', projectId).order('production_day'),
       supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).order('created_at', { ascending: false }).limit(1),
     ]);
 
@@ -266,8 +268,6 @@ export async function getProjectData(projectId: string): Promise<{
     if (scenesRes.error) console.error('[LoadProject] scenes query error:', scenesRes.error.message);
     if (charactersRes.error) console.error('[LoadProject] characters query error:', charactersRes.error.message);
     if (looksRes.error) console.error('[LoadProject] looks query error:', looksRes.error.message);
-    if (scheduleRes.error) console.warn('[LoadProject] schedule query error:', scheduleRes.error.message);
-    if (callSheetsRes.error) console.warn('[LoadProject] call_sheets query error:', callSheetsRes.error.message);
     if (scriptRes.error) console.warn('[LoadProject] script query error:', scriptRes.error.message);
 
     if (scenesRes.error) throw scenesRes.error;
@@ -302,8 +302,7 @@ export async function getProjectData(projectId: string): Promise<{
     // ── Diagnostic: log row counts so we can see exactly what was loaded ──
     console.log(
       `[LoadProject] Rows loaded — scenes: ${scenes.length}, characters: ${(charactersRes.data || []).length}, ` +
-      `looks: ${looks.length}, schedule: ${(scheduleRes.data || []).length}, ` +
-      `callSheets: ${(callSheetsRes.data || []).length}, scripts: ${scriptData.length}`
+      `looks: ${looks.length}, scripts: ${scriptData.length}`
     );
 
     // Phase 2: Fetch junction tables + continuity events
@@ -344,8 +343,6 @@ export async function getProjectData(projectId: string): Promise<{
       lookScenes: lookScenesRes.data || [],
       continuityEvents,
       photos: photosRes.data || [],
-      scheduleData: scheduleRes.data || [],
-      callSheetData: callSheetsRes.data || [],
       scriptData,
       error: null,
     };
@@ -359,8 +356,6 @@ export async function getProjectData(projectId: string): Promise<{
       lookScenes: [],
       continuityEvents: [],
       photos: [],
-      scheduleData: [],
-      callSheetData: [],
       scriptData: [],
       error: error as Error,
     };

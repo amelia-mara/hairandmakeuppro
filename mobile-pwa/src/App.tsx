@@ -161,6 +161,81 @@ function AppContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // F-06 boot validation: if the persisted currentProject points at a
+  // project the user can no longer see (deleted, expired pending
+  // deletion, kicked from project_members), the app would otherwise
+  // render the stale project header for an indefinite period and
+  // route writes to a dead ID. Validate against the freshly-fetched
+  // memberships set; clear the local project on miss.
+  //
+  // Runs once memberships have been loaded for the authenticated
+  // user. projectMemberships is empty until refreshUserProjects has
+  // resolved at least once, so this effect waits for length > 0
+  // before deciding — an empty array could just mean "still loading".
+  const projectMembershipsForBoot = useAuthStore((s) => s.projectMemberships);
+  const bootValidationDone = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      bootValidationDone.current = false;
+      return;
+    }
+    if (bootValidationDone.current) return;
+    if (projectMembershipsForBoot.length === 0) return;
+    bootValidationDone.current = true;
+
+    const persistedProjectId = useProjectStore.getState().currentProject?.id;
+    if (!persistedProjectId) return;
+
+    const accessibleIds = new Set(projectMembershipsForBoot.map((m) => m.projectId));
+    if (!accessibleIds.has(persistedProjectId)) {
+      console.warn(
+        `[Boot] currentProject ${persistedProjectId} is not in the user's accessible projects ` +
+        `(likely deleted, expired pending_deletion_at, or membership revoked). Clearing.`,
+      );
+      useProjectStore.getState().clearProject();
+      // TODO: surface a one-time "your previous project is no longer
+      // available" banner once the global toast/banner system lands.
+    }
+  }, [isAuthenticated, projectMembershipsForBoot]);
+
+  // F-04 strict localStorage prune. Remove only keys whose suffix is
+  // a UUID that doesn't match any accessible project. Keys without a
+  // UUID suffix (global stores like hair-makeup-pro-storage, auth /
+  // theme / tutorial) are left untouched even if their value is
+  // stale — those live inside Zustand dicts and need dict-level
+  // surgery that's out of scope here. Logs every removal so we can
+  // spot over-zealous deletions in production.
+  //
+  // This catches prep-* keys (prep-scene-notes-${id}, prep-team-${id},
+  // prep-happy-budget-${id}, etc.) which the desktop app writes on
+  // the same origin and leaves behind on project delete.
+  const prunedOnce = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      prunedOnce.current = false;
+      return;
+    }
+    if (prunedOnce.current) return;
+    if (projectMembershipsForBoot.length === 0) return;
+    prunedOnce.current = true;
+
+    const accessibleIds = new Set(projectMembershipsForBoot.map((m) => m.projectId));
+    const uuidSuffix = /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+    let pruned = 0;
+    for (const key of Object.keys(localStorage)) {
+      const m = key.match(uuidSuffix);
+      if (!m) continue;
+      const uuid = m[1].toLowerCase();
+      if (accessibleIds.has(uuid)) continue;
+      console.log(`[Boot] Pruning stale localStorage key for inaccessible project: ${key}`);
+      localStorage.removeItem(key);
+      pruned++;
+    }
+    if (pruned > 0) {
+      console.log(`[Boot] Pruned ${pruned} stale localStorage key(s)`);
+    }
+  }, [isAuthenticated, projectMembershipsForBoot]);
+
   // Refresh project memberships when app returns from background (common on mobile)
   const { refreshUserProjects } = useAuthStore();
   useEffect(() => {

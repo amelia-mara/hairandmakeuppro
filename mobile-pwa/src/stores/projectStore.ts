@@ -51,13 +51,26 @@ export const useProjectStore = create<ProjectState>()(
 
       // ── Project CRUD ──────────────────────────────────────────
 
-      setProject: (project) => set({
-        currentProject: withDedupedScenes(project),
-        needsSetup: false,
-        lifecycle: createDefaultLifecycle(),
-        showWrapPopup: false,
-        wrapTriggerReason: null,
-      }),
+      setProject: (project) => {
+        set({
+          currentProject: withDedupedScenes(project),
+          needsSetup: false,
+          lifecycle: createDefaultLifecycle(),
+          showWrapPopup: false,
+          wrapTriggerReason: null,
+        });
+        // Fan out to per-project stores so each owns its own server
+        // ingress. Detached: setProject returns synchronously so the
+        // picker UI commits the switch immediately. Each store
+        // manages its own loading state; failures are logged inside
+        // each store.
+        void useScheduleStore.getState().fetchForProject(project.id);
+        void useCallSheetStore.getState().fetchForProject(project.id);
+        // Timesheets intentionally not fanned out: timesheetStore is
+        // not project-scoped today (entries live in one flat
+        // date-keyed Record). A real fetchForProject there is a
+        // schema-level refactor and out of scope.
+      },
 
       setProjectNeedsSetup: (project) => set({
         currentProject: withDedupedScenes(project),
