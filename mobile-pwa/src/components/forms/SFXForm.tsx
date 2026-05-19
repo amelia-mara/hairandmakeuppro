@@ -19,7 +19,11 @@ export function SFXForm({
   onRemovePhoto,
   readOnly = false,
 }: SFXFormProps) {
-  const currentSFX = sfx || createEmptySFXDetails();
+  // F-39 / Bug 3: merge canonical defaults so partial DB shapes
+  // produce a fully-populated render shape. The render branches read
+  // .sfxTypes.length / .bloodTypes.includes / .sfxReferencePhotos.length
+  // directly without per-callsite guards.
+  const currentSFX = { ...createEmptySFXDetails(), ...(sfx ?? {}) };
 
   const handleFieldChange = <K extends keyof SFXDetails>(field: K, value: SFXDetails[K]) => {
     if (onChange && !readOnly) {

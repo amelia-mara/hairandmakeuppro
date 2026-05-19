@@ -9,8 +9,13 @@ interface HairFormProps {
 }
 
 export function HairForm({ hair, onChange, readOnly = false }: HairFormProps) {
-  // Use empty hair if none provided
-  const currentHair = hair || createEmptyHairDetails();
+  // F-39 / Bug 3: merge canonical defaults so partial DB shapes (Killa
+  // Bee + [TEST] PUNISHING looks carry only a subset of HairDetails
+  // keys) still produce a fully-populated render shape. The previous
+  // `hair || createEmptyHairDetails()` only fired when the entire
+  // object was null; partial objects fell through and the render
+  // branches crashed on currentHair.wigAttachment.length.
+  const currentHair = { ...createEmptyHairDetails(), ...(hair ?? {}) };
   const showWigFields = currentHair.hairType !== 'Natural';
 
   const handleFieldChange = (field: keyof HairDetails, value: string | HairType | WigType | HairlineStyle | WigAttachment[]) => {

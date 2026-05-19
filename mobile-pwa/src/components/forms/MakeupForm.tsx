@@ -9,8 +9,11 @@ interface MakeupFormProps {
 }
 
 export function MakeupForm({ makeup, onChange, readOnly = false }: MakeupFormProps) {
-  // Use empty makeup if none provided
-  const currentMakeup = makeup || createEmptyMakeupDetails();
+  // F-39 / Bug 3: merge canonical defaults for symmetry with HairForm /
+  // SFXForm. MakeupForm has no array-method callsites today so it didn't
+  // crash on partial input, but the pattern lets every Form component
+  // tolerate partial DB shapes uniformly.
+  const currentMakeup = { ...createEmptyMakeupDetails(), ...(makeup ?? {}) };
 
   const handleFieldChange = (field: keyof MakeupDetails, value: string) => {
     if (onChange && !readOnly) {
