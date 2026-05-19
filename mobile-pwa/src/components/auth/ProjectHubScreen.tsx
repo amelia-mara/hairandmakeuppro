@@ -6,6 +6,7 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import * as supabaseStorage from '@/services/supabaseStorage';
+import { unwrapContinuityEvents } from '@/services/syncMappers';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { flushAutoSave } from '@/services/autoSave';
@@ -756,7 +757,7 @@ export function ProjectHubScreen() {
                   sweat: false, dishevelled: false, blood: false,
                   dirt: false, wetHair: false, tears: false,
                 },
-                continuityEvents: (ce.continuity_events_data as unknown as ContinuityEvent[]) || [],
+                continuityEvents: unwrapContinuityEvents(ce.continuity_events_data),
                 sfxDetails: (ce.sfx_details as unknown as SFXDetails) || {
                   sfxRequired: false, sfxTypes: [], prostheticPieces: '',
                   prostheticAdhesive: '', bloodTypes: [], bloodProducts: '',

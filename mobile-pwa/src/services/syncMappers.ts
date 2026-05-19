@@ -13,6 +13,7 @@ import type {
   Character,
   Look,
   SceneCapture,
+  ContinuityEvent,
 } from '@/types';
 import type { Database, Json } from '@/types/supabase';
 
@@ -124,21 +125,61 @@ export function lookToDb(look: Look, projectId: string, masterRefStoragePath?: s
   };
 }
 
+/**
+ * Normalise the legacy envelope shape of `continuity_events_data` into
+ * a flat ContinuityEvent[]. Pre-fix `sceneCaptureToDb` wrote
+ * `{ events: capture.continuityEvents }` on every save; the reader cast
+ * that envelope as ContinuityEvent[], so the next save wrapped it
+ * again. Production rows on Killa Bee + COTC accumulated 4-8 levels of
+ * nested `{events: {events: ...}}` from this loop (F-39 / Bug 1).
+ *
+ * Behaviour examples:
+ *
+ *   unwrapContinuityEvents([{ id: '1' }, { id: '2' }])
+ *     -> [{ id: '1' }, { id: '2' }]                  // already an array
+ *
+ *   unwrapContinuityEvents({ events: [{ id: '1' }] })
+ *     -> [{ id: '1' }]                                // single-level envelope
+ *
+ *   unwrapContinuityEvents({ events: { events: [{ id: '1' }] } })
+ *     -> [{ id: '1' }]                                // 2-level nesting
+ *
+ *   unwrapContinuityEvents({
+ *     events: [{ id: '1' }],
+ *     costume_lookbook: { ... },                      // legacy sibling key
+ *     floor_tracking:   { ... },                      // legacy sibling key
+ *   })
+ *     -> [{ id: '1' }]                                // siblings ignored;
+ *                                                     // recursion only
+ *                                                     // drills the `events`
+ *                                                     // branch, so depth is
+ *                                                     // bounded by nesting,
+ *                                                     // not by sibling count
+ *
+ *   unwrapContinuityEvents(null) // -> []
+ *   unwrapContinuityEvents(undefined) // -> []
+ *   unwrapContinuityEvents({ somethingElse: 1 }) // -> []
+ *
+ * Termination: each recursive call replaces `raw` with the inner
+ * `.events` value. It must either (a) be an Array (we return), or
+ * (b) be an object that still has an `events` key (we recurse one
+ * deeper), or (c) be anything else (we return []). The chain is
+ * bounded by JSON nesting depth — Postgres caps JSONB nesting at
+ * ~100 levels, so even maximally-pathological production data hits
+ * the array or falls through long before stack exhaustion.
+ */
+export function unwrapContinuityEvents(raw: unknown): ContinuityEvent[] {
+  if (Array.isArray(raw)) return raw as ContinuityEvent[];
+  if (raw && typeof raw === 'object' && 'events' in raw) {
+    return unwrapContinuityEvents((raw as { events: unknown }).events);
+  }
+  return [];
+}
+
 export function sceneCaptureToDb(
   capture: SceneCapture,
   userId: string | null
 ): Omit<DbContinuityEvent, 'created_at'> {
-  // Build the JSONB payload: events array + optional costume_lookbook / floor_tracking
-  const eventsData: Record<string, unknown> = {
-    events: capture.continuityEvents,
-  };
-  if (capture.costumeLookbook) {
-    eventsData.costume_lookbook = capture.costumeLookbook;
-  }
-  if (capture.floorTracking) {
-    eventsData.floor_tracking = capture.floorTracking;
-  }
-
   return {
     id: capture.id,
     scene_id: capture.sceneId,
@@ -153,7 +194,13 @@ export function sceneCaptureToDb(
     general_notes: capture.notes || null,
     application_time: capture.applicationTime || null,
     continuity_flags: capture.continuityFlags as unknown as Json,
-    continuity_events_data: eventsData as unknown as Json,
+    // F-39 / Bug 1: write the raw array. The previous code wrapped
+    // continuityEvents in { events: ... } alongside dead costume_lookbook
+    // and floor_tracking keys (no reader anywhere consumed them — verified
+    // by grep), then the reader miscast the envelope as the array, so
+    // every save wrapped one level deeper. `unwrapContinuityEvents` above
+    // accepts both shapes on read so legacy rows still decode.
+    continuity_events_data: (capture.continuityEvents ?? []) as unknown as Json,
     sfx_details: capture.sfxDetails as unknown as Json,
     checked_by: userId,
     checked_at: null,
