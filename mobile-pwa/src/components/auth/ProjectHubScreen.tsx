@@ -14,7 +14,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import type { ProjectMembership, Project, ProjectRole, ProductionType, SceneFilmingStatus, MakeupDetails, HairDetails, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
 import { savePhotoBlob } from '@/db';
 import { detectCharactersForScene } from '@/utils/scriptParser';
-import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
+import { createEmptyMakeupDetails, createEmptyHairDetails, createEmptySFXDetails, createEmptyContinuityFlags } from '@/types';
 
 // Format an absolute calendar date for project metadata lines.
 const formatCardDate = (date?: Date): string => {
@@ -654,19 +654,29 @@ export function ProjectHubScreen() {
               }
             : undefined;
 
+          // F-39 / Bug 2: merge canonical defaults into partial DB
+          // shapes. Killa Bee's 33 looks and [TEST] PUNISHING's 6 looks
+          // are partial-shape (no wigAttachment, no hairType, etc.); the
+          // previous `|| createEmpty…()` fallback only fired when the
+          // entire JSONB was null, so HairForm.render's wigAttachment
+          // access then crashed.
           return {
             id: l.id,
             characterId: l.character_id,
             name: l.name,
             scenes: lookSceneMap.get(l.id) || [],
             estimatedTime: l.estimated_time,
-            makeup: (cleanMakeup as unknown as MakeupDetails) || createEmptyMakeupDetails(),
-            hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
+            makeup: { ...createEmptyMakeupDetails(), ...((cleanMakeup ?? {}) as object) } as MakeupDetails,
+            hair: { ...createEmptyHairDetails(), ...((l.hair_details ?? {}) as object) } as HairDetails,
             notes: l.description || undefined,
             masterReference,
-            continuityFlags: continuityFlagsMeta || undefined,
+            continuityFlags: continuityFlagsMeta
+              ? { ...createEmptyContinuityFlags(), ...(continuityFlagsMeta as object) }
+              : undefined,
             continuityEvents,
-            sfxDetails,
+            sfxDetails: sfxDetails
+              ? { ...createEmptySFXDetails(), ...(sfxDetails as object) } as typeof sfxDetails
+              : undefined,
           };
         });
 

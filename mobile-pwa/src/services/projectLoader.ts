@@ -14,11 +14,18 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
+import { unwrapContinuityEvents } from '@/services/syncMappers';
 import type {
   Scene,
   Character,
   Look,
   PrepSceneBreakdown,
+} from '@/types';
+import {
+  createEmptyHairDetails,
+  createEmptyMakeupDetails,
+  createEmptySFXDetails,
+  createEmptyContinuityFlags,
 } from '@/types';
 
 export interface ProjectLoadResult {
@@ -448,6 +455,13 @@ function mapLooks(
       sfxDetails = (makeupDetailsRaw as any)._sfxDetails;
     }
 
+    // F-39 / Bug 2: merge canonical defaults into partial DB shapes
+    // so downstream form components always see every field. Prep-shape
+    // rows (Killa Bee's 33 looks, [TEST] PUNISHING's 6 looks) carry
+    // only a subset of HairDetails / MakeupDetails keys; the previous
+    // `|| createEmpty…()` fallback only fired when the entire JSONB
+    // was null. continuityEvents may also be the legacy envelope
+    // shape from F-39 / Bug 1 — unwrap on read.
     return {
       id: row.id as string,
       characterId: (row.character_id as string) || '',
@@ -455,11 +469,17 @@ function mapLooks(
       scenes: lsMap.get(row.id as string) || [],
       estimatedTime: (row.estimated_time as number) || 30,
       masterReference,
-      makeup,
-      hair,
-      sfxDetails,
-      continuityFlags,
-      continuityEvents,
+      makeup: { ...createEmptyMakeupDetails(), ...(makeup ?? {}) },
+      hair: { ...createEmptyHairDetails(), ...(hair ?? {}) },
+      sfxDetails: sfxDetails
+        ? { ...createEmptySFXDetails(), ...(sfxDetails ?? {}) }
+        : undefined,
+      continuityFlags: continuityFlags
+        ? { ...createEmptyContinuityFlags(), ...(continuityFlags ?? {}) }
+        : undefined,
+      continuityEvents: continuityEvents
+        ? unwrapContinuityEvents(continuityEvents)
+        : undefined,
       notes: (row.description as string) || '',
       prepSummary,
     };

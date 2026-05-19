@@ -16,7 +16,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSyncStore } from '@/stores/syncStore';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { loadProjectFromSupabase } from '@/services/projectLoader';
+import { unwrapContinuityEvents } from '@/services/syncMappers';
 import type { Look, ProductionSchedule, ScheduleCastMember, ScheduleDay, CallSheet } from '@/types';
+import {
+  createEmptyHairDetails,
+  createEmptyMakeupDetails,
+  createEmptySFXDetails,
+  createEmptyContinuityFlags,
+} from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type ChangePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -554,20 +561,34 @@ function parseLookFromRow(row: Record<string, unknown>, existing?: Look): Look {
   const continuityEventsMeta = rawMakeup?._continuityEvents as any[];
   const sfxDetailsMeta = rawMakeup?._sfxDetails as any;
 
+  // F-39 / Bug 2: merge canonical defaults into partial DB shapes so
+  // downstream form components always see every field. continuityEvents
+  // may also be the legacy envelope shape from F-39 / Bug 1.
+  const rawContinuityEvents = existing?.continuityEvents
+    ?? (continuityEventsMeta && continuityEventsMeta.length > 0
+      ? continuityEventsMeta
+      : undefined);
+  const rawContinuityFlags = existing?.continuityFlags ?? continuityFlagsMeta;
+  const rawSfxDetails = existing?.sfxDetails ?? sfxDetailsMeta;
   return {
     id: row.id as string,
     characterId: (row.character_id as string) || existing?.characterId || '',
     name: (row.name as string) ?? existing?.name ?? '',
     scenes: existing?.scenes || [],
     estimatedTime: (row.estimated_time as number) ?? existing?.estimatedTime ?? 30,
-    makeup: cleanMakeup ? (cleanMakeup as any) : (existing?.makeup || {} as any),
-    hair: rawHair ? (rawHair as any) : (existing?.hair || {} as any),
+    makeup: { ...createEmptyMakeupDetails(), ...((cleanMakeup ?? existing?.makeup ?? {}) as object) },
+    hair: { ...createEmptyHairDetails(), ...((rawHair ?? existing?.hair ?? {}) as object) },
     notes: (row.description as string) ?? existing?.notes,
     masterReference,
-    continuityFlags: existing?.continuityFlags || continuityFlagsMeta || undefined,
-    continuityEvents: existing?.continuityEvents || (continuityEventsMeta && continuityEventsMeta.length > 0
-      ? continuityEventsMeta : undefined),
-    sfxDetails: existing?.sfxDetails || (sfxDetailsMeta || undefined),
+    continuityFlags: rawContinuityFlags
+      ? { ...createEmptyContinuityFlags(), ...(rawContinuityFlags as object) }
+      : undefined,
+    continuityEvents: rawContinuityEvents
+      ? unwrapContinuityEvents(rawContinuityEvents)
+      : undefined,
+    sfxDetails: rawSfxDetails
+      ? { ...createEmptySFXDetails(), ...(rawSfxDetails as object) }
+      : undefined,
   };
 }
 
