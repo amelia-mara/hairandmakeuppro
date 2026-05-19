@@ -368,7 +368,10 @@ export function useScriptUploadProcessor({
                 typeof md.billing === 'number'
                   ? md.billing
                   : characters.length + 1,
-              category: String(md.category ?? 'principal'),
+              category:
+                md.category === 'supporting_artist'
+                  ? 'supporting_artist'
+                  : 'principal',
               age: String(md.age ?? ''),
               gender: String(md.gender ?? ''),
               hairColour: String(md.hairColour ?? ''),
