@@ -281,6 +281,117 @@ export function useScriptUploadProcessor({
         }
       }
 
+      // ━━━ F-37: Preserve existing DB character UUIDs across upload ━━━
+      // Every upload mints fresh randomUUIDs for `characters` (L91). If
+      // those go to saveCharacters as-is, upsertWithOrphanCleanup sees
+      // the existing DB rows as orphans by id and DELETEs them — which
+      // cascades via FK to wipe every attached look, look_scene, and
+      // continuity_event for those characters. This single line of
+      // destruction is why a green re-upload of THE PUNISHING dropped
+      // 6 looks → 0 and 12 look_scenes → 0 in the 2026-05-19 dry-run.
+      //
+      // Fix: query existing DB characters BEFORE we hand the parsed
+      // payload to setParsedData. Match by uppercase name (same key
+      // scriptDiff uses internally at L246-253 and the cold-boot
+      // remap uses at useProjectSync.ts:627-635) and rewrite each
+      // matched character's `.id` to the existing DB id. Propagate
+      // through scenes' characterIds[] and diffResult.characterIdMap
+      // values so downstream code (mergedLooks, breakdown remap) sees
+      // a consistent id-space. Union unmatched existing characters
+      // back into the local set so they aren't seen as orphans either
+      // (silent character deletion is the worst-case destruction).
+      if (isRevision) {
+        const { data: existingDbChars } = await supabase
+          .from('characters')
+          .select('id, name, metadata')
+          .eq('project_id', projectId);
+
+        if (existingDbChars && existingDbChars.length > 0) {
+          const dbCharByUpperName = new Map<
+            string,
+            { id: string; metadata: Record<string, unknown> | null }
+          >();
+          for (const r of existingDbChars) {
+            const key = String(r.name ?? '').toUpperCase().trim();
+            dbCharByUpperName.set(key, {
+              id: r.id as string,
+              metadata: r.metadata as Record<string, unknown> | null,
+            });
+          }
+
+          const matchedDbIds = new Set<string>();
+          const dbIdMap = new Map<string, string>();
+          for (let i = 0; i < characters.length; i++) {
+            const c = characters[i];
+            const existing = dbCharByUpperName.get(c.name.toUpperCase().trim());
+            if (existing) {
+              matchedDbIds.add(existing.id);
+              if (existing.id !== c.id) {
+                dbIdMap.set(c.id, existing.id);
+                characters[i] = { ...c, id: existing.id };
+              }
+            }
+          }
+
+          if (dbIdMap.size > 0) {
+            for (let i = 0; i < scenesWithStoryDays.length; i++) {
+              const s = scenesWithStoryDays[i];
+              scenesWithStoryDays[i] = {
+                ...s,
+                characterIds: s.characterIds.map((cid) => dbIdMap.get(cid) ?? cid),
+              };
+            }
+            if (diffResult) {
+              for (const [oldId, newId] of diffResult.characterIdMap) {
+                const remapped = dbIdMap.get(newId);
+                if (remapped) diffResult.characterIdMap.set(oldId, remapped);
+              }
+            }
+          }
+
+          // D1: union any DB characters that the new draft didn't match
+          // (writer dropped them, parser missed them, etc.) back into
+          // the local set with full metadata round-trip, so
+          // upsertWithOrphanCleanup doesn't see them as orphans. Stale
+          // characters stay visible in the breakdown UI; the user can
+          // hand-remove via the existing "remove character entirely"
+          // flow if the omission was intentional.
+          let unmatchedRestored = 0;
+          for (const r of existingDbChars) {
+            const existingId = r.id as string;
+            if (matchedDbIds.has(existingId)) continue;
+            const md = (r.metadata as Record<string, unknown> | null) ?? {};
+            characters.push({
+              id: existingId,
+              name: String(r.name ?? ''),
+              billing:
+                typeof md.billing === 'number'
+                  ? md.billing
+                  : characters.length + 1,
+              category: String(md.category ?? 'principal'),
+              age: String(md.age ?? ''),
+              gender: String(md.gender ?? ''),
+              hairColour: String(md.hairColour ?? ''),
+              hairType: String(md.hairType ?? ''),
+              eyeColour: String(md.eyeColour ?? ''),
+              skinTone: String(md.skinTone ?? ''),
+              build: String(md.build ?? ''),
+              distinguishingFeatures: String(md.distinguishingFeatures ?? ''),
+              notes: String(md.notes ?? ''),
+            });
+            unmatchedRestored++;
+          }
+
+          if (dbIdMap.size > 0 || unmatchedRestored > 0) {
+            console.log(
+              `[scriptUpload] F-37 remap — rewrote ${dbIdMap.size} parsed character id(s) ` +
+                `to existing DB id(s); restored ${unmatchedRestored} unmatched existing ` +
+                `character(s) to prevent orphan cleanup.`,
+            );
+          }
+        }
+      }
+
       // ━━━ Preserve user-created looks across the upload ━━━
       // Looks belong to the project, not to a specific draft snapshot.
       // Each upload mints fresh character UUIDs, so remap any existing
