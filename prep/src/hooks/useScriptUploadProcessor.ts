@@ -7,6 +7,7 @@ import {
   useCharacterOverridesStore,
   type Scene,
   type Character,
+  type CharacterBreakdown,
 } from '@/stores/breakdownStore';
 import { parseScriptFile, type ParsedScript } from '@/utils/scriptParser';
 import { generateLooksFromScript } from '@/utils/lookGenerator';
@@ -466,6 +467,116 @@ export function useScriptUploadProcessor({
               }
               mergedScenes.splice(insertAt, 0, { ...manual, needsReview: true } as Scene);
             }
+          }
+        }
+      }
+
+      // ━━━ F-37b: Preserve DB look_scenes by reseeding breakdowns ━━━
+      // look_scenes has no first-class Zustand slice. It's reconstructed
+      // on every save by buildLookSceneMap (useProjectSync.ts:70-96)
+      // walking breakdownStore.breakdowns[sceneId].characters[i].lookId.
+      // sync_look_scenes RPC then hard-replaces all rows for the involved
+      // look_ids (DELETE WHERE look_id = ANY + INSERT from p_entries).
+      //
+      // After F-37 char remap, looks survive the upload, but if a DB
+      // look_scene row has no corresponding breakdown carrying its
+      // lookId (e.g. a 'NEW LOOK' assigned via the picker before any
+      // other field was typed, or any future SQL/import path), the next
+      // saveLooks triggered by the parsedScriptStore subscriber's
+      // setParsedData passes an empty p_entries for that look_id and
+      // wipes its assignments.
+      //
+      // Fix: query DB look_scenes for the surviving look_ids, walk them,
+      // and either set lookId on an existing breakdown row, synthesise a
+      // minimum-shape row on an existing breakdown, or synthesise a full
+      // minimum-shape breakdown for scenes that have none. The next
+      // buildLookSceneMap cycle will then reproduce every assignment.
+      if (isRevision && mergedLooks.length > 0) {
+        const lookIds = mergedLooks.map((l) => l.id);
+        const { data: dbLookScenes } = await supabase
+          .from('look_scenes')
+          .select('look_id, scene_number')
+          .in('look_id', lookIds);
+
+        if (dbLookScenes && dbLookScenes.length > 0) {
+          // mergedScenes' composite key matches DB look_scenes.scene_number
+          // exactly (TEXT, e.g. "4A", "150", or unsuffixed "12").
+          const sceneIdByKey = new Map<string, string>();
+          for (const s of mergedScenes) {
+            sceneIdByKey.set(`${s.number}${s.numberSuffix ?? ''}`, s.id);
+          }
+          const charIdByLookId = new Map<string, string>();
+          for (const l of mergedLooks) charIdByLookId.set(l.id, l.characterId);
+
+          const makeMinimalCharBreakdown = (
+            characterId: string,
+            lookId: string,
+          ): CharacterBreakdown => ({
+            characterId,
+            lookId,
+            entersWith: { hair: '', makeup: '', wardrobe: '', facialHair: '' },
+            sfx: '',
+            environmental: '',
+            action: '',
+            changeType: 'no-change',
+            changeNotes: '',
+            exitsWith: { hair: '', makeup: '', wardrobe: '', facialHair: '' },
+            notes: '',
+          });
+
+          let reseeded = 0;
+          let skippedConflict = 0;
+          let synthesisedBreakdowns = 0;
+          for (const row of dbLookScenes) {
+            const lookId = row.look_id as string;
+            const sceneNum = String(row.scene_number);
+            const sceneId = sceneIdByKey.get(sceneNum);
+            const charId = charIdByLookId.get(lookId);
+            if (!sceneId || !charId) continue;
+
+            const existing = breakdownStore.getBreakdown(sceneId);
+            if (existing) {
+              const chars = existing.characters ?? [];
+              const idx = chars.findIndex((c) => c.characterId === charId);
+              if (idx >= 0) {
+                const cur = chars[idx];
+                if (cur.lookId === lookId) continue;
+                if (cur.lookId && cur.lookId !== lookId) {
+                  console.warn(
+                    `[scriptUpload] F-37b conflict — scene ${sceneNum} char ${charId}: ` +
+                      `breakdown has lookId=${cur.lookId}, DB look_scenes has ${lookId}. ` +
+                      `Keeping breakdown value (never overwrite user intent).`,
+                  );
+                  skippedConflict++;
+                  continue;
+                }
+                breakdownStore.setBreakdown(sceneId, {
+                  ...existing,
+                  characters: chars.map((c, i) => (i === idx ? { ...c, lookId } : c)),
+                });
+              } else {
+                breakdownStore.setBreakdown(sceneId, {
+                  ...existing,
+                  characters: [...chars, makeMinimalCharBreakdown(charId, lookId)],
+                });
+              }
+            } else {
+              breakdownStore.setBreakdown(sceneId, {
+                sceneId,
+                timeline: { day: '', dayConfirmed: false, time: '', type: '', note: '' },
+                characters: [makeMinimalCharBreakdown(charId, lookId)],
+                continuityEvents: [],
+              });
+              synthesisedBreakdowns++;
+            }
+            reseeded++;
+          }
+          if (reseeded > 0 || skippedConflict > 0) {
+            console.log(
+              `[scriptUpload] F-37b — reseeded ${reseeded} look_scene assignment(s) ` +
+                `(synthesised ${synthesisedBreakdowns} minimum-shape breakdown(s)); ` +
+                `skipped ${skippedConflict} conflict(s).`,
+            );
           }
         }
       }
